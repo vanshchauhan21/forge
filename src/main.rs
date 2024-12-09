@@ -1,15 +1,16 @@
 mod api;
 mod cause;
 mod error;
+mod exec;
 
-use api::API;
+use api::Api;
 use tower_http::services::ServeDir;
 
 use axum::{self, Router};
 
 #[tokio::main]
 async fn main() {
-    let api = API::new();
+    let api = Api::new();
     let app = Router::new()
         .nest("/api", api.into_router())
         .nest_service("/assets", ServeDir::new("assets"));

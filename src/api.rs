@@ -1,14 +1,22 @@
-use axum::Router;
+use axum::{
+    routing::post,
+    Router,
+};
 
-pub struct API {
+use crate::exec::Exec;
+
+pub struct Api {
     router: Router,
 }
 
-impl API {
+impl Api {
     pub fn new() -> Self {
-        let router = Router::new();
+        let router = Router::new().route(
+            "/exec",
+            post(|req| async { Exec::new().execute(req).await }),
+        );
 
-        API { router }
+        Api { router }
     }
 
     pub fn into_router(self) -> Router {
