@@ -1,5 +1,6 @@
 use axum::response::{IntoResponse, Response};
 use derive_more::derive::{Debug, From};
+use rig::completion::PromptError;
 
 use crate::cause::Cause;
 
@@ -8,6 +9,15 @@ pub enum Error {
     IO {
         error: tokio::io::Error,
         resource: String,
+    },
+    Axum {
+        error: axum::Error,
+    },
+    Serde {
+        error: serde_json::Error,
+    },
+    Prompt {
+        error: PromptError,
     },
 }
 
@@ -18,6 +28,13 @@ impl From<Error> for Cause {
         match value {
             Error::IO { error, resource } => {
                 Cause::new(format!("IO Error: {}", resource)).cause(Cause::new(error.to_string()))
+            }
+            Error::Axum { error } => Cause::new("Axum Error").cause(Cause::new(error.to_string())),
+            Error::Serde { error } => {
+                Cause::new("Serde Error").cause(Cause::new(error.to_string()))
+            }
+            Error::Prompt { error } => {
+                Cause::new("Prompt Error").cause(Cause::new(error.to_string()))
             }
         }
     }

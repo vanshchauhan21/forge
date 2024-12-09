@@ -14,7 +14,11 @@ pub struct Cause {
 
 impl IntoResponse for Cause {
     fn into_response(self) -> Response {
-        Response::new(Body::from(serde_json::to_string(&self).unwrap()))
+        Response::builder()
+            .status(400)
+            .header("Content-Type", "application/json")
+            .body(Body::from(serde_json::to_string(&self).unwrap()))
+            .unwrap()
     }
 }
 

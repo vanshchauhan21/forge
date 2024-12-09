@@ -1,10 +1,15 @@
-
 use crate::error::Result;
+use axum::body::{to_bytes, Body};
+use axum::http::HeaderValue;
 use axum::{
-    body::Body,
     http::{Request, Response},
+    response::IntoResponse,
 };
 use derive_more::Debug;
+use rig::agent::Agent;
+use rig::completion::Prompt;
+use rig::providers::openai::{self, CompletionModel};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 pub struct Exec {}
@@ -15,32 +20,55 @@ impl Exec {
     }
 
     pub async fn execute(&self, request: Request<Body>) -> Result<Response<Body>> {
-        println!("{:?}", request);
-        todo!()
+        let (_, body) = request.into_parts();
+        let bytes = to_bytes(body, usize::MAX).await?;
+        let prompt = serde_json::from_slice(bytes.as_ref())?;
+        let action = LLMAgent::default().execute(prompt).await?;
+        let mut response = Response::new(Body::from(serde_json::to_vec(&action)?).into());
+        response
+            .headers_mut()
+            .append("Content-Type", HeaderValue::from_static("application/json"));
+        Ok(response)
     }
 }
 
-struct LLMAgent {}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum Action {
+    Prompt(String),
+}
 
-#[derive(Debug)]
-enum Prompt {
-    Message(String),
+#[derive(Debug, Serialize)]
+enum Command {
+    Submit(String),
+}
+
+impl IntoResponse for Command {
+    fn into_response(self) -> axum::response::Response {
+        match serde_json::to_vec(&self) {
+            Ok(body) => axum::http::Response::new(Body::from(body)).into_response(),
+            Err(_) => todo!(),
+        }
+    }
+}
+
+struct LLMAgent {
+    agent: Agent<CompletionModel>,
 }
 
 impl LLMAgent {
-    async fn execute(prompt: Prompt) {
-        use rig::{completion::Prompt, providers::openai};
+    fn default() -> Self {
+        // A place to initialize our LLM agent
+        let agent = openai::Client::from_env().agent("gpt-4o-mini").build();
+        LLMAgent { agent }
+    }
 
-        // Create OpenAI client and model
-        // This requires the `OPENAI_API_KEY` environment variable to be set.
-        let gpt4 = openai::Client::from_env().agent("gpt-4").build();
-
-        // Prompt the model and print its response
-        let response = gpt4
-            .prompt(format!("{:?}", prompt).as_str())
-            .await
-            .expect("Failed to prompt GPT-4");
-
-        println!("GPT-4: {response}");
+    async fn execute(&self, action: Action) -> Result<Command> {
+        match action {
+            Action::Prompt(message) => {
+                let response = self.agent.prompt(message.as_str()).await?;
+                Ok(Command::Submit(response))
+            }
+        }
     }
 }
