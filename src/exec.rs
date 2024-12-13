@@ -38,6 +38,14 @@ enum Action {
     Prompt(String),
 }
 
+impl Action {
+    async fn from_request(request: Request<Body>) -> Result<Self> {
+        let (_, body) = request.into_parts();
+        let bytes = to_bytes(body, usize::MAX).await?;
+        Ok(serde_json::from_slice(bytes.as_ref())?)
+    }
+}
+
 #[derive(Debug, Serialize)]
 enum Command {
     Submit(String),
