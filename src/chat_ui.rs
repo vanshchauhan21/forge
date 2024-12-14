@@ -33,6 +33,30 @@ impl ChatState {
             streaming_response: None,
         }
     }
+
+    fn insert_char(&mut self, c: char) {
+        let pos = self.cursor_position;
+        if pos == self.input.len() {
+            self.input.push(c);
+        } else {
+            self.input.insert(pos, c);
+        }
+        self.cursor_position += 1;
+    }
+
+    fn backspace(&mut self) {
+        if self.cursor_position > 0 {
+            let pos = self.cursor_position - 1;
+            self.input.remove(pos);
+            self.cursor_position = pos;
+        }
+    }
+
+    fn delete(&mut self) {
+        if self.cursor_position < self.input.len() {
+            self.input.remove(self.cursor_position);
+        }
+    }
 }
 
 pub struct ChatUI {
@@ -64,16 +88,18 @@ impl ChatUI {
             ])
             .split(frame.size());
 
-        // Messages area
-        let messages_block = Paragraph::new(
-            state.messages.iter()
-                .chain(state.streaming_response.iter())
-                .cloned()
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
-        .block(Block::default().borders(Borders::ALL).title("Chat Messages"))
-        .wrap(Wrap { trim: true });
+        // Messages area with scrolling
+        let messages_text = state.messages.iter()
+            .chain(state.streaming_response.iter())
+            .cloned()
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        let messages_block = Paragraph::new(messages_text)
+            .block(Block::default().borders(Borders::ALL).title("Chat Messages"))
+            .wrap(Wrap { trim: true })
+            .scroll((state.messages.len() as u16, 0));
+
         frame.render_widget(messages_block, layout[0]);
 
         // Input area with cursor
@@ -135,7 +161,7 @@ impl ChatUI {
                                 let mut state = state_clone.lock().await;
                                 let input = state.input.clone();
                                 if !input.is_empty() {
-                                    state.messages.push(format!("User: {}", input));
+                                    state.messages.push(format!("You: {}", input));
                                     let _ = input_tx.send(input).await;
                                 }
                                 state.input.clear();
@@ -145,32 +171,19 @@ impl ChatUI {
                             },
                             KeyCode::Char(c) => {
                                 let mut state = state_clone.lock().await;
-                                let pos = state.cursor_position;
-                                if pos == state.input.len() {
-                                    state.input.push(c);
-                                } else {
-                                    state.input.insert(pos, c);
-                                }
-                                state.cursor_position += 1;
+                                state.insert_char(c);
                                 drop(state);
                                 let _ = state_tx.send(()).await;
                             },
                             KeyCode::Backspace => {
                                 let mut state = state_clone.lock().await;
-                                if state.cursor_position > 0 {
-                                    let pos = state.cursor_position - 1;
-                                    state.input.remove(pos);
-                                    state.cursor_position = pos;
-                                }
+                                state.backspace();
                                 drop(state);
                                 let _ = state_tx.send(()).await;
                             },
                             KeyCode::Delete => {
                                 let mut state = state_clone.lock().await;
-                                let pos = state.cursor_position;
-                                if pos < state.input.len() {
-                                    state.input.remove(pos);
-                                }
+                                state.delete();
                                 drop(state);
                                 let _ = state_tx.send(()).await;
                             },
@@ -218,7 +231,7 @@ impl ChatUI {
             tokio::select! {
                 Some(response) = response_stream.next() => {
                     let mut state = self.state.lock().await;
-                    state.messages.push(format!("AI: {}", response));
+                    state.messages.push(format!("Assistant: {}", response));
                     let state_snapshot = state.clone();
                     drop(state);
                     
