@@ -14,3 +14,10 @@ async-openai = "0.14"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+
+[[test]]
+name = "integration_test"
+path = "tests/integration_test.rs"
