@@ -49,7 +49,7 @@ impl Config for OpenRouterConfig {
     }
 
     fn url(&self, path: &str) -> String {
-        format!("{}/{}", self.api_base(), path)
+        format!("{}{}", self.api_base(), path)
     }
 
     fn query(&self) -> Vec<(&str, &str)> {
