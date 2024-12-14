@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let (input_tx, input_rx) = mpsc::channel(100);
 
             // Create response stream
-            let mut response_stream = create_response_stream(chat_engine, input_rx).await;
+            let response_stream = create_response_stream(chat_engine, input_rx).await;
 
             // Create welcome message
             let (welcome_tx, welcome_rx) = mpsc::channel(1);

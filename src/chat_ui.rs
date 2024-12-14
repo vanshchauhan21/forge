@@ -138,7 +138,7 @@ impl ChatUI {
         S: Stream<Item = String> + Unpin,
     {
         let (state_tx, mut state_rx) = mpsc::channel(100);
-        let (input_tx, mut input_rx) = mpsc::channel(100);
+        let (input_tx, input_rx) = mpsc::channel(100);
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
 
         // Set up Ctrl+C handler
