@@ -19,9 +19,11 @@ async fn create_response_stream(
     tokio::spawn(async move {
         // Process incoming messages
         while let Some(input) = input_rx.recv().await {
+            eprintln!("Processing input in stream: {}", input);
             let mut response_stream = chat_engine.process_message(input).await;
             
             while let Some(response_part) = response_stream.next().await {
+                eprintln!("Sending response part: {}", response_part);
                 let _ = tx.send(response_part).await;
             }
         }
@@ -31,7 +33,7 @@ async fn create_response_stream(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // Initialize chat engine
     let chat_engine = ChatEngine::new(
         "You are Claude 3 Sonnet, an AI assistant with expertise in programming, software development, and technology. \
@@ -53,27 +55,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // Create response stream
             let response_stream = create_response_stream(chat_engine, input_rx).await;
 
-            // Create welcome message
-            let (welcome_tx, welcome_rx) = mpsc::channel(1);
-            welcome_tx.send(
-                "Welcome to Code Forge Chat, powered by Claude 3 Sonnet.\n\
-                I'm your AI programming assistant, specializing in software development and technical topics.\n\
-                Feel free to ask questions about programming, architecture, best practices, or any tech-related topics.\n\
-                Type your message and press Enter to send. Press Ctrl+C or Esc to exit.\n".to_string()
-            ).await?;
-            let welcome_stream = ReceiverStream::new(welcome_rx);
-
-            // Combine welcome message with response stream
-            let combined_stream = welcome_stream.chain(response_stream);
-
             // Start the chat interface
-            chat_ui.run(combined_stream).await?;
+            chat_ui.run(response_stream, input_tx).await?;
             Ok(())
         }
         Err(e) => {
             eprintln!("🔴 Failed to connect to Claude 3 Sonnet: {}", e);
             eprintln!("Please check your OPENROUTER_API_KEY environment variable and internet connection.");
-            Err(e.into())
+            Ok(())
         }
     }
 }

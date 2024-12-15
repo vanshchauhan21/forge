@@ -26,12 +26,22 @@ pub struct ChatState {
 
 impl ChatState {
     pub fn new() -> Self {
-        Self {
+        let mut state = Self {
             input: String::new(),
             cursor_position: 0,
             messages: Vec::new(),
             streaming_response: None,
-        }
+        };
+        
+        // Add welcome message to initial state
+        state.messages.push(
+            "Welcome to Code Forge Chat, powered by Claude 3 Sonnet.\n\
+            I'm your AI programming assistant, specializing in software development and technical topics.\n\
+            Feel free to ask questions about programming, architecture, best practices, or any tech-related topics.\n\
+            Type your message and press Enter to send. Press Ctrl+C or Esc to exit.".to_string()
+        );
+        
+        state
     }
 
     fn insert_char(&mut self, c: char) {
@@ -57,6 +67,24 @@ impl ChatState {
             self.input.remove(self.cursor_position);
         }
     }
+
+    fn start_response(&mut self) {
+        self.streaming_response = Some(String::from("Assistant: "));
+    }
+
+    fn append_to_response(&mut self, text: &str) {
+        if let Some(ref mut response) = self.streaming_response {
+            response.push_str(text);
+        } else {
+            self.streaming_response = Some(format!("Assistant: {}", text));
+        }
+    }
+
+    fn complete_response(&mut self) {
+        if let Some(response) = self.streaming_response.take() {
+            self.messages.push(response);
+        }
+    }
 }
 
 pub struct ChatUI {
@@ -65,7 +93,7 @@ pub struct ChatUI {
 }
 
 impl ChatUI {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, Box<dyn Error + Send + Sync>> {
         // Terminal setup
         enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -79,7 +107,7 @@ impl ChatUI {
         })
     }
 
-    fn render_chat_ui(frame: &mut Frame, state: &ChatState) -> Result<(), Box<dyn Error>> {
+    fn render_chat_ui(frame: &mut Frame, state: &ChatState) -> Result<(), Box<dyn Error + Send + Sync>> {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -89,16 +117,17 @@ impl ChatUI {
             .split(frame.size());
 
         // Messages area with scrolling
-        let messages_text = state.messages.iter()
-            .chain(state.streaming_response.iter())
-            .cloned()
-            .collect::<Vec<String>>()
-            .join("\n");
+        let mut display_messages = state.messages.clone();
+        if let Some(ref current) = state.streaming_response {
+            display_messages.push(current.clone());
+        }
+
+        let messages_text = display_messages.join("\n");
 
         let messages_block = Paragraph::new(messages_text)
             .block(Block::default().borders(Borders::ALL).title("Chat Messages"))
             .wrap(Wrap { trim: true })
-            .scroll((state.messages.len() as u16, 0));
+            .scroll((display_messages.len().saturating_sub(1) as u16, 0));
 
         frame.render_widget(messages_block, layout[0]);
 
@@ -130,16 +159,69 @@ impl ChatUI {
         Ok(())
     }
 
+    async fn handle_key_event(&mut self, key: KeyCode, input_tx: &mpsc::Sender<String>) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        let mut state = self.state.lock().await;
+        match key {
+            KeyCode::Enter => {
+                let input = state.input.clone();
+                if !input.is_empty() {
+                    state.messages.push(format!("You: {}", input));
+                    state.start_response();
+                    state.input.clear();
+                    state.cursor_position = 0;
+                    input_tx.send(input).await?;
+                }
+            },
+            KeyCode::Char(c) => {
+                state.insert_char(c);
+            },
+            KeyCode::Backspace => {
+                state.backspace();
+            },
+            KeyCode::Delete => {
+                state.delete();
+            },
+            KeyCode::Left => {
+                if state.cursor_position > 0 {
+                    state.cursor_position -= 1;
+                }
+            },
+            KeyCode::Right => {
+                if state.cursor_position < state.input.len() {
+                    state.cursor_position += 1;
+                }
+            },
+            KeyCode::Home => {
+                state.cursor_position = 0;
+            },
+            KeyCode::End => {
+                state.cursor_position = state.input.len();
+            },
+            KeyCode::Esc => {
+                return Ok(true);
+            }
+            _ => {}
+        }
+        
+        let state_snapshot = state.clone();
+        drop(state);
+        self.terminal.draw(|frame| {
+            Self::render_chat_ui(frame, &state_snapshot).unwrap()
+        })?;
+
+        Ok(false)
+    }
+
     pub async fn run<S>(
         &mut self,
         mut response_stream: S,
-    ) -> Result<(), Box<dyn Error>>
+        input_tx: mpsc::Sender<String>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>>
     where
         S: Stream<Item = String> + Unpin,
     {
-        let (state_tx, mut state_rx) = mpsc::channel(100);
-        let (input_tx, input_rx) = mpsc::channel(100);
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
+        let (event_tx, mut event_rx) = mpsc::channel(100);
 
         // Set up Ctrl+C handler
         let shutdown_tx_clone = shutdown_tx.clone();
@@ -149,98 +231,46 @@ impl ChatUI {
             }
         });
 
-        // Spawn input handling task
-        let state_clone = Arc::clone(&self.state);
-        let shutdown_tx_clone = shutdown_tx.clone();
-        let input_handle = tokio::spawn(async move {
+        // Spawn event reading task
+        let event_tx_clone = event_tx.clone();
+        tokio::spawn(async move {
             loop {
-                if let Ok(Event::Key(key)) = event::read() {
-                    if key.kind == KeyEventKind::Press {
-                        match key.code {
-                            KeyCode::Enter => {
-                                let mut state = state_clone.lock().await;
-                                let input = state.input.clone();
-                                if !input.is_empty() {
-                                    state.messages.push(format!("You: {}", input));
-                                    let _ = input_tx.send(input).await;
-                                }
-                                state.input.clear();
-                                state.cursor_position = 0;
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Char(c) => {
-                                let mut state = state_clone.lock().await;
-                                state.insert_char(c);
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Backspace => {
-                                let mut state = state_clone.lock().await;
-                                state.backspace();
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Delete => {
-                                let mut state = state_clone.lock().await;
-                                state.delete();
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Left => {
-                                let mut state = state_clone.lock().await;
-                                if state.cursor_position > 0 {
-                                    state.cursor_position -= 1;
-                                }
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Right => {
-                                let mut state = state_clone.lock().await;
-                                if state.cursor_position < state.input.len() {
-                                    state.cursor_position += 1;
-                                }
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Home => {
-                                let mut state = state_clone.lock().await;
-                                state.cursor_position = 0;
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::End => {
-                                let mut state = state_clone.lock().await;
-                                state.cursor_position = state.input.len();
-                                drop(state);
-                                let _ = state_tx.send(()).await;
-                            },
-                            KeyCode::Esc => {
-                                let _ = shutdown_tx_clone.send(()).await;
-                                break;
-                            }
-                            _ => {}
-                        }
+                if let Ok(event) = event::read() {
+                    if let Err(_) = event_tx_clone.send(event).await {
+                        break;
                     }
                 }
             }
         });
 
-        // Process responses
+        // Initial render
+        let state_snapshot = self.state.lock().await.clone();
+        self.terminal.draw(|frame| {
+            Self::render_chat_ui(frame, &state_snapshot).unwrap()
+        })?;
+
+        // Main event loop
         loop {
             tokio::select! {
+                Some(event) = event_rx.recv() => {
+                    if let Event::Key(key) = event {
+                        if key.kind == KeyEventKind::Press {
+                            if self.handle_key_event(key.code, &input_tx).await? {
+                                break;
+                            }
+                        }
+                    }
+                }
                 Some(response) = response_stream.next() => {
                     let mut state = self.state.lock().await;
-                    state.messages.push(format!("Assistant: {}", response));
+                    if response == "\n" {
+                        state.complete_response();
+                    } else {
+                        state.append_to_response(&response);
+                    }
                     let state_snapshot = state.clone();
                     drop(state);
                     
-                    self.terminal.draw(|frame| {
-                        Self::render_chat_ui(frame, &state_snapshot).unwrap()
-                    })?;
-                }
-                Some(_) = state_rx.recv() => {
-                    let state_snapshot = self.state.lock().await.clone();
                     self.terminal.draw(|frame| {
                         Self::render_chat_ui(frame, &state_snapshot).unwrap()
                     })?;
@@ -251,9 +281,6 @@ impl ChatUI {
                 else => break,
             }
         }
-
-        // Clean up input handling task
-        input_handle.abort();
 
         Ok(())
     }
