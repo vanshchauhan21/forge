@@ -12,6 +12,7 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Wrap},
     style::{Style, Modifier},
+    layout::Margin,
 };
 use tokio::sync::{mpsc, Mutex};
 use std::sync::Arc;
@@ -118,6 +119,17 @@ impl ChatUI {
         })
     }
 
+    fn calculate_wrapped_height(text: &str, width: u16) -> u16 {
+        let mut height = 0;
+        for line in text.lines() {
+            // Calculate how many lines this text will wrap to
+            let line_length = line.chars().count() as u16;
+            let wrapped_lines = (line_length + width - 1) / width;
+            height += wrapped_lines.max(1); // At least one line even if empty
+        }
+        height
+    }
+
     fn render_chat_ui(frame: &mut Frame, state: &ChatState) -> Result<(), Box<dyn Error + Send + Sync>> {
         let layout = Layout::default()
             .direction(Direction::Vertical)
@@ -135,12 +147,24 @@ impl ChatUI {
 
         let messages_text = display_messages.join("\n\n");
 
-        let messages_block = Paragraph::new(messages_text)
-            .block(Block::default().borders(Borders::ALL).title("Chat Messages"))
-            .wrap(Wrap { trim: true })
-            .scroll((display_messages.len().saturating_sub(1) as u16, 0));
+        // Get the inner area dimensions accounting for borders
+        let messages_block = Block::default().borders(Borders::ALL).title("Chat Messages");
+        let inner_area = layout[0].inner(&Margin::new(1, 1));
+        
+        // Calculate total content height including message separators
+        let content_height = Self::calculate_wrapped_height(&messages_text, inner_area.width) + 
+            (display_messages.len().saturating_sub(1) as u16); // Add space for \n\n separators
+        
+        // Calculate scroll offset to keep the latest content visible
+        let viewport_height = inner_area.height;
+        let scroll_offset = content_height.saturating_sub(viewport_height);
 
-        frame.render_widget(messages_block, layout[0]);
+        let messages_widget = Paragraph::new(messages_text)
+            .block(messages_block)
+            .wrap(Wrap { trim: true })
+            .scroll((scroll_offset, 0));
+
+        frame.render_widget(messages_widget, layout[0]);
 
         // Input area with cursor
         let input_len = state.input.len();
