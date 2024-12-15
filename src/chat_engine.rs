@@ -57,6 +57,7 @@ impl Config for OpenRouterConfig {
     }
 }
 
+#[derive(Clone)]
 pub struct Agent {
     system_prompt: String,
     user_prompt: String,
@@ -88,7 +89,7 @@ impl Agent {
     }
 
     /// Test the connection to OpenRouter
-    pub async fn test_connection(&self) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn test_connection(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let request = CreateChatCompletionRequest {
             model: MODEL_NAME.to_string(),
             messages: vec![
@@ -137,30 +138,47 @@ impl Agent {
         };
 
         let client = self.client.clone();
+        let messages = self.messages.clone();
         
         // Spawn task to handle streaming response
         tokio::spawn(async move {
-            let mut stream = client.chat().create_stream(request).await.unwrap();
-            let mut current_content = String::new();
+            match client.chat().create_stream(request).await {
+                Ok(mut stream) => {
+                    let mut current_content = String::new();
 
-            while let Some(result) = stream.next().await {
-                match result {
-                    Ok(response) => {
-                        if let Some(ref delta) = response.choices[0].delta.content {
-                            current_content.push_str(delta);
-                            let _ = tx.send(delta.to_string()).await;
+                    while let Some(result) = stream.next().await {
+                        match result {
+                            Ok(response) => {
+                                if let Some(ref delta) = response.choices[0].delta.content {
+                                    current_content.push_str(delta);
+                                    let _ = tx.send(delta.to_string()).await;
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Error in stream: {}", e);
+                                let _ = tx.send(format!("Error: {}", e)).await;
+                                break;
+                            }
                         }
                     }
-                    Err(e) => {
-                        let _ = tx.send(format!("Error: {}", e)).await;
-                        break;
+
+                    // Add assistant's message to history and send newline to signal completion
+                    if !current_content.is_empty() {
+                        let mut messages = messages;
+                        messages.push(
+                            ChatCompletionRequestMessageArgs::default()
+                                .role(Role::Assistant)
+                                .content(current_content)
+                                .build()
+                                .unwrap()
+                        );
+                        let _ = tx.send("\n".to_string()).await;
                     }
                 }
-            }
-
-            // Add assistant's message to history
-            if !current_content.is_empty() {
-                let _ = tx.send("\n".to_string()).await;
+                Err(e) => {
+                    eprintln!("Failed to create stream: {}", e);
+                    let _ = tx.send(format!("Error: {}", e)).await;
+                }
             }
         });
 
@@ -179,7 +197,7 @@ impl ChatEngine {
         }
     }
 
-    pub async fn test_connection(&self) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn test_connection(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         self.agent.test_connection().await
     }
 

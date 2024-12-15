@@ -73,6 +73,11 @@ impl ChatState {
     }
 
     fn append_to_response(&mut self, text: &str) {
+        // Skip "Sending response part:" messages
+        if text.starts_with("Sending response part:") {
+            return;
+        }
+
         if let Some(ref mut response) = self.streaming_response {
             response.push_str(text);
         } else {
@@ -82,7 +87,13 @@ impl ChatState {
 
     fn complete_response(&mut self) {
         if let Some(response) = self.streaming_response.take() {
-            self.messages.push(response);
+            // Format the response with proper line breaks
+            let formatted = response
+                .lines()
+                .map(|line| line.trim())
+                .collect::<Vec<_>>()
+                .join("\n");
+            self.messages.push(formatted);
         }
     }
 }
@@ -122,7 +133,7 @@ impl ChatUI {
             display_messages.push(current.clone());
         }
 
-        let messages_text = display_messages.join("\n");
+        let messages_text = display_messages.join("\n\n");
 
         let messages_block = Paragraph::new(messages_text)
             .block(Block::default().borders(Borders::ALL).title("Chat Messages"))

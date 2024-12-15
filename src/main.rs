@@ -19,11 +19,9 @@ async fn create_response_stream(
     tokio::spawn(async move {
         // Process incoming messages
         while let Some(input) = input_rx.recv().await {
-            eprintln!("Processing input in stream: {}", input);
             let mut response_stream = chat_engine.process_message(input).await;
             
             while let Some(response_part) = response_stream.next().await {
-                eprintln!("Sending response part: {}", response_part);
                 let _ = tx.send(response_part).await;
             }
         }
