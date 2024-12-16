@@ -16,10 +16,10 @@ impl std::fmt::Debug for Error {
 }
 
 #[derive(Clone, derive_setters::Setters)]
-struct Errata {
-    title: String,
+pub struct Errata {
+    pub title: String,
     #[setters(strip_option, into)]
-    description: Option<String>,
+    pub description: Option<String>,
 }
 
 impl Errata {
@@ -54,9 +54,9 @@ impl From<&Error> for Errata {
         match error {
             Error::Engine(e) => match e {
                 crate::core::error::Error::OpenAI(err) => 
-                    Errata::new("OpenAI API Error").set_description(err.to_string()),
+                    Errata::new("OpenAI API Error").description(err.to_string()),
                 crate::core::error::Error::EmptyResponse(provider) => 
-                    Errata::new("Empty Response Error").set_description(format!("No content received from {}", provider)),
+                    Errata::new("Empty Response Error").description(format!("No content received from {}", provider)),
             },
         }
     }
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_error_with_description() {
         let error = Errata::new("Invalid input")
-            .set_description("Expected a number");
+            .description("Expected a number");
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
