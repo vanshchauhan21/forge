@@ -2,9 +2,9 @@ use super::error::{Error, Result};
 use async_openai::{config::Config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct OpenAIConfig {
     api_key: String,
     base_url: String,
@@ -22,6 +22,10 @@ impl Config for OpenAIConfig {
     fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
+        );
         headers.insert("X-Title", HeaderValue::from_static("Tailcall"));
         headers
     }
@@ -51,7 +55,9 @@ fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> 
 impl OpenAIProvider {
     pub fn new(api_key: String, model: String, base_url: String) -> Self {
         let config = OpenAIConfig { api_key, base_url };
+
         let client = Client::with_config(config);
+
         Self { client, model }
     }
 

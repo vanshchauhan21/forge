@@ -41,7 +41,7 @@ impl Display for Errata {
 
 impl Debug for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ERROR {}", self.title)?;
+        write!(f, "{}", self.title)?;
         if let Some(desc) = &self.description {
             if !desc.trim().is_empty() {
                 write!(f, "\n{}", desc)?;
