@@ -15,9 +15,10 @@ impl std::fmt::Debug for Error {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, derive_setters::Setters)]
 struct Errata {
     title: String,
+    #[setters(strip_option, into)]
     description: Option<String>,
 }
 
@@ -78,7 +79,8 @@ mod tests {
 
     #[test]
     fn test_error_with_description() {
-        let error = Errata::new("Invalid input", Some("Expected a number"));
+        let error = Errata::new("Invalid input", None::<String>)
+            .set_description("Expected a number");
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
