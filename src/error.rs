@@ -29,16 +29,21 @@ impl Display for Errata {
 
 impl Debug for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "|ERROR {}", self.title)?;
+        write!(f, "ERROR {}", self.title)?;
         if let Some(desc) = &self.description {
-            writeln!(f, "|{}", desc)?;
+            if !desc.trim().is_empty() {
+                write!(f, "\n{}", desc)?;
+            }
         }
-        write!(f, "|")
+        Ok(())
     }
 }
 
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
+
+        
+
         match error {
             Error::Engine(e) => Errata {
                 title: e.to_string(),
@@ -52,6 +57,7 @@ impl From<&Error> for Errata {
 mod tests {
     use super::*;
     use indoc::indoc;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_simple_error() {
@@ -61,9 +67,7 @@ mod tests {
         };
         assert_eq!(
             format!("{:?}", error),
-            indoc! {"
-                |ERROR Something went wrong
-                |"}
+            indoc! {"ERROR Something went wrong"}
         );
     }
 
@@ -76,9 +80,8 @@ mod tests {
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
-                |ERROR Invalid input
-                |Expected a number
-                |"}
+                ERROR Invalid input
+                Expected a number"}
         );
     }
 }

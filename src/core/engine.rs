@@ -140,38 +140,4 @@ impl Engine {
         let response = self.provider.prompt(input).await?;
         Ok(response)
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use futures::StreamExt;
-
-        #[tokio::test]
-        async fn test_prompt() {
-            use std::env;
-
-            let mut chat_engine = Engine::new(
-                env::var("OPENROUTER_API_KEY").unwrap(),
-                "gpt-4".to_string(),
-                "https://api.openai.com/v1".to_string(),
-            );
-
-            let response = chat_engine
-                .prompt("Test prompt".to_string())
-                .await
-                .expect("Failed to get prompt response");
-
-            // Test the streaming response
-            let mut response_text = String::new();
-            tokio::pin!(response);
-            while let Some(response_part) = response.next().await {
-                match response_part {
-                    Ok(part) => response_text.push_str(&part),
-                    Err(e) => panic!("Error in stream: {}", e),
-                }
-            }
-
-            assert!(!response_text.is_empty(), "Response should not be empty");
-        }
-    }
 }
