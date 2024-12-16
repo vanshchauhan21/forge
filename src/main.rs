@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     println!("{:?}", cli);
 
     // Initialize chat engine
-    let engine = Engine::new(cli.key);
+    let engine = Engine::new(cli.key, cli.model, cli.base_url);
 
     // Testing if the connection is successful
     engine.test().await?;

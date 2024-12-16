@@ -49,18 +49,15 @@ fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> 
 }
 
 impl OpenAIProvider {
-    const BASE_URL: &str = "https://api.openai.com/v1";
-    const MODEL: &str = "gpt-4o";
-
-    pub fn new(api_key: String) -> Self {
+    pub fn new(api_key: String, model: String, base_url: String) -> Self {
         let config = OpenAIConfig {
             api_key,
-            base_url: Self::BASE_URL.to_string(),
+            base_url,
         };
         let client = Client::with_config(config);
         Self {
             client,
-            model: Self::MODEL.to_string(),
+            model,
         }
     }
 
@@ -131,13 +128,13 @@ impl OpenAIProvider {
 }
 
 pub struct Engine {
-    provider: OpenAIProvider,
+    provider: OpenAIProvider, 
 }
 
 impl Engine {
-    pub fn new(key: String) -> Self {
+    pub fn new(key: String, model: String, base_url: String) -> Self {
         Self {
-            provider: OpenAIProvider::new(key),
+            provider: OpenAIProvider::new(key, model, base_url),
         }
     }
 
@@ -170,11 +167,18 @@ mod test {
             panic!("❌ OPENROUTER_API_KEY environment variable is not set");
         }
 
-        let chat_engine = Engine::new("You are a test assistant.".to_string()); // Removed second argument
+        let chat_engine = Engine::new(
+            env::var("OPENROUTER_API_KEY").unwrap(),
+            "gpt-4".to_string(),
+            "https://api.openai.com/v1".to_string(),
+        );
 
         match chat_engine.test().await {
             Ok(response) => {
-                assert_eq!(response, true);
+                assert!(
+                    response,
+                    "Expected successful connection test"
+                );
                 println!("✅ Successfully connected to OpenRouter");
                 println!("Response: {}", response);
             }
@@ -195,7 +199,11 @@ mod test {
     /// Helper function to run the test with proper environment setup
     #[tokio::test]
     async fn test_chat_engine_initialization() {
-        let chat_engine = Engine::new("Test system prompt".to_string()); // Removed second argument
+        let chat_engine = Engine::new(
+            env::var("OPENROUTER_API_KEY").unwrap(),
+            "gpt-4".to_string(),
+            "https://api.openai.com/v1".to_string(),
+        );
 
         assert!(
             chat_engine.test().await.is_ok(),
@@ -206,7 +214,11 @@ mod test {
     /// This test will test connection ask a question and get a response and verify the response
     #[tokio::test]
     async fn test_chat_engine_response() {
-        let mut chat_engine = Engine::new("You are a test assistant.".to_string());
+        let mut chat_engine = Engine::new(
+            env::var("OPENROUTER_API_KEY").unwrap(),
+            "gpt-4".to_string(),
+            "https://api.openai.com/v1".to_string(),
+        );
 
         match chat_engine.test().await {
             Ok(_) => {
