@@ -3,20 +3,24 @@ use async_openai::{config::Config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use tracing::info;
 
 #[derive(Debug, Clone)]
-struct OpenAIConfig {
+struct OpenRouterConfig {
     api_key: String,
-    base_url: String,
+    base_url: Option<String>,
 }
 
-impl Config for OpenAIConfig {
+impl Config for OpenRouterConfig {
     fn api_key(&self) -> &str {
         &self.api_key
     }
 
     fn api_base(&self) -> &str {
-        &self.base_url
+        self.base_url
+            .as_ref()
+            .map(|a| a.as_str())
+            .unwrap_or("https://openrouter.ai/api/v1")
     }
 
     fn headers(&self) -> HeaderMap {
@@ -40,8 +44,8 @@ impl Config for OpenAIConfig {
 }
 
 #[derive(Clone)]
-pub struct OpenAIProvider {
-    client: Client<OpenAIConfig>,
+pub struct OpenRouter {
+    client: Client<OpenRouterConfig>,
     model: String,
 }
 
@@ -52,29 +56,16 @@ fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> 
         .build()?)
 }
 
-impl OpenAIProvider {
-    pub fn new(api_key: String, model: String, base_url: String) -> Self {
-        let config = OpenAIConfig { api_key, base_url };
+impl OpenRouter {
+    pub fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
+        let config = OpenRouterConfig { api_key, base_url };
 
         let client = Client::with_config(config);
 
-        Self { client, model }
-    }
-
-    /// Test the connection to OpenRouter
-    pub async fn test(&self) -> Result<bool> {
-        let request = self.test_request()?;
-
-        let response = self.client.chat().create(request).await?;
-
-        let ok = response.choices.iter().any(|c| {
-            c.message
-                .content
-                .iter()
-                .any(|c| c == "Connected successfully!")
-        });
-
-        Ok(ok)
+        Self {
+            client,
+            model: model.unwrap_or("openai/gpt-4o-mini".to_string()),
+        }
     }
 
     fn test_request(&self) -> Result<CreateChatCompletionRequest> {
@@ -94,26 +85,6 @@ impl OpenAIProvider {
         })
     }
 
-    /// Get a streaming response from OpenRouter
-    pub async fn prompt(&self, input: String) -> Result<impl Stream<Item = Result<String>>> {
-        let client = self.client.clone();
-        let request = self.prompt_request(input)?;
-        // Spawn task to handle streaming response
-
-        let stream = client.chat().create_stream(request).await?;
-
-        Ok(stream.map(|a| match a {
-            Ok(response) => {
-                if let Some(ref delta) = response.choices[0].delta.content {
-                    Ok(delta.to_string())
-                } else {
-                    Err(Error::empty_response("OpenAI"))
-                }
-            }
-            Err(e) => Err(e.into()),
-        }))
-    }
-
     fn prompt_request(&self, input: String) -> Result<CreateChatCompletionRequest> {
         Ok(CreateChatCompletionRequest {
             model: self.model.clone(),
@@ -127,23 +98,78 @@ impl OpenAIProvider {
     }
 }
 
-pub struct Engine {
-    provider: OpenAIProvider,
+impl LLMProvider for OpenRouter {
+    fn name(&self) -> &'static str {
+        "Open Router"
+    }
+    /// Test the connection to OpenRouter
+    async fn test(&self) -> Result<bool> {
+        let request = self.test_request()?;
+
+        let response = self.client.chat().create(request).await?;
+
+        let ok = response.choices.iter().any(|c| {
+            c.message
+                .content
+                .iter()
+                .any(|c| c == "Connected successfully!")
+        });
+
+        Ok(ok)
+    }
+
+    /// Get a streaming response from OpenRouter
+    async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>> {
+        let client = self.client.clone();
+        let request = self.prompt_request(input)?;
+        // Spawn task to handle streaming response
+
+        let stream = client.chat().create_stream(request).await?;
+
+        Ok(Box::new(stream.map(|a| match a {
+            Ok(response) => {
+                if let Some(ref delta) = response.choices[0].delta.content {
+                    Ok(delta.to_string())
+                } else {
+                    Err(Error::empty_response("OpenAI"))
+                }
+            }
+            Err(e) => Err(e.into()),
+        })))
+    }
 }
 
-impl Engine {
-    pub fn new(key: String, model: String, base_url: String) -> Self {
-        Self {
-            provider: OpenAIProvider::new(key, model, base_url),
-        }
-    }
+pub trait LLMProvider {
+    fn name(&self) -> &'static str;
+    async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>>;
+    async fn test(&self) -> Result<bool>;
+}
 
+pub struct Engine<Provider> {
+    provider: Provider,
+}
+
+impl<P: LLMProvider> Engine<P> {
     pub async fn test(&self) -> Result<bool> {
-        self.provider.test().await
+        let status = self.provider.test().await?;
+
+        info!(
+            "Connection Successfully established with {}",
+            self.provider.name()
+        );
+
+        Ok(status)
     }
 
-    pub async fn prompt(&mut self, input: String) -> Result<impl Stream<Item = Result<String>>> {
-        let response = self.provider.prompt(input).await?;
-        Ok(response)
+    pub async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>> {
+        self.provider.prompt(input).await
+    }
+}
+
+impl Engine<OpenRouter> {
+    pub fn open_router(key: String, model: Option<String>, base_url: Option<String>) -> Self {
+        Self {
+            provider: OpenRouter::new(key, model, base_url),
+        }
     }
 }
