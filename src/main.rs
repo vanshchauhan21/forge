@@ -2,14 +2,14 @@ mod core;
 mod error;
 mod ui;
 
-use core::ChatEngine;
+use core::Engine;
 use error::Result;
 use ui::ChatUI;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize chat engine
-    let engine = ChatEngine::new(
+    let engine = Engine::new(
         "You are an AI assistant with expertise in programming, software development, and technology. \
         You excel at providing clear, accurate, and well-structured responses. When discussing code, you use proper \
         formatting and explain key concepts thoroughly. You are direct and professional, focusing on delivering \

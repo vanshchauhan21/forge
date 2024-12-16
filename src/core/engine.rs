@@ -1,12 +1,5 @@
 use super::error::{Error, Result};
-use async_openai::{
-    config::Config,
-    types::{
-        ChatCompletionRequestMessage, ChatCompletionRequestMessageArgs,
-        CreateChatCompletionRequest, Role,
-    },
-    Client,
-};
+use async_openai::{config::Config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
@@ -137,11 +130,11 @@ impl OpenAIProvider {
     }
 }
 
-pub struct ChatEngine {
+pub struct Engine {
     provider: OpenAIProvider,
 }
 
-impl ChatEngine {
+impl Engine {
     pub fn new(system_prompt: String) -> Self {
         Self {
             provider: OpenAIProvider::new(system_prompt),
@@ -165,7 +158,7 @@ mod test {
     //! of the chat engine. To run these tests, make sure you have set the
     //! OPENROUTER_API_KEY environment variable.
 
-    use crate::ChatEngine; // Changed from code_forge to crate
+    use crate::Engine; // Changed from code_forge to crate
     use futures::StreamExt;
     use std::env;
 
@@ -177,7 +170,7 @@ mod test {
             panic!("❌ OPENROUTER_API_KEY environment variable is not set");
         }
 
-        let chat_engine = ChatEngine::new("You are a test assistant.".to_string()); // Removed second argument
+        let chat_engine = Engine::new("You are a test assistant.".to_string()); // Removed second argument
 
         match chat_engine.test().await {
             Ok(response) => {
@@ -206,7 +199,7 @@ mod test {
     /// Helper function to run the test with proper environment setup
     #[tokio::test]
     async fn test_chat_engine_initialization() {
-        let chat_engine = ChatEngine::new("Test system prompt".to_string()); // Removed second argument
+        let chat_engine = Engine::new("Test system prompt".to_string()); // Removed second argument
 
         assert!(
             chat_engine.test().await.is_ok(),
@@ -217,7 +210,7 @@ mod test {
     /// This test will test connection ask a question and get a response and verify the response
     #[tokio::test]
     async fn test_chat_engine_response() {
-        let mut chat_engine = ChatEngine::new("You are a test assistant.".to_string());
+        let mut chat_engine = Engine::new("You are a test assistant.".to_string());
 
         match chat_engine.test().await {
             Ok(_) => {

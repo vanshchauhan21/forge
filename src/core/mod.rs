@@ -1,4 +1,4 @@
 mod engine;
 pub mod error;
 
-pub use engine::ChatEngine;
+pub use engine::Engine;

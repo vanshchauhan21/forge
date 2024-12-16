@@ -1,13 +1,13 @@
 use crate::error::Result;
 
-use crate::core::ChatEngine;
+use crate::core::Engine;
 
 pub struct ChatUI {
-    engine: ChatEngine,
+    engine: Engine,
 }
 
 impl ChatUI {
-    pub fn new(engine: ChatEngine) -> Self {
+    pub fn new(engine: Engine) -> Self {
         ChatUI { engine }
     }
 
