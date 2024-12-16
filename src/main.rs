@@ -1,5 +1,5 @@
 mod chat_engine;
-mod chat_ui;
+mod ui;
 
 use std::error::Error;
 use futures::stream::Stream;
@@ -7,7 +7,7 @@ use futures::StreamExt;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use chat_engine::ChatEngine;
-use chat_ui::ChatUI;
+use ui::ChatUI;
 
 async fn create_response_stream(
     mut chat_engine: ChatEngine,
