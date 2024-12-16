@@ -1,7 +1,7 @@
-mod engine;
+mod core;
 mod ui;
 
-use engine::ChatEngine;
+use core::ChatEngine;
 use futures::stream::Stream;
 use std::error::Error;
 use tokio::sync::mpsc;

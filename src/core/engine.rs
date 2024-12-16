@@ -1,3 +1,4 @@
+use super::error::Result;
 use async_openai::{
     config::Config,
     types::{
@@ -17,11 +18,11 @@ const OPENROUTER_BASE_URL: &str = "https://openrouter.ai/api/v1";
 const MODEL_NAME: &str = "anthropic/claude-3-sonnet";
 
 #[derive(Clone)]
-struct OpenRouterConfig {
+struct OpenRouterProvider {
     api_key: String,
 }
 
-impl Config for OpenRouterConfig {
+impl Config for OpenRouterProvider {
     fn api_key(&self) -> &str {
         &self.api_key
     }
@@ -51,15 +52,15 @@ impl Config for OpenRouterConfig {
 }
 
 #[derive(Clone)]
-pub struct Agent {
-    client: Client<OpenRouterConfig>,
+pub struct Provider {
+    client: Client<OpenRouterProvider>,
     messages: Vec<ChatCompletionRequestMessage>,
 }
 
-impl Agent {
+impl Provider {
     pub fn new(system: String) -> Self {
         let api_key = env::var("OPENROUTER_API_KEY").expect("OPENROUTER_API_KEY must be set");
-        let config = OpenRouterConfig { api_key };
+        let config = OpenRouterProvider { api_key };
         let client = Client::with_config(config);
 
         let messages = vec![ChatCompletionRequestMessageArgs::default()
@@ -72,9 +73,7 @@ impl Agent {
     }
 
     /// Test the connection to OpenRouter
-    pub async fn test_connection(
-        &self,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn test(&self) -> Result<bool> {
         let request = CreateChatCompletionRequest {
             model: MODEL_NAME.to_string(),
             messages: vec![
@@ -89,18 +88,22 @@ impl Agent {
                     .build()
                     .unwrap(),
             ],
-            temperature: Some(0.7),
+            temperature: Some(0.0),
             stream: Some(false),
             max_tokens: Some(50),
             ..Default::default()
         };
 
         let response = self.client.chat().create(request).await?;
-        Ok(response.choices[0]
-            .message
-            .content
-            .clone()
-            .unwrap_or_default())
+
+        let ok = response.choices.iter().any(|c| {
+            c.message
+                .content
+                .iter()
+                .any(|c| c == "Connected successfully!")
+        });
+
+        Ok(ok)
     }
 
     /// Get a streaming response from OpenRouter
@@ -176,24 +179,22 @@ impl Agent {
 }
 
 pub struct ChatEngine {
-    agent: Agent,
+    provider: Provider,
 }
 
 impl ChatEngine {
     pub fn new(system_prompt: String) -> Self {
         Self {
-            agent: Agent::new(system_prompt),
+            provider: Provider::new(system_prompt),
         }
     }
 
-    pub async fn test_connection(
-        &self,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        self.agent.test_connection().await
+    pub async fn test_connection(&self) -> Result<bool> {
+        self.provider.test().await
     }
 
     pub async fn process_message(&mut self, input: String) -> impl Stream<Item = String> + Unpin {
-        self.agent.stream_response(input).await
+        self.provider.stream_response(input).await
     }
 }
 
