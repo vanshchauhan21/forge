@@ -3,7 +3,7 @@ mod error;
 mod ui;
 
 use clap::{Parser, ValueEnum};
-use core::Engine;
+use core::{OpenRouter, Provider};
 use error::Result;
 use tracing::{info, Level};
 use tracing_subscriber::filter::LevelFilter;
@@ -60,10 +60,10 @@ async fn main() -> Result<()> {
         .init();
 
     // Initialize chat engine
-    let engine = Engine::open_router(cli.key, cli.model.clone(), cli.base_url.clone());
+    let provider = Provider::open_router(cli.key, cli.model.clone(), cli.base_url.clone());
 
     // Testing if the connection is successful
-    engine.test().await?;
+    provider.test().await?;
 
     Ok(())
 }

@@ -1,9 +1,9 @@
 use super::error::{Error, Result};
+use super::provider::{Provider, InnerProvider};
 use async_openai::{config::Config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use tracing::info;
 
 #[derive(Debug, Clone)]
 struct OpenRouterConfig {
@@ -57,7 +57,7 @@ fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> 
 }
 
 impl OpenRouter {
-    pub fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
+    fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         let config = OpenRouterConfig { api_key, base_url };
 
         let client = Client::with_config(config);
@@ -98,7 +98,7 @@ impl OpenRouter {
     }
 }
 
-impl LLMProvider for OpenRouter {
+impl InnerProvider for OpenRouter {
     fn name(&self) -> &'static str {
         "Open Router"
     }
@@ -139,37 +139,8 @@ impl LLMProvider for OpenRouter {
     }
 }
 
-pub trait LLMProvider {
-    fn name(&self) -> &'static str;
-    async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>>;
-    async fn test(&self) -> Result<bool>;
-}
-
-pub struct Engine<Provider> {
-    provider: Provider,
-}
-
-impl<P: LLMProvider> Engine<P> {
-    pub async fn test(&self) -> Result<bool> {
-        let status = self.provider.test().await?;
-
-        info!(
-            "Connection Successfully established with {}",
-            self.provider.name()
-        );
-
-        Ok(status)
-    }
-
-    pub async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>> {
-        self.provider.prompt(input).await
-    }
-}
-
-impl Engine<OpenRouter> {
-    pub fn open_router(key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        Self {
-            provider: OpenRouter::new(key, model, base_url),
-        }
+impl Provider<OpenRouter> {
+    pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
+        Provider::new(OpenRouter::new(api_key, model, base_url))
     }
 }
