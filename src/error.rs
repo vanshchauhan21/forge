@@ -41,13 +41,16 @@ impl Debug for Errata {
 
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
-
-        
-
         match error {
-            Error::Engine(e) => Errata {
-                title: e.to_string(),
-                description: None,
+            Error::Engine(e) => match e {
+                crate::core::error::Error::OpenAI(err) => Errata {
+                    title: "OpenAI API Error".to_string(),
+                    description: Some(err.to_string()),
+                },
+                crate::core::error::Error::EmptyResponse(provider) => Errata {
+                    title: format!("Empty Response Error"),
+                    description: Some(format!("No content received from {}", provider)),
+                },
             },
         }
     }
