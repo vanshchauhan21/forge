@@ -174,11 +174,7 @@ mod test {
 
         match chat_engine.test().await {
             Ok(response) => {
-                assert!(
-                    response.contains("Connected successfully"),
-                    "Expected connection test response, got: {}",
-                    response
-                );
+                assert_eq!(response, true);
                 println!("✅ Successfully connected to OpenRouter");
                 println!("Response: {}", response);
             }
@@ -214,9 +210,9 @@ mod test {
 
         match chat_engine.test().await {
             Ok(_) => {
-                let mut response = chat_engine.prompt("who is PM of India".to_string()).await;
+                let mut response = chat_engine.prompt("who is PM of India".to_string()).await.unwrap();
                 let mut final_response = String::new();
-                while let Some(response_part) = response.next().await {
+                while let Some(Ok(response_part)) = response.next().await {
                     final_response.push_str(&response_part);
                 }
                 println!("Response: {}", final_response);
