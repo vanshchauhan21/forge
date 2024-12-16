@@ -135,9 +135,9 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(system_prompt: String) -> Self {
+    pub fn new(key: String) -> Self {
         Self {
-            provider: OpenAIProvider::new(system_prompt),
+            provider: OpenAIProvider::new(key),
         }
     }
 

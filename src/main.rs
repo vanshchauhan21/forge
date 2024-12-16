@@ -1,29 +1,34 @@
 mod core;
 mod error;
-mod ui;
 
+use clap::Parser;
 use core::Engine;
 use error::Result;
-use ui::ChatUI;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// API Key to be used
+    key: String,
+
+    /// Model to be used
+    model: String,
+
+    /// Base URL to be used
+    base_url: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    println!("{:?}", cli);
+
     // Initialize chat engine
-    let engine = Engine::new(
-        "You are an AI assistant with expertise in programming, software development, and technology. \
-        You excel at providing clear, accurate, and well-structured responses. When discussing code, you use proper \
-        formatting and explain key concepts thoroughly. You are direct and professional, focusing on delivering \
-        high-quality technical assistance while maintaining a helpful demeanor.".to_string()     
-    );
+    let engine = Engine::new(cli.key);
 
     // Testing if the connection is successful
     engine.test().await?;
-
-    // Create chat UI and channels
-    let chat_ui = ChatUI::new(engine);
-
-    // Start the chat interface
-    chat_ui.run().await?;
 
     Ok(())
 }
