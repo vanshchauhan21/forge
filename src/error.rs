@@ -21,6 +21,15 @@ struct Errata {
     description: Option<String>,
 }
 
+impl Errata {
+    fn new(title: impl Into<String>, description: Option<impl Into<String>>) -> Self {
+        Self {
+            title: title.into(),
+            description: description.map(|d| d.into()),
+        }
+    }
+}
+
 impl Display for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.title)
@@ -43,14 +52,10 @@ impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
             Error::Engine(e) => match e {
-                crate::core::error::Error::OpenAI(err) => Errata {
-                    title: "OpenAI API Error".to_string(),
-                    description: Some(err.to_string()),
-                },
-                crate::core::error::Error::EmptyResponse(provider) => Errata {
-                    title: format!("Empty Response Error"),
-                    description: Some(format!("No content received from {}", provider)),
-                },
+                crate::core::error::Error::OpenAI(err) => 
+                    Errata::new("OpenAI API Error", Some(err.to_string())),
+                crate::core::error::Error::EmptyResponse(provider) => 
+                    Errata::new("Empty Response Error", Some(format!("No content received from {}", provider))),
             },
         }
     }
@@ -64,10 +69,7 @@ mod tests {
 
     #[test]
     fn test_simple_error() {
-        let error = Errata {
-            title: "Something went wrong".to_string(),
-            description: None,
-        };
+        let error = Errata::new("Something went wrong", None::<String>);
         assert_eq!(
             format!("{:?}", error),
             indoc! {"ERROR Something went wrong"}
@@ -76,10 +78,7 @@ mod tests {
 
     #[test]
     fn test_error_with_description() {
-        let error = Errata {
-            title: "Invalid input".to_string(),
-            description: Some("Expected a number".to_string()),
-        };
+        let error = Errata::new("Invalid input", Some("Expected a number"));
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
