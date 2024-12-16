@@ -23,7 +23,7 @@ pub struct Errata {
 }
 
 impl Errata {
-    fn new(title: impl Into<String>) -> Self {
+    pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
             description: None,
