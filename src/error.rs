@@ -33,7 +33,7 @@ impl Debug for Errata {
         if let Some(desc) = &self.description {
             writeln!(f, "|{}", desc)?;
         }
-        Ok(())
+        write!(f, "|")
     }
 }
 
