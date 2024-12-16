@@ -29,9 +29,9 @@ impl Display for Errata {
 
 impl Debug for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "ERROR {}", self.title)?;
+        writeln!(f, "|ERROR {}", self.title)?;
         if let Some(desc) = &self.description {
-            writeln!(f, "{}", desc)?;
+            writeln!(f, "|{}", desc)?;
         }
         Ok(())
     }
