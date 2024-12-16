@@ -9,13 +9,13 @@ use crossterm::{
 use futures::stream::Stream;
 use futures::StreamExt;
 use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders, Paragraph, Wrap},
-    style::{Style, Modifier},
     layout::Margin,
+    prelude::*,
+    style::{Modifier, Style},
+    widgets::{Block, Borders, Paragraph, Wrap},
 };
-use tokio::sync::{mpsc, Mutex};
 use std::sync::Arc;
+use tokio::sync::{mpsc, Mutex};
 
 #[derive(Clone)]
 pub struct ChatState {
@@ -33,7 +33,7 @@ impl ChatState {
             messages: Vec::new(),
             streaming_response: None,
         };
-        
+
         // Add welcome message to initial state
         state.messages.push(
             "Welcome to Code Forge Chat, powered by Claude 3 Sonnet.\n\
@@ -41,7 +41,7 @@ impl ChatState {
             Feel free to ask questions about programming, architecture, best practices, or any tech-related topics.\n\
             Type your message and press Enter to send. Press Ctrl+C or Esc to exit.".to_string()
         );
-        
+
         state
     }
 
@@ -124,13 +124,16 @@ impl ChatUI {
         for line in text.lines() {
             // Calculate how many lines this text will wrap to
             let line_length = line.chars().count() as u16;
-            let wrapped_lines = (line_length + width - 1) / width;
+            let wrapped_lines = line_length.div_ceil(width);
             height += wrapped_lines.max(1); // At least one line even if empty
         }
         height
     }
 
-    fn render_chat_ui(frame: &mut Frame, state: &ChatState) -> Result<(), Box<dyn Error + Send + Sync>> {
+    fn render_chat_ui(
+        frame: &mut Frame,
+        state: &ChatState,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -148,13 +151,15 @@ impl ChatUI {
         let messages_text = display_messages.join("\n\n");
 
         // Get the inner area dimensions accounting for borders
-        let messages_block = Block::default().borders(Borders::ALL).title("Chat Messages");
+        let messages_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Chat Messages");
         let inner_area = layout[0].inner(&Margin::new(1, 1));
-        
+
         // Calculate total content height including message separators
-        let content_height = Self::calculate_wrapped_height(&messages_text, inner_area.width) + 
-            (display_messages.len().saturating_sub(1) as u16); // Add space for \n\n separators
-        
+        let content_height = Self::calculate_wrapped_height(&messages_text, inner_area.width)
+            + (display_messages.len().saturating_sub(1) as u16); // Add space for \n\n separators
+
         // Calculate scroll offset to keep the latest content visible
         let viewport_height = inner_area.height;
         let scroll_offset = content_height.saturating_sub(viewport_height);
@@ -169,7 +174,7 @@ impl ChatUI {
         // Input area with cursor
         let input_len = state.input.len();
         let cursor_style = Style::default().add_modifier(Modifier::REVERSED);
-        
+
         let input_text = if state.cursor_position < input_len {
             let (before, at_cursor) = state.input.split_at(state.cursor_position);
             let (at_cursor, after) = at_cursor.split_at(1);
@@ -187,14 +192,18 @@ impl ChatUI {
             Line::from(vec![Span::styled(" ", cursor_style)])
         };
 
-        let input_block = Paragraph::new(input_text)
-            .block(Block::default().borders(Borders::ALL).title("Input"));
+        let input_block =
+            Paragraph::new(input_text).block(Block::default().borders(Borders::ALL).title("Input"));
         frame.render_widget(input_block, layout[1]);
 
         Ok(())
     }
 
-    async fn handle_key_event(&mut self, key: KeyCode, input_tx: &mpsc::Sender<String>) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn handle_key_event(
+        &mut self,
+        key: KeyCode,
+        input_tx: &mpsc::Sender<String>,
+    ) -> Result<bool, Box<dyn Error + Send + Sync>> {
         let mut state = self.state.lock().await;
         match key {
             KeyCode::Enter => {
@@ -206,43 +215,42 @@ impl ChatUI {
                     state.cursor_position = 0;
                     input_tx.send(input).await?;
                 }
-            },
+            }
             KeyCode::Char(c) => {
                 state.insert_char(c);
-            },
+            }
             KeyCode::Backspace => {
                 state.backspace();
-            },
+            }
             KeyCode::Delete => {
                 state.delete();
-            },
+            }
             KeyCode::Left => {
                 if state.cursor_position > 0 {
                     state.cursor_position -= 1;
                 }
-            },
+            }
             KeyCode::Right => {
                 if state.cursor_position < state.input.len() {
                     state.cursor_position += 1;
                 }
-            },
+            }
             KeyCode::Home => {
                 state.cursor_position = 0;
-            },
+            }
             KeyCode::End => {
                 state.cursor_position = state.input.len();
-            },
+            }
             KeyCode::Esc => {
                 return Ok(true);
             }
             _ => {}
         }
-        
+
         let state_snapshot = state.clone();
         drop(state);
-        self.terminal.draw(|frame| {
-            Self::render_chat_ui(frame, &state_snapshot).unwrap()
-        })?;
+        self.terminal
+            .draw(|frame| Self::render_chat_ui(frame, &state_snapshot).unwrap())?;
 
         Ok(false)
     }
@@ -271,7 +279,7 @@ impl ChatUI {
         tokio::spawn(async move {
             loop {
                 if let Ok(event) = event::read() {
-                    if let Err(_) = event_tx_clone.send(event).await {
+                    if event_tx_clone.send(event).await.is_err() {
                         break;
                     }
                 }
@@ -280,19 +288,16 @@ impl ChatUI {
 
         // Initial render
         let state_snapshot = self.state.lock().await.clone();
-        self.terminal.draw(|frame| {
-            Self::render_chat_ui(frame, &state_snapshot).unwrap()
-        })?;
+        self.terminal
+            .draw(|frame| Self::render_chat_ui(frame, &state_snapshot).unwrap())?;
 
         // Main event loop
         loop {
             tokio::select! {
                 Some(event) = event_rx.recv() => {
                     if let Event::Key(key) = event {
-                        if key.kind == KeyEventKind::Press {
-                            if self.handle_key_event(key.code, &input_tx).await? {
-                                break;
-                            }
+                        if key.kind == KeyEventKind::Press && self.handle_key_event(key.code, &input_tx).await? {
+                            break;
                         }
                     }
                 }
@@ -305,7 +310,7 @@ impl ChatUI {
                     }
                     let state_snapshot = state.clone();
                     drop(state);
-                    
+
                     self.terminal.draw(|frame| {
                         Self::render_chat_ui(frame, &state_snapshot).unwrap()
                     })?;

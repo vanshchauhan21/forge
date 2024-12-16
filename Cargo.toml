@@ -17,7 +17,3 @@ serde_json = "1.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
-
-[[test]]
-name = "integration_test"
-path = "tests/integration_test.rs"
