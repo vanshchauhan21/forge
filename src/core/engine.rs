@@ -117,7 +117,7 @@ impl OpenAIProvider {
                 if let Some(ref delta) = response.choices[0].delta.content {
                     Ok(delta.to_string())
                 } else {
-                    Err(Error::EmptyResponse)
+                    Err(Error::EmptyResponse("OpenAI".to_string())) // Updated to include provider name
                 }
             }
             Err(e) => Err(e.into()),

@@ -1,12 +1,15 @@
 use async_openai::error::OpenAIError;
 use derive_more::derive::{Display, From};
 
-#[derive(From, Debug, Display)]
+#[derive(From, Display, Debug)]
 pub enum Error {
+    // Custom display message for OpenAI error
+    #[display("OpenAI Error: {}", _0)]
     OpenAI(OpenAIError),
 
-    // TODO: add name of the provider in this error
-    EmptyResponse,
+    // Custom display message for EmptyResponse
+    #[display("Empty Response from provider: {}", _0)]
+    EmptyResponse(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

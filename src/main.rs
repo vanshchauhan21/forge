@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     engine.test().await?;
 
     // Create chat UI and channels
-    let mut chat_ui = ChatUI::new(engine);
+    let chat_ui = ChatUI::new(engine);
 
     // Start the chat interface
     chat_ui.run().await?;
