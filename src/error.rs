@@ -79,7 +79,7 @@ mod tests {
         let error = Errata::new("Something went wrong");
         assert_eq!(
             format!("{:?}", error),
-            indoc! {"ERROR Something went wrong"}
+            indoc! {"Something went wrong"}
         );
     }
 
@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
-                ERROR Invalid input
+                Invalid input
                 Expected a number"}
         );
     }
