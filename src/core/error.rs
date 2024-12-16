@@ -13,7 +13,7 @@ impl Error {
     pub fn empty_response(provider: impl Into<String>) -> Self {
         Error::Provider {
             provider: provider.into(),
-            error: ProviderError::EmptyResponse("No content received".to_string()),
+            error: ProviderError::EmptyResponse,
         }
     }
 }
@@ -24,16 +24,7 @@ pub enum ProviderError {
     OpenAI(OpenAIError),
 
     // Custom display message for EmptyResponse
-    EmptyResponse(String),
-}
-
-impl std::fmt::Display for ProviderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ProviderError::OpenAI(err) => write!(f, "{}", err),
-            ProviderError::EmptyResponse(msg) => write!(f, "{}", msg),
-        }
-    }
+    EmptyResponse,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

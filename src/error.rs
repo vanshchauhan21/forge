@@ -2,6 +2,8 @@ use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::From;
 
+use crate::core::error::ProviderError;
+
 #[derive(From)]
 pub enum Error {
     Engine(crate::core::error::Error),
@@ -53,9 +55,14 @@ impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
             Error::Engine(e) => match e {
-                crate::core::error::Error::Provider { provider, error } => 
-                    Errata::new("Provider Error")
-                        .description(format!("{} error: {}", provider, error)),
+                crate::core::error::Error::Provider { provider, error } => {
+                    Errata::new(format!("{} Provider Error", provider)).description(match error {
+                        ProviderError::OpenAI(err) => format!("{}", err),
+                        ProviderError::EmptyResponse => {
+                            "The provider returned an empty response".to_string()
+                        }
+                    })
+                }
             },
         }
     }
@@ -78,8 +85,7 @@ mod tests {
 
     #[test]
     fn test_error_with_description() {
-        let error = Errata::new("Invalid input")
-            .description("Expected a number");
+        let error = Errata::new("Invalid input").description("Expected a number");
         assert_eq!(
             format!("{:?}", error),
             indoc! {"
