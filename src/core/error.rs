@@ -27,6 +27,15 @@ pub enum ProviderError {
     EmptyResponse(String),
 }
 
+impl std::fmt::Display for ProviderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProviderError::OpenAI(err) => write!(f, "{}", err),
+            ProviderError::EmptyResponse(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl From<OpenAIError> for Error {
