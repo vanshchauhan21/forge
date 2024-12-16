@@ -1,4 +1,4 @@
-use super::error::Result;
+use super::error::{Error, Result};
 use async_openai::{
     config::Config,
     types::{
@@ -9,36 +9,27 @@ use async_openai::{
 };
 use futures::stream::Stream;
 use futures::StreamExt;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use std::env;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
-
-const OPENROUTER_BASE_URL: &str = "https://openrouter.ai/api/v1";
-const MODEL_NAME: &str = "anthropic/claude-3-sonnet";
+use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 
 #[derive(Clone)]
-struct OpenRouterProvider {
+struct OpenAIConfig {
     api_key: String,
+    base_url: String,
 }
 
-impl Config for OpenRouterProvider {
+impl Config for OpenAIConfig {
     fn api_key(&self) -> &str {
         &self.api_key
     }
 
     fn api_base(&self) -> &str {
-        OPENROUTER_BASE_URL
+        &self.base_url
     }
 
     fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
-        );
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        headers.insert("X-Title", HeaderValue::from_static("Code Forge Chat"));
+        headers.insert("X-Title", HeaderValue::from_static("Tailcall"));
         headers
     }
 
@@ -52,47 +43,37 @@ impl Config for OpenRouterProvider {
 }
 
 #[derive(Clone)]
-pub struct Provider {
-    client: Client<OpenRouterProvider>,
-    messages: Vec<ChatCompletionRequestMessage>,
+pub struct OpenAIProvider {
+    client: Client<OpenAIConfig>,
+    model: String,
 }
 
-impl Provider {
-    pub fn new(system: String) -> Self {
-        let api_key = env::var("OPENROUTER_API_KEY").expect("OPENROUTER_API_KEY must be set");
-        let config = OpenRouterProvider { api_key };
+fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> {
+    Ok(ChatCompletionRequestMessageArgs::default()
+        .role(role)
+        .content(input)
+        .build()?)
+}
+
+impl OpenAIProvider {
+    const BASE_URL: &str = "https://api.openai.com/v1";
+    const MODEL: &str = "gpt-4o";
+
+    pub fn new(api_key: String) -> Self {
+        let config = OpenAIConfig {
+            api_key,
+            base_url: Self::BASE_URL.to_string(),
+        };
         let client = Client::with_config(config);
-
-        let messages = vec![ChatCompletionRequestMessageArgs::default()
-            .role(Role::System)
-            .content(system.clone())
-            .build()
-            .unwrap()];
-
-        Self { client, messages }
+        Self {
+            client,
+            model: Self::MODEL.to_string(),
+        }
     }
 
     /// Test the connection to OpenRouter
     pub async fn test(&self) -> Result<bool> {
-        let request = CreateChatCompletionRequest {
-            model: MODEL_NAME.to_string(),
-            messages: vec![
-                ChatCompletionRequestMessageArgs::default()
-                    .role(Role::System)
-                    .content("You are a helpful AI assistant.")
-                    .build()
-                    .unwrap(),
-                ChatCompletionRequestMessageArgs::default()
-                    .role(Role::User)
-                    .content("Respond with 'Connected successfully!' if you receive this message.")
-                    .build()
-                    .unwrap(),
-            ],
-            temperature: Some(0.0),
-            stream: Some(false),
-            max_tokens: Some(50),
-            ..Default::default()
-        };
+        let request = self.test_request()?;
 
         let response = self.client.chat().create(request).await?;
 
@@ -106,95 +87,73 @@ impl Provider {
         Ok(ok)
     }
 
-    /// Get a streaming response from OpenRouter
-    pub async fn stream_response(&mut self, input: String) -> impl Stream<Item = String> + Unpin {
-        let (tx, rx) = mpsc::channel::<String>(100);
-
-        // Add user message to history
-        self.messages.push(
-            ChatCompletionRequestMessageArgs::default()
-                .role(Role::User)
-                .content(input)
-                .build()
-                .unwrap(),
-        );
-
-        // Create chat completion request
-        let request = CreateChatCompletionRequest {
-            model: MODEL_NAME.to_string(),
-            messages: self.messages.clone(),
-            temperature: Some(0.7),
-            stream: Some(true),
-            max_tokens: Some(1000),
+    fn test_request(&self) -> Result<CreateChatCompletionRequest> {
+        Ok(CreateChatCompletionRequest {
+            model: self.model.to_string(),
+            messages: vec![
+                new_message(Role::System, "You are a helpful AI assistant.")?,
+                new_message(
+                    Role::User,
+                    "Respond with 'Connected successfully!' if you receive this message.",
+                )?,
+            ],
+            temperature: Some(0.0),
+            stream: Some(false),
+            max_tokens: Some(50),
             ..Default::default()
-        };
+        })
+    }
 
+    /// Get a streaming response from OpenRouter
+    pub async fn prompt(&self, input: String) -> Result<impl Stream<Item = Result<String>>> {
         let client = self.client.clone();
-        let messages = self.messages.clone();
-
+        let request = self.prompt_request(input)?;
         // Spawn task to handle streaming response
-        tokio::spawn(async move {
-            match client.chat().create_stream(request).await {
-                Ok(mut stream) => {
-                    let mut current_content = String::new();
 
-                    while let Some(result) = stream.next().await {
-                        match result {
-                            Ok(response) => {
-                                if let Some(ref delta) = response.choices[0].delta.content {
-                                    current_content.push_str(delta);
-                                    let _ = tx.send(delta.to_string()).await;
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("Error in stream: {}", e);
-                                let _ = tx.send(format!("Error: {}", e)).await;
-                                break;
-                            }
-                        }
-                    }
+        let stream = client.chat().create_stream(request).await?;
 
-                    // Add assistant's message to history and send newline to signal completion
-                    if !current_content.is_empty() {
-                        let mut messages = messages;
-                        messages.push(
-                            ChatCompletionRequestMessageArgs::default()
-                                .role(Role::Assistant)
-                                .content(current_content)
-                                .build()
-                                .unwrap(),
-                        );
-                        let _ = tx.send("\n".to_string()).await;
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Failed to create stream: {}", e);
-                    let _ = tx.send(format!("Error: {}", e)).await;
+        Ok(stream.map(|a| match a {
+            Ok(response) => {
+                if let Some(ref delta) = response.choices[0].delta.content {
+                    Ok(delta.to_string())
+                } else {
+                    Err(Error::EmptyResponse)
                 }
             }
-        });
+            Err(e) => Err(e.into()),
+        }))
+    }
 
-        ReceiverStream::new(rx)
+    fn prompt_request(&self, input: String) -> Result<CreateChatCompletionRequest> {
+        Ok(CreateChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![new_message(Role::User, &input)?],
+
+            // TODO: Make temperature configurable
+            temperature: Some(0.7),
+            stream: Some(true),
+            ..Default::default()
+        })
     }
 }
 
 pub struct ChatEngine {
-    provider: Provider,
+    provider: OpenAIProvider,
 }
 
 impl ChatEngine {
     pub fn new(system_prompt: String) -> Self {
         Self {
-            provider: Provider::new(system_prompt),
+            provider: OpenAIProvider::new(system_prompt),
         }
     }
 
-    pub async fn test_connection(&self) -> Result<bool> {
+    pub async fn test(&self) -> Result<bool> {
         self.provider.test().await
     }
 
-    pub async fn process_message(&mut self, input: String) -> impl Stream<Item = String> + Unpin {
-        self.provider.stream_response(input).await
+    pub async fn prompt(&mut self, input: String) -> Result<impl Stream<Item = Result<String>>> {
+        self.provider.prompt(input).await
     }
 }
 
@@ -220,7 +179,7 @@ mod test {
 
         let chat_engine = ChatEngine::new("You are a test assistant.".to_string()); // Removed second argument
 
-        match chat_engine.test_connection().await {
+        match chat_engine.test().await {
             Ok(response) => {
                 assert!(
                     response.contains("Connected successfully"),
@@ -250,7 +209,7 @@ mod test {
         let chat_engine = ChatEngine::new("Test system prompt".to_string()); // Removed second argument
 
         assert!(
-            chat_engine.test_connection().await.is_ok(),
+            chat_engine.test().await.is_ok(),
             "Chat engine should initialize and connect successfully"
         );
     }
@@ -260,11 +219,9 @@ mod test {
     async fn test_chat_engine_response() {
         let mut chat_engine = ChatEngine::new("You are a test assistant.".to_string());
 
-        match chat_engine.test_connection().await {
+        match chat_engine.test().await {
             Ok(_) => {
-                let mut response = chat_engine
-                    .process_message("who is PM of India".to_string())
-                    .await;
+                let mut response = chat_engine.prompt("who is PM of India".to_string()).await;
                 let mut final_response = String::new();
                 while let Some(response_part) = response.next().await {
                     final_response.push_str(&response_part);
