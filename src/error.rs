@@ -53,10 +53,9 @@ impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
             Error::Engine(e) => match e {
-                crate::core::error::Error::OpenAI(err) => 
-                    Errata::new("OpenAI API Error").description(err.to_string()),
-                crate::core::error::Error::EmptyResponse(provider) => 
-                    Errata::new("Empty Response Error").description(format!("No content received from {}", provider)),
+                crate::core::error::Error::Provider { provider, error } => 
+                    Errata::new("Provider Error")
+                        .description(format!("{} error: {}", provider, error)),
             },
         }
     }
