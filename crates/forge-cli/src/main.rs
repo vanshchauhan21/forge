@@ -1,5 +1,5 @@
 mod error;
-mod ui;
+
 use clap::{Parser, ValueEnum};
 use error::Result;
 use forge_provider::Provider;
