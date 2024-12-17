@@ -98,6 +98,7 @@ impl OpenRouter {
     }
 }
 
+#[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
     fn name(&self) -> &'static str {
         "Open Router"
@@ -142,7 +143,7 @@ impl InnerProvider for OpenRouter {
     }
 }
 
-impl Provider<OpenRouter> {
+impl Provider {
     pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         Provider::new(OpenRouter::new(api_key, model, base_url))
     }

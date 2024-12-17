@@ -1,9 +1,8 @@
-mod core;
 mod error;
 mod ui;
 use clap::{Parser, ValueEnum};
-use core::Provider;
 use error::Result;
+use forge_provider::Provider;
 use futures::StreamExt;
 use std::io::Write;
 use strum_macros::{AsRefStr, Display};
