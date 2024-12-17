@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
         let prompt = inquire::Text::new(format!("{} ❯", current_mode).as_str()).prompt()?;
 
         if prompt.starts_with("/") {
-            if let Some(mode) = prompt.trim_start_matches("/").parse::<Mode>().ok() {
+            if let Ok(mode) = prompt.trim_start_matches("/").parse::<Mode>() {
                 if matches!(mode, Mode::Quit) {
                     break;
                 }
@@ -96,7 +96,7 @@ async fn main() -> Result<()> {
             print!("{}", text?);
         }
 
-        print!("\n");
+        println!();
 
         std::io::stdout().flush().unwrap();
     }
