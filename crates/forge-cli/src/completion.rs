@@ -7,7 +7,7 @@ pub struct Completion {
 
 impl Completion {
     pub fn new(completions: Vec<impl ToString>) -> Self {
-        Self::from_iter(completions.into_iter())
+        Self::from_iter(completions)
     }
 }
 
