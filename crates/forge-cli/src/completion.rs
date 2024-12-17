@@ -9,11 +9,12 @@ impl Completion {
     pub fn new(completions: Vec<impl ToString>) -> Self {
         Self::from_iter(completions.into_iter())
     }
+}
 
-    pub fn from_iter<T: ToString>(iter: impl Iterator<Item = T>) -> Self {
-        Self {
-            suggestions: iter.map(|a| a.to_string()).collect(),
-        }
+impl<A: ToString> FromIterator<A> for Completion {
+    fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+        let suggestions = iter.into_iter().map(|s| s.to_string()).collect();
+        Self { suggestions }
     }
 }
 
