@@ -2,6 +2,7 @@
 name = "forge-provider"
 version = "0.1.0"
 edition = "2021"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
@@ -10,17 +11,8 @@ async-openai = "0.14"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-derive_setters = "0.1.6"
-derive_more = { version = "1.0.0", features = ["full"] }
-clap = { version = "4.5.23", features = ["derive"] }
 tracing = "0.1.41"
-tracing-subscriber = "0.3"
-inquire = "0.7.5"
-strum = "0.25"
-strum_macros = "0.25"
 async-trait = "0.1.83"
-
-
 
 [dev-dependencies]
 indoc = "2.0.5"
