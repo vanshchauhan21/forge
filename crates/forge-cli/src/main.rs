@@ -3,9 +3,9 @@ use error::Result;
 use forge_cli::error;
 use forge_provider::Provider;
 use futures::StreamExt;
-use tracing::level_filters::LevelFilter;
 use std::io::Write;
 use strum_macros::{AsRefStr, Display};
+use tracing::level_filters::LevelFilter;
 
 #[derive(Default, Debug, Clone, ValueEnum)]
 pub enum LogLevel {
