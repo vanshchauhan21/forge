@@ -1,5 +1,5 @@
 use super::error::{Error, Result};
-use super::provider::{Provider, InnerProvider};
+use super::provider::{InnerProvider, Provider};
 use async_openai::{config::Config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
@@ -119,7 +119,10 @@ impl InnerProvider for OpenRouter {
     }
 
     /// Get a streaming response from OpenRouter
-    async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>> {
+    async fn prompt(
+        &self,
+        input: String,
+    ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
         let client = self.client.clone();
         let request = self.prompt_request(input)?;
         // Spawn task to handle streaming response

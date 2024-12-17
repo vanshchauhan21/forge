@@ -3,9 +3,10 @@ mod error;
 mod ui;
 
 use clap::{Parser, ValueEnum};
-use core::{OpenRouter, Provider};
+use core::Provider;
 use error::Result;
-use tracing::{info, Level};
+use futures::StreamExt;
+use inquire::Text;
 use tracing_subscriber::filter::LevelFilter;
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -64,6 +65,19 @@ async fn main() -> Result<()> {
 
     // Testing if the connection is successful
     provider.test().await?;
+
+    loop {
+        let prompt = Text::new("❯ ").prompt()?;
+        if prompt == "/q" {
+            break;
+        }
+
+        let mut output = provider.prompt(prompt).await?;
+
+        while let Some(text) = output.next().await {
+            print!("{}", text?);
+        }
+    }
 
     Ok(())
 }

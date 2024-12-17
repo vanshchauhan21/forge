@@ -4,7 +4,8 @@ use tracing::info;
 
 pub trait InnerProvider {
     fn name(&self) -> &'static str;
-    async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>>;
+    async fn prompt(&self, input: String)
+        -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>>;
     async fn test(&self) -> Result<bool>;
 }
 
@@ -24,7 +25,10 @@ impl<P: InnerProvider> Provider<P> {
         Ok(status)
     }
 
-    pub async fn prompt(&self, input: String) -> Result<Box<dyn Stream<Item = Result<String>>>> {
+    pub async fn prompt(
+        &self,
+        input: String,
+    ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
         self.provider.prompt(input).await
     }
 

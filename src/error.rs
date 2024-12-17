@@ -1,12 +1,14 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::From;
+use inquire::InquireError;
 
 use crate::core::error::ProviderError;
 
 #[derive(From)]
 pub enum Error {
     Engine(crate::core::error::Error),
+    Inquire(InquireError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -64,6 +66,7 @@ impl From<&Error> for Errata {
                     })
                 }
             },
+            Error::Inquire(e) => Errata::new(format!("{}", e)),
         }
     }
 }
@@ -77,10 +80,7 @@ mod tests {
     #[test]
     fn test_simple_error() {
         let error = Errata::new("Something went wrong");
-        assert_eq!(
-            format!("{:?}", error),
-            indoc! {"Something went wrong"}
-        );
+        assert_eq!(format!("{:?}", error), indoc! {"Something went wrong"});
     }
 
     #[test]
