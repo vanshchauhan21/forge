@@ -7,6 +7,7 @@ use core::Provider;
 use error::Result;
 use futures::StreamExt;
 use inquire::Text;
+use std::io::Write;
 use tracing_subscriber::filter::LevelFilter;
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -77,6 +78,10 @@ async fn main() -> Result<()> {
         while let Some(text) = output.next().await {
             print!("{}", text?);
         }
+
+        print!("\n");
+
+        std::io::stdout().flush().unwrap();
     }
 
     Ok(())
