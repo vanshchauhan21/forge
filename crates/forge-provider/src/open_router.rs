@@ -140,6 +140,18 @@ impl InnerProvider for OpenRouter {
             Err(e) => Err(e.into()),
         })))
     }
+
+    async fn models(&self) -> Result<Vec<String>> {
+        Ok(self
+            .client
+            .models()
+            .list()
+            .await?
+            .data
+            .iter()
+            .map(|r| r.id.clone())
+            .collect::<Vec<String>>())
+    }
 }
 
 impl Provider {

@@ -1,38 +1,13 @@
 use clap::Parser;
 use error::Result;
-use forge_cli::{error, log::LogLevel};
+use forge_cli::{
+    command::{Cli, Mode},
+    completion::Completion,
+    error,
+};
 use forge_provider::Provider;
 use futures::StreamExt;
 use std::io::Write;
-use strum_macros::{AsRefStr, Display};
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    /// API Key to be used
-    #[arg(short, long)]
-    key: String,
-
-    /// Model to be used
-    #[arg(short, long)]
-    model: Option<String>,
-
-    /// Base URL to be used
-    #[arg(short, long)]
-    base_url: Option<String>,
-
-    /// Log level to use
-    #[arg(long)]
-    log_level: Option<LogLevel>,
-}
-#[derive(Debug, Clone, Default, PartialEq, Eq, Display, AsRefStr, strum_macros::EnumString)]
-#[strum(serialize_all = "UPPERCASE")]
-enum Mode {
-    #[default]
-    Ask,
-    Edit,
-    Quit,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -49,18 +24,20 @@ async fn main() -> Result<()> {
     // Testing if the connection is successful
     provider.test().await?;
 
-    let mut current_mode = Mode::default();
+    let mut mode = Mode::default();
 
     loop {
-        let prompt = inquire::Text::new(format!("{} ❯", current_mode).as_str()).prompt()?;
+        let prompt = inquire::Text::new(format!("{} ❯", mode).as_str())
+            .with_autocomplete(Completion::new(Mode::variants()))
+            .prompt()?;
 
         if prompt.starts_with("/") {
-            if let Ok(mode) = prompt.trim_start_matches("/").parse::<Mode>() {
-                if matches!(mode, Mode::Quit) {
+            if let Ok(input) = prompt.trim_start_matches("/").parse::<Mode>() {
+                if matches!(input, Mode::Quit) {
                     break;
                 }
 
-                current_mode = mode;
+                mode = input;
             }
 
             continue;

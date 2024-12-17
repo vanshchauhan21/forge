@@ -8,6 +8,8 @@ pub(crate) trait InnerProvider {
     async fn prompt(&self, input: String)
         -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>>;
     async fn test(&self) -> Result<bool>;
+
+    async fn models(&self) -> Result<Vec<String>>;
 }
 
 pub struct Provider {
