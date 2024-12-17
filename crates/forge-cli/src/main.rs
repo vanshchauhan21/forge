@@ -1,11 +1,10 @@
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use error::Result;
 use forge_cli::{error, log::LogLevel};
 use forge_provider::Provider;
 use futures::StreamExt;
 use std::io::Write;
 use strum_macros::{AsRefStr, Display};
-use tracing_subscriber::filter::LevelFilter;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
