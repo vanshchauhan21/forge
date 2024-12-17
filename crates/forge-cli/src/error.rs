@@ -66,7 +66,7 @@ impl From<&Error> for Errata {
                     })
                 }
                 forge_provider::error::Error::Reqwest(error) => {
-                    Errata::new(format!("Http Error")).description(format!("{}", error))
+                    Errata::new("Http Error".to_string()).description(format!("{}", error))
                 }
             },
             Error::Inquire(e) => Errata::new(format!("{}", e)),
