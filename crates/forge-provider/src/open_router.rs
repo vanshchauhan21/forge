@@ -17,7 +17,8 @@ impl Config for OpenRouterConfig {
     }
 
     fn api_base(&self) -> &str {
-        self.base_url.as_deref()
+        self.base_url
+            .as_deref()
             .unwrap_or("https://openrouter.ai/api/v1")
     }
 
