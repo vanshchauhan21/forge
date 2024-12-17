@@ -523,7 +523,6 @@ dependencies = [
 name = "forge-cli"
 version = "0.1.0"
 dependencies = [
- "async-openai",
  "clap",
  "derive_more",
  "derive_setters",
@@ -532,13 +531,9 @@ dependencies = [
  "indoc",
  "inquire",
  "pretty_assertions",
- "reqwest",
- "serde",
- "serde_json",
  "strum",
  "strum_macros 0.25.3",
  "tokio",
- "tokio-stream",
  "tracing",
  "tracing-subscriber",
 ]
@@ -549,22 +544,13 @@ version = "0.1.0"
 dependencies = [
  "async-openai",
  "async-trait",
- "clap",
- "derive_more",
- "derive_setters",
  "futures",
- "indoc",
- "inquire",
- "pretty_assertions",
  "reqwest",
  "serde",
  "serde_json",
- "strum",
- "strum_macros 0.25.3",
  "tokio",
  "tokio-stream",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
