@@ -1,7 +1,6 @@
-mod error;
-
 use clap::{Parser, ValueEnum};
 use error::Result;
+use forge_cli::error;
 use forge_provider::Provider;
 use futures::StreamExt;
 use std::io::Write;
