@@ -5,7 +5,6 @@ use forge_provider::Provider;
 use futures::StreamExt;
 use std::io::Write;
 use strum_macros::{AsRefStr, Display};
-use tracing::level_filters::LevelFilter;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
