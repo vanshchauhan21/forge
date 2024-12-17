@@ -1,5 +1,4 @@
 use inquire::{autocompletion::Replacement, Autocomplete};
-use tracing::{debug, info};
 
 #[derive(Clone)]
 pub struct Completion {
@@ -47,8 +46,8 @@ impl Autocomplete for Completion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::command::{Cli, Mode};
-    use clap::CommandFactory;
+    
+    
     use pretty_assertions::assert_eq;
 
     #[test]
