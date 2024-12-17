@@ -35,6 +35,10 @@ impl Provider {
         self.provider.prompt(input).await
     }
 
+    pub async fn models(&self) -> Result<Vec<String>> {
+        self.provider.models().await
+    }
+
     pub(crate) fn new(provider: impl InnerProvider + 'static) -> Self {
         Self {
             provider: Box::new(provider),

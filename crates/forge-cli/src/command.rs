@@ -10,6 +10,7 @@ pub enum Mode {
     Ask,
     Edit,
     Quit,
+    Model,
 }
 
 impl Mode {

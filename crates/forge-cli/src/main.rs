@@ -19,7 +19,8 @@ async fn main() -> Result<()> {
         .init();
 
     // Initialize chat engine
-    let provider = Provider::open_router(cli.key, cli.model.clone(), cli.base_url.clone());
+    let mut provider =
+        Provider::open_router(cli.key.clone(), cli.model.clone(), cli.base_url.clone());
 
     // Testing if the connection is successful
     provider.test().await?;
@@ -27,17 +28,29 @@ async fn main() -> Result<()> {
     let mut mode = Mode::default();
 
     loop {
-        let prompt = inquire::Text::new(format!("{} ❯", mode).as_str())
+        let prompt = inquire::Text::new(format!("{}", mode).as_str())
             .with_autocomplete(Completion::new(Mode::variants()))
             .prompt()?;
 
         if prompt.starts_with("/") {
-            if let Ok(input) = prompt.trim_start_matches("/").parse::<Mode>() {
-                if matches!(input, Mode::Quit) {
-                    break;
+            if let Ok(prompt) = prompt.trim_start_matches("/").parse::<Mode>() {
+                mode = prompt;
+                match mode {
+                    Mode::Ask => {}
+                    Mode::Edit => {}
+                    Mode::Quit => {
+                        break;
+                    }
+                    Mode::Model => {
+                        let models = provider.models().await?;
+                        let input = inquire::Select::new("Choose a model", models).prompt()?;
+                        provider = Provider::open_router(
+                            cli.key.clone(),
+                            Some(input),
+                            cli.base_url.clone(),
+                        )
+                    }
                 }
-
-                mode = input;
             }
 
             continue;

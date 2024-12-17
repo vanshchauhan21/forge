@@ -1,12 +1,13 @@
 use async_openai::error::OpenAIError;
 
-#[derive(Debug)]
+#[derive(Debug, derive_more::From)]
 pub enum Error {
     // Custom display message for provider error
     Provider {
         provider: String,
         error: ProviderError,
     },
+    Reqwest(#[from] reqwest::Error),
 }
 
 impl Error {
