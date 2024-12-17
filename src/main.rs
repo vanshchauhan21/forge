@@ -1,13 +1,12 @@
 mod core;
 mod error;
 mod ui;
-
 use clap::{Parser, ValueEnum};
 use core::Provider;
 use error::Result;
 use futures::StreamExt;
-use inquire::Text;
 use std::io::Write;
+use strum_macros::{AsRefStr, Display};
 use tracing_subscriber::filter::LevelFilter;
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -51,6 +50,14 @@ struct Cli {
     #[arg(long)]
     log_level: Option<LogLevel>,
 }
+#[derive(Debug, Clone, Default, PartialEq, Eq, Display, AsRefStr, strum_macros::EnumString)]
+#[strum(serialize_all = "UPPERCASE")]
+enum Mode {
+    #[default]
+    Ask,
+    Edit,
+    Quit,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -67,10 +74,21 @@ async fn main() -> Result<()> {
     // Testing if the connection is successful
     provider.test().await?;
 
+    let mut current_mode = Mode::default();
+
     loop {
-        let prompt = Text::new("❯ ").prompt()?;
-        if prompt == "/q" {
-            break;
+        let prompt = inquire::Text::new(format!("{} ❯", current_mode).as_str()).prompt()?;
+
+        if prompt.starts_with("/") {
+            if let Some(mode) = prompt.trim_start_matches("/").parse::<Mode>().ok() {
+                if matches!(mode, Mode::Quit) {
+                    break;
+                }
+
+                current_mode = mode;
+            }
+
+            continue;
         }
 
         let mut output = provider.prompt(prompt).await?;
