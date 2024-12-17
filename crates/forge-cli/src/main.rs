@@ -1,8 +1,9 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use error::Result;
 use forge_cli::error;
 use forge_provider::Provider;
 use futures::StreamExt;
+use tracing::level_filters::LevelFilter;
 use std::io::Write;
 use strum_macros::{AsRefStr, Display};
 
