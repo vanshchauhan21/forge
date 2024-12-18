@@ -1,4 +1,5 @@
 use clap::Parser;
+use colorize::AnsiColor;
 use error::Result;
 use forge_cli::{
     command::{Cli, Mode},
@@ -8,7 +9,6 @@ use forge_cli::{
 use forge_provider::Provider;
 use futures::StreamExt;
 use spinners::{Spinner, Spinners};
-use std::io::Write;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -29,8 +29,9 @@ async fn main() -> Result<()> {
     let mut mode = Mode::default();
 
     loop {
-        let prompt = inquire::Text::new(format!("{}", mode).as_str())
+        let prompt = inquire::Text::new(format!("{}❯", mode).bold().as_str())
             .with_autocomplete(Completion::new(Mode::variants()))
+            .with_help_message("Ask the agent to do something")
             .prompt()?;
 
         if prompt.starts_with("/") {
@@ -57,22 +58,15 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        let mut sp = Spinner::new(Spinners::Dots9, "".into());
-        let mut stop = true;
+        let mut spinner = Spinner::new(Spinners::Dots9, "Thinking...".into());
         let mut output = provider.prompt(prompt).await?;
-
+        let mut buffer = String::new();
         while let Some(text) = output.next().await {
-            if stop {
-                sp.stop_with_symbol("");
-                stop = false
-            }
-
-            print!("{}", text?);
+            buffer.push_str(text?.as_str());
         }
+        spinner.stop_with_message("Here is what I thought...".into());
 
-        println!();
-
-        std::io::stdout().flush().unwrap();
+        println!("{}", buffer);
     }
 
     Ok(())

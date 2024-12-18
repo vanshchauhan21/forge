@@ -16,6 +16,7 @@ strum = "0.25"
 strum_macros = "0.25"
 forge-provider = { path = "../forge-provider" }
 spinners = "4.1.1"
+colorize = "0.1.0"
 
 [dev-dependencies]
 indoc = "2.0.5"
