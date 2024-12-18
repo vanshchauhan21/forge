@@ -6,11 +6,11 @@ use crate::Combine;
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 
-pub struct App<A, S, C> {
+pub struct Container<A, S, C> {
     _app: Box<dyn for<'a> Fn(&'a A, &'a mut S) -> C>,
 }
 
-impl<A, S, C: Default> Default for App<A, S, C> {
+impl<A, S, C: Default> Default for Container<A, S, C> {
     fn default() -> Self {
         Self {
             _app: Box::new(|_, _| C::default()),
@@ -18,7 +18,7 @@ impl<A, S, C: Default> Default for App<A, S, C> {
     }
 }
 
-impl<A, S, C> App<A, S, C> {
+impl<A, S, C> Container<A, S, C> {
     pub fn update(f: impl Fn(&A, S) -> S + 'static) -> Self
     where
         C: Default,
@@ -44,13 +44,13 @@ impl<A, S, C> App<A, S, C> {
 }
 
 struct Sink<A, S, C> {
-    app: App<A, S, C>,
+    app: Container<A, S, C>,
     runtime: Box<dyn Runtime<A, C>>,
     state: Arc<Mutex<Cell<S>>>,
 }
 
 impl<A, S, C> Sink<A, S, C> {
-    fn new(app: App<A, S, C>, runtime: impl Runtime<A, C> + 'static, state: S) -> Self {
+    fn new(app: Container<A, S, C>, runtime: impl Runtime<A, C> + 'static, state: S) -> Self {
         Self {
             app,
             runtime: Box::new(runtime),
@@ -72,7 +72,7 @@ impl<A, S, C> Sink<A, S, C> {
     }
 }
 
-impl<A: 'static, S: 'static, C: Combine + 'static> Combine for App<A, S, C> {
+impl<A: 'static, S: 'static, C: Combine + 'static> Combine for Container<A, S, C> {
     fn combine(self, other: Self) -> Self {
         Self {
             _app: Box::new(move |a, s| (self._app)(a, s).combine((other._app)(a, s))),
