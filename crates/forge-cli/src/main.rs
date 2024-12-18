@@ -65,7 +65,6 @@ async fn main() -> Result<()> {
             if stop {
                 sp.stop_with_symbol("");
                 stop = false
-
             }
 
             print!("{}", text?);

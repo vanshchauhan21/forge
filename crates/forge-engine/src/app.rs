@@ -1,4 +1,4 @@
-use tokio_stream::{Stream, StreamExt};
+use tokio_stream::StreamExt;
 
 use crate::error::Error;
 use crate::runtime::Runtime;
