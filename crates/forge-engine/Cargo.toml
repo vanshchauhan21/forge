@@ -1,0 +1,9 @@
+[package]
+name = "forge-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.83"
+tokio = "1.42.0"
+tokio-stream = "0.1.17"

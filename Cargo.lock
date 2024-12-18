@@ -539,6 +539,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-engine"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "forge-provider"
 version = "0.1.0"
 dependencies = [
