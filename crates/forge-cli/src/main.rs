@@ -7,6 +7,7 @@ use forge_cli::{
 };
 use forge_provider::Provider;
 use futures::StreamExt;
+use spinners::{Spinner, Spinners};
 use std::io::Write;
 
 #[tokio::main]
@@ -56,9 +57,17 @@ async fn main() -> Result<()> {
             continue;
         }
 
+        let mut sp = Spinner::new(Spinners::Dots9, "".into());
+        let mut stop = true;
         let mut output = provider.prompt(prompt).await?;
 
         while let Some(text) = output.next().await {
+            if stop {
+                sp.stop_with_symbol("");
+                stop = false
+
+            }
+
             print!("{}", text?);
         }
 
