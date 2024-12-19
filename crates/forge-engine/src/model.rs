@@ -103,7 +103,7 @@ impl State {
     fn step(&mut self, action: Action) -> Command {
         match action {
             Action::Initialize => {
-                self.context.system = Message::new("<SYSTEM MESSAGE>");
+                self.context.system = Message::new(include_str!("./prompt.md"));
                 Command::default()
             }
             Action::Prompt(message) => {
