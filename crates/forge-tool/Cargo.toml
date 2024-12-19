@@ -4,6 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1.83"
-derive_more = "1.0.0"
-mcp_rs = "0.1.0"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+async-trait = "0.1"
+url = { version = "2.5", features = ["serde"] }
+tracing = "0.1"
+home = "0.5.11"
+colorize = "0.1.0"

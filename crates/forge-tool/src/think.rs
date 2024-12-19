@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::types::{
+use crate::model::{
     CallToolRequest, CallToolResponse, ListRequest, ToolResponseContent, ToolsListResponse,
 };
 use anyhow::Result;

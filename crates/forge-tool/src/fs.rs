@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::types::{
+use crate::model::{
     CallToolRequest, CallToolResponse, ListRequest, ToolResponseContent, ToolsListResponse,
 };
 use anyhow::Result;

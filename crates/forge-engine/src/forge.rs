@@ -23,13 +23,8 @@ impl CodeForge {
         }
     }
 
-    pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T)
-    where
-        T::Input: TryFrom<JsonRpcRequest, Error = forge_tool::error::Error>,
-        T::Output: TryInto<JsonRpcResponse, Error = forge_tool::error::Error>,
-    {
-        self.tools
-            .insert(tool.name().to_string(), Box::new(tool.into_dyn()));
+    pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T) {
+        self.tools.insert(tool.name().to_string(), Box::new(tool));
     }
 
     pub async fn prompt(&self, prompt: String) -> Result<Stream<Event>> {

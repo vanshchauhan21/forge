@@ -1,8 +1,12 @@
-mod tool;
+use model::{CallToolRequest, CallToolResponse};
 
-pub use mcp_rs::protocol::{JsonRpcRequest, JsonRpcResponse};
-pub use tool::*;
+pub mod fs;
+pub mod model;
+pub mod think;
 
-pub mod error {
-    pub type Error = mcp_rs::error::McpError;
+#[async_trait::async_trait]
+pub trait Tool {
+    fn name(&self) -> &'static str;
+    async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String>;
+    fn tools_list(&self) -> Vec<&'static str>;
 }
