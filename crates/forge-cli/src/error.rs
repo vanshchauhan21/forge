@@ -58,7 +58,7 @@ impl From<&Error> for Errata {
                 forge_engine::error::Error::Serde(err) => {
                     Errata::new("Serialization Error".to_string()).description(format!("{}", err))
                 }
-                forge_engine::error::Error::Provider(error) => todo!(),
+                forge_engine::error::Error::Provider(error) => Errata::new(format!("{}", error)),
             },
         }
     }

@@ -19,7 +19,7 @@ impl CodeForge {
         CodeForge {
             state: Arc::new(Mutex::new(State::default())),
             tools: HashMap::new(),
-            provider: Provider::open_router(key, None, None),
+            provider: Provider::open_ai(key, None, None),
         }
     }
 
