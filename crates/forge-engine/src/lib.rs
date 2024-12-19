@@ -2,6 +2,7 @@ pub mod error;
 mod model;
 
 use error::Result;
+use forge_provider::Provider;
 use forge_tool::{JsonRpcRequest, JsonRpcResponse, Tool};
 use model::State;
 use std::{
@@ -11,13 +12,21 @@ use std::{
 
 pub type Stream<A> = Box<dyn tokio_stream::Stream<Item = A> + Unpin>;
 
-#[derive(Default)]
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
     tools: HashMap<String, Box<dyn Tool<Input = JsonRpcRequest, Output = JsonRpcResponse>>>,
+    provider: Provider,
 }
 
 impl CodeForge {
+    pub fn new(key: String) -> Self {
+        CodeForge {
+            state: Arc::new(Mutex::new(State::default())),
+            tools: HashMap::new(),
+            provider: Provider::open_router(key, None, None),
+        }
+    }
+
     pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T)
     where
         T::Input: TryFrom<JsonRpcRequest, Error = forge_tool::error::Error>,
@@ -27,12 +36,13 @@ impl CodeForge {
             .insert(tool.name().to_string(), Box::new(tool.into_dyn()));
     }
 
-    pub async fn prompt(&self, prompt: &str) -> Result<Stream<Event>> {
+    pub async fn prompt(&self, prompt: String) -> Result<Stream<Event>> {
         todo!()
     }
 
-    pub async fn model(&self, model: &str) -> Result<Stream<Event>> {
-        todo!()
+    pub fn model(self, model: String) -> Self {
+        // TODO: update the provider to use the passed model
+        self
     }
 
     /// Returns an autocomplete for a prompt containing '@'
@@ -45,4 +55,8 @@ impl CodeForge {
     }
 }
 
-pub enum Event {}
+pub enum Event {
+    Inquire(Option<String>),
+    Text(String),
+    End,
+}

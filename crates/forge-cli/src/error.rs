@@ -2,11 +2,8 @@ use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::From;
 
-use forge_provider::error::ProviderError;
-
 #[derive(From)]
 pub enum Error {
-    Provider(forge_provider::error::Error),
     Inquire(inquire::InquireError),
     Engine(forge_engine::error::Error),
 }
@@ -56,19 +53,6 @@ impl Debug for Errata {
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
-            Error::Provider(e) => match e {
-                forge_provider::error::Error::Provider { provider, error } => {
-                    Errata::new(format!("{} Provider Error", provider)).description(match error {
-                        ProviderError::OpenAI(err) => format!("{}", err),
-                        ProviderError::EmptyResponse => {
-                            "The provider returned an empty response".to_string()
-                        }
-                    })
-                }
-                forge_provider::error::Error::Reqwest(error) => {
-                    Errata::new("Http Error".to_string()).description(format!("{}", error))
-                }
-            },
             Error::Inquire(error) => Errata::new(format!("{}", error)),
             Error::Engine(error) => match error {
                 forge_engine::error::Error::Serde(err) => {
