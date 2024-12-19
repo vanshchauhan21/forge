@@ -86,21 +86,21 @@ impl Message<Assistant> {
 #[derive(Default, Clone, Setters)]
 pub struct Context {
     pub system: Message<System>,
-    pub message: Vec<AnyMessage>,
+    pub messages: Vec<AnyMessage>,
     pub tools: Vec<Rc<dyn Tool>>,
     pub files: Vec<File>,
 }
 
 impl Context {
     pub fn add_message(mut self, message: impl Into<AnyMessage>) -> Self {
-        self.message.push(message.into());
+        self.messages.push(message.into());
         self
     }
 
     pub fn new(system: Message<System>) -> Self {
         Context {
             system,
-            message: Vec::new(),
+            messages: Vec::new(),
             tools: Vec::new(),
             files: Vec::new(),
         }
@@ -164,8 +164,11 @@ fn insert_into<T>(vector: Option<Vec<T>>, value: T) -> Option<Vec<T>> {
 impl From<Context> for Request {
     fn from(value: Context) -> Self {
         let mut request = Request::default();
-        // Add System Message [DONE]
+        // Add System Message
         request.messages = insert_into(request.messages, value.system.into());
+        for message in value.messages {
+            request.messages = insert_into(request.messages, message.into());
+        }
 
         // Add Add all tools
         request.tools = Some(
@@ -180,6 +183,7 @@ impl From<Context> for Request {
         request.tool_choice = Some(forge_provider::model::ToolChoice::Auto);
 
         // Add User Message
+
         // Add Context Files
         request
     }
@@ -194,6 +198,15 @@ impl<R: Role> From<Message<R>> for forge_provider::model::Message {
                 text: value.content,
             }),
             name: None,
+        }
+    }
+}
+
+impl From<AnyMessage> for forge_provider::model::Message {
+    fn from(value: AnyMessage) -> Self {
+        match value {
+            AnyMessage::User(message) => message.into(),
+            AnyMessage::Assistant(message) => message.into(),
         }
     }
 }
