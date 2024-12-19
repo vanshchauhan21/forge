@@ -1,18 +1,18 @@
 use super::error::{Error, Result};
 use super::provider::{InnerProvider, Provider};
-use async_openai::{config::Config, types::*, Client};
+use async_openai::{config, types::*, Client};
 use futures::stream::Stream;
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
-struct OpenAIConfig {
+struct Config {
     api_key: String,
     base_url: Option<String>,
 }
 
-impl Config for OpenAIConfig {
+impl config::Config for Config {
     fn api_key(&self) -> &str {
         &self.api_key
     }
@@ -45,10 +45,10 @@ impl Config for OpenAIConfig {
 
 #[derive(Clone)]
 pub struct OpenRouter {
-    client: Client<OpenAIConfig>,
+    client: Client<Config>,
     model: String,
     http_client: reqwest::Client,
-    config: OpenAIConfig,
+    config: Config,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -105,7 +105,7 @@ pub use async_openai::types::Role;
 
 impl OpenRouter {
     fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        let config = OpenAIConfig { api_key, base_url };
+        let config = Config { api_key, base_url };
         let http_client = reqwest::Client::new();
         let client = Client::with_config(config.clone()).with_http_client(http_client.clone());
 

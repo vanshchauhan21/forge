@@ -6,12 +6,12 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize}; // Importing Stream trait
 
 #[derive(Debug, Clone)]
-struct OpenRouterConfig {
+struct Config {
     api_key: String,
     base_url: Option<String>,
 }
 
-impl OpenRouterConfig {
+impl Config {
     fn api_key(&self) -> &str {
         &self.api_key
     }
@@ -45,7 +45,7 @@ impl OpenRouterConfig {
 #[derive(Clone)]
 pub struct OpenRouter {
     http_client: reqwest::Client,
-    config: OpenRouterConfig,
+    config: Config,
     model: String,
 }
 
@@ -197,7 +197,7 @@ pub struct ProviderPreferences {
 
 impl OpenRouter {
     fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        let config = OpenRouterConfig { api_key, base_url };
+        let config = Config { api_key, base_url };
         let http_client = reqwest::Client::new();
 
         Self {
