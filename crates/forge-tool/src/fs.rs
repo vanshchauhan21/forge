@@ -179,12 +179,13 @@ fn list_tools() -> Result<ToolsListResponse> {
     Ok(serde_json::from_value(response)?)
 }
 
-struct FileSystem;
+#[derive(Default)]
+pub struct FS;
 
 #[async_trait::async_trait]
-impl Tool for FileSystem {
+impl Tool for FS {
     fn name(&self) -> &'static str {
-        "FileSystem"
+        "fs"
     }
 
     async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {

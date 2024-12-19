@@ -3,6 +3,8 @@ use model::{CallToolRequest, CallToolResponse, ToolsListResponse};
 mod fs;
 mod model;
 mod think;
+pub use fs::FS;
+pub use think::Think;
 
 #[async_trait::async_trait]
 pub trait Tool {

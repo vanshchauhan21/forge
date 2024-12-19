@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct ThoughtData {
+pub struct ThoughtData {
     thought: String,
     thought_number: i32,
     total_thoughts: i32,
@@ -22,20 +22,13 @@ struct ThoughtData {
     needs_more_thoughts: Option<bool>,
 }
 
-#[derive(Clone)]
-struct SequentialThinkingServer {
+#[derive(Clone, Default)]
+pub struct Think {
     thought_history: Vec<ThoughtData>,
     branches: HashMap<String, Vec<ThoughtData>>,
 }
 
-impl SequentialThinkingServer {
-    fn new() -> Self {
-        Self {
-            thought_history: Vec::new(),
-            branches: HashMap::new(),
-        }
-    }
-
+impl Think {
     fn validate_thought_data(&self, input: serde_json::Value) -> Result<ThoughtData> {
         let thought_data: ThoughtData = serde_json::from_value(input)?;
 
@@ -119,10 +112,7 @@ impl SequentialThinkingServer {
     }
 }
 
-fn call_tool(
-    req: CallToolRequest,
-    thinking_server: &mut SequentialThinkingServer,
-) -> Result<CallToolResponse> {
+fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallToolResponse> {
     let name = req.name.as_str();
     let args = req.arguments.unwrap_or_default();
     let args = serde_json::to_value(args)?;
@@ -200,26 +190,14 @@ fn list_tools() -> Result<ToolsListResponse> {
     Ok(serde_json::from_value(response)?)
 }
 
-struct Think {
-    thinking_server: SequentialThinkingServer,
-}
-
-impl Default for Think {
-    fn default() -> Self {
-        Self {
-            thinking_server: SequentialThinkingServer::new(),
-        }
-    }
-}
-
 #[async_trait::async_trait]
 impl Tool for Think {
     fn name(&self) -> &'static str {
-        "Sequential Thinking"
+        "think"
     }
 
     async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
-        call_tool(input, &mut self.thinking_server.clone()).map_err(|e| e.to_string())
+        call_tool(input, &mut self.clone()).map_err(|e| e.to_string())
     }
 
     fn tools_list(&self) -> Result<ToolsListResponse, String> {
