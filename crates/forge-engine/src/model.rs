@@ -73,7 +73,7 @@ pub struct ToolRequest {
 #[derive(Clone)]
 pub struct ToolResponse {
     name: String,
-    value: std::result::Result<Value, Value>,
+    value: std::result::Result<String, String>,
 }
 
 pub enum Action {

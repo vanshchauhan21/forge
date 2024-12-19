@@ -3,10 +3,10 @@ use mcp_rs::{
     protocol::{JsonRpcRequest, JsonRpcResponse},
 };
 
-pub struct DynTool<T>(T);
+pub struct Client<T>(T);
 
 #[async_trait::async_trait]
-impl<T: Tool + Sync> Tool for DynTool<T>
+impl<T: Tool + Sync> Tool for Client<T>
 where
     T::Input: TryFrom<JsonRpcRequest, Error = McpError>,
     T::Output: TryInto<JsonRpcResponse, Error = McpError>,
@@ -14,14 +14,14 @@ where
     type Input = JsonRpcRequest;
     type Output = JsonRpcResponse;
 
+    fn name(&self) -> &'static str {
+        self.0.name()
+    }
+
     async fn tools_call(&self, input: Self::Input) -> Result<Self::Output, McpError> {
         let input: T::Input = input.try_into()?;
         let output: JsonRpcResponse = self.0.tools_call(input).await?.try_into()?;
         Ok(output)
-    }
-
-    fn name(&self) -> &'static str {
-        self.0.name()
     }
 
     fn tools_list(&self) -> Vec<&'static str> {
@@ -40,10 +40,10 @@ pub trait Tool {
 
     fn tools_list(&self) -> Vec<&'static str>;
 
-    fn into_dyn(self) -> DynTool<Self>
+    fn into_dyn(self) -> Client<Self>
     where
         Self: Sized,
     {
-        DynTool(self)
+        Client(self)
     }
 }
