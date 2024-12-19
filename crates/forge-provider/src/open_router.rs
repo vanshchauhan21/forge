@@ -1,4 +1,3 @@
-
 use super::error::Result;
 use super::open_ai::Role; // Importing Role
 use super::provider::{InnerProvider, Provider};
@@ -91,8 +90,7 @@ pub struct ListModelResponse {
     pub data: Vec<Model>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Request {
     pub messages: Option<Vec<Message>>,
     pub prompt: Option<String>,
@@ -120,7 +118,6 @@ pub struct Request {
     pub route: Option<String>,
     pub provider: Option<ProviderPreferences>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
