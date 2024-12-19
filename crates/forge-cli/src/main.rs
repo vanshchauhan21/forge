@@ -5,7 +5,9 @@ use forge_cli::{
     command::{Cli, Mode},
     completion::Completion,
     error,
+    runtime::Runtime,
 };
+use forge_engine::model::CodeForge;
 use forge_provider::Provider;
 use futures::StreamExt;
 use spinners::{Spinner, Spinners};
@@ -68,6 +70,8 @@ async fn main() -> Result<()> {
 
         println!("{}", buffer);
     }
+
+    CodeForge::default().run(Runtime::default()).await?;
 
     Ok(())
 }

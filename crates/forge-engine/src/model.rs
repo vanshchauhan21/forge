@@ -1,17 +1,21 @@
+use crate::error::Result;
 use derive_more::derive::From;
 use serde_json::Value;
 
-pub struct App {
+use crate::Runtime;
+
+#[derive(Default)]
+pub struct CodeForge {
     stack: Vec<Context>,
     context: Context,
     history: Vec<AnyMessage>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct System;
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct User;
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Assistant;
 
 #[derive(Clone, From)]
@@ -20,7 +24,7 @@ pub enum AnyMessage {
     Assistant(Message<Assistant>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Message<Role> {
     content: String,
     role: Role,
@@ -35,7 +39,7 @@ impl Message<System> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Context {
     system: Message<System>,
     message: Vec<AnyMessage>,
@@ -63,7 +67,7 @@ pub enum Command {
     Empty,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ToolRequest {
     name: String,
     value: Value,
@@ -91,7 +95,7 @@ impl From<ToolResponse> for Message<User> {
     }
 }
 
-impl App {
+impl CodeForge {
     fn command(&mut self, action: Action) -> Command {
         match action {
             Action::Initialize => {
@@ -120,5 +124,9 @@ impl App {
                 Err(value) => todo!(),
             },
         }
+    }
+
+    fn run(&self, runtime: impl Runtime) -> Result<()> {
+        todo!()
     }
 }
