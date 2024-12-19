@@ -17,7 +17,7 @@ pub struct CodeForge {
 impl CodeForge {
     pub fn new(key: String) -> Self {
         let tools: HashMap<String, Box<dyn Tool>> = vec![
-            Box::new(forge_tool::FS::default()) as Box<dyn Tool>,
+            Box::new(forge_tool::FS) as Box<dyn Tool>,
             Box::new(forge_tool::Think::default()) as Box<dyn Tool>,
         ]
         .into_iter()
