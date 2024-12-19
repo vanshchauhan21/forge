@@ -21,8 +21,8 @@ pub struct Prompt {
 
 #[derive(Setters, Clone)]
 pub struct File {
-    name: String,
-    content: String,
+    pub name: String,
+    pub content: String,
 }
 
 impl Prompt {
@@ -94,11 +94,6 @@ impl CodeForge {
     pub fn model(self, model: String) -> Self {
         // TODO: update the provider to use the passed model
         self
-    }
-
-    /// Returns an autocomplete for a prompt containing '@'
-    pub async fn files(&self) -> Result<Vec<String>> {
-        todo!()
     }
 
     pub async fn models(&self) -> Result<Vec<String>> {
