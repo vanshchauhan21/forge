@@ -92,6 +92,13 @@ impl From<ToolResponse> for Message<User> {
     }
 }
 
+pub enum Event {
+    Inquire(Option<String>),
+    Text(String),
+    Error(String),
+    End,
+}
+
 impl State {
     fn step(&mut self, action: Action) -> Command {
         match action {

@@ -6,9 +6,8 @@ use forge_cli::{
     completion::Completion,
     error,
 };
-use forge_engine::{CodeForge, Event};
+use forge_engine::{model::Event, CodeForge};
 use futures::StreamExt;
-use spinners::{Spinner, Spinners};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,14 +47,17 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        let mut spinner = Spinner::new(Spinners::Dots9, "Thinking...".into());
+        let mut spinner = Spinner::new(spinners::Spinners::Dots);
+
         let mut output = agent.prompt(prompt).await?;
+
         let buffer = String::new();
         while let Some(event) = output.next().await {
+            spinner.stop();
             match event {
                 Event::Inquire(_) => todo!(),
                 Event::Text(text) => {
-                    println!("{}", text);
+                    print!("{}", text);
                 }
                 Event::End => {
                     end = true;
@@ -64,10 +66,35 @@ async fn main() -> Result<()> {
                 Event::Error(_) => todo!(),
             }
         }
-        spinner.stop_with_message("Here is what I thought...".into());
 
         println!("{}", buffer);
     }
 
     Ok(())
+}
+
+struct Spinner {
+    spinner: spinners::Spinner,
+    message: String,
+    is_done: bool,
+}
+
+impl Spinner {
+    pub fn new(dot: spinners::Spinners) -> Self {
+        let spinner = spinners::Spinner::new(dot, "".into());
+        Self {
+            spinner,
+            message: "".into(),
+            is_done: false,
+        }
+    }
+
+    pub fn stop(&mut self) {
+        if !self.is_done {
+            self.spinner
+                .stop_with_message("Here is what I thought...".into());
+
+            self.is_done = true
+        }
+    }
 }
