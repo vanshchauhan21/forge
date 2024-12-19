@@ -92,12 +92,16 @@ pub struct ListModelResponse {
     pub data: Vec<Model>,
 }
 
-fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> {
+// Making new_message public
+pub fn new_message(role: Role, input: &str) -> Result<ChatCompletionRequestMessage> {
     Ok(ChatCompletionRequestMessageArgs::default()
         .role(role)
         .content(input)
         .build()?)
 }
+
+// Making Role public
+pub use async_openai::types::Role;
 
 impl OpenRouter {
     fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
@@ -113,25 +117,7 @@ impl OpenRouter {
         }
     }
 
-    // TODO: implement it using `self.prompt`
-    fn test_request(&self) -> Result<CreateChatCompletionRequest> {
-        Ok(CreateChatCompletionRequest {
-            model: self.model.to_string(),
-            messages: vec![
-                new_message(Role::System, "You are a helpful AI assistant.")?,
-                new_message(
-                    Role::User,
-                    "Respond with 'Connected successfully!' if you receive this message.",
-                )?,
-            ],
-            temperature: Some(0.0),
-            stream: Some(false),
-            max_tokens: Some(50),
-            ..Default::default()
-        })
-    }
-
-    fn prompt_request(&self, input: String) -> Result<CreateChatCompletionRequest> {
+    fn request(&self, input: String) -> Result<CreateChatCompletionRequest> {
         Ok(CreateChatCompletionRequest {
             model: self.model.clone(),
             messages: vec![new_message(Role::User, &input)?],
@@ -149,19 +135,6 @@ impl InnerProvider for OpenRouter {
     fn name(&self) -> &'static str {
         "Open Router"
     }
-    /// Test the connection to OpenRouter
-    async fn test(&self) -> Result<bool> {
-        let request = self.test_request()?;
-        let response = self.client.chat().create(request).await?;
-        let ok = response.choices.iter().any(|c| {
-            c.message
-                .content
-                .iter()
-                .any(|c| c == "Connected successfully!")
-        });
-
-        Ok(ok)
-    }
 
     /// Get a streaming response from OpenRouter
     async fn prompt(
@@ -169,7 +142,7 @@ impl InnerProvider for OpenRouter {
         input: String,
     ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
         let client = self.client.clone();
-        let request = self.prompt_request(input)?;
+        let request = self.request(input)?;
         // Spawn task to handle streaming response
 
         let stream = client.chat().create_stream(request).await?;

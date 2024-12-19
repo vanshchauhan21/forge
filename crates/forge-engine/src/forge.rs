@@ -1,6 +1,6 @@
 use crate::model::State;
-use crate::{error::Result, model::Event, Stream};
-use forge_provider::Provider;
+use crate::{error::Result, model::Event};
+use forge_provider::{Provider, Stream};
 use forge_tool::Tool;
 use std::{
     collections::HashMap,
