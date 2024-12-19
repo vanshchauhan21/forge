@@ -5,5 +5,8 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.83"
+derive_more = "1.0.0"
+serde = "1.0.216"
+serde_json = "1.0.133"
 tokio = "1.42.0"
 tokio-stream = "0.1.17"

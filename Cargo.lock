@@ -551,6 +551,9 @@ name = "forge-engine"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "derive_more",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-stream",
 ]
