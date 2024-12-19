@@ -5,7 +5,6 @@ use forge_provider::{Provider, Stream};
 use forge_tool::Tool;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use tokio_stream::StreamExt;
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,

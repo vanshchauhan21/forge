@@ -1,11 +1,10 @@
 use crate::model::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
-use crate::Stream;
 
 use super::error::Result;
 use super::open_ai::Role; // Importing Role
 use super::provider::{InnerProvider, Provider};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use serde::{Deserialize, Serialize}; // Importing Stream trait
+ // Importing Stream trait
 
 #[derive(Debug, Clone)]
 struct Config {

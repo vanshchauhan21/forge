@@ -1,7 +1,4 @@
-use crate::{
-    model::{Request, Response},
-    Stream,
-};
+use crate::model::{Request, Response};
 
 use super::error::Result;
 

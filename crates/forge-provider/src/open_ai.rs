@@ -1,7 +1,6 @@
 use crate::model::{Request, Response};
-use crate::Stream;
 
-use super::error::{Error, Result};
+use super::error::Result;
 use super::provider::{InnerProvider, Provider};
 use async_openai::{config, types::*, Client};
 use futures::StreamExt;
