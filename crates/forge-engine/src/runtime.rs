@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    model::{Action, Command},
+    state::{Action, Command},
 };
 
 #[async_trait::async_trait]

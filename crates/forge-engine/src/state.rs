@@ -1,11 +1,8 @@
-use crate::error::Result;
 use derive_more::derive::From;
 use serde_json::Value;
 
-use crate::Runtime;
-
 #[derive(Default)]
-pub struct CodeForge {
+pub struct State {
     stack: Vec<Context>,
     context: Context,
     history: Vec<AnyMessage>,
@@ -76,7 +73,7 @@ pub struct ToolRequest {
 #[derive(Clone)]
 pub struct ToolResponse {
     name: String,
-    value: Result<Value, Value>,
+    value: std::result::Result<Value, Value>,
 }
 
 pub enum Action {
@@ -95,8 +92,8 @@ impl From<ToolResponse> for Message<User> {
     }
 }
 
-impl CodeForge {
-    fn command(&mut self, action: Action) -> Command {
+impl State {
+    fn step(&mut self, action: Action) -> Command {
         match action {
             Action::Initialize => {
                 self.context.system = Message::new("<SYSTEM MESSAGE>");
@@ -124,9 +121,5 @@ impl CodeForge {
                 Err(value) => todo!(),
             },
         }
-    }
-
-    fn run(&self, runtime: impl Runtime) -> Result<()> {
-        todo!()
     }
 }

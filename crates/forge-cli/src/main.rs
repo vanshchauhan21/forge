@@ -7,7 +7,7 @@ use forge_cli::{
     error,
     runtime::Runtime,
 };
-use forge_engine::model::CodeForge;
+use forge_engine::CodeForge;
 use forge_provider::Provider;
 use futures::StreamExt;
 use spinners::{Spinner, Spinners};
