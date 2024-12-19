@@ -1,8 +1,6 @@
 pub mod error;
 pub mod model;
 mod runtime;
-use model::Action;
 pub use runtime::Runtime;
-use tokio_stream::Stream;
 
-pub type ActionStream = Box<dyn Stream<Item = Action> + Unpin>;
+pub type Stream<A> = Box<dyn tokio_stream::Stream<Item = A> + Unpin>;
