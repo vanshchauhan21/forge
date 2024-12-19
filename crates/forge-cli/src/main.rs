@@ -8,6 +8,7 @@ use forge_cli::{
 };
 use forge_engine::{model::Event, CodeForge, Prompt};
 use futures::StreamExt;
+use ignore::WalkBuilder;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,9 +22,17 @@ async fn main() -> Result<()> {
     let mut agent = CodeForge::new(cli.key.clone());
     let mut mode = Command::default();
     let mut end = false;
+
     while !end {
+        // TODO: we shouldn't get the latest files from fs on each loop, should occur only when
+        // user is searching for files.
+        let mut suggestions = ls_files(std::path::Path::new("."))
+            .map(|v| v.into_iter().map(|a| format!("@{}", a)).collect::<Vec<_>>())
+            .unwrap_or_default();
+        suggestions.extend(Command::variants());
+
         let prompt = inquire::Text::new(format!("{}❯", mode).bold().as_str())
-            .with_autocomplete(Completion::new(Command::variants()))
+            .with_autocomplete(Completion::new(suggestions))
             .prompt()?;
 
         if prompt.starts_with("/") {
@@ -96,4 +105,24 @@ impl Spinner {
             self.is_done = true
         }
     }
+}
+
+fn ls_files(path: &std::path::Path) -> std::io::Result<Vec<String>> {
+    let mut paths = Vec::new();
+    let walker = WalkBuilder::new(path)
+        .hidden(true)        // Skip hidden files
+        .git_global(true)    // Use global gitignore
+        .git_ignore(true)    // Use local .gitignore
+        .ignore(true)        // Use .ignore files
+        .build();
+
+    for result in walker {
+        if let Ok(entry) = result {
+            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+                paths.push(entry.path().display().to_string());
+            }
+        }
+    }
+
+    Ok(paths)
 }

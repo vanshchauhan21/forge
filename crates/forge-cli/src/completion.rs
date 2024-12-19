@@ -27,7 +27,15 @@ impl Autocomplete for Completion {
         } else {
             self.suggestions
                 .iter()
-                .filter(|c| c.to_lowercase().starts_with(&input))
+                .filter(|c| match &input {
+                    s if s.starts_with("/") => c.to_lowercase().starts_with(&input),
+                    s if s.starts_with("@") => input
+                        .split("@")
+                        .last()
+                        .filter(|file| !file.contains("@") && !file.is_empty())
+                        .map_or(false, |file| c.to_lowercase().contains(file)),
+                    _ => false,
+                })
                 .cloned()
                 .collect()
         };
@@ -52,7 +60,7 @@ mod tests {
 
     #[test]
     fn test_completion() {
-        let mut completion = Completion::new(vec!["/ASK", "/EDIT", "/QUIT"]);
+        let mut completion = Completion::new(vec!["/ASK", "/EDIT", "/QUIT", "@abc/pqd.rs", "@pqd"]);
         let actual = completion.get_suggestions("").unwrap();
         let expected: Vec<&str> = Vec::new();
         assert_eq!(actual, expected);
@@ -63,6 +71,18 @@ mod tests {
 
         let actual = completion.get_suggestions("/a").unwrap();
         let expected = vec!["/ASK"];
+        assert_eq!(actual, expected);
+
+        let actual = completion.get_suggestions("@abc").unwrap();
+        let expected = vec!["@abc/pqd.rs"];
+        assert_eq!(actual, expected);
+
+        let actual = completion.get_suggestions("@pqd.rs").unwrap();
+        let expected = vec!["@abc/pqd.rs"];
+        assert_eq!(actual, expected);
+
+        let actual = completion.get_suggestions("@").unwrap();
+        let expected: Vec<String> = vec![];
         assert_eq!(actual, expected);
     }
 }
