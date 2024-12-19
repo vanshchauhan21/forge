@@ -7,7 +7,6 @@ use crate::{
 use anyhow::Result;
 use colorize::AnsiColor;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ThoughtData {
@@ -132,64 +131,6 @@ fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallTo
     })
 }
 
-fn list_tools() -> ToolsListResponse {
-    let response = json!({
-      "tools": [
-        {
-          "name": "sequentialthinking",
-          "description": "A detailed tool for dynamic and reflective problem-solving through thoughts.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "thought": {
-                "type": "string",
-                "description": "Your current thinking step"
-              },
-              "nextThoughtNeeded": {
-                "type": "boolean",
-                "description": "Whether another thought step is needed"
-              },
-              "thoughtNumber": {
-                "type": "integer",
-                "description": "Current thought number",
-                "minimum": 1
-              },
-              "totalThoughts": {
-                "type": "integer",
-                "description": "Estimated total thoughts needed",
-                "minimum": 1
-              },
-              "isRevision": {
-                "type": "boolean",
-                "description": "Whether this revises previous thinking"
-              },
-              "revisesThought": {
-                "type": "integer",
-                "description": "Which thought is being reconsidered",
-                "minimum": 1
-              },
-              "branchFromThought": {
-                "type": "integer",
-                "description": "Branching point thought number",
-                "minimum": 1
-              },
-              "branchId": {
-                "type": "string",
-                "description": "Branch identifier"
-              },
-              "needsMoreThoughts": {
-                "type": "boolean",
-                "description": "If more thoughts are needed"
-              }
-            },
-            "required": ["thought", "nextThoughtNeeded", "thoughtNumber", "totalThoughts"]
-          },
-        }
-      ],
-    });
-    serde_json::from_value(response).unwrap()
-}
-
 #[async_trait::async_trait]
 impl Tool for Think {
     fn name(&self) -> &'static str {
@@ -201,6 +142,7 @@ impl Tool for Think {
     }
 
     fn tools_list(&self) -> ToolsListResponse {
-        list_tools()
+        let response = include_str!("./think.schema.json");
+        serde_json::from_str(response).unwrap()
     }
 }

@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use crate::model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse};
 use crate::Tool;
 use anyhow::Result;
-use serde_json::json;
 
 fn call_tool(req: CallToolRequest) -> Result<CallToolResponse> {
     let name = req.name.as_str();
@@ -99,86 +98,6 @@ fn get_path(args: &HashMap<String, serde_json::Value>) -> Result<PathBuf> {
     }
 }
 
-fn list_tools() -> ToolsListResponse {
-    let response = json!({
-      "tools": [
-        {
-          "name": "read_file",
-          "description":
-            "Read the complete contents of a file from the file system. \
-            Handles various text encodings and provides detailed error messages \
-            if the file cannot be read. Use this tool when you need to examine \
-            the contents of a single file. Only works within allowed directories.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["path"]
-          },
-        },
-        {
-          "name": "list_directory",
-          "description":
-            "Get a detailed listing of all files and directories in a specified path. \
-            Results clearly distinguish between files and directories with [FILE] and [DIR] \
-            prefixes. This tool is essential for understanding directory structure and \
-            finding specific files within a directory. Only works within allowed directories.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["path"]
-          },
-        },
-        {
-          "name": "search_files",
-          "description":
-            "Recursively search for files and directories matching a pattern. \
-            Searches through all subdirectories from the starting path. The search \
-            is case-insensitive and matches partial names. Returns full paths to all \
-            matching items. Great for finding files when you don't know their exact location. \
-            Only searches within allowed directories.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "path": {
-                "type": "string"
-              },
-              "pattern": {
-                "type": "string"
-              }
-            },
-            "required": ["path", "pattern"]
-          },
-        },
-        {
-          "name": "get_file_info",
-          "description":
-            "Retrieve detailed metadata about a file or directory. Returns comprehensive \
-            information including size, creation time, last modified time, permissions, \
-            and type. This tool is perfect for understanding file characteristics \
-            without reading the actual content. Only works within allowed directories.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["path"]
-          },
-        }
-      ],
-    });
-    serde_json::from_value(response).unwrap()
-}
-
 #[derive(Default)]
 pub struct FS;
 
@@ -193,6 +112,7 @@ impl Tool for FS {
     }
 
     fn tools_list(&self) -> ToolsListResponse {
-        list_tools()
+        let response = include_str!("./fs.schema.json");
+        serde_json::from_str(response).unwrap()
     }
 }
