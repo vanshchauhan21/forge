@@ -70,7 +70,11 @@ impl From<&Error> for Errata {
                 }
             },
             Error::Inquire(error) => Errata::new(format!("{}", error)),
-            Error::Engine(error) => Errata::new(format!("{}", error)),
+            Error::Engine(error) => match error {
+                forge_engine::error::Error::Serde(err) => {
+                    Errata::new("Serialization Error".to_string()).description(format!("{}", err))
+                }
+            },
         }
     }
 }
