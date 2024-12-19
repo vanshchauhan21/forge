@@ -83,13 +83,10 @@ impl CodeForge {
             .files(prompt.files);
 
         // TODO: Streaming is making the design complicated
-        let stream = self.provider.chat(context.into()).await?;
+        let response = self.provider.chat(context.into()).await?;
 
         // TODO: need to handle errors more concisely
-        Ok(Box::new(stream.map(|message| match message {
-            Ok(message) => Event::Say(message),
-            Err(error) => Event::Err(format!("{}", error)),
-        })))
+        todo!()
     }
 
     pub fn model(self, model: String) -> Self {

@@ -134,7 +134,7 @@ pub struct Prediction {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ResponseType {
+pub struct Response {
     pub status: String,
     pub data: Option<serde_json::Value>,
     pub error: Option<String>,

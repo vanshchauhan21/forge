@@ -1,4 +1,4 @@
-use crate::model::{ContentPart, ListModelResponse, Message, Request, TextContent};
+use crate::model::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
 use crate::Stream;
 
 use super::error::Result;
@@ -81,23 +81,17 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    async fn chat(&self, request: Request) -> Result<Stream<Result<String>>> {
-        let response = self
+    async fn chat(&self, mut request: Request) -> Result<Response> {
+        request.stream = Some(false);
+        Ok(self
             .http_client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
             .json(&request)
             .send()
             .await?
-            .json::<ResponseType>() // Adjusted to use ResponseType
-            .await?;
-
-        // Handle the response and return a stream
-        let stream = futures::stream::iter(
-            response.data.into_iter().map(|data| Ok(data.to_string())), // Adjusted to match expected output
-        );
-
-        Ok(Box::new(stream))
+            .json::<Response>() // Adjusted to use ResponseType
+            .await?)
     }
 
     async fn models(&self) -> Result<Vec<String>> {
@@ -114,13 +108,6 @@ impl InnerProvider for OpenRouter {
             .map(|r| r.name.clone())
             .collect::<Vec<String>>())
     }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ResponseType {
-    pub status: String,
-    pub data: Option<serde_json::Value>,
-    pub error: Option<String>,
 }
 
 impl Provider {

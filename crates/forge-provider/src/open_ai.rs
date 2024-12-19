@@ -1,4 +1,4 @@
-use crate::model::Request;
+use crate::model::{Request, Response};
 use crate::Stream;
 
 use super::error::{Error, Result};
@@ -126,24 +126,10 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    /// Get a streaming response from OpenRouter
-    async fn chat(&self, request: Request) -> Result<Stream<Result<String>>> {
+    async fn chat(&self, request: Request) -> Result<Response> {
         let client = self.client.clone();
-
-        // Spawn task to handle streaming response
-
-        let stream = client.chat().create_stream(request.into()).await?;
-
-        Ok(Box::new(stream.map(|a| match a {
-            Ok(response) => {
-                if let Some(ref delta) = response.choices[0].delta.content {
-                    Ok(delta.to_string())
-                } else {
-                    Err(Error::empty_response("OpenAI"))
-                }
-            }
-            Err(e) => Err(e.into()),
-        })))
+        let response = client.chat().create(request.into()).await?;
+        Ok(response.into())
     }
 
     async fn models(&self) -> Result<Vec<String>> {
@@ -167,6 +153,12 @@ impl Provider {
 
 impl From<Request> for CreateChatCompletionRequest {
     fn from(value: Request) -> Self {
+        todo!()
+    }
+}
+
+impl From<CreateChatCompletionResponse> for Response {
+    fn from(value: CreateChatCompletionResponse) -> Self {
         todo!()
     }
 }
