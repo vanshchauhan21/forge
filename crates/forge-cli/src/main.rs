@@ -24,7 +24,6 @@ async fn main() -> Result<()> {
     while !end {
         let prompt = inquire::Text::new(format!("{}❯", mode).bold().as_str())
             .with_autocomplete(Completion::new(Mode::variants()))
-            .with_help_message("Ask the agent to do something")
             .prompt()?;
 
         if prompt.starts_with("/") {
