@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use derive_more::derive::From;
 use derive_setters::Setters;
-use forge_provider::model::{ContentPart, Request, TextContent};
+use forge_provider::{ContentPart, Request, TextContent};
 use forge_tool::Tool;
 use serde_json::Value;
 
@@ -186,15 +186,15 @@ impl From<Context> for Request {
         );
 
         // Encourage the model to use tools
-        request.tool_choice = Some(forge_provider::model::ToolChoice::Auto);
+        request.tool_choice = Some(forge_provider::ToolChoice::Auto);
 
         request
     }
 }
 
-impl<R: Role> From<Message<R>> for forge_provider::model::Message {
+impl<R: Role> From<Message<R>> for forge_provider::Message {
     fn from(value: Message<R>) -> Self {
-        forge_provider::model::Message {
+        forge_provider::Message {
             role: R::name(),
             content: ContentPart::Text(TextContent {
                 r#type: "text".to_string(),
@@ -205,7 +205,7 @@ impl<R: Role> From<Message<R>> for forge_provider::model::Message {
     }
 }
 
-impl From<AnyMessage> for forge_provider::model::Message {
+impl From<AnyMessage> for forge_provider::Message {
     fn from(value: AnyMessage) -> Self {
         match value {
             AnyMessage::User(message) => message.into(),
@@ -214,13 +214,13 @@ impl From<AnyMessage> for forge_provider::model::Message {
     }
 }
 
-fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::model::Tool> {
+fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::Tool> {
     tool.tools_list()
         .tools
         .iter()
-        .map(|tool| forge_provider::model::Tool {
+        .map(|tool| forge_provider::Tool {
             r#type: "function".to_string(),
-            function: forge_provider::model::FunctionDescription {
+            function: forge_provider::FunctionDescription {
                 description: tool.description.clone(),
                 name: tool.name.clone(),
                 parameters: tool.input_schema.clone(),
@@ -229,9 +229,9 @@ fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::model::Tool> {
         .collect()
 }
 
-impl From<File> for forge_provider::model::Message {
+impl From<File> for forge_provider::Message {
     fn from(value: File) -> Self {
-        forge_provider::model::Message {
+        forge_provider::Message {
             role: User::name(),
             content: ContentPart::Text(TextContent {
                 r#type: "text".to_string(),
