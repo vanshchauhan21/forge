@@ -227,7 +227,7 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    async fn prompt(
+    async fn chat(
         &self,
         request: Request,
     ) -> Result<Box<dyn FuturesStream<Item = Result<String>> + Unpin>> {

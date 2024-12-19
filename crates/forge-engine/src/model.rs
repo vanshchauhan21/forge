@@ -6,6 +6,8 @@ use forge_provider::Request;
 use forge_tool::Tool;
 use serde_json::Value;
 
+use crate::File;
+
 #[derive(Default)]
 pub struct State {
     stack: Vec<Context>,
@@ -64,7 +66,7 @@ pub struct Context {
     pub system: Message<System>,
     pub message: Vec<AnyMessage>,
     pub tools: Vec<Rc<dyn Tool>>,
-    pub files: Vec<String>,
+    pub files: Vec<File>,
 }
 
 impl Context {
@@ -127,11 +129,8 @@ pub enum Event {
     End,
 }
 
-
-impl TryFrom<Context> for Request {
-    type Error = String;
-
-    fn try_from(value: Context) -> Result<Self, Self::Error> {
+impl From<Context> for Request {
+    fn from(value: Context) -> Self {
         todo!()
     }
 }

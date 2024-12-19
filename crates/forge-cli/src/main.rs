@@ -6,7 +6,7 @@ use forge_cli::{
     completion::Completion,
     error,
 };
-use forge_engine::{model::Event, CodeForge};
+use forge_engine::{model::Event, CodeForge, Prompt};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
 
         let mut spinner = Spinner::new(spinners::Spinners::Dots);
 
-        let mut output = agent.prompt(prompt).await?;
+        let mut output = agent.chat(Prompt::new(prompt)).await?;
 
         let buffer = String::new();
         while let Some(event) = output.next().await {

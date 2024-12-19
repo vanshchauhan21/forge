@@ -5,7 +5,7 @@ use super::error::Result;
 #[async_trait::async_trait]
 pub(crate) trait InnerProvider {
     fn name(&self) -> &'static str;
-    async fn prompt(&self, request: Request) -> Result<Stream<Result<String>>>;
+    async fn chat(&self, request: Request) -> Result<Stream<Result<String>>>;
     async fn models(&self) -> Result<Vec<String>>;
 }
 
@@ -15,7 +15,7 @@ pub struct Provider {
 
 impl Provider {
     pub async fn chat(&self, request: Request) -> Result<Stream<Result<String>>> {
-        self.provider.prompt(request).await
+        self.provider.chat(request).await
     }
 
     pub async fn models(&self) -> Result<Vec<String>> {

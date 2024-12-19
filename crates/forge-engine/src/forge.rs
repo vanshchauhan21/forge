@@ -1,12 +1,10 @@
 use crate::model::{Context, Message, State};
 use crate::{error::Result, model::Event};
+use derive_setters::Setters;
 use forge_provider::{Provider, Stream};
 use forge_tool::Tool;
 use std::rc::Rc;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use tokio_stream::StreamExt;
 
 pub struct CodeForge {
@@ -15,9 +13,29 @@ pub struct CodeForge {
     provider: Provider,
 }
 
+#[derive(Setters, Clone)]
 pub struct Prompt {
     message: String,
-    files: Vec<String>,
+    files: Vec<File>,
+}
+
+#[derive(Setters, Clone)]
+pub struct File {
+    name: String,
+    content: String,
+}
+
+impl Prompt {
+    pub fn new(message: String) -> Self {
+        Prompt {
+            message,
+            files: Vec::new(),
+        }
+    }
+
+    pub fn add_file(&mut self, file: File) {
+        self.files.push(file);
+    }
 }
 
 impl CodeForge {
@@ -42,7 +60,7 @@ impl CodeForge {
         self.tools.push(Rc::new(tool));
     }
 
-    pub async fn prompt(&self, prompt: Prompt) -> Result<Stream<Event>> {
+    pub async fn chat(&self, prompt: Prompt) -> Result<Stream<Event>> {
         // - Create Request, update context
         //   -  Add System Message
         //   -  Add Add all tools
@@ -56,12 +74,17 @@ impl CodeForge {
         // - Add tool response to context
         // - Goto #001
 
+        // let (tx, rx) = tokio::sync::mpsc::channel(1);
+
+        // TODO: add message to history
+
         let context = Context::new(Message::system(include_str!("./prompt.md").to_string()))
             .tools(self.tools.clone())
             .add_message(Message::user(prompt.message))
             .files(prompt.files);
 
-        let stream = self.provider.chat(context.try_into()?).await?;
+        let stream = self.provider.chat(context.into()).await?;
+
         Ok(Box::new(stream.map(|message| match message {
             Ok(message) => Event::Text(message),
             Err(error) => Event::Error(format!("{}", error)),
@@ -80,5 +103,10 @@ impl CodeForge {
 
     pub async fn models(&self) -> Result<Vec<String>> {
         Ok(self.provider.models().await?)
+    }
+
+    /// Resets the state of the forge without changing the model
+    pub fn reset(self) -> Self {
+        todo!()
     }
 }

@@ -127,7 +127,7 @@ impl InnerProvider for OpenRouter {
     }
 
     /// Get a streaming response from OpenRouter
-    async fn prompt(
+    async fn chat(
         &self,
         request: Request,
     ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
