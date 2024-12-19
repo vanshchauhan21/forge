@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use derive_more::derive::From;
 use derive_setters::Setters;
+use forge_provider::Request;
 use forge_tool::Tool;
 use serde_json::Value;
 
@@ -77,6 +78,7 @@ impl Context {
             system,
             message: Vec::new(),
             tools: Vec::new(),
+            files: Vec::new(),
         }
     }
 }
@@ -125,35 +127,11 @@ pub enum Event {
     End,
 }
 
-impl State {
-    fn step(&mut self, action: Action) -> Command {
-        match action {
-            Action::Initialize => {
-                self.context.system = Message::system(include_str!("./prompt.md"));
-                Command::default()
-            }
-            Action::Prompt(message) => {
-                self.history.push(message.clone().into());
-                self.context.add_message(message.clone());
-                Command::LLMRequest(self.context.clone())
-            }
-            Action::LLMResponse { message, use_tool } => {
-                self.history.push(message.clone().into());
-                self.context.add_message(message.clone());
-                if let Some(tool) = use_tool {
-                    Command::UseTool(tool)
-                } else {
-                    Command::default()
-                }
-            }
-            Action::ToolResponse(tool_response) => match &tool_response.value {
-                Ok(_) => {
-                    self.context
-                        .add_message(Message::<User>::from(tool_response));
-                    Command::LLMRequest(self.context.clone())
-                }
-                Err(value) => todo!(),
-            },
-        }
+
+impl TryFrom<Context> for Request {
+    type Error = String;
+
+    fn try_from(value: Context) -> Result<Self, Self::Error> {
+        todo!()
     }
 }

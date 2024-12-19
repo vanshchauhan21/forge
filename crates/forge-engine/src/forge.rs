@@ -61,8 +61,7 @@ impl CodeForge {
             .add_message(Message::user(prompt.message))
             .files(prompt.files);
 
-        let message = context.to_string();
-        let stream = self.provider.chat(message).await?;
+        let stream = self.provider.chat(context.try_into()?).await?;
         Ok(Box::new(stream.map(|message| match message {
             Ok(message) => Event::Text(message),
             Err(error) => Event::Error(format!("{}", error)),

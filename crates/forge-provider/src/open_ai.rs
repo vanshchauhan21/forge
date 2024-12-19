@@ -1,3 +1,5 @@
+use crate::open_router::Request;
+
 use super::error::{Error, Result};
 use super::provider::{InnerProvider, Provider};
 use async_openai::{config, types::*, Client};
@@ -116,18 +118,6 @@ impl OpenRouter {
             model: model.unwrap_or("gpt-4o-mini".to_string()),
         }
     }
-
-    fn request(&self, input: String) -> Result<CreateChatCompletionRequest> {
-        Ok(CreateChatCompletionRequest {
-            model: self.model.clone(),
-            messages: vec![new_message(Role::User, &input)?],
-
-            // TODO: Make temperature configurable
-            temperature: Some(0.7),
-            stream: Some(true),
-            ..Default::default()
-        })
-    }
 }
 
 #[async_trait::async_trait]
@@ -139,13 +129,13 @@ impl InnerProvider for OpenRouter {
     /// Get a streaming response from OpenRouter
     async fn prompt(
         &self,
-        input: String,
+        request: Request,
     ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
         let client = self.client.clone();
-        let request = self.request(input)?;
+
         // Spawn task to handle streaming response
 
-        let stream = client.chat().create_stream(request).await?;
+        let stream = client.chat().create_stream(request.into()).await?;
 
         Ok(Box::new(stream.map(|a| match a {
             Ok(response) => {
@@ -175,5 +165,12 @@ impl InnerProvider for OpenRouter {
 impl Provider {
     pub fn open_ai(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         Provider::new(OpenRouter::new(api_key, model, base_url))
+    }
+}
+
+
+impl From<Request> for CreateChatCompletionRequest {
+    fn from(value: Request) -> Self {
+        todo!()
     }
 }
