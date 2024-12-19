@@ -77,7 +77,6 @@ impl CodeForge {
         // let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         // TODO: add message to history
-
         let context = Context::new(Message::system(include_str!("./prompt.md").to_string()))
             .tools(self.tools.clone())
             .add_message(Message::user(prompt.message))
@@ -85,6 +84,7 @@ impl CodeForge {
 
         let stream = self.provider.chat(context.into()).await?;
 
+        // TODO: need to handle errors more concisely
         Ok(Box::new(stream.map(|message| match message {
             Ok(message) => Event::Text(message),
             Err(error) => Event::Error(format!("{}", error)),

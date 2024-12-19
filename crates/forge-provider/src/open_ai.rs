@@ -1,9 +1,9 @@
 use crate::model::Request;
+use crate::Stream;
 
 use super::error::{Error, Result};
 use super::provider::{InnerProvider, Provider};
 use async_openai::{config, types::*, Client};
-use futures::stream::Stream;
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
@@ -127,10 +127,7 @@ impl InnerProvider for OpenRouter {
     }
 
     /// Get a streaming response from OpenRouter
-    async fn chat(
-        &self,
-        request: Request,
-    ) -> Result<Box<dyn Stream<Item = Result<String>> + Unpin>> {
+    async fn chat(&self, request: Request) -> Result<Stream<Result<String>>> {
         let client = self.client.clone();
 
         // Spawn task to handle streaming response

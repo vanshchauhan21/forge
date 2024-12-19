@@ -1,4 +1,5 @@
 use crate::model::{ContentPart, ListModelResponse, Message, Request, TextContent};
+use crate::Stream;
 
 use super::error::Result;
 use super::open_ai::Role; // Importing Role
@@ -81,10 +82,7 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    async fn chat(
-        &self,
-        request: Request,
-    ) -> Result<Box<dyn FuturesStream<Item = Result<String>> + Unpin>> {
+    async fn chat(&self, request: Request) -> Result<Stream<Result<String>>> {
         let response = self
             .http_client
             .post(self.config.url("/chat/completions"))
