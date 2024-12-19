@@ -110,15 +110,15 @@ impl Spinner {
 fn ls_files(path: &std::path::Path) -> std::io::Result<Vec<String>> {
     let mut paths = Vec::new();
     let walker = WalkBuilder::new(path)
-        .hidden(true)        // Skip hidden files
-        .git_global(true)    // Use global gitignore
-        .git_ignore(true)    // Use local .gitignore
-        .ignore(true)        // Use .ignore files
+        .hidden(true) // Skip hidden files
+        .git_global(true) // Use global gitignore
+        .git_ignore(true) // Use local .gitignore
+        .ignore(true) // Use .ignore files
         .build();
 
     for result in walker {
         if let Ok(entry) = result {
-            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+            if entry.file_type().is_some_and(|ft| ft.is_file()) {
                 paths.push(entry.path().display().to_string());
             }
         }
