@@ -21,7 +21,7 @@ pub struct Prompt {
 
 #[derive(Setters, Clone)]
 pub struct File {
-    pub name: String,
+    pub path: String,
     pub content: String,
 }
 
@@ -62,11 +62,11 @@ impl CodeForge {
 
     pub async fn chat(&self, prompt: Prompt) -> Result<Stream<Event>> {
         // - Create Request, update context
-        //   -  Add System Message
-        //   -  Add Add all tools
-        //   -  Add User Message
-        //   -  Add Context Files
-        // - Send message to LLM and await response #001
+        //   -  Add System Message [DONE]
+        //   -  Add Add all tools [DONE]
+        //   -  Add User Message [DONE]
+        //   -  Add Context Files [DONE]
+        // - Send message to LLM and await response #001 [DONE]
         // - On Response, dispatch event
         // - Check response has tool_use
         // - Execute tool
