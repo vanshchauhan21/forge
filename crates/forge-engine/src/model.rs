@@ -145,10 +145,9 @@ impl From<ToolResponse> for Message<User> {
 }
 
 pub enum Event {
-    Inquire(Option<String>),
-    Text(String),
-    Error(String),
-    End,
+    Ask(Option<String>),
+    Say(String),
+    Err(String),
 }
 
 fn insert_into<T>(vector: Option<Vec<T>>, value: T) -> Option<Vec<T>> {

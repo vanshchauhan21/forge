@@ -21,11 +21,11 @@ async fn main() -> Result<()> {
 
     let mut agent = CodeForge::new(cli.key.clone());
     let mut mode = Command::default();
-    let mut end = false;
 
-    while !end {
+    loop {
         // TODO: we shouldn't get the latest files from fs on each loop, should occur only when
         // user is searching for files.
+
         let mut suggestions = ls_files(std::path::Path::new("."))
             .map(|v| v.into_iter().map(|a| format!("@{}", a)).collect::<Vec<_>>())
             .unwrap_or_default();
@@ -57,21 +57,17 @@ async fn main() -> Result<()> {
 
         let mut spinner = Spinner::new(spinners::Spinners::Dots);
 
-        let mut output = agent.chat(Prompt::new(prompt)).await?;
+        let mut stream = agent.chat(Prompt::new(prompt)).await?;
 
         let buffer = String::new();
-        while let Some(event) = output.next().await {
+        while let Some(event) = stream.next().await {
             spinner.stop();
             match event {
-                Event::Inquire(_) => todo!(),
-                Event::Text(text) => {
+                Event::Ask(_) => todo!(),
+                Event::Say(text) => {
                     print!("{}", text);
                 }
-                Event::End => {
-                    end = true;
-                    break;
-                }
-                Event::Error(_) => todo!(),
+                Event::Err(_) => todo!(),
             }
         }
 

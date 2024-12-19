@@ -86,8 +86,8 @@ impl CodeForge {
 
         // TODO: need to handle errors more concisely
         Ok(Box::new(stream.map(|message| match message {
-            Ok(message) => Event::Text(message),
-            Err(error) => Event::Error(format!("{}", error)),
+            Ok(message) => Event::Say(message),
+            Err(error) => Event::Err(format!("{}", error)),
         })))
     }
 
