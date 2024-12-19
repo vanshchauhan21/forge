@@ -110,6 +110,7 @@ pub struct FunctionDescription {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Tool {
+    // TODO: should be an enum
     pub r#type: String,
     pub function: FunctionDescription,
 }

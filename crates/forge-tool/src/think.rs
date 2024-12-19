@@ -132,7 +132,7 @@ fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallTo
     })
 }
 
-fn list_tools() -> Result<ToolsListResponse> {
+fn list_tools() -> ToolsListResponse {
     let response = json!({
       "tools": [
         {
@@ -187,7 +187,7 @@ fn list_tools() -> Result<ToolsListResponse> {
         }
       ],
     });
-    Ok(serde_json::from_value(response)?)
+    serde_json::from_value(response).unwrap()
 }
 
 #[async_trait::async_trait]
@@ -200,7 +200,7 @@ impl Tool for Think {
         call_tool(input, &mut self.clone()).map_err(|e| e.to_string())
     }
 
-    fn tools_list(&self) -> Result<ToolsListResponse, String> {
-        list_tools().map_err(|e| e.to_string())
+    fn tools_list(&self) -> ToolsListResponse {
+        list_tools()
     }
 }

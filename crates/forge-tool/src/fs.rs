@@ -99,7 +99,7 @@ fn get_path(args: &HashMap<String, serde_json::Value>) -> Result<PathBuf> {
     }
 }
 
-fn list_tools() -> Result<ToolsListResponse> {
+fn list_tools() -> ToolsListResponse {
     let response = json!({
       "tools": [
         {
@@ -176,7 +176,7 @@ fn list_tools() -> Result<ToolsListResponse> {
         }
       ],
     });
-    Ok(serde_json::from_value(response)?)
+    serde_json::from_value(response).unwrap()
 }
 
 #[derive(Default)]
@@ -192,7 +192,7 @@ impl Tool for FS {
         call_tool(input).map_err(|e| e.to_string())
     }
 
-    fn tools_list(&self) -> Result<ToolsListResponse, String> {
-        list_tools().map_err(|e| e.to_string())
+    fn tools_list(&self) -> ToolsListResponse {
+        list_tools()
     }
 }

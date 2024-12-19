@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{ops::Deref, rc::Rc};
 
 use derive_more::derive::From;
 use derive_setters::Setters;
@@ -151,17 +151,33 @@ pub enum Event {
     End,
 }
 
+fn insert_into<T>(vector: Option<Vec<T>>, value: T) -> Option<Vec<T>> {
+    match vector {
+        Some(mut vec) => {
+            vec.push(value);
+            Some(vec)
+        }
+        None => Some(vec![value]),
+    }
+}
+
 impl From<Context> for Request {
     fn from(value: Context) -> Self {
-        let request = Request::default();
+        let mut request = Request::default();
+        // Add System Message [DONE]
+        request.messages = insert_into(request.messages, value.system.into());
 
-        let mut messages = request.messages.unwrap_or_default();
-        messages.push(value.system.into());
+        // Add Add all tools
+        request.tools = Some(
+            value
+                .tools
+                .iter()
+                .flat_map(|tool| into_tool(tool.as_ref()))
+                .collect(),
+        );
 
-        //   -  Add System Message [DONE]
-        //   -  Add Add all tools
-        //   -  Add User Message
-        //   -  Add Context Files
+        // Add User Message
+        // Add Context Files
         request
     }
 }
@@ -177,4 +193,19 @@ impl<R: Role> From<Message<R>> for forge_provider::model::Message {
             name: None,
         }
     }
+}
+
+fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::model::Tool> {
+    tool.tools_list()
+        .tools
+        .iter()
+        .map(|tool| forge_provider::model::Tool {
+            r#type: "function".to_string(),
+            function: forge_provider::model::FunctionDescription {
+                description: tool.description.clone(),
+                name: tool.name.clone(),
+                parameters: tool.input_schema.clone(),
+            },
+        })
+        .collect()
 }
