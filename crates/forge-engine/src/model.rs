@@ -1,4 +1,4 @@
-use std::{ops::Deref, rc::Rc};
+use std::rc::Rc;
 
 use derive_more::derive::From;
 use derive_setters::Setters;
