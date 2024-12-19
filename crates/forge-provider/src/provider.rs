@@ -1,4 +1,4 @@
-use crate::{open_router::Request, Stream};
+use crate::{model::Request, Stream};
 
 use super::error::Result;
 

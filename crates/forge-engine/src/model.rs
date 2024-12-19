@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use derive_more::derive::From;
 use derive_setters::Setters;
-use forge_provider::Request;
+use forge_provider::model::Request;
 use forge_tool::Tool;
 use serde_json::Value;
 

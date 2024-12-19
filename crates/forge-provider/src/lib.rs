@@ -1,4 +1,5 @@
 pub mod error;
+pub mod model;
 mod open_ai;
 mod open_router;
 mod provider;

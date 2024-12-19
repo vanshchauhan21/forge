@@ -1,4 +1,4 @@
-use crate::open_router::Request;
+use crate::model::Request;
 
 use super::error::{Error, Result};
 use super::provider::{InnerProvider, Provider};
