@@ -16,6 +16,7 @@ pub struct CodeForge {
 
 impl CodeForge {
     pub fn new(key: String) -> Self {
+        // Add initial set of tools
         let tools: HashMap<String, Box<dyn Tool>> = vec![
             Box::new(forge_tool::FS) as Box<dyn Tool>,
             Box::new(forge_tool::Think::default()) as Box<dyn Tool>,
@@ -39,6 +40,19 @@ impl CodeForge {
     }
 
     pub async fn prompt(&self, prompt: String) -> Result<Stream<Event>> {
+        // - Create Request, update context
+        //   -  Add System Message
+        //   -  Add Add all tools
+        //   -  Add User Message
+        //   -  Add Context Files
+        // - Send message to LLM and await response #001
+        // - On Response, dispatch event
+        // - Check response has tool_use
+        // - Execute tool
+        // - Dispatch Event
+        // - Add tool response to context
+        // - Goto #001
+
         let stream = self.provider.prompt(prompt).await?;
         Ok(Box::new(stream.map(|message| match message {
             Ok(message) => Event::Text(message),
