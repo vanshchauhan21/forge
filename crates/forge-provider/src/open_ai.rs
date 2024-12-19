@@ -168,7 +168,6 @@ impl Provider {
     }
 }
 
-
 impl From<Request> for CreateChatCompletionRequest {
     fn from(value: Request) -> Self {
         todo!()
