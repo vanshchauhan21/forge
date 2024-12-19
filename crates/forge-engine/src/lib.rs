@@ -1,9 +1,9 @@
 pub mod error;
-mod state;
+mod model;
 
 use error::Result;
 use forge_tool::{JsonRpcRequest, JsonRpcResponse, Tool};
-use state::State;
+use model::State;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
