@@ -176,6 +176,9 @@ impl From<Context> for Request {
                 .collect(),
         );
 
+        // Encourage the model to use tools
+        request.tool_choice = Some(forge_provider::model::ToolChoice::Auto);
+
         // Add User Message
         // Add Context Files
         request
