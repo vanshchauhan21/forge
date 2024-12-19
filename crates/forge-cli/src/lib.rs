@@ -1,4 +1,5 @@
 pub mod command;
 pub mod completion;
 pub mod error;
-pub mod log;
+mod log;
+pub mod runtime;

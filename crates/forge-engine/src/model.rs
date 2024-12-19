@@ -117,10 +117,7 @@ impl App {
                     self.context.push(Message::<User>::from(tool_response));
                     Command::LLMRequest(self.context.clone())
                 }
-                Err(value) => Command::UseTool(ToolRequest {
-                    name: tool_response.name,
-                    value,
-                }),
+                Err(value) => todo!(),
             },
         }
     }

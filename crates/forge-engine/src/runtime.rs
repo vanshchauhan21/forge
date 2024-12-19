@@ -1,8 +1,6 @@
-use tokio_stream::Stream;
-
-use crate::error::Error;
+use crate::{error::Error, model::Command, ActionStream};
 
 #[async_trait::async_trait]
-pub trait Runtime<Action, Command> {
-    async fn run(&self, command: Command) -> Result<Box<dyn Stream<Item = Action> + Unpin>, Error>;
+pub trait Runtime {
+    async fn run(&self, command: Command) -> Result<ActionStream, Error>;
 }

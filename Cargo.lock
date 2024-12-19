@@ -529,10 +529,12 @@ dependencies = [
 name = "forge-cli"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "colorize",
  "derive_more",
  "derive_setters",
+ "forge-engine",
  "forge-provider",
  "futures",
  "indoc",
