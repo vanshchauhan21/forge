@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::model::{
-    CallToolRequest, CallToolResponse, ListRequest, ToolResponseContent, ToolsListResponse,
-};
+use crate::model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse};
+use crate::Tool;
 use anyhow::Result;
 use serde_json::json;
 
@@ -100,7 +99,7 @@ fn get_path(args: &HashMap<String, serde_json::Value>) -> Result<PathBuf> {
     }
 }
 
-fn list_tools(_req: ListRequest) -> Result<ToolsListResponse> {
+fn list_tools() -> Result<ToolsListResponse> {
     let response = json!({
       "tools": [
         {
@@ -178,4 +177,21 @@ fn list_tools(_req: ListRequest) -> Result<ToolsListResponse> {
       ],
     });
     Ok(serde_json::from_value(response)?)
+}
+
+struct FileSystem;
+
+#[async_trait::async_trait]
+impl Tool for FileSystem {
+    fn name(&self) -> &'static str {
+        "FileSystem"
+    }
+
+    async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
+        call_tool(input).map_err(|e| e.to_string())
+    }
+
+    fn tools_list(&self) -> Result<ToolsListResponse, String> {
+        list_tools().map_err(|e| e.to_string())
+    }
 }
