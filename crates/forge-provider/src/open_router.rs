@@ -4,7 +4,6 @@ use crate::Stream;
 use super::error::Result;
 use super::open_ai::Role; // Importing Role
 use super::provider::{InnerProvider, Provider};
-use futures::stream::Stream as FuturesStream;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize}; // Importing Stream trait
 
