@@ -1,48 +1,11 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
-use forge_mcp::server::Server;
-use forge_mcp::transport::ServerStdioTransport;
-use forge_mcp::types::{
-    CallToolRequest, CallToolResponse, ListRequest, ResourcesListResponse, ServerCapabilities,
-    ToolResponseContent, ToolsListResponse,
+use crate::types::{
+    CallToolRequest, CallToolResponse, ListRequest, ToolResponseContent, ToolsListResponse,
 };
+use anyhow::Result;
 use serde_json::json;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        // needs to be stderr due to stdio transport
-        .with_writer(std::io::stderr)
-        .init();
-
-    let server = Server::builder(ServerStdioTransport)
-        .capabilities(ServerCapabilities {
-            tools: Some(json!({})),
-            ..Default::default()
-        })
-        .request_handler("tools/list", list_tools)
-        .request_handler("tools/call", call_tool)
-        .request_handler("resources/list", |_req: ListRequest| {
-            Ok(ResourcesListResponse {
-                resources: vec![],
-                next_cursor: None,
-                meta: None,
-            })
-        })
-        .build();
-    let server_handle = {
-        let server: Server<ServerStdioTransport> = server;
-        tokio::spawn(async move { server.listen().await })
-    };
-
-    server_handle
-        .await?
-        .map_err(|e| anyhow::anyhow!("Server error: {}", e))?;
-    Ok(())
-}
 
 fn call_tool(req: CallToolRequest) -> Result<CallToolResponse> {
     let name = req.name.as_str();

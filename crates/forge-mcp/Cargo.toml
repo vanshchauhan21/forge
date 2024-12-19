@@ -11,3 +11,5 @@ anyhow = "1.0"
 async-trait = "0.1"
 url = { version = "2.5", features = ["serde"] }
 tracing = "0.1"
+home = "0.5.11"
+colorize = "0.1.0"

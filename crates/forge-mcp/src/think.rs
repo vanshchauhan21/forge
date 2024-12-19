@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
-use colored::Colorize;
-use forge_mcp::server::Server;
-use forge_mcp::transport::ServerStdioTransport;
-use forge_mcp::types::{
-    CallToolRequest, CallToolResponse, ListRequest, ResourcesListResponse, ServerCapabilities,
+use crate::types::{
+    CallToolRequest, CallToolResponse, ListRequest,
     ToolResponseContent, ToolsListResponse,
 };
+use anyhow::Result;
+use colorize::AnsiColor;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -200,41 +198,6 @@ fn list_tools(_req: ListRequest) -> Result<ToolsListResponse> {
       ],
     });
     Ok(serde_json::from_value(response)?)
-}
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_writer(std::io::stderr)
-        .init();
-
-    let thinking_server = SequentialThinkingServer::new();
-
-    let t_server = thinking_server.clone();
-    let server = Server::builder(ServerStdioTransport)
-        .capabilities(ServerCapabilities {
-            tools: Some(json!({})),
-            ..Default::default()
-        })
-        .request_handler("tools/list", list_tools)
-        .request_handler("tools/call", move |req| -> Result<CallToolResponse> {
-            call_tools(req, t_server.clone())
-        })
-        .request_handler("resources/list", |_req: ListRequest| {
-            Ok(ResourcesListResponse {
-                resources: vec![],
-                next_cursor: None,
-                meta: None,
-            })
-        })
-        .build();
-
-    eprintln!("Sequential Thinking MCP Server running on stdio");
-
-    server.listen().await?;
-
-    Ok(())
 }
 
 fn call_tools(
