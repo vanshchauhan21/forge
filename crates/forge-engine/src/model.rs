@@ -166,8 +166,15 @@ impl From<Context> for Request {
         let mut request = Request::default();
         // Add System Message
         request.messages = insert_into(request.messages, value.system.into());
+
+        // Add User Message
         for message in value.messages {
             request.messages = insert_into(request.messages, message.into());
+        }
+
+        // Add Context Files
+        for file in value.files {
+            request.messages = insert_into(request.messages, file.into());
         }
 
         // Add Add all tools
@@ -182,9 +189,6 @@ impl From<Context> for Request {
         // Encourage the model to use tools
         request.tool_choice = Some(forge_provider::model::ToolChoice::Auto);
 
-        // Add User Message
-
-        // Add Context Files
         request
     }
 }
@@ -224,4 +228,17 @@ fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::model::Tool> {
             },
         })
         .collect()
+}
+
+impl From<File> for forge_provider::model::Message {
+    fn from(value: File) -> Self {
+        forge_provider::model::Message {
+            role: User::name(),
+            content: ContentPart::Text(TextContent {
+                r#type: "text".to_string(),
+                text: format!("{}\n{}", value.path, value.content),
+            }),
+            name: Some(value.path),
+        }
+    }
 }
