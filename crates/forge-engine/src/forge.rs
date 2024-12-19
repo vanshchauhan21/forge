@@ -82,6 +82,7 @@ impl CodeForge {
             .add_message(Message::user(prompt.message))
             .files(prompt.files);
 
+        // TODO: Streaming is making the design complicated
         let stream = self.provider.chat(context.into()).await?;
 
         // TODO: need to handle errors more concisely
