@@ -61,6 +61,7 @@ async fn main() -> Result<()> {
                     end = true;
                     break;
                 }
+                Event::Error(_) => todo!(),
             }
         }
         spinner.stop_with_message("Here is what I thought...".into());

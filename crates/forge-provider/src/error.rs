@@ -1,8 +1,10 @@
 use async_openai::error::OpenAIError;
+use derive_more::derive::Display;
 
-#[derive(Debug, derive_more::From)]
+#[derive(Debug, Display, derive_more::From)]
 pub enum Error {
     // Custom display message for provider error
+    #[display("{}", error)]
     Provider {
         provider: String,
         error: ProviderError,
@@ -19,7 +21,7 @@ impl Error {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum ProviderError {
     // Custom display message for OpenAI error
     OpenAI(OpenAIError),

@@ -9,6 +9,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+use tokio_stream::StreamExt;
 
 pub type Stream<A> = Box<dyn tokio_stream::Stream<Item = A> + Unpin>;
 
@@ -37,7 +38,11 @@ impl CodeForge {
     }
 
     pub async fn prompt(&self, prompt: String) -> Result<Stream<Event>> {
-        todo!()
+        let stream = self.provider.prompt(prompt).await?;
+        Ok(Box::new(stream.map(|message| match message {
+            Ok(message) => Event::Text(message),
+            Err(error) => Event::Error(format!("{}", error)),
+        })))
     }
 
     pub fn model(self, model: String) -> Self {
@@ -51,12 +56,13 @@ impl CodeForge {
     }
 
     pub async fn models(&self) -> Result<Vec<String>> {
-        todo!()
+        Ok(self.provider.models().await?)
     }
 }
 
 pub enum Event {
     Inquire(Option<String>),
     Text(String),
+    Error(String),
     End,
 }
