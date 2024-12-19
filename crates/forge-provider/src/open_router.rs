@@ -283,9 +283,10 @@ impl Provider {
 mod test {
     use crate::open_router::ListModelResponse;
 
-
     fn models() -> &'static str {
-        let data = r#"{
+        
+
+        (r#"{
             "data": [
               {
                 "id": "sao10k/l3.3-euryale-70b",
@@ -336,15 +337,13 @@ mod test {
                 "per_request_limits": null
               }
             ]
-          }"#;
-
-          data
+          }"#) as _
     }
 
-
     #[test]
-    fn test_ser_of_models(){
-        let response: Result<ListModelResponse, serde_json::Error> = serde_json::from_str(&models());
+    fn test_ser_of_models() {
+        let response: Result<ListModelResponse, serde_json::Error> =
+            serde_json::from_str(models());
         assert!(response.is_ok())
     }
 }
