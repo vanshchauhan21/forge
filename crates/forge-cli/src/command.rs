@@ -5,7 +5,7 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Display, AsRefStr, EnumString, EnumIter)]
 #[strum(serialize_all = "UPPERCASE")]
-pub enum Mode {
+pub enum Command {
     #[default]
     Ask,
     Edit,
@@ -13,7 +13,7 @@ pub enum Mode {
     Model,
 }
 
-impl Mode {
+impl Command {
     pub fn variants() -> Vec<String> {
         Self::iter().map(|m| format!("/{}", m.as_ref())).collect()
     }

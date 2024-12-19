@@ -2,7 +2,7 @@ use clap::Parser;
 use colorize::AnsiColor;
 use error::Result;
 use forge_cli::{
-    command::{Cli, Mode},
+    command::{Cli, Command},
     completion::Completion,
     error,
 };
@@ -19,23 +19,23 @@ async fn main() -> Result<()> {
         .init();
 
     let mut agent = CodeForge::new(cli.key.clone());
-    let mut mode = Mode::default();
+    let mut mode = Command::default();
     let mut end = false;
     while !end {
         let prompt = inquire::Text::new(format!("{}❯", mode).bold().as_str())
-            .with_autocomplete(Completion::new(Mode::variants()))
+            .with_autocomplete(Completion::new(Command::variants()))
             .prompt()?;
 
         if prompt.starts_with("/") {
-            if let Ok(prompt) = prompt.trim_start_matches("/").parse::<Mode>() {
+            if let Ok(prompt) = prompt.trim_start_matches("/").parse::<Command>() {
                 mode = prompt;
                 match mode {
-                    Mode::Ask => {}
-                    Mode::Edit => {}
-                    Mode::Quit => {
+                    Command::Ask => {}
+                    Command::Edit => {}
+                    Command::Quit => {
                         break;
                     }
-                    Mode::Model => {
+                    Command::Model => {
                         let models = agent.models().await?;
                         let input = inquire::Select::new("Choose a model", models).prompt()?;
                         agent = agent.model(input)
