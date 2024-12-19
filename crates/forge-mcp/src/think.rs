@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::types::{
-    CallToolRequest, CallToolResponse, ListRequest,
-    ToolResponseContent, ToolsListResponse,
+    CallToolRequest, CallToolResponse, ListRequest, ToolResponseContent, ToolsListResponse,
 };
 use anyhow::Result;
 use colorize::AnsiColor;
