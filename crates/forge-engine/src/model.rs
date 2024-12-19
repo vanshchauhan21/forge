@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use derive_more::derive::From;
 use derive_setters::Setters;
-use forge_provider::model::Request;
+use forge_provider::model::{ContentPart, Request, TextContent};
 use forge_tool::Tool;
 use serde_json::Value;
 
@@ -21,6 +21,28 @@ pub struct System;
 pub struct User;
 #[derive(Clone, Default)]
 pub struct Assistant;
+
+pub trait Role {
+    fn name() -> String;
+}
+
+impl Role for System {
+    fn name() -> String {
+        "system".to_string()
+    }
+}
+
+impl Role for User {
+    fn name() -> String {
+        "user".to_string()
+    }
+}
+
+impl Role for Assistant {
+    fn name() -> String {
+        "assistant".to_string()
+    }
+}
 
 #[derive(Clone, From)]
 pub enum AnyMessage {
@@ -131,6 +153,28 @@ pub enum Event {
 
 impl From<Context> for Request {
     fn from(value: Context) -> Self {
-        todo!()
+        let request = Request::default();
+
+        let mut messages = request.messages.unwrap_or_default();
+        messages.push(value.system.into());
+
+        //   -  Add System Message [DONE]
+        //   -  Add Add all tools
+        //   -  Add User Message
+        //   -  Add Context Files
+        request
+    }
+}
+
+impl<R: Role> From<Message<R>> for forge_provider::model::Message {
+    fn from(value: Message<R>) -> Self {
+        forge_provider::model::Message {
+            role: R::name(),
+            content: ContentPart::Text(TextContent {
+                r#type: "text".to_string(),
+                text: value.content,
+            }),
+            name: None,
+        }
     }
 }

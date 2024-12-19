@@ -71,6 +71,7 @@ pub struct Request {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
+    // TODO: could be an enum
     pub r#type: String,
     pub text: String,
 }
