@@ -1,7 +1,7 @@
 use crate::model::State;
 use crate::{error::Result, model::Event, Stream};
 use forge_provider::Provider;
-use forge_tool::{JsonRpcRequest, JsonRpcResponse, Tool};
+use forge_tool::Tool;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -10,7 +10,7 @@ use tokio_stream::StreamExt;
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tools: HashMap<String, Box<dyn Tool<Input = JsonRpcRequest, Output = JsonRpcResponse>>>,
+    tools: HashMap<String, Box<dyn Tool>>,
     provider: Provider,
 }
 
