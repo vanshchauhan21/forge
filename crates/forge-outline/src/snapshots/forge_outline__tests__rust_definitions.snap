@@ -1,0 +1,10 @@
+---
+source: crates/forge-outline/src/lib.rs
+expression: result
+---
+test.rs
+│struct User {
+|----
+│fn calculate_age(birth_year: u32) -> u32 {
+|----
+│fn new(name: String, age: u32) -> Self {

@@ -1,0 +1,8 @@
+---
+source: crates/forge-outline/src/lib.rs
+expression: result
+---
+test.js
+│function calculateTotal(items) {
+|----
+│function formatPrice(price) {
