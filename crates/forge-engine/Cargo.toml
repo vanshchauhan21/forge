@@ -12,3 +12,4 @@ thiserror = "2.0.8"
 tokio = "1.42.0"
 tokio-stream = "0.1.17"
 forge-provider = { path = "../forge-provider" }
+forge-tool ={ path = "../forge-tool" }

@@ -1,0 +1,9 @@
+[package]
+name = "forge-tool"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.83"
+derive_more = "1.0.0"
+mcp_rs = "0.1.0"

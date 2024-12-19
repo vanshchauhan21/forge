@@ -1,32 +1,30 @@
 pub mod error;
 mod state;
-mod tool;
+
 use error::Result;
-use serde_json::Value;
+use forge_tool::{JsonRpcRequest, JsonRpcResponse, Tool};
 use state::State;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use tool::SerdeTool;
-pub use tool::Tool;
 
 pub type Stream<A> = Box<dyn tokio_stream::Stream<Item = A> + Unpin>;
 
 #[derive(Default)]
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tools: HashMap<String, Box<dyn Tool<Input = Value, Output = Value>>>,
+    tools: HashMap<String, Box<dyn Tool<Input = JsonRpcRequest, Output = JsonRpcResponse>>>,
 }
 
 impl CodeForge {
     pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T)
     where
-        T::Input: serde::de::DeserializeOwned,
-        T::Output: serde::Serialize,
+        T::Input: TryFrom<JsonRpcRequest, Error = forge_tool::error::Error>,
+        T::Output: TryInto<JsonRpcResponse, Error = forge_tool::error::Error>,
     {
         self.tools
-            .insert(tool.name().to_string(), Box::new(SerdeTool(tool)));
+            .insert(tool.name().to_string(), Box::new(tool.into_dyn()));
     }
 
     pub async fn prompt(&self, prompt: &str) -> Result<Stream<Event>> {
