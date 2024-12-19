@@ -32,7 +32,8 @@ impl Autocomplete for Completion {
                     s if s.starts_with("@") => input
                         .split("@")
                         .last()
-                        .filter(|file| !file.contains("@") && !file.is_empty()).is_some_and(|file| c.to_lowercase().contains(file)),
+                        .filter(|file| !file.contains("@") && !file.is_empty())
+                        .is_some_and(|file| c.to_lowercase().contains(file)),
                     _ => false,
                 })
                 .cloned()
