@@ -284,8 +284,6 @@ mod test {
     use crate::open_router::ListModelResponse;
 
     fn models() -> &'static str {
-        
-
         (r#"{
             "data": [
               {
@@ -342,8 +340,7 @@ mod test {
 
     #[test]
     fn test_ser_of_models() {
-        let response: Result<ListModelResponse, serde_json::Error> =
-            serde_json::from_str(models());
+        let response: Result<ListModelResponse, serde_json::Error> = serde_json::from_str(models());
         assert!(response.is_ok())
     }
 }
