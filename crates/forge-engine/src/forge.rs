@@ -1,7 +1,8 @@
-use crate::model::State;
+use crate::model::{Context, Message, State};
 use crate::{error::Result, model::Event};
 use forge_provider::{Provider, Stream};
 use forge_tool::Tool;
+use std::rc::Rc;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -10,20 +11,22 @@ use tokio_stream::StreamExt;
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tools: HashMap<String, Box<dyn Tool>>,
+    tools: Vec<Rc<dyn Tool>>,
     provider: Provider,
+}
+
+pub struct Prompt {
+    message: String,
+    files: Vec<String>,
 }
 
 impl CodeForge {
     pub fn new(key: String) -> Self {
         // Add initial set of tools
-        let tools: HashMap<String, Box<dyn Tool>> = vec![
-            Box::new(forge_tool::FS) as Box<dyn Tool>,
-            Box::new(forge_tool::Think::default()) as Box<dyn Tool>,
-        ]
-        .into_iter()
-        .map(|tool| (tool.name().to_string(), tool))
-        .collect();
+        let tools = vec![
+            Rc::new(forge_tool::FS) as Rc<dyn Tool>,
+            Rc::new(forge_tool::Think::default()) as Rc<dyn Tool>,
+        ];
 
         CodeForge {
             state: Arc::new(Mutex::new(State::default())),
@@ -36,10 +39,10 @@ impl CodeForge {
     }
 
     pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T) {
-        self.tools.insert(tool.name().to_string(), Box::new(tool));
+        self.tools.push(Rc::new(tool));
     }
 
-    pub async fn prompt(&self, prompt: String) -> Result<Stream<Event>> {
+    pub async fn prompt(&self, prompt: Prompt) -> Result<Stream<Event>> {
         // - Create Request, update context
         //   -  Add System Message
         //   -  Add Add all tools
@@ -53,7 +56,13 @@ impl CodeForge {
         // - Add tool response to context
         // - Goto #001
 
-        let stream = self.provider.prompt(prompt).await?;
+        let context = Context::new(Message::system(include_str!("./prompt.md").to_string()))
+            .tools(self.tools.clone())
+            .add_message(Message::user(prompt.message))
+            .files(prompt.files);
+
+        let message = context.to_string();
+        let stream = self.provider.chat(message).await?;
         Ok(Box::new(stream.map(|message| match message {
             Ok(message) => Event::Text(message),
             Err(error) => Event::Error(format!("{}", error)),

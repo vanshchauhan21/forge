@@ -89,6 +89,7 @@ pub struct ListModelResponse {
     pub data: Vec<Model>,
 }
 
+// TODO: make this the default way to make requests
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Request {
     pub messages: Option<Vec<Message>>,
@@ -184,6 +185,8 @@ pub struct Prediction {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ResponseType {
     pub status: String,
+
+    // FIXME: make this type-safe
     pub data: Option<serde_json::Value>,
     pub error: Option<String>,
 }
@@ -216,16 +219,6 @@ impl OpenRouter {
             name: None,
         }
     }
-
-    fn prompt_request(&self, input: String) -> Result<Request> {
-        Ok(Request {
-            model: Some(self.model.clone()),
-            messages: Some(vec![self.new_message(Role::User, &input)]),
-            temperature: Some(0.7),
-            stream: Some(true),
-            ..Default::default()
-        })
-    }
 }
 
 #[async_trait::async_trait]
@@ -236,9 +229,8 @@ impl InnerProvider for OpenRouter {
 
     async fn prompt(
         &self,
-        input: String,
+        request: Request,
     ) -> Result<Box<dyn FuturesStream<Item = Result<String>> + Unpin>> {
-        let request = self.prompt_request(input)?;
         let response = self
             .http_client
             .post(self.config.url("/chat/completions"))

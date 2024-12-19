@@ -1,4 +1,8 @@
+use std::rc::Rc;
+
 use derive_more::derive::From;
+use derive_setters::Setters;
+use forge_tool::Tool;
 use serde_json::Value;
 
 #[derive(Default)]
@@ -28,29 +32,51 @@ pub struct Message<Role> {
 }
 
 impl Message<System> {
-    pub fn new(content: &str) -> Self {
+    pub fn system(content: String) -> Self {
         Message {
-            content: content.to_string(),
+            content,
             role: System,
         }
     }
 }
 
-#[derive(Default, Clone)]
+impl Message<User> {
+    pub fn user(content: String) -> Self {
+        Message {
+            content,
+            role: User,
+        }
+    }
+}
+
+impl Message<Assistant> {
+    pub fn assistant(content: String) -> Self {
+        Message {
+            content,
+            role: Assistant,
+        }
+    }
+}
+
+#[derive(Default, Clone, Setters)]
 pub struct Context {
-    system: Message<System>,
-    message: Vec<AnyMessage>,
+    pub system: Message<System>,
+    pub message: Vec<AnyMessage>,
+    pub tools: Vec<Rc<dyn Tool>>,
+    pub files: Vec<String>,
 }
 
 impl Context {
-    pub fn push(&mut self, message: impl Into<AnyMessage>) {
+    pub fn add_message(mut self, message: impl Into<AnyMessage>) -> Self {
         self.message.push(message.into());
+        self
     }
 
     pub fn new(system: Message<System>) -> Self {
         Context {
             system,
             message: Vec::new(),
+            tools: Vec::new(),
         }
     }
 }
@@ -103,17 +129,17 @@ impl State {
     fn step(&mut self, action: Action) -> Command {
         match action {
             Action::Initialize => {
-                self.context.system = Message::new(include_str!("./prompt.md"));
+                self.context.system = Message::system(include_str!("./prompt.md"));
                 Command::default()
             }
             Action::Prompt(message) => {
                 self.history.push(message.clone().into());
-                self.context.push(message.clone());
+                self.context.add_message(message.clone());
                 Command::LLMRequest(self.context.clone())
             }
             Action::LLMResponse { message, use_tool } => {
                 self.history.push(message.clone().into());
-                self.context.push(message.clone());
+                self.context.add_message(message.clone());
                 if let Some(tool) = use_tool {
                     Command::UseTool(tool)
                 } else {
@@ -122,7 +148,8 @@ impl State {
             }
             Action::ToolResponse(tool_response) => match &tool_response.value {
                 Ok(_) => {
-                    self.context.push(Message::<User>::from(tool_response));
+                    self.context
+                        .add_message(Message::<User>::from(tool_response));
                     Command::LLMRequest(self.context.clone())
                 }
                 Err(value) => todo!(),
