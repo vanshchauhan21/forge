@@ -205,7 +205,7 @@ impl From<Request> for OpenRouterRequest {
             ),
             tools: Some(
                 value
-                    .available_tools
+                    .tools
                     .into_iter()
                     .map(OpenRouterTool::from)
                     .collect::<Vec<_>>(),

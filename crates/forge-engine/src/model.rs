@@ -43,7 +43,11 @@ pub enum Action {
 
 impl From<ToolResponse> for Message<User> {
     fn from(tool_response: ToolResponse) -> Self {
-        todo!()
+        Message::user(format!(
+            "{}: {}",
+            tool_response.name,
+            tool_response.value.unwrap()
+        ))
     }
 }
 

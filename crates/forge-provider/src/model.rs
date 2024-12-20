@@ -6,19 +6,19 @@ use serde_json::Value;
 #[derive(Default, Setters, Debug, Clone)]
 pub struct Request {
     pub context: Vec<AnyMessage>,
-    pub available_tools: Vec<Tool>,
+    pub tools: Vec<Tool>,
+    pub tool_result: Vec<ToolResult>,
 }
 
 impl Request {
     pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
         let tool: Tool = tool.into();
-        self.available_tools.push(tool);
+        self.tools.push(tool);
         self
     }
 
     pub fn extend_tools(mut self, tools: Vec<impl Into<Tool>>) -> Self {
-        self.available_tools
-            .extend(tools.into_iter().map(Into::into));
+        self.tools.extend(tools.into_iter().map(Into::into));
         self
     }
 
@@ -105,40 +105,47 @@ pub enum AnyMessage {
 #[derive(Setters, Debug, Clone)]
 pub struct Response {
     pub message: Message<Assistant>,
-    pub call_tool: Vec<CallTool>,
+    pub tool_use: Vec<ToolUse>,
 }
 
 impl Response {
     pub fn new(message: String) -> Response {
         Response {
             message: Message::assistant(message),
-            call_tool: vec![],
+            tool_use: vec![],
         }
     }
 
-    pub fn add_call(mut self, call_tool: impl Into<CallTool>) -> Self {
-        self.call_tool.push(call_tool.into());
+    pub fn add_call(mut self, call_tool: impl Into<ToolUse>) -> Self {
+        self.tool_use.push(call_tool.into());
         self
     }
 
-    pub fn extend_calls(mut self, calls: Vec<impl Into<CallTool>>) -> Self {
-        self.call_tool.extend(calls.into_iter().map(Into::into));
+    pub fn extend_calls(mut self, calls: Vec<impl Into<ToolUse>>) -> Self {
+        self.tool_use.extend(calls.into_iter().map(Into::into));
         self
     }
 }
 
+/// Unique identifier for a using a tool
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CallId(String);
+pub struct UseId(String);
 
-impl CallId {
-    pub(crate) fn new(id: String) -> CallId {
-        CallId(id)
+impl UseId {
+    pub(crate) fn new(id: String) -> UseId {
+        UseId(id)
     }
 }
 
 #[derive(Setters, Debug, Clone)]
-pub struct CallTool {
-    pub call_id: CallId,
+pub struct ToolUse {
+    pub tool_use_id: UseId,
     pub tool_id: ToolId,
     pub input: Value,
+}
+
+#[derive(Setters, Debug, Clone)]
+pub struct ToolResult {
+    pub tool_use_id: UseId,
+    pub content: Value,
 }
