@@ -648,6 +648,7 @@ dependencies = [
  "async-openai",
  "async-trait",
  "derive_more",
+ "derive_setters",
  "futures",
  "reqwest",
  "serde",

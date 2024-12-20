@@ -1,12 +1,17 @@
+use derive_setters::Setters;
 use serde_json::Value;
 
+#[derive(Setters, Debug, Clone)]
 pub struct Request {
-    context: Vec<AnyMessage>,
-    available_tools: Vec<Tool>,
+    pub context: Vec<AnyMessage>,
+    pub available_tools: Vec<Tool>,
 }
 
+#[derive(Setters, Debug, Clone)]
 pub struct System {}
+#[derive(Setters, Debug, Clone)]
 pub struct User {}
+#[derive(Setters, Debug, Clone)]
 pub struct Assistant {}
 
 pub trait Role {
@@ -31,37 +36,45 @@ impl Role for Assistant {
     }
 }
 
+#[derive(Setters, Debug, Clone)]
 pub struct Message<Role> {
     content: String,
     role: Role,
 }
 
+#[derive(Debug, Clone)]
 pub enum AnyMessage {
     System(Message<System>),
     User(Message<User>),
     Assistant(Message<Assistant>),
 }
 
+#[derive(Debug, Clone)]
 pub struct ToolId(String);
 
+#[derive(Setters, Debug, Clone)]
 pub struct Tool {
-    id: ToolId,
-    description: String,
-    input_schema: JsonSchema,
-    output_schema: JsonSchema,
+    pub id: ToolId,
+    pub description: String,
+    pub input_schema: JsonSchema,
+    pub output_schema: JsonSchema,
 }
 
+#[derive(Setters, Debug, Clone)]
 pub struct Response {
-    message: Message<Assistant>,
-    call_tool: Vec<CallTool>,
+    pub message: Message<Assistant>,
+    pub call_tool: Vec<CallTool>,
 }
 
+#[derive(Debug, Clone)]
 pub struct CallId(String);
 
+#[derive(Setters, Debug, Clone)]
 pub struct CallTool {
-    id: CallId,
-    tool_id: ToolId,
-    input: Value,
+    pub id: CallId,
+    pub tool_id: ToolId,
+    pub input: Value,
 }
 
+#[derive(Debug, Clone)]
 pub struct JsonSchema(Value);

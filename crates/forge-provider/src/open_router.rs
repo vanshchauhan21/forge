@@ -4,6 +4,7 @@ use super::error::Result;
 use super::open_ai::Role; // Importing Role
 use super::provider::{InnerProvider, Provider};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Model {
