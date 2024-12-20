@@ -126,4 +126,3 @@ impl ToolTrait for Think {
         Ok(thought_result)
     }
 }
-
