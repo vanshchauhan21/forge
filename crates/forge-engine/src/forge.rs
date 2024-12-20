@@ -1,9 +1,8 @@
 use crate::model::State;
 use crate::{error::Result, model::Event};
-use derive_setters::Setters;
 use forge_provider::model::{Message, Request, User};
 use forge_provider::{Provider, Stream};
-use forge_tool::ToolEngine;
+use forge_tool::{ToolEngine, Prompt};
 use std::sync::{Arc, Mutex};
 
 pub struct CodeForge {
@@ -12,30 +11,6 @@ pub struct CodeForge {
     provider: Provider,
 }
 
-#[derive(Setters, Clone)]
-pub struct Prompt {
-    message: String,
-    files: Vec<File>,
-}
-
-#[derive(Setters, Clone)]
-pub struct File {
-    pub path: String,
-    pub content: String,
-}
-
-impl Prompt {
-    pub fn new(message: String) -> Self {
-        Prompt {
-            message,
-            files: Vec::new(),
-        }
-    }
-
-    pub fn add_file(&mut self, file: File) {
-        self.files.push(file);
-    }
-}
 
 impl CodeForge {
     pub fn new(key: String) -> Self {
@@ -76,7 +51,7 @@ impl CodeForge {
                 prompt
                     .files
                     .into_iter()
-                    .map(Message::<User>::from)
+                    .map(|f| Message::user(format!("{}\n{}", f.path, f.content)))
                     .collect(),
             );
 

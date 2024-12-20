@@ -6,7 +6,8 @@ use forge_cli::{
     completion::Completion,
     error,
 };
-use forge_engine::{model::Event, CodeForge, Prompt};
+use forge_engine::{model::Event, CodeForge};
+use forge_tool::Prompt;
 use futures::StreamExt;
 use ignore::WalkBuilder;
 
@@ -57,7 +58,11 @@ async fn main() -> Result<()> {
 
         let mut spinner = Spinner::new(spinners::Spinners::Dots);
 
-        let mut stream = agent.chat(Prompt::new(prompt)).await?;
+        let prompt = Prompt::parse(prompt)
+            .await
+            .map_err(|e| e.to_string())
+            .unwrap();
+        let mut stream = agent.chat(prompt).await?;
 
         let buffer = String::new();
         while let Some(event) = stream.next().await {

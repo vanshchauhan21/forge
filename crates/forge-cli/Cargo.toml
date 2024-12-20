@@ -19,6 +19,7 @@ spinners = "4.1.1"
 colorize = "0.1.0"
 async-trait = "0.1.83"
 ignore = "0.4"
+forge-tool = { path = "../forge-tool"}
 
 [dev-dependencies]
 indoc = "2.0.5"

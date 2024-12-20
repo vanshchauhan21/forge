@@ -1,8 +1,6 @@
 use forge_provider::model::{AnyMessage, Assistant, Message, Request, User};
 use serde_json::Value;
 
-use crate::File;
-
 #[derive(Default)]
 pub struct State {
     stack: Vec<Request>,
@@ -64,11 +62,5 @@ fn insert_into<T>(vector: Option<Vec<T>>, value: T) -> Option<Vec<T>> {
             Some(vec)
         }
         None => Some(vec![value]),
-    }
-}
-
-impl From<File> for forge_provider::model::Message<User> {
-    fn from(value: File) -> Self {
-        Message::user(format!("{}\n{}", value.path, value.content))
     }
 }

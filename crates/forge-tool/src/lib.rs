@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+mod console;
 mod fs;
 mod model;
 use fs::{FSFileInfo, FSList, FSRead, FSSearch};
@@ -7,6 +8,10 @@ mod think;
 use inflector::Inflector;
 use serde_json::Value;
 use think::Think;
+mod prompt_parser;
+use console::{ReadLine, WriteLine};
+
+pub use console::{File, Prompt};
 
 // TODO: use a more type-safe API instead of the MCP interface
 #[async_trait::async_trait]
@@ -118,6 +123,9 @@ impl Default for ToolEngine {
 
         let think = Think::default();
         tools.insert(think.id(), SerdeTool::import(think));
+
+        tools.insert(ReadLine.id(), SerdeTool::import(ReadLine));
+        tools.insert(WriteLine.id(), SerdeTool::import(WriteLine));
 
         Self { tools }
     }
