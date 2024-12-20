@@ -11,7 +11,7 @@ impl ToolTrait for FSRead {
     type Output = String;
 
     fn description(&self) -> String {
-        "Read a file".to_string()
+        "Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.".to_string()
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
@@ -28,7 +28,7 @@ impl ToolTrait for FSSearch {
     type Output = Vec<String>;
 
     fn description(&self) -> String {
-        "Search for files and directories recursively in a given directory. Input is (directory_path, search_pattern) where search_pattern is matched against file/directory names".to_string()
+        "Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items. Great for finding files when you don't know their exact location. Only searches within allowed directories.".to_string()
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
@@ -65,7 +65,7 @@ impl ToolTrait for FSList {
     type Output = Vec<String>;
 
     fn description(&self) -> String {
-        "List files and directories in a given directory".to_string()
+        "Get a detailed listing of all files and directories in a specified path. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. This tool is essential for understanding directory structure and finding specific files within a directory. Only works within allowed directories.".to_string()
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
@@ -92,7 +92,7 @@ impl ToolTrait for FSFileInfo {
     type Output = String;
 
     fn description(&self) -> String {
-        "Get information about a file or directory".to_string()
+        "Retrieve detailed metadata about a file or directory. Returns comprehensive information including size, creation time, last modified time, permissions, and type. This tool is perfect for understanding file characteristics without reading the actual content. Only works within allowed directories.".to_string()
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
