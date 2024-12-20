@@ -1,9 +1,12 @@
+mod error;
+
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
-mod error;
-mod queries;
+pub const JAVASCRIPT: &str = include_str!("./queries/javascript.rkt");
+pub const PYTHON: &str = include_str!("./queries/python.rkt");
+pub const RUST: &str = include_str!("./queries/rust.rkt");
 
 use error::{Error, Result};
 
@@ -18,9 +21,9 @@ fn load_language_parser(language_name: &str) -> Result<Language> {
 
 fn load_queries() -> HashMap<&'static str, &'static str> {
     let mut queries = HashMap::new();
-    queries.insert("rust", queries::RUST);
-    queries.insert("javascript", queries::JAVASCRIPT);
-    queries.insert("python", queries::PYTHON);
+    queries.insert("rust", RUST);
+    queries.insert("javascript", JAVASCRIPT);
+    queries.insert("python", PYTHON);
     queries
 }
 
