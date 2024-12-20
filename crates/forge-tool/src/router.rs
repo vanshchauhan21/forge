@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
+use inflector::Inflector;
+use serde_json::Value;
+
 use crate::console::{ReadLine, WriteLine};
 use crate::fs::{FSFileInfo, FSList, FSRead, FSSearch};
 use crate::think::Think;
 use crate::ToolTrait;
-use inflector::Inflector;
-use serde_json::Value;
-use std::collections::HashMap;
 
 struct JsonTool<T>(T);
 

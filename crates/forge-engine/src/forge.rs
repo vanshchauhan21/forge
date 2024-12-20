@@ -1,9 +1,11 @@
-use crate::model::State;
-use crate::{error::Result, model::Event};
+use std::sync::{Arc, Mutex};
+
 use forge_provider::model::{Message, Request};
 use forge_provider::{Provider, Stream};
 use forge_tool::{Prompt, Router};
-use std::sync::{Arc, Mutex};
+
+use crate::error::Result;
+use crate::model::{Event, State};
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
@@ -27,10 +29,10 @@ impl CodeForge {
 
     pub async fn chat(&self, prompt: Prompt) -> Result<Stream<Event>> {
         // - Create Request, update context
-        //   -  Add System Message [DONE]
-        //   -  Add Add all tools [DONE]
-        //   -  Add User Message [DONE]
-        //   -  Add Context Files [DONE]
+        //   - Add System Message [DONE]
+        //   - Add Add all tools [DONE]
+        //   - Add User Message [DONE]
+        //   - Add Context Files [DONE]
         // - Send message to LLM and await response #001 [DONE]
         // - On Response, dispatch event
         // - Check response has tool_use

@@ -20,6 +20,7 @@ pub struct ThoughtData {
     needs_more_thoughts: Option<bool>,
 }
 
+/// A detailed tool for dynamic and reflective problem-solving through thoughts.
 #[derive(Clone, Default)]
 pub struct Think {
     thought_history: Vec<ThoughtData>,
@@ -132,6 +133,6 @@ mod test {
 
     #[test]
     fn test_id() {
-        assert!(Think::default().id().0.ends_with("/think"));
+        assert!(JsonTool::import(Think::default()).0.ends_with("/think"));
     }
 }

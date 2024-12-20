@@ -1,7 +1,8 @@
-use crate::log::LogLevel;
 use clap::Parser;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
+
+use crate::log::LogLevel;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Display, AsRefStr, EnumString, EnumIter)]
 #[strum(serialize_all = "UPPERCASE")]

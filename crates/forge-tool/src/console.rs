@@ -1,11 +1,11 @@
-use crate::{
-    prompt_parser::{PromptParser, Token},
-    Description, ToolTrait,
-};
 use forge_tool_macros::Description;
 use ignore::WalkBuilder;
-use inquire::{autocompletion::Replacement, Autocomplete};
+use inquire::autocompletion::Replacement;
+use inquire::Autocomplete;
 use serde::Serialize;
+
+use crate::prompt_parser::{PromptParser, Token};
+use crate::{Description, ToolTrait};
 
 #[derive(Clone, Serialize)]
 pub struct Prompt {
@@ -21,10 +21,7 @@ pub struct File {
 
 impl Prompt {
     pub async fn parse(message: String) -> Result<Self, String> {
-        let mut prompt = Prompt {
-            message: message.clone(),
-            files: Vec::new(),
-        };
+        let mut prompt = Prompt { message: message.clone(), files: Vec::new() };
 
         let tokens = PromptParser::parse(message);
         for token in tokens {
@@ -32,10 +29,7 @@ impl Prompt {
                 let content = tokio::fs::read_to_string(&path)
                     .await
                     .map_err(|e| e.to_string())?;
-                prompt.add_file(File {
-                    path: path.display().to_string(),
-                    content,
-                });
+                prompt.add_file(File { path: path.display().to_string(), content });
             }
         }
 
@@ -47,9 +41,11 @@ impl Prompt {
     }
 }
 
+/// Read a line from the console
 #[derive(Serialize, Description)]
 pub(crate) struct ReadLine;
 
+/// Write a line to the console
 #[derive(Serialize)]
 pub(crate) struct WriteLine;
 

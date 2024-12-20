@@ -1,11 +1,12 @@
-use crate::model::{Request, Response};
-
-use super::error::Result;
-use super::provider::{InnerProvider, Provider};
-use async_openai::{config, types::*, Client};
+use async_openai::types::*;
+use async_openai::{config, Client};
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+
+use super::error::Result;
+use super::provider::{InnerProvider, Provider};
+use crate::model::{Request, Response};
 
 #[derive(Debug, Clone)]
 struct Config {

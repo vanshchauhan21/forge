@@ -1,4 +1,5 @@
-use inquire::{autocompletion::Replacement, Autocomplete};
+use inquire::autocompletion::Replacement;
+use inquire::Autocomplete;
 
 #[derive(Clone)]
 pub struct Completion {
@@ -54,9 +55,9 @@ impl Autocomplete for Completion {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use pretty_assertions::assert_eq;
+
+    use super::*;
 
     #[test]
     fn test_completion() {

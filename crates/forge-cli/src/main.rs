@@ -1,12 +1,11 @@
 use clap::Parser;
 use colorize::AnsiColor;
 use error::Result;
-use forge_cli::{
-    command::{Cli, Command},
-    completion::Completion,
-    error,
-};
-use forge_engine::{model::Event, CodeForge};
+use forge_cli::command::{Cli, Command};
+use forge_cli::completion::Completion;
+use forge_cli::error;
+use forge_engine::model::Event;
+use forge_engine::CodeForge;
 use forge_tool::Prompt;
 use futures::StreamExt;
 use ignore::WalkBuilder;
@@ -24,8 +23,8 @@ async fn main() -> Result<()> {
     let mut mode = Command::default();
 
     loop {
-        // TODO: we shouldn't get the latest files from fs on each loop, should occur only when
-        // user is searching for files.
+        // TODO: we shouldn't get the latest files from fs on each loop, should occur
+        // only when user is searching for files.
 
         let mut suggestions = ls_files(std::path::Path::new("."))
             .map(|v| v.into_iter().map(|a| format!("@{}", a)).collect::<Vec<_>>())
@@ -88,11 +87,7 @@ struct Spinner {
 impl Spinner {
     pub fn new(dot: spinners::Spinners) -> Self {
         let spinner = spinners::Spinner::new(dot, "".into());
-        Self {
-            spinner,
-            message: "".into(),
-            is_done: false,
-        }
+        Self { spinner, message: "".into(), is_done: false }
     }
 
     pub fn stop(&mut self) {

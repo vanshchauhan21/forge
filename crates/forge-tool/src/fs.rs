@@ -1,13 +1,31 @@
-use crate::Description;
-use crate::ToolTrait;
 use forge_tool_macros::Description;
 
+use crate::{Description, ToolTrait};
+
+/// Read the complete contents of a file from the file system. Handles various
+/// text encodings and provides detailed error messages if the file cannot be
+/// read. Use this tool when you need to examine the contents of a single file.
+/// Only works within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSRead;
+/// Recursively search for files and directories matching a pattern. Searches
+/// through all subdirectories from the starting path. The search is
+/// case-insensitive and matches partial names. Returns full paths to all
+/// matching items. Great for finding files when you don't know their exact
+/// location. Only searches within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSSearch;
+/// Get a detailed listing of all files and directories in a specified path.
+/// Results clearly distinguish between files and directories with [FILE] and
+/// [DIR] prefixes. This tool is essential for understanding directory structure
+/// and finding specific files within a directory. Only works within allowed
+/// directories.
 #[derive(Description)]
 pub(crate) struct FSList;
+/// Retrieve detailed metadata about a file or directory. Returns comprehensive
+/// information including size, creation time, last modified time, permissions,
+/// and type. This tool is perfect for understanding file characteristics
+/// without reading the actual content. Only works within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSFileInfo;
 
@@ -111,16 +129,17 @@ impl ToolTrait for FSFileInfo {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
 
+    use super::*;
+
     #[tokio::test]
     async fn test_id() {
-        assert!(FSRead.id().0.ends_with("fs/fs_read"));
-        assert!(FSSearch.id().0.ends_with("fs/fs_search"));
-        assert!(FSList.id().0.ends_with("fs/fs_list"));
-        assert!(FSFileInfo.id().0.ends_with("fs/fs_file_info"));
+        assert!(JsonTool::import(FSRead).0.ends_with("fs/fs_read"));
+        assert!(JsonTool::import(FSSearch).0.ends_with("fs/fs_search"));
+        assert!(JsonTool::import(FSList).0.ends_with("fs/fs_list"));
+        assert!(JsonTool::import(FSFileInfo).0.ends_with("fs/fs_file_info"));
     }
 
     #[tokio::test]

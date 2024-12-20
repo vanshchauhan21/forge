@@ -2,6 +2,7 @@ mod error;
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 pub const JAVASCRIPT: &str = include_str!("./queries/javascript.rkt");
@@ -83,7 +84,8 @@ fn parse_file(_file: &Path, content: &str, parser: &mut Parser, query: &Query) -
     }
 }
 
-/// Parse source code files provided as a vector of tuples containing file paths and their contents
+/// Parse source code files provided as a vector of tuples containing file paths
+/// and their contents
 pub fn parse_source_code_for_definitions(files: Vec<(PathBuf, String)>) -> Result<String> {
     let extensions_to_languages =
         HashMap::from([("rs", "rust"), ("js", "javascript"), ("py", "python")]);
@@ -131,8 +133,9 @@ pub fn parse_source_code_for_definitions(files: Vec<(PathBuf, String)>) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use insta::assert_snapshot;
+
+    use super::*;
 
     #[test]
     fn test_empty_directory() {

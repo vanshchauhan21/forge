@@ -1,6 +1,5 @@
-use crate::model::{Request, Response};
-
 use super::error::Result;
+use crate::model::{Request, Response};
 
 #[async_trait::async_trait]
 pub(crate) trait InnerProvider {
@@ -23,8 +22,6 @@ impl Provider {
     }
 
     pub(crate) fn new(provider: impl InnerProvider + 'static) -> Self {
-        Self {
-            provider: Box::new(provider),
-        }
+        Self { provider: Box::new(provider) }
     }
 }

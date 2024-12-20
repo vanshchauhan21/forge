@@ -1,12 +1,10 @@
-// use crate::model::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
-
-use crate::model::{AnyMessage, Assistant, Request, Response, Role, System, User};
-
-use super::error::Result;
-use super::provider::{InnerProvider, Provider};
 use forge_tool::Tool;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+
+use super::error::Result;
+use super::provider::{InnerProvider, Provider};
+use crate::model::{AnyMessage, Assistant, Request, Response, Role, System, User};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Model {

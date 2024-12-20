@@ -70,28 +70,19 @@ pub struct Message<R: Role> {
 
 impl Message<System> {
     pub fn system(content: String) -> Self {
-        Message {
-            content,
-            role: System {},
-        }
+        Message { content, role: System {} }
     }
 }
 
 impl Message<User> {
     pub fn user(content: String) -> Self {
-        Message {
-            content,
-            role: User {},
-        }
+        Message { content, role: User {} }
     }
 }
 
 impl Message<Assistant> {
     pub fn assistant(content: String) -> Self {
-        Message {
-            content,
-            role: Assistant {},
-        }
+        Message { content, role: Assistant {} }
     }
 }
 
@@ -110,10 +101,7 @@ pub struct Response {
 
 impl Response {
     pub fn new(message: String) -> Response {
-        Response {
-            message: Message::assistant(message),
-            tool_use: vec![],
-        }
+        Response { message: Message::assistant(message), tool_use: vec![] }
     }
 
     pub fn add_call(mut self, call_tool: impl Into<ToolUse>) -> Self {

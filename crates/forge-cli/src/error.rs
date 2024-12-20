@@ -26,10 +26,7 @@ pub struct Errata {
 
 impl Errata {
     pub fn new(title: impl Into<String>) -> Self {
-        Self {
-            title: title.into(),
-            description: None,
-        }
+        Self { title: title.into(), description: None }
     }
 }
 
@@ -68,9 +65,10 @@ impl From<&Error> for Errata {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use indoc::indoc;
     use pretty_assertions::assert_eq;
+
+    use super::*;
 
     #[test]
     fn test_simple_error() {

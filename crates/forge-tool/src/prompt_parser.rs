@@ -1,13 +1,12 @@
-use nom::{
-    branch::alt,
-    bytes::complete::take_while1,
-    character::complete::{char, space0, space1},
-    combinator::{map, opt, recognize},
-    multi::many0,
-    sequence::{pair, preceded},
-    IResult,
-};
 use std::path::PathBuf;
+
+use nom::branch::alt;
+use nom::bytes::complete::take_while1;
+use nom::character::complete::{char, space0, space1};
+use nom::combinator::{map, opt, recognize};
+use nom::multi::many0;
+use nom::sequence::{pair, preceded};
+use nom::IResult;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
