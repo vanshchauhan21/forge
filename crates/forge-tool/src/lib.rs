@@ -1,6 +1,7 @@
 mod console;
 mod fs;
 mod mcp;
+mod model;
 mod prompt_parser;
 mod router;
 mod think;
