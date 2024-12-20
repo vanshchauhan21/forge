@@ -1,5 +1,5 @@
 use forge_provider::model::{AnyMessage, Assistant, Message, Request, User};
-use forge_tool::Tool;
+use forge_tool::ToolTrait;
 use serde_json::Value;
 
 use crate::File;

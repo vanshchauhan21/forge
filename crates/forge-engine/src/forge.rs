@@ -3,13 +3,13 @@ use crate::{error::Result, model::Event};
 use derive_setters::Setters;
 use forge_provider::model::{Message, Request, User};
 use forge_provider::{Provider, Stream};
-use forge_tool::Tool;
+use forge_tool::ToolTrait;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tools: Vec<Rc<dyn Tool>>,
+    tools: Vec<Rc<dyn ToolTrait>>,
     provider: Provider,
 }
 
@@ -42,8 +42,8 @@ impl CodeForge {
     pub fn new(key: String) -> Self {
         // Add initial set of tools
         let tools = vec![
-            Rc::new(forge_tool::FS) as Rc<dyn Tool>,
-            Rc::new(forge_tool::Think::default()) as Rc<dyn Tool>,
+            Rc::new(forge_tool::FS) as Rc<dyn ToolTrait>,
+            Rc::new(forge_tool::Think::default()) as Rc<dyn ToolTrait>,
         ];
 
         CodeForge {
@@ -56,7 +56,7 @@ impl CodeForge {
         }
     }
 
-    pub fn add_tool<T: Tool + Sync + 'static>(&mut self, tool: T) {
+    pub fn add_tool<T: ToolTrait + Sync + 'static>(&mut self, tool: T) {
         self.tools.push(Rc::new(tool));
     }
 

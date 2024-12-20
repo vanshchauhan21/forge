@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse},
-    Tool,
+    ToolTrait,
 };
 use anyhow::Result;
 use colorize::AnsiColor;
@@ -132,7 +132,7 @@ fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallTo
 }
 
 #[async_trait::async_trait]
-impl Tool for Think {
+impl ToolTrait for Think {
     fn name(&self) -> &'static str {
         "think"
     }

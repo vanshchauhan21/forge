@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse};
-use crate::Tool;
+use crate::ToolTrait;
 use anyhow::Result;
 
 fn call_tool(req: CallToolRequest) -> Result<CallToolResponse> {
@@ -102,7 +102,7 @@ fn get_path(args: &HashMap<String, serde_json::Value>) -> Result<PathBuf> {
 pub struct FS;
 
 #[async_trait::async_trait]
-impl Tool for FS {
+impl ToolTrait for FS {
     fn name(&self) -> &'static str {
         "fs"
     }
