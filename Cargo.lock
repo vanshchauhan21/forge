@@ -649,6 +649,7 @@ dependencies = [
  "async-trait",
  "derive_more",
  "derive_setters",
+ "forge-tool",
  "futures",
  "reqwest",
  "serde",

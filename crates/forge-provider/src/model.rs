@@ -1,5 +1,6 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
+use forge_tool::{Tool, ToolId};
 use serde_json::Value;
 
 #[derive(Default, Setters, Debug, Clone)]
@@ -101,23 +102,6 @@ pub enum AnyMessage {
     Assistant(Message<Assistant>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ToolId(String);
-
-impl ToolId {
-    pub(crate) fn into_string(self) -> String {
-        self.0
-    }
-}
-
-#[derive(Setters, Debug, Clone)]
-pub struct Tool {
-    pub id: ToolId,
-    pub description: String,
-    pub input_schema: JsonSchema,
-    pub output_schema: Option<JsonSchema>,
-}
-
 #[derive(Setters, Debug, Clone)]
 pub struct Response {
     pub message: Message<Assistant>,
@@ -157,13 +141,4 @@ pub struct CallTool {
     pub call_id: CallId,
     pub tool_id: ToolId,
     pub input: Value,
-}
-
-#[derive(Debug, Clone)]
-pub struct JsonSchema(Value);
-
-impl JsonSchema {
-    pub(crate) fn into_value(self) -> Value {
-        self.0
-    }
 }

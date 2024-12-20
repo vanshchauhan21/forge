@@ -3,13 +3,12 @@ use crate::{error::Result, model::Event};
 use derive_setters::Setters;
 use forge_provider::model::{Message, Request, User};
 use forge_provider::{Provider, Stream};
-use forge_tool::ToolTrait;
-use std::rc::Rc;
+use forge_tool::ToolEngine;
 use std::sync::{Arc, Mutex};
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tools: Vec<Rc<dyn ToolTrait>>,
+    tool_engine: ToolEngine,
     provider: Provider,
 }
 
@@ -41,23 +40,15 @@ impl Prompt {
 impl CodeForge {
     pub fn new(key: String) -> Self {
         // Add initial set of tools
-        let tools = vec![
-            Rc::new(forge_tool::FS) as Rc<dyn ToolTrait>,
-            Rc::new(forge_tool::Think::default()) as Rc<dyn ToolTrait>,
-        ];
 
         CodeForge {
             state: Arc::new(Mutex::new(State::default())),
             // TODO: add fs and think
-            tools,
+            tool_engine: ToolEngine::default(),
 
             // TODO: make the provider configurable
             provider: Provider::open_router(key, None, None),
         }
-    }
-
-    pub fn add_tool<T: ToolTrait + Sync + 'static>(&mut self, tool: T) {
-        self.tools.push(Rc::new(tool));
     }
 
     pub async fn chat(&self, prompt: Prompt) -> Result<Stream<Event>> {
@@ -79,7 +70,7 @@ impl CodeForge {
         // TODO: add message to history
         let context = Request::default()
             .add_message(Message::system(include_str!("./prompt.md").to_string()))
-            // .extend_tools(self.tools.clone())
+            .extend_tools(self.tool_engine.list())
             .add_message(Message::user(prompt.message))
             .extend_messages(
                 prompt
