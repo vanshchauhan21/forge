@@ -199,14 +199,14 @@ impl From<Request> for OpenRouterRequest {
                 value
                     .context
                     .into_iter()
-                    .map(|msg| Message::from(msg))
+                    .map(Message::from)
                     .collect::<Vec<_>>(),
             ),
             tools: Some(
                 value
                     .available_tools
                     .into_iter()
-                    .map(|t| OpenRouterTool::from(t))
+                    .map(OpenRouterTool::from)
                     .collect::<Vec<_>>(),
             ),
             ..Default::default()

@@ -90,7 +90,7 @@ impl CodeForge {
             );
 
         // TODO: Streaming is making the design complicated
-        let response = self.provider.chat(context.into()).await?;
+        let response = self.provider.chat(context).await?;
 
         // TODO: need to handle errors more concisely
         todo!()
