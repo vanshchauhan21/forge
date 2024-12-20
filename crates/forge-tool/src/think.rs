@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{
-    model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse},
-    ToolTrait,
-};
 use anyhow::Result;
 use colorize::AnsiColor;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::{ToolId, ToolTrait};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ThoughtData {
@@ -111,38 +110,22 @@ impl Think {
     }
 }
 
-fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallToolResponse> {
-    let name = req.name.as_str();
-    let args = req.arguments.unwrap_or_default();
-    let args = serde_json::to_value(args)?;
-    let result = match name {
-        "sequentialthinking" => {
-            let thought_result = thinking_server.process_thought(args)?;
-            ToolResponseContent::Text {
-                text: serde_json::to_string(&thought_result)?,
-            }
-        }
-        _ => return Err(anyhow::anyhow!("Unknown tool: {}", req.name)),
-    };
-    Ok(CallToolResponse {
-        content: vec![result],
-        is_error: None,
-        meta: None,
-    })
-}
-
 #[async_trait::async_trait]
 impl ToolTrait for Think {
-    fn id(&self) -> &'static str {
-        "think"
+    type Input = Value;
+    type Output = Value;
+
+    fn id(&self) -> ToolId {
+        ToolId("sequential-thinking".to_string())
     }
 
-    async fn call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
-        call_tool(input, &mut self.clone()).map_err(|e| e.to_string())
+    fn description(&self) -> String {
+        "A detailed tool for dynamic and reflective problem-solving through thoughts.".into()
     }
 
-    fn list(&self) -> ToolsListResponse {
-        let response = include_str!("./think.schema.json");
-        serde_json::from_str(response).unwrap()
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let mut thinker = self.clone();
+        let thought_result = thinker.process_thought(input).map_err(|e| e.to_string())?;
+        Ok(thought_result)
     }
 }

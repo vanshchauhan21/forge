@@ -3,8 +3,9 @@ use std::collections::HashMap;
 mod fs;
 mod model;
 use fs::{FSFileInfo, FSRead, FSSearch, FSls};
-// mod think;
+mod think;
 use serde_json::Value;
+use think::Think;
 
 // TODO: use a more type-safe API instead of the MCP interface
 #[async_trait::async_trait]
@@ -105,6 +106,9 @@ impl Default for ToolEngine {
         tools.insert(FSSearch.id(), SerdeTool::import(FSSearch));
         tools.insert(FSls.id(), SerdeTool::import(FSls));
         tools.insert(FSFileInfo.id(), SerdeTool::import(FSFileInfo));
+
+        let think = Think::default();
+        tools.insert(think.id(), SerdeTool::import(think));
 
         Self { tools }
     }
