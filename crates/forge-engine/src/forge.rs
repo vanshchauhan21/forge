@@ -2,12 +2,12 @@ use crate::model::State;
 use crate::{error::Result, model::Event};
 use forge_provider::model::{Message, Request};
 use forge_provider::{Provider, Stream};
-use forge_tool::{Prompt, ToolEngine};
+use forge_tool::{Prompt, Router};
 use std::sync::{Arc, Mutex};
 
 pub struct CodeForge {
     state: Arc<Mutex<State>>,
-    tool_engine: ToolEngine,
+    tool_engine: Router,
     provider: Provider,
 }
 
@@ -18,7 +18,7 @@ impl CodeForge {
         CodeForge {
             state: Arc::new(Mutex::new(State::default())),
             // TODO: add fs and think
-            tool_engine: ToolEngine::default(),
+            tool_engine: Router::default(),
 
             // TODO: make the provider configurable
             provider: Provider::open_router(key, None, None),
