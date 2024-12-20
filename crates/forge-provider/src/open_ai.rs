@@ -1,4 +1,4 @@
-use crate::request::{Request, Response};
+use crate::model::{Request, Response};
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};

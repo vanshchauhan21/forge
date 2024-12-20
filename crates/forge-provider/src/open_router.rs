@@ -1,4 +1,4 @@
-use crate::request::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
+use crate::model::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
 
 use super::error::Result;
 use super::open_ai::Role; // Importing Role
