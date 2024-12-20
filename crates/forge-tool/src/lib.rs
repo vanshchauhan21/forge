@@ -16,3 +16,7 @@ pub(crate) trait ToolTrait {
     fn description(&self) -> String;
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }
+
+trait Documented {
+    fn doc() -> &'static str;
+}
