@@ -1,7 +1,8 @@
-use crate::model::{ListModelResponse, Message, Request, Response, TextContent};
+// use crate::model::{ContentPart, ListModelResponse, Message, Request, Response, TextContent};
+
+use crate::model::{AnyMessage, Assistant, Request, Response, Role, System, Tool, User};
 
 use super::error::Result;
-use super::open_ai::Role; // Importing Role
 use super::provider::{InnerProvider, Provider};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
@@ -47,7 +48,7 @@ pub struct ListModelResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct Request {
+pub struct OpenRouterRequest {
     pub messages: Option<Vec<Message>>,
     pub prompt: Option<String>,
     pub model: Option<String>,
@@ -56,7 +57,7 @@ pub struct Request {
     pub stream: Option<bool>,
     pub max_tokens: Option<u32>,
     pub temperature: Option<f32>,
-    pub tools: Option<Vec<Tool>>,
+    pub tools: Option<Vec<OpenRouterTool>>,
     pub tool_choice: Option<ToolChoice>,
     pub seed: Option<u32>,
     pub top_p: Option<f32>,
@@ -115,7 +116,7 @@ pub struct FunctionDescription {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Tool {
+pub struct OpenRouterTool {
     // TODO: should be an enum
     pub r#type: String,
     pub function: FunctionDescription,
@@ -140,10 +141,83 @@ pub struct Prediction {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Response {
+pub struct OpenRouterResponse {
     pub status: String,
     pub data: Option<serde_json::Value>,
     pub error: Option<String>,
+}
+
+impl From<Tool> for OpenRouterTool {
+    fn from(value: Tool) -> Self {
+        OpenRouterTool {
+            r#type: "function".to_string(),
+            function: FunctionDescription {
+                description: Some(value.description),
+                name: value.id.into_string(),
+                parameters: value.input_schema.into_value(),
+            },
+        }
+    }
+}
+
+// TODO: fix the names.
+impl From<AnyMessage> for Message {
+    fn from(value: AnyMessage) -> Self {
+        match value {
+            AnyMessage::Assistant(assistant) => Message {
+                role: Assistant::name(),
+                content: ContentPart::Text(TextContent {
+                    r#type: "text".to_string(),
+                    text: assistant.content,
+                }),
+                name: None,
+            },
+            AnyMessage::System(sys) => Message {
+                role: System::name(),
+                content: ContentPart::Text(TextContent {
+                    r#type: "text".to_string(),
+                    text: sys.content,
+                }),
+                name: None,
+            },
+            AnyMessage::User(usr) => Message {
+                role: User::name(),
+                content: ContentPart::Text(TextContent {
+                    r#type: "text".to_string(),
+                    text: usr.content,
+                }),
+                name: None,
+            },
+        }
+    }
+}
+
+impl From<Request> for OpenRouterRequest {
+    fn from(value: Request) -> Self {
+        OpenRouterRequest {
+            messages: Some(
+                value
+                    .context
+                    .into_iter()
+                    .map(|msg| Message::from(msg))
+                    .collect::<Vec<_>>(),
+            ),
+            tools: Some(
+                value
+                    .available_tools
+                    .into_iter()
+                    .map(|t| OpenRouterTool::from(t))
+                    .collect::<Vec<_>>(),
+            ),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<OpenRouterResponse> for Response {
+    fn from(value: OpenRouterResponse) -> Self {
+        todo!()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -206,17 +280,6 @@ impl OpenRouter {
             model: model.unwrap_or("openai/gpt-4o-mini".to_string()),
         }
     }
-
-    fn new_message(&self, role: Role, input: &str) -> Message {
-        Message {
-            role: role.to_string(),
-            content: ContentPart::Text(TextContent {
-                r#type: "text".to_string(),
-                text: input.to_string(),
-            }),
-            name: None,
-        }
-    }
 }
 
 #[async_trait::async_trait]
@@ -225,17 +288,19 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    async fn chat(&self, mut request: Request) -> Result<Response> {
-        request.stream = Some(false);
-        Ok(self
+    async fn chat(&self, request: Request) -> Result<Response> {
+        let open_router_request = OpenRouterRequest::from(request);
+        let response = self
             .http_client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .json(&request)
+            .json(&open_router_request)
             .send()
             .await?
-            .json::<Response>() // Adjusted to use ResponseType
-            .await?)
+            .json::<OpenRouterResponse>() // Adjusted to use ResponseType
+            .await?;
+
+        Ok(response.into())
     }
 
     async fn models(&self) -> Result<Vec<String>> {

@@ -46,8 +46,8 @@ impl Role for Assistant {
 
 #[derive(Setters, Debug, Clone)]
 pub struct Message<R: Role> {
-    content: String,
-    role: R,
+    pub content: String,
+    pub role: R,
 }
 
 impl Message<System> {
@@ -86,6 +86,12 @@ pub enum AnyMessage {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolId(String);
+
+impl ToolId {
+    pub(crate) fn into_string(self) -> String {
+        self.0
+    }
+}
 
 #[derive(Setters, Debug, Clone)]
 pub struct Tool {
@@ -133,3 +139,9 @@ pub struct CallTool {
 
 #[derive(Debug, Clone)]
 pub struct JsonSchema(Value);
+
+impl JsonSchema {
+    pub(crate) fn into_value(self) -> Value {
+        self.0
+    }
+}
