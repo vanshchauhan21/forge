@@ -103,15 +103,15 @@ pub struct FS;
 
 #[async_trait::async_trait]
 impl ToolTrait for FS {
-    fn name(&self) -> &'static str {
+    fn id(&self) -> &'static str {
         "fs"
     }
 
-    async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
+    async fn call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
         call_tool(input).map_err(|e| e.to_string())
     }
 
-    fn tools_list(&self) -> ToolsListResponse {
+    fn list(&self) -> ToolsListResponse {
         let response = include_str!("./fs.schema.json");
         serde_json::from_str(response).unwrap()
     }

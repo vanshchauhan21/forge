@@ -133,15 +133,15 @@ fn call_tool(req: CallToolRequest, thinking_server: &mut Think) -> Result<CallTo
 
 #[async_trait::async_trait]
 impl ToolTrait for Think {
-    fn name(&self) -> &'static str {
+    fn id(&self) -> &'static str {
         "think"
     }
 
-    async fn tools_call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
+    async fn call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
         call_tool(input, &mut self.clone()).map_err(|e| e.to_string())
     }
 
-    fn tools_list(&self) -> ToolsListResponse {
+    fn list(&self) -> ToolsListResponse {
         let response = include_str!("./think.schema.json");
         serde_json::from_str(response).unwrap()
     }
