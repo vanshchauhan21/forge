@@ -1,18 +1,26 @@
 use derive_setters::Setters;
 use serde_json::Value;
 
-#[derive(Setters, Debug, Clone)]
+#[derive(Default, Setters, Debug, Clone)]
 pub struct Request {
     pub context: Vec<AnyMessage>,
     pub available_tools: Vec<Tool>,
 }
 
-#[derive(Setters, Debug, Clone)]
-pub struct System {}
-#[derive(Setters, Debug, Clone)]
-pub struct User {}
-#[derive(Setters, Debug, Clone)]
-pub struct Assistant {}
+impl Request {
+    pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
+        let tool: Tool = tool.into();
+        self.available_tools.push(tool);
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct System;
+#[derive(Debug, Clone)]
+pub struct User;
+#[derive(Debug, Clone)]
+pub struct Assistant;
 
 pub trait Role {
     fn name() -> String;
@@ -37,9 +45,36 @@ impl Role for Assistant {
 }
 
 #[derive(Setters, Debug, Clone)]
-pub struct Message<Role> {
+pub struct Message<R: Role> {
     content: String,
-    role: Role,
+    role: R,
+}
+
+impl Message<System> {
+    pub fn system(content: String) -> Self {
+        Message {
+            content,
+            role: System {},
+        }
+    }
+}
+
+impl Message<User> {
+    pub fn user(content: String) -> Self {
+        Message {
+            content,
+            role: User {},
+        }
+    }
+}
+
+impl Message<Assistant> {
+    pub fn assistant(content: String) -> Self {
+        Message {
+            content,
+            role: Assistant {},
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +84,7 @@ pub enum AnyMessage {
     Assistant(Message<Assistant>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolId(String);
 
 #[derive(Setters, Debug, Clone)]
@@ -57,7 +92,7 @@ pub struct Tool {
     pub id: ToolId,
     pub description: String,
     pub input_schema: JsonSchema,
-    pub output_schema: JsonSchema,
+    pub output_schema: Option<JsonSchema>,
 }
 
 #[derive(Setters, Debug, Clone)]
@@ -66,12 +101,32 @@ pub struct Response {
     pub call_tool: Vec<CallTool>,
 }
 
-#[derive(Debug, Clone)]
+impl Response {
+    pub fn new(message: String) -> Response {
+        Response {
+            message: Message::assistant(message),
+            call_tool: vec![],
+        }
+    }
+
+    pub fn add_call(mut self, call_tool: impl Into<CallTool>) -> Self {
+        self.call_tool.push(call_tool.into());
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallId(String);
+
+impl CallId {
+    pub(crate) fn new(id: String) -> CallId {
+        CallId(id)
+    }
+}
 
 #[derive(Setters, Debug, Clone)]
 pub struct CallTool {
-    pub id: CallId,
+    pub call_id: CallId,
     pub tool_id: ToolId,
     pub input: Value,
 }
