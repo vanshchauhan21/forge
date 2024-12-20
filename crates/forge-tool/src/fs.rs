@@ -106,8 +106,8 @@ impl ToolTrait for FSFileInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tokio::fs;
     use tempfile::TempDir;
+    use tokio::fs;
 
     #[tokio::test]
     async fn test_id() {
@@ -121,7 +121,7 @@ mod test {
     async fn test_fs_read_success() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
-        
+
         let test_content = "Hello, World!";
         fs::write(&file_path, test_content).await.unwrap();
 
@@ -212,7 +212,7 @@ mod test {
     #[tokio::test]
     async fn test_fs_list_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         let fs_list = FSList;
         let result = fs_list
             .call(temp_dir.path().to_string_lossy().to_string())
@@ -225,9 +225,13 @@ mod test {
     #[tokio::test]
     async fn test_fs_list_with_files_and_dirs() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::write(temp_dir.path().join("file1.txt"), "content1").await.unwrap();
-        fs::write(temp_dir.path().join("file2.txt"), "content2").await.unwrap();
+
+        fs::write(temp_dir.path().join("file1.txt"), "content1")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("file2.txt"), "content2")
+            .await
+            .unwrap();
         fs::create_dir(temp_dir.path().join("dir1")).await.unwrap();
         fs::create_dir(temp_dir.path().join("dir2")).await.unwrap();
 
@@ -238,17 +242,13 @@ mod test {
             .unwrap();
 
         assert_eq!(result.len(), 4);
-        
-        let files: Vec<_> = result.iter()
-            .filter(|p| p.starts_with("[FILE]"))
-            .collect();
-        let dirs: Vec<_> = result.iter()
-            .filter(|p| p.starts_with("[DIR]"))
-            .collect();
-        
+
+        let files: Vec<_> = result.iter().filter(|p| p.starts_with("[FILE]")).collect();
+        let dirs: Vec<_> = result.iter().filter(|p| p.starts_with("[DIR]")).collect();
+
         assert_eq!(files.len(), 2);
         assert_eq!(dirs.len(), 2);
-        
+
         assert!(result.iter().any(|p| p.contains("file1.txt")));
         assert!(result.iter().any(|p| p.contains("file2.txt")));
         assert!(result.iter().any(|p| p.contains("dir1")));
@@ -271,10 +271,16 @@ mod test {
     #[tokio::test]
     async fn test_fs_list_with_hidden_files() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::write(temp_dir.path().join("regular.txt"), "content").await.unwrap();
-        fs::write(temp_dir.path().join(".hidden"), "content").await.unwrap();
-        fs::create_dir(temp_dir.path().join(".hidden_dir")).await.unwrap();
+
+        fs::write(temp_dir.path().join("regular.txt"), "content")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join(".hidden"), "content")
+            .await
+            .unwrap();
+        fs::create_dir(temp_dir.path().join(".hidden_dir"))
+            .await
+            .unwrap();
 
         let fs_list = FSList;
         let result = fs_list
@@ -291,10 +297,16 @@ mod test {
     #[tokio::test]
     async fn test_fs_search_basic() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::write(temp_dir.path().join("test1.txt"), "").await.unwrap();
-        fs::write(temp_dir.path().join("test2.txt"), "").await.unwrap();
-        fs::write(temp_dir.path().join("other.txt"), "").await.unwrap();
+
+        fs::write(temp_dir.path().join("test1.txt"), "")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("test2.txt"), "")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("other.txt"), "")
+            .await
+            .unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -313,11 +325,13 @@ mod test {
     #[tokio::test]
     async fn test_fs_search_recursive() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         let sub_dir = temp_dir.path().join("subdir");
         fs::create_dir(&sub_dir).await.unwrap();
-        
-        fs::write(temp_dir.path().join("test1.txt"), "").await.unwrap();
+
+        fs::write(temp_dir.path().join("test1.txt"), "")
+            .await
+            .unwrap();
         fs::write(sub_dir.join("test2.txt"), "").await.unwrap();
         fs::write(sub_dir.join("other.txt"), "").await.unwrap();
 
@@ -338,9 +352,13 @@ mod test {
     #[tokio::test]
     async fn test_fs_search_case_insensitive() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::write(temp_dir.path().join("TEST.txt"), "").await.unwrap();
-        fs::write(temp_dir.path().join("TeSt2.txt"), "").await.unwrap();
+
+        fs::write(temp_dir.path().join("TEST.txt"), "")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("TeSt2.txt"), "")
+            .await
+            .unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -359,8 +377,10 @@ mod test {
     #[tokio::test]
     async fn test_fs_search_empty_pattern() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::write(temp_dir.path().join("test.txt"), "").await.unwrap();
+
+        fs::write(temp_dir.path().join("test.txt"), "")
+            .await
+            .unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -394,10 +414,16 @@ mod test {
     #[tokio::test]
     async fn test_fs_search_directory_names() {
         let temp_dir = TempDir::new().unwrap();
-        
-        fs::create_dir(temp_dir.path().join("test_dir")).await.unwrap();
-        fs::create_dir(temp_dir.path().join("test_dir").join("nested")).await.unwrap();
-        fs::create_dir(temp_dir.path().join("other_dir")).await.unwrap();
+
+        fs::create_dir(temp_dir.path().join("test_dir"))
+            .await
+            .unwrap();
+        fs::create_dir(temp_dir.path().join("test_dir").join("nested"))
+            .await
+            .unwrap();
+        fs::create_dir(temp_dir.path().join("other_dir"))
+            .await
+            .unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
