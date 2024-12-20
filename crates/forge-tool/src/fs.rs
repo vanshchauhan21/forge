@@ -73,16 +73,14 @@ impl ToolTrait for FSList {
         let mut paths = Vec::new();
         let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
 
-        while let Ok(f) = walker.next_entry().await {
-            if let Some(entry) = f {
-                let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
-                let prefix = if file_type.is_dir() {
-                    "[DIR]"
-                } else {
-                    "[FILE]"
-                };
-                paths.push(format!("{} {}", prefix, entry.path().display()));
-            }
+        while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
+            let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
+            let prefix = if file_type.is_dir() {
+                "[DIR]"
+            } else {
+                "[FILE]"
+            };
+            paths.push(format!("{} {}", prefix, entry.path().display()));
         }
         Ok(paths)
     }
@@ -108,12 +106,327 @@ impl ToolTrait for FSFileInfo {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
-    #[test]
-    fn test_id() {
+    #[tokio::test]
+    async fn test_id() {
         assert!(FSRead.id().0.ends_with("fs/fs_read"));
         assert!(FSSearch.id().0.ends_with("fs/fs_search"));
         assert!(FSList.id().0.ends_with("fs/fs_list"));
         assert!(FSFileInfo.id().0.ends_with("fs/fs_file_info"));
+    }
+
+    #[tokio::test]
+    async fn test_fs_read_success() {
+        // Create a temporary directory and file
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        
+        // Write test content
+        let test_content = "Hello, World!";
+        fs::write(&file_path, test_content).unwrap();
+
+        // Test FSRead
+        let fs_read = FSRead;
+        let result = fs_read
+            .call(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(result, test_content);
+    }
+
+    #[tokio::test]
+    async fn test_fs_read_nonexistent_file() {
+        // Test with a nonexistent file
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent_file = temp_dir.path().join("nonexistent.txt");
+
+        let fs_read = FSRead;
+        let result = fs_read
+            .call(nonexistent_file.to_string_lossy().to_string())
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fs_read_empty_file() {
+        // Create an empty file
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("empty.txt");
+        fs::write(&file_path, "").unwrap();
+
+        let fs_read = FSRead;
+        let result = fs_read
+            .call(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(result, "");
+    }
+
+    #[tokio::test]
+    async fn test_fs_file_info_on_file() {
+        // Create a temporary file
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        fs::write(&file_path, "test content").unwrap();
+
+        let fs_info = FSFileInfo;
+        let result = fs_info
+            .call(file_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        // Verify the metadata contains expected file information
+        assert!(result.contains("FileType"));
+        assert!(result.contains("permissions"));
+        assert!(result.contains("modified"));
+    }
+
+    #[tokio::test]
+    async fn test_fs_file_info_on_directory() {
+        // Create a temporary directory
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().join("test_dir");
+        fs::create_dir(&dir_path).unwrap();
+
+        let fs_info = FSFileInfo;
+        let result = fs_info
+            .call(dir_path.to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        // Verify the metadata contains expected directory information
+        assert!(result.contains("FileType"));
+        assert!(result.contains("permissions"));
+        assert!(result.contains("modified"));
+    }
+
+    #[tokio::test]
+    async fn test_fs_file_info_nonexistent() {
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent_path = temp_dir.path().join("nonexistent");
+
+        let fs_info = FSFileInfo;
+        let result = fs_info
+            .call(nonexistent_path.to_string_lossy().to_string())
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_empty_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        let fs_list = FSList;
+        let result = fs_list
+            .call(temp_dir.path().to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_with_files_and_dirs() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create test files and directories
+        fs::write(temp_dir.path().join("file1.txt"), "content1").unwrap();
+        fs::write(temp_dir.path().join("file2.txt"), "content2").unwrap();
+        fs::create_dir(temp_dir.path().join("dir1")).unwrap();
+        fs::create_dir(temp_dir.path().join("dir2")).unwrap();
+
+        let fs_list = FSList;
+        let result = fs_list
+            .call(temp_dir.path().to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        // Check if we have all 4 entries
+        assert_eq!(result.len(), 4);
+        
+        // Check for correct prefixes
+        let files: Vec<_> = result.iter()
+            .filter(|p| p.starts_with("[FILE]"))
+            .collect();
+        let dirs: Vec<_> = result.iter()
+            .filter(|p| p.starts_with("[DIR]"))
+            .collect();
+        
+        assert_eq!(files.len(), 2);
+        assert_eq!(dirs.len(), 2);
+        
+        // Verify specific entries exist
+        assert!(result.iter().any(|p| p.contains("file1.txt")));
+        assert!(result.iter().any(|p| p.contains("file2.txt")));
+        assert!(result.iter().any(|p| p.contains("dir1")));
+        assert!(result.iter().any(|p| p.contains("dir2")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_nonexistent_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent_dir = temp_dir.path().join("nonexistent");
+
+        let fs_list = FSList;
+        let result = fs_list
+            .call(nonexistent_dir.to_string_lossy().to_string())
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_with_hidden_files() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create regular and hidden files
+        fs::write(temp_dir.path().join("regular.txt"), "content").unwrap();
+        fs::write(temp_dir.path().join(".hidden"), "content").unwrap();
+        fs::create_dir(temp_dir.path().join(".hidden_dir")).unwrap();
+
+        let fs_list = FSList;
+        let result = fs_list
+            .call(temp_dir.path().to_string_lossy().to_string())
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 3);
+        assert!(result.iter().any(|p| p.contains("regular.txt")));
+        assert!(result.iter().any(|p| p.contains(".hidden")));
+        assert!(result.iter().any(|p| p.contains(".hidden_dir")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_basic() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create test files
+        fs::write(temp_dir.path().join("test1.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("test2.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("other.txt"), "").unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                temp_dir.path().to_string_lossy().to_string(),
+                "test".to_string(),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| p.ends_with("test1.txt")));
+        assert!(result.iter().any(|p| p.ends_with("test2.txt")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_recursive() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create nested directory structure
+        let sub_dir = temp_dir.path().join("subdir");
+        fs::create_dir(&sub_dir).unwrap();
+        
+        fs::write(temp_dir.path().join("test1.txt"), "").unwrap();
+        fs::write(sub_dir.join("test2.txt"), "").unwrap();
+        fs::write(sub_dir.join("other.txt"), "").unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                temp_dir.path().to_string_lossy().to_string(),
+                "test".to_string(),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| p.ends_with("test1.txt")));
+        assert!(result.iter().any(|p| p.ends_with("test2.txt")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_case_insensitive() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        fs::write(temp_dir.path().join("TEST.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("TeSt2.txt"), "").unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                temp_dir.path().to_string_lossy().to_string(),
+                "test".to_string(),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| p.ends_with("TEST.txt")));
+        assert!(result.iter().any(|p| p.ends_with("TeSt2.txt")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_empty_pattern() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        fs::write(temp_dir.path().join("test.txt"), "").unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                temp_dir.path().to_string_lossy().to_string(),
+                "".to_string(),
+            ))
+            .await
+            .unwrap();
+
+        // Empty pattern should match all files
+        assert_eq!(result.len(), 1);
+        assert!(result.iter().any(|p| p.ends_with("test.txt")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_nonexistent_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent_dir = temp_dir.path().join("nonexistent");
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                nonexistent_dir.to_string_lossy().to_string(),
+                "test".to_string(),
+            ))
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_directory_names() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create directories that should match the search
+        fs::create_dir(temp_dir.path().join("test_dir")).unwrap();
+        fs::create_dir(temp_dir.path().join("test_dir").join("nested")).unwrap();
+        fs::create_dir(temp_dir.path().join("other_dir")).unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call((
+                temp_dir.path().to_string_lossy().to_string(),
+                "test".to_string(),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert!(result.iter().any(|p| p.ends_with("test_dir")));
     }
 }
