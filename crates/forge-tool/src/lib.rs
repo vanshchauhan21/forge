@@ -11,7 +11,7 @@ use think::Think;
 mod prompt_parser;
 use console::{ReadLine, WriteLine};
 
-pub use console::{File, Prompt};
+pub use console::Prompt;
 
 // TODO: use a more type-safe API instead of the MCP interface
 #[async_trait::async_trait]

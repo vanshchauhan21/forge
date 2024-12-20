@@ -6,6 +6,7 @@ use derive_more::derive::From;
 pub enum Error {
     Inquire(inquire::InquireError),
     Engine(forge_engine::error::Error),
+    Custom(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -60,6 +61,7 @@ impl From<&Error> for Errata {
                 }
                 forge_engine::error::Error::Provider(error) => Errata::new(format!("{}", error)),
             },
+            Error::Custom(error) => Errata::new(error.to_string()),
         }
     }
 }
