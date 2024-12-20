@@ -10,17 +10,6 @@ use crate::ToolTrait;
 
 struct JsonTool<T>(T);
 
-impl<T> JsonTool<T> {
-    fn import(tool: T) -> Box<dyn ToolTrait<Input = Value, Output = Value> + Sync + 'static>
-    where
-        T: ToolTrait + Sync + 'static,
-        T::Input: serde::de::DeserializeOwned,
-        T::Output: serde::Serialize,
-    {
-        Box::new(Self(tool))
-    }
-}
-
 #[async_trait::async_trait]
 impl<T: ToolTrait + Sync> ToolTrait for JsonTool<T>
 where
@@ -126,5 +115,34 @@ impl Default for Router {
             ]);
 
         Self { tools }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_id() {
+        assert!(Router::import(FSRead)
+            .0
+            .into_string()
+            .ends_with("fs/fs_read"));
+        assert!(Router::import(FSSearch)
+            .0
+            .into_string()
+            .ends_with("fs/fs_search"));
+        assert!(Router::import(FSList)
+            .0
+            .into_string()
+            .ends_with("fs/fs_list"));
+        assert!(Router::import(FSFileInfo)
+            .0
+            .into_string()
+            .ends_with("fs/fs_file_info"));
+        assert!(Router::import(Think::default())
+            .0
+            .into_string()
+            .ends_with("/think"));
     }
 }

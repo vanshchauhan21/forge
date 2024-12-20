@@ -135,14 +135,6 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn test_id() {
-        assert!(JsonTool::import(FSRead).0.ends_with("fs/fs_read"));
-        assert!(JsonTool::import(FSSearch).0.ends_with("fs/fs_search"));
-        assert!(JsonTool::import(FSList).0.ends_with("fs/fs_list"));
-        assert!(JsonTool::import(FSFileInfo).0.ends_with("fs/fs_file_info"));
-    }
-
-    #[tokio::test]
     async fn test_fs_read_success() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");

@@ -127,12 +127,3 @@ impl ToolTrait for Think {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_id() {
-        assert!(JsonTool::import(Think::default()).0.ends_with("/think"));
-    }
-}
