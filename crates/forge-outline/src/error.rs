@@ -19,9 +19,7 @@ impl Display for Error {
         match self {
             Error::DirectoryAccess(msg) => write!(f, "{}", msg),
             Error::DirectoryRead(e) => write!(f, "Failed to read directory: {}", e),
-            Error::FileRead { path, error } => {
-                write!(f, "Failed to read file {}: {}", path, error)
-            }
+            Error::FileRead { path, error } => write!(f, "Failed to read file {}: {}", path, error),
             Error::UnsupportedLanguage(msg) => write!(f, "Language error: {}", msg),
             Error::QueryError(msg) => write!(f, "Query error: {}", msg),
         }
