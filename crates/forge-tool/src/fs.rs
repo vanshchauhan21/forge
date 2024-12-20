@@ -1,8 +1,14 @@
+use crate::Description;
 use crate::ToolTrait;
+use forge_tool_macros::Description;
 
+#[derive(Description)]
 pub(crate) struct FSRead;
+#[derive(Description)]
 pub(crate) struct FSSearch;
+#[derive(Description)]
 pub(crate) struct FSList;
+#[derive(Description)]
 pub(crate) struct FSFileInfo;
 
 #[async_trait::async_trait]

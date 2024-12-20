@@ -1,11 +1,11 @@
+use crate::{
+    prompt_parser::{PromptParser, Token},
+    Description, ToolTrait,
+};
+use forge_tool_macros::Description;
 use ignore::WalkBuilder;
 use inquire::{autocompletion::Replacement, Autocomplete};
 use serde::Serialize;
-
-use crate::{
-    prompt_parser::{PromptParser, Token},
-    ToolTrait,
-};
 
 #[derive(Clone, Serialize)]
 pub struct Prompt {
@@ -47,7 +47,7 @@ impl Prompt {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Description)]
 pub(crate) struct ReadLine;
 
 #[derive(Serialize)]

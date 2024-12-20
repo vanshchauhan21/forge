@@ -678,6 +678,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "colorize",
+ "forge-tool-macros",
  "home",
  "ignore",
  "inquire",

@@ -112,15 +112,16 @@ impl Router {
 
 impl Default for Router {
     fn default() -> Self {
-        let mut tools: HashMap<ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>> = HashMap::from([
-            Router::import(FSRead),
-            Router::import(FSSearch),
-            Router::import(FSList),
-            Router::import(FSFileInfo),
-            Router::import(Think::default()),
-            Router::import(ReadLine),
-            Router::import(WriteLine),
-        ]);
+        let tools: HashMap<ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>> =
+            HashMap::from([
+                Router::import(FSRead),
+                Router::import(FSSearch),
+                Router::import(FSList),
+                Router::import(FSFileInfo),
+                Router::import(Think::default()),
+                Router::import(ReadLine),
+                Router::import(WriteLine),
+            ]);
 
         Self { tools }
     }
