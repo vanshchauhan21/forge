@@ -106,7 +106,7 @@ impl ToolTrait for FSFileInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::fs;
+    use tokio::fs;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -119,15 +119,12 @@ mod test {
 
     #[tokio::test]
     async fn test_fs_read_success() {
-        // Create a temporary directory and file
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
         
-        // Write test content
         let test_content = "Hello, World!";
-        fs::write(&file_path, test_content).unwrap();
+        fs::write(&file_path, test_content).await.unwrap();
 
-        // Test FSRead
         let fs_read = FSRead;
         let result = fs_read
             .call(file_path.to_string_lossy().to_string())
@@ -139,7 +136,6 @@ mod test {
 
     #[tokio::test]
     async fn test_fs_read_nonexistent_file() {
-        // Test with a nonexistent file
         let temp_dir = TempDir::new().unwrap();
         let nonexistent_file = temp_dir.path().join("nonexistent.txt");
 
@@ -153,10 +149,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fs_read_empty_file() {
-        // Create an empty file
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("empty.txt");
-        fs::write(&file_path, "").unwrap();
+        fs::write(&file_path, "").await.unwrap();
 
         let fs_read = FSRead;
         let result = fs_read
@@ -169,10 +164,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fs_file_info_on_file() {
-        // Create a temporary file
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
-        fs::write(&file_path, "test content").unwrap();
+        fs::write(&file_path, "test content").await.unwrap();
 
         let fs_info = FSFileInfo;
         let result = fs_info
@@ -180,7 +174,6 @@ mod test {
             .await
             .unwrap();
 
-        // Verify the metadata contains expected file information
         assert!(result.contains("FileType"));
         assert!(result.contains("permissions"));
         assert!(result.contains("modified"));
@@ -188,10 +181,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fs_file_info_on_directory() {
-        // Create a temporary directory
         let temp_dir = TempDir::new().unwrap();
         let dir_path = temp_dir.path().join("test_dir");
-        fs::create_dir(&dir_path).unwrap();
+        fs::create_dir(&dir_path).await.unwrap();
 
         let fs_info = FSFileInfo;
         let result = fs_info
@@ -199,7 +191,6 @@ mod test {
             .await
             .unwrap();
 
-        // Verify the metadata contains expected directory information
         assert!(result.contains("FileType"));
         assert!(result.contains("permissions"));
         assert!(result.contains("modified"));
@@ -235,11 +226,10 @@ mod test {
     async fn test_fs_list_with_files_and_dirs() {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create test files and directories
-        fs::write(temp_dir.path().join("file1.txt"), "content1").unwrap();
-        fs::write(temp_dir.path().join("file2.txt"), "content2").unwrap();
-        fs::create_dir(temp_dir.path().join("dir1")).unwrap();
-        fs::create_dir(temp_dir.path().join("dir2")).unwrap();
+        fs::write(temp_dir.path().join("file1.txt"), "content1").await.unwrap();
+        fs::write(temp_dir.path().join("file2.txt"), "content2").await.unwrap();
+        fs::create_dir(temp_dir.path().join("dir1")).await.unwrap();
+        fs::create_dir(temp_dir.path().join("dir2")).await.unwrap();
 
         let fs_list = FSList;
         let result = fs_list
@@ -247,10 +237,8 @@ mod test {
             .await
             .unwrap();
 
-        // Check if we have all 4 entries
         assert_eq!(result.len(), 4);
         
-        // Check for correct prefixes
         let files: Vec<_> = result.iter()
             .filter(|p| p.starts_with("[FILE]"))
             .collect();
@@ -261,7 +249,6 @@ mod test {
         assert_eq!(files.len(), 2);
         assert_eq!(dirs.len(), 2);
         
-        // Verify specific entries exist
         assert!(result.iter().any(|p| p.contains("file1.txt")));
         assert!(result.iter().any(|p| p.contains("file2.txt")));
         assert!(result.iter().any(|p| p.contains("dir1")));
@@ -285,10 +272,9 @@ mod test {
     async fn test_fs_list_with_hidden_files() {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create regular and hidden files
-        fs::write(temp_dir.path().join("regular.txt"), "content").unwrap();
-        fs::write(temp_dir.path().join(".hidden"), "content").unwrap();
-        fs::create_dir(temp_dir.path().join(".hidden_dir")).unwrap();
+        fs::write(temp_dir.path().join("regular.txt"), "content").await.unwrap();
+        fs::write(temp_dir.path().join(".hidden"), "content").await.unwrap();
+        fs::create_dir(temp_dir.path().join(".hidden_dir")).await.unwrap();
 
         let fs_list = FSList;
         let result = fs_list
@@ -306,10 +292,9 @@ mod test {
     async fn test_fs_search_basic() {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create test files
-        fs::write(temp_dir.path().join("test1.txt"), "").unwrap();
-        fs::write(temp_dir.path().join("test2.txt"), "").unwrap();
-        fs::write(temp_dir.path().join("other.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("test1.txt"), "").await.unwrap();
+        fs::write(temp_dir.path().join("test2.txt"), "").await.unwrap();
+        fs::write(temp_dir.path().join("other.txt"), "").await.unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -329,13 +314,12 @@ mod test {
     async fn test_fs_search_recursive() {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create nested directory structure
         let sub_dir = temp_dir.path().join("subdir");
-        fs::create_dir(&sub_dir).unwrap();
+        fs::create_dir(&sub_dir).await.unwrap();
         
-        fs::write(temp_dir.path().join("test1.txt"), "").unwrap();
-        fs::write(sub_dir.join("test2.txt"), "").unwrap();
-        fs::write(sub_dir.join("other.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("test1.txt"), "").await.unwrap();
+        fs::write(sub_dir.join("test2.txt"), "").await.unwrap();
+        fs::write(sub_dir.join("other.txt"), "").await.unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -355,8 +339,8 @@ mod test {
     async fn test_fs_search_case_insensitive() {
         let temp_dir = TempDir::new().unwrap();
         
-        fs::write(temp_dir.path().join("TEST.txt"), "").unwrap();
-        fs::write(temp_dir.path().join("TeSt2.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("TEST.txt"), "").await.unwrap();
+        fs::write(temp_dir.path().join("TeSt2.txt"), "").await.unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -376,7 +360,7 @@ mod test {
     async fn test_fs_search_empty_pattern() {
         let temp_dir = TempDir::new().unwrap();
         
-        fs::write(temp_dir.path().join("test.txt"), "").unwrap();
+        fs::write(temp_dir.path().join("test.txt"), "").await.unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
@@ -387,7 +371,6 @@ mod test {
             .await
             .unwrap();
 
-        // Empty pattern should match all files
         assert_eq!(result.len(), 1);
         assert!(result.iter().any(|p| p.ends_with("test.txt")));
     }
@@ -412,10 +395,9 @@ mod test {
     async fn test_fs_search_directory_names() {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create directories that should match the search
-        fs::create_dir(temp_dir.path().join("test_dir")).unwrap();
-        fs::create_dir(temp_dir.path().join("test_dir").join("nested")).unwrap();
-        fs::create_dir(temp_dir.path().join("other_dir")).unwrap();
+        fs::create_dir(temp_dir.path().join("test_dir")).await.unwrap();
+        fs::create_dir(temp_dir.path().join("test_dir").join("nested")).await.unwrap();
+        fs::create_dir(temp_dir.path().join("other_dir")).await.unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
