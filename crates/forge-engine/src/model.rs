@@ -83,6 +83,7 @@ impl Message<Assistant> {
     }
 }
 
+// TODO: use provider::model here
 #[derive(Default, Clone, Setters)]
 pub struct Context {
     pub system: Message<System>,
@@ -162,7 +163,7 @@ fn insert_into<T>(vector: Option<Vec<T>>, value: T) -> Option<Vec<T>> {
 
 impl From<Context> for Request {
     fn from(value: Context) -> Self {
-        let mut request = Request::default();
+        let mut request = Request::default().add_message(value.system);
         // Add System Message
         request.context = insert_into(request.context, value.system.into());
 
