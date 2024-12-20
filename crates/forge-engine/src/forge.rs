@@ -1,8 +1,8 @@
 use crate::model::State;
 use crate::{error::Result, model::Event};
-use forge_provider::model::{Message, Request, User};
+use forge_provider::model::{Message, Request};
 use forge_provider::{Provider, Stream};
-use forge_tool::{ToolEngine, Prompt};
+use forge_tool::{Prompt, ToolEngine};
 use std::sync::{Arc, Mutex};
 
 pub struct CodeForge {
@@ -10,7 +10,6 @@ pub struct CodeForge {
     tool_engine: ToolEngine,
     provider: Provider,
 }
-
 
 impl CodeForge {
     pub fn new(key: String) -> Self {
