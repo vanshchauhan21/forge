@@ -82,8 +82,7 @@ pub struct RootCapabilities {
 #[serde(rename_all = "camelCase")]
 pub struct Tool {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    pub description: String,
     pub input_schema: serde_json::Value,
 }
 #[derive(Debug, Serialize, Deserialize)]

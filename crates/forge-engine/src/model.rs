@@ -194,14 +194,9 @@ impl From<Context> for Request {
 
 impl<R: Role> From<Message<R>> for forge_provider::model::Message {
     fn from(value: Message<R>) -> Self {
-        forge_provider::model::Message {
-            role: R::name(),
-            content: ContentPart::Text(TextContent {
-                r#type: "text".to_string(),
-                text: value.content,
-            }),
-            name: None,
-        }
+        forge_provider::model::Message::default()
+        .content(value.content)
+        .role(R::name())
     }
 }
 
@@ -218,26 +213,23 @@ fn into_tool(tool: &dyn Tool) -> Vec<forge_provider::model::Tool> {
     tool.tools_list()
         .tools
         .iter()
-        .map(|tool| forge_provider::model::Tool {
-            r#type: "function".to_string(),
-            function: forge_provider::model::FunctionDescription {
-                description: tool.description.clone(),
-                name: tool.name.clone(),
-                parameters: tool.input_schema.clone(),
-            },
+        .map(|tool| {
+            
+            forge_provider::model::Tool {
+                id: forge_provider::model::ToolId(tool.id().to_string()),
+                description: tool.description(),
+                input_schema: forge_provider::model::JsonSchema::from(tool.input_schema()),
+                output_schema: None,
+    
+        }
         })
         .collect()
 }
 
 impl From<File> for forge_provider::model::Message {
     fn from(value: File) -> Self {
-        forge_provider::model::Message {
-            role: User::name(),
-            content: ContentPart::Text(TextContent {
-                r#type: "text".to_string(),
-                text: format!("{}\n{}", value.path, value.content),
-            }),
-            name: Some(value.path),
-        }
+        forge_provider::model::Message::default()
+        .content(format!("{}\n{}", value.path, value.content))
+        .role(User::name())
     }
 }
