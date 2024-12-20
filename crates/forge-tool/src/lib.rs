@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 mod fs;
 mod model;
-use fs::{FSFileInfo, FSRead, FSSearch, FSList};
+use fs::{FSFileInfo, FSList, FSRead, FSSearch};
 mod think;
 use inflector::Inflector;
 use serde_json::Value;

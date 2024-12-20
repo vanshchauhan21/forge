@@ -105,13 +105,12 @@ impl ToolTrait for FSFileInfo {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test_id(){
+    fn test_id() {
         assert!(FSRead.id().0.ends_with("fs/fs_read"));
         assert!(FSSearch.id().0.ends_with("fs/fs_search"));
         assert!(FSList.id().0.ends_with("fs/fs_list"));

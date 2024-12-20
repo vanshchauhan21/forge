@@ -5,7 +5,7 @@ use colorize::AnsiColor;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{ToolId, ToolTrait};
+use crate::ToolTrait;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ThoughtData {
