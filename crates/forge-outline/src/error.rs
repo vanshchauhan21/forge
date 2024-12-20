@@ -6,7 +6,7 @@ pub enum Error {
     DirectoryAccess(String),
     DirectoryRead(io::Error),
     FileRead { path: String, error: io::Error },
-    LanguageError(String),
+    UnsupportedLanguage(String),
     QueryError(String),
 }
 
@@ -22,7 +22,7 @@ impl Display for Error {
             Error::FileRead { path, error } => {
                 write!(f, "Failed to read file {}: {}", path, error)
             }
-            Error::LanguageError(msg) => write!(f, "Language error: {}", msg),
+            Error::UnsupportedLanguage(msg) => write!(f, "Language error: {}", msg),
             Error::QueryError(msg) => write!(f, "Query error: {}", msg),
         }
     }

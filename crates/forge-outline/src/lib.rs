@@ -6,22 +6,21 @@ mod error;
 mod queries;
 
 use error::{Error, Result};
-use queries::{javascript, python, rust};
 
 fn load_language_parser(language_name: &str) -> Result<Language> {
     match language_name {
         "rust" => Ok(tree_sitter_rust::language()),
         "javascript" => Ok(tree_sitter_javascript::language()),
         "python" => Ok(tree_sitter_python::language()),
-        x => Err(Error::LanguageError(format!("Unsupported language: {}", x))),
+        x => Err(Error::UnsupportedLanguage(x.to_string())),
     }
 }
 
 fn load_queries() -> HashMap<&'static str, &'static str> {
     let mut queries = HashMap::new();
-    queries.insert("rust", rust::QUERY);
-    queries.insert("javascript", javascript::QUERY);
-    queries.insert("python", python::QUERY);
+    queries.insert("rust", queries::RUST);
+    queries.insert("javascript", queries::JAVASCRIPT);
+    queries.insert("python", queries::PYTHON);
     queries
 }
 
@@ -98,7 +97,7 @@ pub fn parse_source_code_for_definitions(files: Vec<(PathBuf, String)>) -> Resul
                     let mut parser = Parser::new();
                     parser
                         .set_language(language)
-                        .map_err(|e| Error::LanguageError(e.to_string()))?;
+                        .map_err(|e| Error::UnsupportedLanguage(e.to_string()))?;
                     let query = Query::new(language, queries[lang_name])
                         .map_err(|e| Error::QueryError(e.to_string()))?;
                     parsers.insert(lang_name, (parser, query));
