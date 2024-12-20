@@ -1,6 +1,7 @@
-use crate::model::{Context, Message, State};
+use crate::model::State;
 use crate::{error::Result, model::Event};
 use derive_setters::Setters;
+use forge_provider::model::{Message, Request, User};
 use forge_provider::{Provider, Stream};
 use forge_tool::Tool;
 use std::rc::Rc;
@@ -76,10 +77,17 @@ impl CodeForge {
         // let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         // TODO: add message to history
-        let context = Context::new(Message::system(include_str!("./prompt.md").to_string()))
-            .tools(self.tools.clone())
+        let context = Request::default()
+            .add_message(Message::system(include_str!("./prompt.md").to_string()))
+            // .extend_tools(self.tools.clone())
             .add_message(Message::user(prompt.message))
-            .files(prompt.files);
+            .extend_messages(
+                prompt
+                    .files
+                    .into_iter()
+                    .map(Message::<User>::from)
+                    .collect(),
+            );
 
         // TODO: Streaming is making the design complicated
         let response = self.provider.chat(context.into()).await?;
