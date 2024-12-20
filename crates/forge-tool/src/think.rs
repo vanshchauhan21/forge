@@ -115,10 +115,6 @@ impl ToolTrait for Think {
     type Input = Value;
     type Output = Value;
 
-    fn id(&self) -> ToolId {
-        ToolId("sequential-thinking".to_string())
-    }
-
     fn description(&self) -> String {
         "A detailed tool for dynamic and reflective problem-solving through thoughts.".into()
     }
@@ -127,5 +123,15 @@ impl ToolTrait for Think {
         let mut thinker = self.clone();
         let thought_result = thinker.process_thought(input).map_err(|e| e.to_string())?;
         Ok(thought_result)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_id() {
+        assert!(Think::default().id().0.ends_with("/think"));
     }
 }

@@ -13,3 +13,4 @@ url = { version = "2.5", features = ["serde"] }
 tracing = "0.1"
 home = "0.5.11"
 colorize = "0.1.0"
+Inflector = "0.11.4"

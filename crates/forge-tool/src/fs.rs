@@ -1,18 +1,14 @@
-use crate::{ToolId, ToolTrait};
+use crate::ToolTrait;
 
 pub(crate) struct FSRead;
 pub(crate) struct FSSearch;
-pub(crate) struct FSls;
+pub(crate) struct FSList;
 pub(crate) struct FSFileInfo;
 
 #[async_trait::async_trait]
 impl ToolTrait for FSRead {
     type Input = String;
     type Output = String;
-
-    fn id(&self) -> ToolId {
-        ToolId("fs.read".to_string())
-    }
 
     fn description(&self) -> String {
         "Read a file".to_string()
@@ -30,10 +26,6 @@ impl ToolTrait for FSRead {
 impl ToolTrait for FSSearch {
     type Input = (String, String);
     type Output = Vec<String>;
-
-    fn id(&self) -> ToolId {
-        ToolId("fs.search".to_string())
-    }
 
     fn description(&self) -> String {
         "Search for files and directories recursively in a given directory. Input is (directory_path, search_pattern) where search_pattern is matched against file/directory names".to_string()
@@ -68,13 +60,9 @@ impl ToolTrait for FSSearch {
 }
 
 #[async_trait::async_trait]
-impl ToolTrait for FSls {
+impl ToolTrait for FSList {
     type Input = String;
     type Output = Vec<String>;
-
-    fn id(&self) -> ToolId {
-        ToolId("fs.ls".to_string())
-    }
 
     fn description(&self) -> String {
         "List files and directories in a given directory".to_string()
@@ -105,10 +93,6 @@ impl ToolTrait for FSFileInfo {
     type Input = String;
     type Output = String;
 
-    fn id(&self) -> ToolId {
-        ToolId("fs.file_info".to_string())
-    }
-
     fn description(&self) -> String {
         "Get information about a file or directory".to_string()
     }
@@ -118,5 +102,19 @@ impl ToolTrait for FSFileInfo {
             .await
             .map_err(|e| e.to_string())?;
         Ok(format!("{:?}", meta))
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_id(){
+        assert!(FSRead.id().0.ends_with("fs/fs_read"));
+        assert!(FSSearch.id().0.ends_with("fs/fs_search"));
+        assert!(FSList.id().0.ends_with("fs/fs_list"));
+        assert!(FSFileInfo.id().0.ends_with("fs/fs_file_info"));
     }
 }

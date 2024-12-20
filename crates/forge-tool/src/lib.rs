@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 mod fs;
 mod model;
-use fs::{FSFileInfo, FSRead, FSSearch, FSls};
+use fs::{FSFileInfo, FSRead, FSSearch, FSList};
 mod think;
+use inflector::Inflector;
 use serde_json::Value;
 use think::Think;
 
@@ -12,7 +13,15 @@ use think::Think;
 pub(crate) trait ToolTrait {
     type Input;
     type Output;
-    fn id(&self) -> ToolId;
+    fn id(&self) -> ToolId {
+        let id = std::any::type_name::<Self>();
+        let out = id
+            .split("::")
+            .map(|v| v.to_snake_case())
+            .collect::<Vec<_>>()
+            .join("/");
+        ToolId(out)
+    }
     fn description(&self) -> String;
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }
@@ -104,7 +113,7 @@ impl Default for ToolEngine {
 
         tools.insert(FSRead.id(), SerdeTool::import(FSRead));
         tools.insert(FSSearch.id(), SerdeTool::import(FSSearch));
-        tools.insert(FSls.id(), SerdeTool::import(FSls));
+        tools.insert(FSList.id(), SerdeTool::import(FSList));
         tools.insert(FSFileInfo.id(), SerdeTool::import(FSFileInfo));
 
         let think = Think::default();
