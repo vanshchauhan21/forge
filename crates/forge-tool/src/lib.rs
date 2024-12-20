@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-// mod fs;
+mod fs;
 mod model;
+use fs::{FSFileInfo, FSRead, FSSearch, FSls};
 // mod think;
 use serde_json::Value;
 
@@ -15,30 +16,18 @@ pub(crate) trait ToolTrait {
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }
 
-struct FSRead;
+struct SerdeTool<T>(T);
 
-#[async_trait::async_trait]
-impl ToolTrait for FSRead {
-    type Input = String;
-    type Output = String;
-
-    fn id(&self) -> ToolId {
-        ToolId("fs.read".to_string())
-    }
-
-    fn description(&self) -> String {
-        "Read a file".to_string()
-    }
-
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let content = tokio::fs::read_to_string(&input)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(content)
+impl<T> SerdeTool<T> {
+    fn import(tool: T) -> Box<dyn ToolTrait<Input = Value, Output = Value> + Sync + 'static>
+    where
+        T: ToolTrait + Sync + 'static,
+        T::Input: serde::de::DeserializeOwned,
+        T::Output: serde::Serialize,
+    {
+        Box::new(Self(tool))
     }
 }
-
-struct SerdeTool<Tool>(Tool);
 
 #[async_trait::async_trait]
 impl<T: ToolTrait + Sync> ToolTrait for SerdeTool<T>
@@ -112,12 +101,10 @@ impl Default for ToolEngine {
     fn default() -> Self {
         let mut tools = HashMap::new();
 
-        tools.insert(
-            FSRead.id(),
-            // TODO: reduce boilerplate code, for eg: SerdeTool::import(FSRead)
-            Box::new(SerdeTool(FSRead))
-                as Box<dyn ToolTrait<Input = Value, Output = Value> + Sync + 'static>,
-        );
+        tools.insert(FSRead.id(), SerdeTool::import(FSRead));
+        tools.insert(FSSearch.id(), SerdeTool::import(FSSearch));
+        tools.insert(FSls.id(), SerdeTool::import(FSls));
+        tools.insert(FSFileInfo.id(), SerdeTool::import(FSFileInfo));
 
         Self { tools }
     }

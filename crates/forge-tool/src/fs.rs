@@ -1,118 +1,122 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use crate::{ToolId, ToolTrait};
 
-use crate::model::{CallToolRequest, CallToolResponse, ToolResponseContent, ToolsListResponse};
-use crate::ToolTrait;
-use anyhow::Result;
+pub(crate) struct FSRead;
+pub(crate) struct FSSearch;
+pub(crate) struct FSls;
+pub(crate) struct FSFileInfo;
 
-fn call_tool(req: CallToolRequest) -> Result<CallToolResponse> {
-    let name = req.name.as_str();
-    let args = req.arguments.unwrap_or_default();
-    let result = match name {
-        "read_file" => {
-            let path = get_path(&args)?;
-            let content = std::fs::read_to_string(path)?;
-            ToolResponseContent::Text { text: content }
+#[async_trait::async_trait]
+impl ToolTrait for FSRead {
+    type Input = String;
+    type Output = String;
+
+    fn id(&self) -> ToolId {
+        ToolId("fs.read".to_string())
+    }
+
+    fn description(&self) -> String {
+        "Read a file".to_string()
+    }
+
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let content = tokio::fs::read_to_string(&input)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(content)
+    }
+}
+
+#[async_trait::async_trait]
+impl ToolTrait for FSSearch {
+    type Input = (String, String);
+    type Output = Vec<String>;
+
+    fn id(&self) -> ToolId {
+        ToolId("fs.search".to_string())
+    }
+
+    fn description(&self) -> String {
+        "Search for files and directories recursively in a given directory. Input is (directory_path, search_pattern) where search_pattern is matched against file/directory names".to_string()
+    }
+
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let (dir, pattern) = input;
+        let pattern = pattern.to_lowercase();
+
+        async fn search(dir: &std::path::Path, pattern: &str) -> Result<Vec<String>, String> {
+            let mut matches = Vec::new();
+            let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
+
+            while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
+                let path = entry.path();
+                if let Some(name) = path.file_name() {
+                    let name = name.to_string_lossy().to_lowercase();
+                    if name.contains(pattern) {
+                        matches.push(path.to_string_lossy().to_string());
+                    }
+                }
+
+                if path.is_dir() {
+                    matches.extend(Box::pin(search(&path, pattern)).await?);
+                }
+            }
+            Ok(matches)
         }
-        "list_directory" => {
-            let path = get_path(&args)?;
-            let entries = std::fs::read_dir(path)?;
-            let mut text = String::new();
-            for entry in entries {
-                let entry = entry?;
-                let prefix = if entry.file_type()?.is_dir() {
+
+        Ok(Box::pin(search(std::path::Path::new(&dir), &pattern)).await?)
+    }
+}
+
+#[async_trait::async_trait]
+impl ToolTrait for FSls {
+    type Input = String;
+    type Output = Vec<String>;
+
+    fn id(&self) -> ToolId {
+        ToolId("fs.ls".to_string())
+    }
+
+    fn description(&self) -> String {
+        "List files and directories in a given directory".to_string()
+    }
+
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let dir = std::path::Path::new(&input);
+        let mut paths = Vec::new();
+        let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
+
+        while let Ok(f) = walker.next_entry().await {
+            if let Some(entry) = f {
+                let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
+                let prefix = if file_type.is_dir() {
                     "[DIR]"
                 } else {
                     "[FILE]"
                 };
-                text.push_str(&format!(
-                    "{prefix} {}\n",
-                    entry.file_name().to_string_lossy()
-                ));
-            }
-            ToolResponseContent::Text { text }
-        }
-        "search_files" => {
-            let path = get_path(&args)?;
-            let pattern = args["pattern"].as_str().unwrap();
-            let mut matches = Vec::new();
-            search_directory(&path, pattern, &mut matches)?;
-            ToolResponseContent::Text {
-                text: matches.join("\n"),
+                paths.push(format!("{} {}", prefix, entry.path().display()));
             }
         }
-        "get_file_info" => {
-            let path = get_path(&args)?;
-            let metadata = std::fs::metadata(path)?;
-            ToolResponseContent::Text {
-                text: format!("{:?}", metadata),
-            }
-        }
-        "list_allowed_directories" => ToolResponseContent::Text {
-            text: "[]".to_string(),
-        },
-        _ => return Err(anyhow::anyhow!("Unknown tool: {}", req.name)),
-    };
-    Ok(CallToolResponse {
-        content: vec![result],
-        is_error: None,
-        meta: None,
-    })
-}
-
-fn search_directory(dir: &Path, pattern: &str, matches: &mut Vec<String>) -> Result<()> {
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let name = path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_lowercase();
-
-        // Check if the current file/directory matches the pattern
-        if name.contains(&pattern.to_lowercase()) {
-            matches.push(path.to_string_lossy().to_string());
-        }
-
-        // Recursively search subdirectories
-        if path.is_dir() {
-            search_directory(&path, pattern, matches)?;
-        }
-    }
-    Ok(())
-}
-
-fn get_path(args: &HashMap<String, serde_json::Value>) -> Result<PathBuf> {
-    let path = args["path"]
-        .as_str()
-        .ok_or(anyhow::anyhow!("Missing path"))?;
-
-    if path.starts_with('~') {
-        let home = home::home_dir().ok_or(anyhow::anyhow!("Could not determine home directory"))?;
-        // Strip the ~ and join with home path
-        let path = home.join(path.strip_prefix("~/").unwrap_or_default());
-        Ok(path)
-    } else {
-        Ok(PathBuf::from(path))
+        Ok(paths)
     }
 }
-
-#[derive(Default)]
-pub struct FS;
 
 #[async_trait::async_trait]
-impl ToolTrait for FS {
-    fn id(&self) -> &'static str {
-        "fs"
+impl ToolTrait for FSFileInfo {
+    type Input = String;
+    type Output = String;
+
+    fn id(&self) -> ToolId {
+        ToolId("fs.file_info".to_string())
     }
 
-    async fn call(&self, input: CallToolRequest) -> Result<CallToolResponse, String> {
-        call_tool(input).map_err(|e| e.to_string())
+    fn description(&self) -> String {
+        "Get information about a file or directory".to_string()
     }
 
-    fn list(&self) -> ToolsListResponse {
-        let response = include_str!("./fs.schema.json");
-        serde_json::from_str(response).unwrap()
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let meta = tokio::fs::metadata(input)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(format!("{:?}", meta))
     }
 }
