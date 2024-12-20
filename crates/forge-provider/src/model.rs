@@ -1,3 +1,4 @@
+use derive_more::derive::From;
 use derive_setters::Setters;
 use serde_json::Value;
 
@@ -11,6 +12,11 @@ impl Request {
     pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
         let tool: Tool = tool.into();
         self.available_tools.push(tool);
+        self
+    }
+
+    pub fn add_message(mut self, message: impl Into<AnyMessage>) -> Self {
+        self.context.push(message.into());
         self
     }
 }
@@ -77,7 +83,7 @@ impl Message<Assistant> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From)]
 pub enum AnyMessage {
     System(Message<System>),
     User(Message<User>),

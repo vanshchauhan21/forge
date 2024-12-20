@@ -164,16 +164,16 @@ impl From<Context> for Request {
     fn from(value: Context) -> Self {
         let mut request = Request::default();
         // Add System Message
-        request.messages = insert_into(request.messages, value.system.into());
+        request.context = insert_into(request.context, value.system.into());
 
         // Add User Message
         for message in value.messages {
-            request.messages = insert_into(request.messages, message.into());
+            request.context = insert_into(request.context, message.into());
         }
 
         // Add Context Files
         for file in value.files {
-            request.messages = insert_into(request.messages, file.into());
+            request.context = insert_into(request.context, file.into());
         }
 
         // Add Add all tools
