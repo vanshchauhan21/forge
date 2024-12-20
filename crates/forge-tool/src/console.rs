@@ -5,7 +5,6 @@ use inquire::Autocomplete;
 use serde::Serialize;
 
 use crate::model::Prompt;
-use crate::prompt_parser::{PromptParser, Token};
 use crate::{Description, ToolTrait};
 
 /// Read a line from the console
