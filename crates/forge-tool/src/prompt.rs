@@ -86,8 +86,8 @@ impl Prompt {
 
 //     #[test]
 //     fn test_simple_file_path() {
-//         let tokens = Prompt::parse_tokens("Check @src/main.rs please").unwrap();
-//         assert_eq!(
+//         let tokens = Prompt::parse_tokens("Check @src/main.rs
+// please").unwrap();         assert_eq!(
 //             tokens,
 //             vec![
 //                 Token::Text("Check".to_string()),
@@ -99,8 +99,8 @@ impl Prompt {
 
 //     #[test]
 //     fn test_multiple_file_paths() {
-//         let tokens = Prompt::parse_tokens("Compare @file1.rs with @file2.rs").unwrap();
-//         assert_eq!(
+//         let tokens = Prompt::parse_tokens("Compare @file1.rs with
+// @file2.rs").unwrap();         assert_eq!(
 //             tokens,
 //             vec![
 //                 Token::Text("Compare".to_string()),
