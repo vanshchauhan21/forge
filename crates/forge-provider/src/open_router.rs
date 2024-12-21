@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use forge_tool::Tool;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
@@ -141,9 +143,66 @@ struct Prediction {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Response {
-    status: String,
-    data: Option<serde_json::Value>,
-    error: Option<String>,
+    id: String,
+    choices: Vec<Choice>,
+    created: u64,
+    model: String,
+    object: String,
+    system_fingerprint: Option<String>,
+    usage: Option<ResponseUsage>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct ResponseUsage {
+    prompt_tokens: u64,
+    completion_tokens: u64,
+    total_tokens: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+enum Choice {
+    NonChatChoice {
+        finish_reason: Option<String>,
+        text: String,
+        error: Option<ErrorResponse>,
+    },
+    NonStreamingChoice {
+        finish_reason: Option<String>,
+        message: ResponseMessage,
+        error: Option<ErrorResponse>,
+    },
+    StreamingChoice {
+        finish_reason: Option<String>,
+        delta: ResponseMessage,
+        error: Option<ErrorResponse>,
+    },
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct ErrorResponse {
+    code: u32,
+    message: String,
+    metadata: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct ResponseMessage {
+    content: Option<String>,
+    role: Option<String>,
+    tool_calls: Vec<ToolCall>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct ToolCall {
+    id: String,
+    r#type: String,
+    function: FunctionCall,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct FunctionCall {
+    name: String,
+    arguments: serde_json::Value,
 }
 
 impl From<Tool> for OpenRouterTool {
