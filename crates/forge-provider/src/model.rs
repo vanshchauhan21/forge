@@ -17,13 +17,24 @@ impl Request {
         self
     }
 
-    pub fn extend_tools(mut self, tools: Vec<impl Into<Tool>>) -> Self {
-        self.tools.extend(tools.into_iter().map(Into::into));
+    pub fn add_tool_result(mut self, tool_result: impl Into<ToolResult>) -> Self {
+        self.tool_result.push(tool_result.into());
         self
     }
 
     pub fn add_message(mut self, message: impl Into<AnyMessage>) -> Self {
         self.context.push(message.into());
+        self
+    }
+
+    pub fn extend_tools(mut self, tools: Vec<impl Into<Tool>>) -> Self {
+        self.tools.extend(tools.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn extend_tool_results(mut self, tool_results: Vec<impl Into<ToolResult>>) -> Self {
+        self.tool_result
+            .extend(tool_results.into_iter().map(Into::into));
         self
     }
 

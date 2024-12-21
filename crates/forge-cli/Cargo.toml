@@ -14,12 +14,13 @@ tracing-subscriber = "0.3"
 inquire = "0.7.5"
 strum = "0.25"
 strum_macros = "0.25"
-forge-engine = { path = "../forge-engine" }
 spinners = "4.1.1"
 colorize = "0.1.0"
 async-trait = "0.1.83"
 ignore = "0.4"
-forge-tool = { path = "../forge-tool"}
+forge-tool = { path = "../forge-tool" }
+forge-provider = { path = "../forge-provider" }
+serde_json = "1.0.133"
 
 [dev-dependencies]
 indoc = "2.0.5"

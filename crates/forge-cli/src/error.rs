@@ -5,8 +5,10 @@ use derive_more::derive::From;
 #[derive(From)]
 pub enum Error {
     Inquire(inquire::InquireError),
-    Engine(forge_engine::error::Error),
+    // TODO: drop `Custom` because its too generic
     Custom(String),
+    Provider(forge_provider::error::Error),
+    IO(std::io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -52,13 +54,9 @@ impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
             Error::Inquire(error) => Errata::new(format!("{}", error)),
-            Error::Engine(error) => match error {
-                forge_engine::error::Error::Serde(err) => {
-                    Errata::new("Serialization Error".to_string()).description(format!("{}", err))
-                }
-                forge_engine::error::Error::Provider(error) => Errata::new(format!("{}", error)),
-            },
             Error::Custom(error) => Errata::new(error.to_string()),
+            Error::Provider(error) => Errata::new(format!("{}", error)),
+            Error::IO(error) => Errata::new(format!("{}", error)),
         }
     }
 }

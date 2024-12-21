@@ -52,13 +52,17 @@ impl ToolId {
     pub fn into_string(self) -> String {
         self.0
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl Router {
-    pub async fn call(&self, tool_id: ToolId, input: Value) -> Result<Value, String> {
-        match self.tools.get(&tool_id) {
+    pub async fn call(&self, tool_id: &ToolId, input: Value) -> Result<Value, String> {
+        match self.tools.get(tool_id) {
             Some(tool) => tool.executable.call(input).await,
-            None => Err(format!("No such tool found: {}", tool_id.into_string())),
+            None => Err(format!("No such tool found: {}", tool_id.as_str())),
         }
     }
 
