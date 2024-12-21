@@ -2,6 +2,7 @@ use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tracing::debug;
+
 use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]

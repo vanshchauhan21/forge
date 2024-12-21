@@ -328,7 +328,7 @@ impl TryFrom<Response> for crate::model::Response {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: UseId::new(tool_call.id.clone()),
                                 tool_id: ToolId::new(&tool_call.function.name),
-                                input: serde_json::from_str(&tool_call.function.arguments)?
+                                input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
                     }

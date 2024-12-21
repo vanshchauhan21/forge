@@ -7,6 +7,7 @@ use futures::future::join_all;
 use futures::FutureExt;
 use serde_json::Value;
 use tracing::debug;
+
 use crate::completion::Completion;
 use crate::error::Result;
 use crate::walker::Walker;
