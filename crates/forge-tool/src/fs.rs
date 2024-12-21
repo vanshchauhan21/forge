@@ -1,3 +1,4 @@
+
 use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -75,7 +76,7 @@ impl ToolTrait for FSWrite {
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
-        Ok("Write successful".to_string())
+        Ok(format!("Wrote to file: {}", input.path))
     }
 }
 
