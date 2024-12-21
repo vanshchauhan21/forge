@@ -3,22 +3,27 @@ use std::collections::HashMap;
 use anyhow::Result;
 use colorize::AnsiColor;
 use forge_tool_macros::Description;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::{Description, ToolTrait};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ThoughtData {
-    thought: String,
-    thought_number: i32,
-    total_thoughts: i32,
-    next_thought_needed: bool,
-    is_revision: Option<bool>,
-    revises_thought: Option<i32>,
-    branch_from_thought: Option<i32>,
-    branch_id: Option<String>,
-    needs_more_thoughts: Option<bool>,
+    pub thought: String,
+    pub next_thought_needed: bool,
+    pub thought_number: i32,
+    pub total_thoughts: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_revision: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revises_thought: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_from_thought: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub needs_more_thoughts: Option<bool>,
 }
 
 /// A detailed tool for dynamic and reflective problem-solving through thoughts.
@@ -29,17 +34,25 @@ pub struct Think {
 }
 
 impl Think {
-    fn validate_thought_data(&self, input: serde_json::Value) -> Result<ThoughtData> {
-        let thought_data: ThoughtData = serde_json::from_value(input)?;
-
-        if thought_data.thought_number <= 0 {
+    fn validate_thought_data(&self, input: ThoughtData) -> Result<ThoughtData> {
+        if input.thought_number <= 0 {
             return Err(anyhow::anyhow!("Invalid thoughtNumber: must be positive"));
         }
-        if thought_data.total_thoughts <= 0 {
+        if input.total_thoughts <= 0 {
             return Err(anyhow::anyhow!("Invalid totalThoughts: must be positive"));
         }
 
-        Ok(thought_data)
+        Ok(ThoughtData {
+            thought: input.thought,
+            thought_number: input.thought_number,
+            total_thoughts: input.total_thoughts,
+            next_thought_needed: input.next_thought_needed,
+            is_revision: input.is_revision,
+            revises_thought: input.revises_thought,
+            branch_from_thought: input.branch_from_thought,
+            branch_id: input.branch_id,
+            needs_more_thoughts: input.needs_more_thoughts,
+        })
     }
 
     fn format_thought(&self, thought_data: &ThoughtData) -> String {
@@ -78,7 +91,7 @@ impl Think {
         )
     }
 
-    fn process_thought(&mut self, input: serde_json::Value) -> Result<serde_json::Value> {
+    fn process_thought(&mut self, input: ThoughtData) -> Result<serde_json::Value> {
         let mut thought_data = self.validate_thought_data(input)?;
 
         if thought_data.thought_number > thought_data.total_thoughts {
@@ -112,8 +125,8 @@ impl Think {
 
 #[async_trait::async_trait]
 impl ToolTrait for Think {
-    type Input = Value;
-    type Output = Value;
+    type Input = ThoughtData;
+    type Output = serde_json::Value;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let mut thinker = self.clone();

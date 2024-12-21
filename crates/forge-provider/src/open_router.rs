@@ -6,11 +6,14 @@ use http::{HeaderMap, HeaderValue};
 use reqwest_middleware::reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
 use crate::log::LoggingMiddleware;
-use crate::model::{AnyMessage, Assistant, Role, System, User};
+use crate::model::UseId;
+use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, User};
+use forge_tool::ToolId;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 struct Model {
@@ -303,15 +306,38 @@ impl TryFrom<Response> for crate::model::Response {
 
     fn try_from(res: Response) -> Result<Self> {
         if let Some(choice) = res.choices.first() {
-            Ok(match choice {
+            let response = match choice {
                 Choice::NonChat { text, .. } => crate::model::Response::new(text.clone()),
                 Choice::NonStreaming { message, .. } => {
-                    crate::model::Response::new(message.content.clone().unwrap_or_default())
+                    let mut resp =
+                        crate::model::Response::new(message.content.clone().unwrap_or_default());
+                    if let Some(tool_calls) = &message.tool_calls {
+                        for tool_call in tool_calls {
+                            resp = resp.add_call(ToolUse {
+                                tool_use_id: UseId::new(tool_call.id.clone()),
+                                tool_id: ToolId::new(&tool_call.function.name),
+                                input: tool_call.function.arguments.clone(),
+                            });
+                        }
+                    }
+                    resp
                 }
                 Choice::Streaming { delta, .. } => {
-                    crate::model::Response::new(delta.content.clone().unwrap_or_default())
+                    let mut resp =
+                        crate::model::Response::new(delta.content.clone().unwrap_or_default());
+                    if let Some(tool_calls) = &delta.tool_calls {
+                        for tool_call in tool_calls {
+                            resp = resp.add_call(ToolUse {
+                                tool_use_id: UseId::new(tool_call.id.clone()),
+                                tool_id: ToolId::new(&tool_call.function.name),
+                                input: tool_call.function.arguments.clone(),
+                            });
+                        }
+                    }
+                    resp
                 }
-            })
+            };
+            Ok(response)
         } else {
             Err(crate::error::Error::empty_response("Open Router"))
         }
@@ -384,16 +410,21 @@ impl InnerProvider for OpenRouter {
 
     async fn chat(&self, request: crate::model::Request) -> Result<crate::model::Response> {
         let request = Request::from(request);
+        let body = serde_json::to_string(&request)?;
+
+        info!("Request Body: {}", body);
+
         let body = self
             .http_client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .body(serde_json::to_string(&request).unwrap())
+            .body(body)
             .send()
             .await?
             .text()
             .await?;
 
+        info!("Response Body: {}", body);
         let response = serde_json::from_str::<Response>(&body)?;
 
         Ok(response.try_into()?)

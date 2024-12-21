@@ -4,6 +4,7 @@ use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
 use serde_json::Value;
+use tracing::info;
 
 use crate::console::{ReadLine, WriteLine};
 use crate::fs::{FSFileInfo, FSList, FSRead, FSSearch};
@@ -49,6 +50,10 @@ pub struct Tool {
 pub struct ToolId(String);
 
 impl ToolId {
+    pub fn new(id: &str) -> Self {
+        Self(id.to_string())
+    }
+    
     pub fn into_string(self) -> String {
         self.0
     }
@@ -76,11 +81,7 @@ impl Router {
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
-        let id = std::any::type_name::<T>()
-            .split("::")
-            .map(|v| v.to_snake_case())
-            .collect::<Vec<_>>()
-            .join("/");
+        let id = std::any::type_name::<T>().to_snake_case();
         let executable = Box::new(JsonTool(tool));
         let tool = Tool {
             id: ToolId(id.clone()),
@@ -88,6 +89,7 @@ impl Router {
             input_schema: schema_for!(T::Input),
             output_schema: Some(schema_for!(T::Output)),
         };
+        info!("Imported tool: {:?}", tool);
         (ToolId(id), ToolDefinition { executable, tool })
     }
 }
@@ -114,25 +116,19 @@ mod test {
 
     #[test]
     fn test_id() {
-        assert!(Router::import(FSRead)
-            .0
-            .into_string()
-            .ends_with("fs/fs_read"));
+        assert!(Router::import(FSRead).0.into_string().ends_with("fs_read"));
         assert!(Router::import(FSSearch)
             .0
             .into_string()
-            .ends_with("fs/fs_search"));
-        assert!(Router::import(FSList)
-            .0
-            .into_string()
-            .ends_with("fs/fs_list"));
+            .ends_with("fs_search"));
+        assert!(Router::import(FSList).0.into_string().ends_with("fs_list"));
         assert!(Router::import(FSFileInfo)
             .0
             .into_string()
-            .ends_with("fs/fs_file_info"));
+            .ends_with("file_info"));
         assert!(Router::import(Think::default())
             .0
             .into_string()
-            .ends_with("/think"));
+            .ends_with("think"));
     }
 }

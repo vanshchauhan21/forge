@@ -460,4 +460,9 @@ mod test {
         assert_eq!(result.len(), 1);
         assert!(result.iter().any(|p| p.ends_with("test_dir")));
     }
+
+    #[test]
+    fn test_description() {
+        assert!(FSRead::description().len() > 100)
+    }
 }
