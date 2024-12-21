@@ -42,10 +42,11 @@ pub(crate) struct FSRead;
 pub(crate) struct FSSearch;
 /// Get a detailed listing of all files and directories in a specified path.
 /// Results clearly distinguish between files and directories with [FILE] and
-/// [DIR] prefixes. When recursive is true, lists contents of all subdirectories.
-/// When recursive is false or not provided, only lists top-level contents.
-/// This tool is essential for understanding directory structure and finding
-/// specific files within a directory. Only works within allowed directories.
+/// [DIR] prefixes. When recursive is true, lists contents of all
+/// subdirectories. When recursive is false or not provided, only lists
+/// top-level contents. This tool is essential for understanding directory
+/// structure and finding specific files within a directory. Only works within
+/// allowed directories.
 #[derive(Description)]
 pub(crate) struct FSList;
 /// Retrieve detailed metadata about a file or directory. Returns comprehensive
@@ -135,7 +136,11 @@ impl ToolTrait for FSList {
 
             while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
                 let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
-                let prefix = if file_type.is_dir() { "[DIR]" } else { "[FILE]" };
+                let prefix = if file_type.is_dir() {
+                    "[DIR]"
+                } else {
+                    "[FILE]"
+                };
                 paths.push(format!("{} {}", prefix, entry.path().display()));
 
                 if recursive && file_type.is_dir() {
@@ -270,9 +275,9 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: None 
+                recursive: None,
             })
             .await
             .unwrap();
@@ -295,9 +300,9 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: None
+                recursive: None,
             })
             .await
             .unwrap();
@@ -323,9 +328,9 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: nonexistent_dir.to_string_lossy().to_string(),
-                recursive: None
+                recursive: None,
             })
             .await;
 
@@ -348,9 +353,9 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: None
+                recursive: None,
             })
             .await
             .unwrap();
@@ -519,7 +524,9 @@ mod test {
         fs::write(temp_dir.path().join("dir1/file1.txt"), "content1")
             .await
             .unwrap();
-        fs::create_dir(temp_dir.path().join("dir1/subdir")).await.unwrap();
+        fs::create_dir(temp_dir.path().join("dir1/subdir"))
+            .await
+            .unwrap();
         fs::write(temp_dir.path().join("dir1/subdir/file2.txt"), "content2")
             .await
             .unwrap();
@@ -528,12 +535,12 @@ mod test {
             .unwrap();
 
         let fs_list = FSList;
-        
+
         // Test recursive listing
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: Some(true)
+                recursive: Some(true),
             })
             .await
             .unwrap();
@@ -547,9 +554,9 @@ mod test {
 
         // Test non-recursive listing of same structure
         let result = fs_list
-            .call(FSListInput { 
+            .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: Some(false)
+                recursive: Some(false),
             })
             .await
             .unwrap();
