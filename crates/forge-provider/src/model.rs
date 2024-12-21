@@ -1,6 +1,7 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
 use forge_tool::{Tool, ToolId};
+use serde::Serialize;
 use serde_json::Value;
 
 #[derive(Default, Setters, Debug, Clone)]
@@ -79,6 +80,15 @@ pub struct Message<R: Role> {
     pub role: R,
 }
 
+impl<T: Role> Message<T> {
+    pub fn extend(self, other: Message<T>) -> Message<T> {
+        Message {
+            content: format!("{}\n{}", self.content, other.content),
+            role: self.role,
+        }
+    }
+}
+
 impl Message<System> {
     pub fn system(content: impl Into<String>) -> Self {
         Message { content: content.into(), role: System {} }
@@ -88,6 +98,11 @@ impl Message<System> {
 impl Message<User> {
     pub fn user(content: impl Into<String>) -> Self {
         Message { content: content.into(), role: User {} }
+    }
+
+    /// Creates a user message from any serializable item. The message is typically in a XML format
+    pub fn try_from(item: impl Serialize) -> Result<Self, crate::error::Error> {
+        Ok(Message::user(serde_xml_rs::to_string(&item)?))
     }
 }
 
