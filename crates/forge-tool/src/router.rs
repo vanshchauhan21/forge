@@ -28,18 +28,6 @@ where
     }
 }
 
-impl<T> JsonTool<T> {
-    fn id(&self) -> ToolId {
-        let id = std::any::type_name::<T>();
-        let out = id
-            .split("::")
-            .map(|v| v.to_snake_case())
-            .collect::<Vec<_>>()
-            .join("/");
-        ToolId(out)
-    }
-}
-
 struct ToolDefinition {
     executable: Box<dyn ToolTrait<Input = Value, Output = Value>>,
     tool: Tool,
@@ -75,8 +63,7 @@ impl Router {
     }
 
     pub fn list(&self) -> Vec<Tool> {
-        self.tools.values().map(|tool| tool.tool.clone())
-            .collect()
+        self.tools.values().map(|tool| tool.tool.clone()).collect()
     }
 
     fn import<T>(tool: T) -> (ToolId, ToolDefinition)

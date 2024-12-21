@@ -69,20 +69,20 @@ pub struct Message<R: Role> {
 }
 
 impl Message<System> {
-    pub fn system(content: String) -> Self {
-        Message { content, role: System {} }
+    pub fn system(content: impl Into<String>) -> Self {
+        Message { content: content.into(), role: System {} }
     }
 }
 
 impl Message<User> {
-    pub fn user(content: String) -> Self {
-        Message { content, role: User {} }
+    pub fn user(content: impl Into<String>) -> Self {
+        Message { content: content.into(), role: User {} }
     }
 }
 
 impl Message<Assistant> {
-    pub fn assistant(content: String) -> Self {
-        Message { content, role: Assistant {} }
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Message { content: content.into(), role: Assistant {} }
     }
 }
 
@@ -120,6 +120,7 @@ impl Response {
 pub struct UseId(String);
 
 impl UseId {
+    #[allow(unused)]
     pub(crate) fn new(id: String) -> UseId {
         UseId(id)
     }

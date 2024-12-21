@@ -80,14 +80,13 @@ async fn main() -> Result<()> {
 
 struct Spinner {
     spinner: spinners::Spinner,
-    message: String,
     is_done: bool,
 }
 
 impl Spinner {
     pub fn new(dot: spinners::Spinners) -> Self {
         let spinner = spinners::Spinner::new(dot, "".into());
-        Self { spinner, message: "".into(), is_done: false }
+        Self { spinner, is_done: false }
     }
 
     pub fn stop(&mut self) {

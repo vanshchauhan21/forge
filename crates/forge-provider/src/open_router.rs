@@ -273,7 +273,7 @@ impl From<crate::model::Request> for Request {
 }
 
 impl From<Response> for crate::model::Response {
-    fn from(value: Response) -> Self {
+    fn from(_: Response) -> Self {
         todo!()
     }
 }
@@ -290,10 +290,6 @@ struct Config {
 }
 
 impl Config {
-    fn api_key(&self) -> &str {
-        &self.api_key
-    }
-
     fn api_base(&self) -> &str {
         self.base_url
             .as_deref()
@@ -314,16 +310,13 @@ impl Config {
     fn url(&self, path: &str) -> String {
         format!("{}{}", self.api_base(), path)
     }
-
-    fn query(&self) -> Vec<(&str, &str)> {
-        Vec::new()
-    }
 }
 
 #[derive(Clone)]
 struct OpenRouter {
     http_client: reqwest::Client,
     config: Config,
+    #[allow(unused)]
     model: String,
 }
 
@@ -385,7 +378,8 @@ impl Provider {
 
 #[cfg(test)]
 mod test {
-    use crate::open_router::ListModelResponse;
+    use super::*;
+    use crate::Provider;
 
     fn models() -> &'static str {
         include_str!("models.json")
@@ -394,6 +388,18 @@ mod test {
     #[test]
     fn test_ser_of_models() {
         let response: Result<ListModelResponse, serde_json::Error> = serde_json::from_str(models());
+        assert!(response.is_ok())
+    }
+
+    #[tokio::test]
+    async fn test_chat() {
+        let api_key =
+            "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".to_string();
+        let provider = OpenRouter::new(api_key, None, None);
+        let request = crate::mode::Request::default()
+            .add_message(crate::model::Message::user("How are you doing sir?"));
+        request.prompt = Some("Hello, how are you?".to_string());
+        let response = provider.chat(request).await;
         assert!(response.is_ok())
     }
 }
