@@ -7,7 +7,6 @@ use nom::combinator::{map, opt, recognize};
 use nom::multi::many0;
 use nom::sequence::{pair, preceded};
 use nom::IResult;
-
 use schemars::JsonSchema;
 use serde::Serialize;
 

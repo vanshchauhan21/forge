@@ -5,7 +5,7 @@ mod prompt;
 mod router;
 mod think;
 
-pub use prompt::{Prompt, File};
+pub use prompt::{File, Prompt};
 pub use router::*;
 
 #[async_trait::async_trait]

@@ -5,15 +5,14 @@ use inquire::Autocomplete;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::Prompt;
-use crate::{Description, ToolTrait};
+use crate::{Description, Prompt, ToolTrait};
 
 /// Read a line from the console
 #[derive(Serialize, Description)]
 pub(crate) struct ReadLine;
 
 /// Write a line to the console
-#[derive(Serialize)]
+#[derive(Serialize, Description)]
 pub(crate) struct WriteLine;
 
 #[derive(Clone)]

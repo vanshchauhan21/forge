@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use colorize::AnsiColor;
+use forge_tool_macros::Description;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::ToolTrait;
+use crate::{Description, ToolTrait};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ThoughtData {
@@ -21,7 +22,7 @@ pub struct ThoughtData {
 }
 
 /// A detailed tool for dynamic and reflective problem-solving through thoughts.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Description)]
 pub struct Think {
     thought_history: Vec<ThoughtData>,
     branches: HashMap<String, Vec<ThoughtData>>,

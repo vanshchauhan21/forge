@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use inflector::Inflector;
-use schemars::JsonSchema;
+use schemars::schema::RootSchema;
+use schemars::{schema_for, JsonSchema};
 use serde_json::Value;
 
 use crate::console::{ReadLine, WriteLine};
 use crate::fs::{FSFileInfo, FSList, FSRead, FSSearch};
 use crate::think::Think;
-use crate::ToolTrait;
+use crate::{Description, ToolTrait};
 
 struct JsonTool<T>(T);
 
@@ -39,16 +40,21 @@ impl<T> JsonTool<T> {
     }
 }
 
+struct ToolDefinition {
+    executable: Box<dyn ToolTrait<Input = Value, Output = Value>>,
+    tool: Tool,
+}
+
 pub struct Router {
-    tools: HashMap<ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>>,
+    tools: HashMap<ToolId, ToolDefinition>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Tool {
     pub id: ToolId,
     pub description: String,
-    pub input_schema: Value,
-    pub output_schema: Option<Value>,
+    pub input_schema: RootSchema,
+    pub output_schema: Option<RootSchema>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -63,18 +69,19 @@ impl ToolId {
 impl Router {
     pub async fn call(&self, tool_id: ToolId, input: Value) -> Result<Value, String> {
         match self.tools.get(&tool_id) {
-            Some(tool) => tool.call(input).await,
+            Some(tool) => tool.executable.call(input).await,
             None => Err(format!("No such tool found: {}", tool_id.into_string())),
         }
     }
 
     pub fn list(&self) -> Vec<Tool> {
-        todo!()
+        self.tools.values().map(|tool| tool.tool.clone())
+            .collect()
     }
 
-    fn import<T>(tool: T) -> (ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>)
+    fn import<T>(tool: T) -> (ToolId, ToolDefinition)
     where
-        T: ToolTrait + Send + Sync + 'static,
+        T: ToolTrait + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
@@ -83,23 +90,28 @@ impl Router {
             .map(|v| v.to_snake_case())
             .collect::<Vec<_>>()
             .join("/");
-        let json = Box::new(JsonTool(tool));
-        (ToolId(id), json)
+        let executable = Box::new(JsonTool(tool));
+        let tool = Tool {
+            id: ToolId(id.clone()),
+            description: T::description().to_string(),
+            input_schema: schema_for!(T::Input),
+            output_schema: Some(schema_for!(T::Output)),
+        };
+        (ToolId(id), ToolDefinition { executable, tool })
     }
 }
 
 impl Default for Router {
     fn default() -> Self {
-        let tools: HashMap<ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>> =
-            HashMap::from([
-                Router::import(FSRead),
-                Router::import(FSSearch),
-                Router::import(FSList),
-                Router::import(FSFileInfo),
-                Router::import(Think::default()),
-                Router::import(ReadLine),
-                Router::import(WriteLine),
-            ]);
+        let tools: HashMap<ToolId, ToolDefinition> = HashMap::from([
+            Router::import(FSRead),
+            Router::import(FSSearch),
+            Router::import(FSList),
+            Router::import(FSFileInfo),
+            Router::import(Think::default()),
+            Router::import(ReadLine),
+            Router::import(WriteLine),
+        ]);
 
         Self { tools }
     }
