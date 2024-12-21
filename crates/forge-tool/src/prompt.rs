@@ -8,21 +8,53 @@ use nom::multi::many0;
 use nom::sequence::{pair, preceded};
 use nom::IResult;
 
+use schemars::JsonSchema;
+use serde::Serialize;
+
+#[derive(Clone, Serialize, JsonSchema)]
+pub struct Prompt {
+    pub message: String,
+    pub files: Vec<File>,
+}
+
+#[derive(Clone, Serialize, JsonSchema)]
+pub struct File {
+    pub path: String,
+    pub content: String,
+}
+
+impl Prompt {}
+
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Text(String),
     FilePath(PathBuf),
 }
 
-#[derive(Debug)]
-pub struct PromptParser;
+impl Prompt {
+    // Make `parse` pub(crate)
+    pub async fn parse(message: String) -> Result<Prompt, String> {
+        let mut prompt = Prompt { message: message.clone(), files: Vec::new() };
 
-impl PromptParser {
-    pub fn parse(input: String) -> Vec<Token> {
-        match Self::parse_tokens(&input) {
+        let tokens = match Self::parse_tokens(&message) {
             Ok((_, tokens)) => tokens,
-            Err(_) => vec![Token::Text(input)], // Fallback for unparseable input
+            Err(_) => vec![Token::Text(message)], // Fallback for unparsable input
+        };
+
+        for token in tokens {
+            if let Token::FilePath(path) = token {
+                let content = tokio::fs::read_to_string(&path)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                prompt.add_file(File { path: path.display().to_string(), content });
+            }
         }
+
+        Ok(prompt)
+    }
+
+    pub fn add_file(&mut self, file: File) {
+        self.files.push(file);
     }
 
     fn parse_tokens(input: &str) -> IResult<&str, Vec<Token>> {

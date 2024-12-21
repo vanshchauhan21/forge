@@ -5,7 +5,7 @@ use inquire::Autocomplete;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::model::Prompt;
+use crate::Prompt;
 use crate::{Description, ToolTrait};
 
 /// Read a line from the console

@@ -1,11 +1,11 @@
 mod console;
 mod fs;
 mod mcp;
-pub mod model;
-mod prompt_parser;
+mod prompt;
 mod router;
 mod think;
-pub use model::*;
+
+pub use prompt::{Prompt, File};
 pub use router::*;
 
 #[async_trait::async_trait]
