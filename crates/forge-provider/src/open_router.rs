@@ -61,8 +61,7 @@ struct Request {
     messages: Option<Vec<Message>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     prompt: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    model: Option<String>,
+    model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<ResponseFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -405,7 +404,6 @@ impl Config {
 struct OpenRouter {
     http_client: ClientWithMiddleware,
     config: Config,
-    #[allow(unused)]
     model: String,
 }
 
@@ -432,8 +430,12 @@ impl InnerProvider for OpenRouter {
     }
 
     async fn chat(&self, request: crate::model::Request) -> Result<crate::model::Response> {
-        let request = Request::from(request);
-        let body = serde_json::to_string(&request)?;
+        let mut new_request = Request::from(request);
+
+        // Set the configured model
+        new_request.model = self.model.clone();
+
+        let body = serde_json::to_string(&new_request)?;
 
         info!("Request Body: {}", body);
 
