@@ -4,146 +4,146 @@ use serde::{Deserialize, Serialize};
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
-use crate::model::{AnyMessage, Assistant, Request, Response, Role, System, User};
+use crate::model::{AnyMessage, Assistant, Role, System, User};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct Model {
-    pub id: String,
-    pub name: String,
-    pub created: u64,
-    pub description: String,
-    pub context_length: u64,
-    pub architecture: Architecture,
-    pub pricing: Pricing,
-    pub top_provider: TopProvider,
-    pub per_request_limits: Option<serde_json::Value>,
+struct Model {
+    id: String,
+    name: String,
+    created: u64,
+    description: String,
+    context_length: u64,
+    architecture: Architecture,
+    pricing: Pricing,
+    top_provider: TopProvider,
+    per_request_limits: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct Architecture {
-    pub modality: String,
-    pub tokenizer: String,
-    pub instruct_type: Option<String>,
+struct Architecture {
+    modality: String,
+    tokenizer: String,
+    instruct_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct Pricing {
-    pub prompt: String,
-    pub completion: String,
-    pub image: String,
-    pub request: String,
+struct Pricing {
+    prompt: String,
+    completion: String,
+    image: String,
+    request: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct TopProvider {
-    pub context_length: Option<u64>,
-    pub max_completion_tokens: Option<u64>,
-    pub is_moderated: bool,
+struct TopProvider {
+    context_length: Option<u64>,
+    max_completion_tokens: Option<u64>,
+    is_moderated: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
-pub struct ListModelResponse {
-    pub data: Vec<Model>,
+struct ListModelResponse {
+    data: Vec<Model>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct OpenRouterRequest {
-    pub messages: Option<Vec<Message>>,
-    pub prompt: Option<String>,
-    pub model: Option<String>,
-    pub response_format: Option<ResponseFormat>,
-    pub stop: Option<Vec<String>>,
-    pub stream: Option<bool>,
-    pub max_tokens: Option<u32>,
-    pub temperature: Option<f32>,
-    pub tools: Option<Vec<OpenRouterTool>>,
-    pub tool_choice: Option<ToolChoice>,
-    pub seed: Option<u32>,
-    pub top_p: Option<f32>,
-    pub top_k: Option<u32>,
-    pub frequency_penalty: Option<f32>,
-    pub presence_penalty: Option<f32>,
-    pub repetition_penalty: Option<f32>,
-    pub logit_bias: Option<std::collections::HashMap<u32, f32>>,
-    pub top_logprobs: Option<u32>,
-    pub min_p: Option<f32>,
-    pub top_a: Option<f32>,
-    pub prediction: Option<Prediction>,
-    pub transforms: Option<Vec<String>>,
-    pub models: Option<Vec<String>>,
-    pub route: Option<String>,
-    pub provider: Option<ProviderPreferences>,
+struct Request {
+    messages: Option<Vec<Message>>,
+    prompt: Option<String>,
+    model: Option<String>,
+    response_format: Option<ResponseFormat>,
+    stop: Option<Vec<String>>,
+    stream: Option<bool>,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    tools: Option<Vec<OpenRouterTool>>,
+    tool_choice: Option<ToolChoice>,
+    seed: Option<u32>,
+    top_p: Option<f32>,
+    top_k: Option<u32>,
+    frequency_penalty: Option<f32>,
+    presence_penalty: Option<f32>,
+    repetition_penalty: Option<f32>,
+    logit_bias: Option<std::collections::HashMap<u32, f32>>,
+    top_logprobs: Option<u32>,
+    min_p: Option<f32>,
+    top_a: Option<f32>,
+    prediction: Option<Prediction>,
+    transforms: Option<Vec<String>>,
+    models: Option<Vec<String>>,
+    route: Option<String>,
+    provider: Option<ProviderPreferences>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TextContent {
+struct TextContent {
     // TODO: could be an enum
-    pub r#type: String,
-    pub text: String,
+    r#type: String,
+    text: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ImageContentPart {
-    pub r#type: String,
-    pub image_url: ImageUrl,
+struct ImageContentPart {
+    r#type: String,
+    image_url: ImageUrl,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ImageUrl {
-    pub url: String,
-    pub detail: Option<String>,
+struct ImageUrl {
+    url: String,
+    detail: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum ContentPart {
+enum ContentPart {
     Text(TextContent),
     Image(ImageContentPart),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Message {
-    pub role: String,
-    pub content: ContentPart,
-    pub name: Option<String>,
+struct Message {
+    role: String,
+    content: ContentPart,
+    name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct FunctionDescription {
-    pub description: Option<String>,
-    pub name: String,
-    pub parameters: serde_json::Value,
+struct FunctionDescription {
+    description: Option<String>,
+    name: String,
+    parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct OpenRouterTool {
+struct OpenRouterTool {
     // TODO: should be an enum
-    pub r#type: String,
-    pub function: FunctionDescription,
+    r#type: String,
+    function: FunctionDescription,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum ToolChoice {
+enum ToolChoice {
     None,
     Auto,
     Function { name: String },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ResponseFormat {
-    pub r#type: String,
+struct ResponseFormat {
+    r#type: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Prediction {
-    pub r#type: String,
-    pub content: String,
+struct Prediction {
+    r#type: String,
+    content: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct OpenRouterResponse {
-    pub status: String,
-    pub data: Option<serde_json::Value>,
-    pub error: Option<String>,
+struct Response {
+    status: String,
+    data: Option<serde_json::Value>,
+    error: Option<String>,
 }
 
 impl From<Tool> for OpenRouterTool {
@@ -191,9 +191,9 @@ impl From<AnyMessage> for Message {
     }
 }
 
-impl From<Request> for OpenRouterRequest {
-    fn from(value: Request) -> Self {
-        OpenRouterRequest {
+impl From<crate::model::Request> for Request {
+    fn from(value: crate::model::Request) -> Self {
+        Request {
             messages: Some(
                 value
                     .context
@@ -213,14 +213,14 @@ impl From<Request> for OpenRouterRequest {
     }
 }
 
-impl From<OpenRouterResponse> for Response {
-    fn from(value: OpenRouterResponse) -> Self {
+impl From<Response> for crate::model::Response {
+    fn from(value: Response) -> Self {
         todo!()
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ProviderPreferences {
+struct ProviderPreferences {
     // Define fields as necessary
 }
 
@@ -262,7 +262,7 @@ impl Config {
 }
 
 #[derive(Clone)]
-pub struct OpenRouter {
+struct OpenRouter {
     http_client: reqwest::Client,
     config: Config,
     model: String,
@@ -287,8 +287,8 @@ impl InnerProvider for OpenRouter {
         "Open Router"
     }
 
-    async fn chat(&self, request: Request) -> Result<Response> {
-        let open_router_request = OpenRouterRequest::from(request);
+    async fn chat(&self, request: crate::model::Request) -> Result<crate::model::Response> {
+        let open_router_request = Request::from(request);
         let response = self
             .http_client
             .post(self.config.url("/chat/completions"))
@@ -296,7 +296,7 @@ impl InnerProvider for OpenRouter {
             .json(&open_router_request)
             .send()
             .await?
-            .json::<OpenRouterResponse>() // Adjusted to use ResponseType
+            .json::<Response>() // Adjusted to use ResponseType
             .await?;
 
         Ok(response.into())
