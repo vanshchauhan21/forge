@@ -1,4 +1,5 @@
 pub mod error;
+mod log;
 pub mod model;
 #[allow(unused)]
 mod open_ai;

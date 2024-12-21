@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 
 use forge_tool::Tool;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use http::header::{AUTHORIZATION, CONTENT_TYPE};
+use http::{HeaderMap, HeaderValue};
+use reqwest_middleware::reqwest::Client;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
+use crate::log::LoggingMiddleware;
 use crate::model::{AnyMessage, Assistant, Role, System, User};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -350,7 +354,7 @@ impl Config {
 
 #[derive(Clone)]
 struct OpenRouter {
-    http_client: reqwest::Client,
+    http_client: ClientWithMiddleware,
     config: Config,
     #[allow(unused)]
     model: String,
@@ -359,7 +363,10 @@ struct OpenRouter {
 impl OpenRouter {
     fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         let config = Config { api_key, base_url };
-        let http_client = reqwest::Client::new();
+        let reqwest_client = Client::builder().build().unwrap();
+        let http_client = ClientBuilder::new(reqwest_client)
+            .with(LoggingMiddleware)
+            .build();
 
         Self {
             http_client,
@@ -376,29 +383,35 @@ impl InnerProvider for OpenRouter {
     }
 
     async fn chat(&self, request: crate::model::Request) -> Result<crate::model::Response> {
-        let open_router_request = Request::from(request);
-        let response = self
+        let request = Request::from(request);
+        let body = self
             .http_client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .json(&open_router_request)
+            .body(serde_json::to_string(&request).unwrap())
             .send()
             .await?
-            .json::<Response>() // Adjusted to use ResponseType
+            .text()
             .await?;
+
+        let response = serde_json::from_str::<Response>(&body)?;
 
         Ok(response.try_into()?)
     }
 
     async fn models(&self) -> Result<Vec<String>> {
-        Ok(self
+        let text = self
             .http_client
             .get(self.config.url("/models"))
             .headers(self.config.headers())
             .send()
             .await?
-            .json::<ListModelResponse>()
-            .await?
+            .text()
+            .await?;
+
+        let response: ListModelResponse = serde_json::from_str(&text)?;
+
+        Ok(response
             .data
             .iter()
             .map(|r| r.name.clone())

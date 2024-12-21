@@ -9,7 +9,9 @@ pub enum Error {
         provider: String,
         error: ProviderError,
     },
-    Reqwest(#[from] reqwest::Error),
+    ReqwestMiddleware(#[from] reqwest_middleware::Error),
+    Reqwest(#[from] reqwest_middleware::reqwest::Error),
+    Serde(#[from] serde_json::Error),
 }
 
 impl Error {

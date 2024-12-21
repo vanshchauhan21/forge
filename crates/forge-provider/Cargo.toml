@@ -16,3 +16,5 @@ async-trait = "0.1.83"
 derive_more = { version = "1.0.0", features = ["from", "display"] }
 derive_setters = "0.1.6"
 forge-tool = { path = "../forge-tool" }
+reqwest-middleware = "0.4.0"
+http = "1.2.0"
