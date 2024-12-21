@@ -3,8 +3,6 @@ use crate::model::{Request, Response};
 
 #[async_trait::async_trait]
 pub(crate) trait InnerProvider {
-    #[allow(unused)]
-    fn name(&self) -> &'static str;
     async fn chat(&self, request: Request) -> Result<Response>;
     async fn models(&self) -> Result<Vec<String>>;
 }

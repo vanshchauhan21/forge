@@ -336,7 +336,7 @@ impl TryFrom<Response> for crate::model::Response {
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
-                                tool_use_id: UseId::new(tool_call.id.clone()),
+                                tool_use_id: UseId(tool_call.id.clone()),
                                 tool_id: ToolId::new(&tool_call.function.name),
                                 input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
@@ -350,7 +350,7 @@ impl TryFrom<Response> for crate::model::Response {
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
-                                tool_use_id: UseId::new(tool_call.id.clone()),
+                                tool_use_id: UseId(tool_call.id.clone()),
                                 tool_id: ToolId::new(&tool_call.function.name),
                                 input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
@@ -425,10 +425,6 @@ impl OpenRouter {
 
 #[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
-    fn name(&self) -> &'static str {
-        "Open Router"
-    }
-
     async fn chat(&self, request: crate::model::Request) -> Result<crate::model::Response> {
         let mut new_request = Request::from(request);
 

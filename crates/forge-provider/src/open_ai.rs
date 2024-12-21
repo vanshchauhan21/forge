@@ -122,10 +122,6 @@ impl OpenRouter {
 
 #[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
-    fn name(&self) -> &'static str {
-        "Open Router"
-    }
-
     async fn chat(&self, request: Request) -> Result<Response> {
         let client = self.client.clone();
         let response = client.chat().create(request.into()).await?;

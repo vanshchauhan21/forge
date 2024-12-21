@@ -146,13 +146,6 @@ impl Response {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UseId(pub(crate) String);
 
-impl UseId {
-    #[allow(unused)]
-    pub(crate) fn new(id: String) -> UseId {
-        UseId(id)
-    }
-}
-
 #[derive(Setters, Debug, Clone)]
 pub struct ToolUse {
     pub tool_use_id: UseId,
