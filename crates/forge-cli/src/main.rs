@@ -108,11 +108,9 @@ fn ls_files(path: &std::path::Path) -> std::io::Result<Vec<String>> {
         .ignore(true) // Use .ignore files
         .build();
 
-    for result in walker {
-        if let Ok(entry) = result {
-            if entry.file_type().is_some_and(|ft| ft.is_file()) {
-                paths.push(entry.path().display().to_string());
-            }
+    for entry in walker.flatten() {
+        if entry.file_type().is_some_and(|ft| ft.is_file()) {
+            paths.push(entry.path().display().to_string());
         }
     }
 

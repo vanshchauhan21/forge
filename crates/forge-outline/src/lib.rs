@@ -146,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_unsupported_files() {
-        let mut files = Vec::new();
-        files.push((PathBuf::from("test.txt"), "Some content".to_string()));
+        let files = vec![(PathBuf::from("test.txt"), "Some content".to_string())];
         let result = parse_source_code_for_definitions(files).unwrap();
         assert_snapshot!(result);
     }
@@ -195,16 +194,17 @@ mod tests {
 
     #[test]
     fn test_multiple_file_types() {
-        let mut files = Vec::new();
-        files.push((
-            PathBuf::from("test.rs"),
-            "fn test_function() {}".to_string(),
-        ));
-        files.push((
-            PathBuf::from("test.js"),
-            "function jsFunction() {}".to_string(),
-        ));
-        files.push((PathBuf::from("test.txt"), "plain text".to_string()));
+        let files = vec![
+            (
+                PathBuf::from("test.rs"),
+                "fn test_function() {}".to_string(),
+            ),
+            (
+                PathBuf::from("test.js"),
+                "function jsFunction() {}".to_string(),
+            ),
+            (PathBuf::from("test.txt"), "plain text".to_string()),
+        ];
 
         let result = parse_source_code_for_definitions(files).unwrap();
         assert_snapshot!(result);

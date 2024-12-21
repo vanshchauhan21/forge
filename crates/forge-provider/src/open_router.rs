@@ -161,17 +161,17 @@ struct ResponseUsage {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 enum Choice {
-    NonChatChoice {
+    NonChat {
         finish_reason: Option<String>,
         text: String,
         error: Option<ErrorResponse>,
     },
-    NonStreamingChoice {
+    NonStreaming {
         finish_reason: Option<String>,
         message: ResponseMessage,
         error: Option<ErrorResponse>,
     },
-    StreamingChoice {
+    Streaming {
         finish_reason: Option<String>,
         delta: ResponseMessage,
         error: Option<ErrorResponse>,
