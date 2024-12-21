@@ -277,13 +277,35 @@ impl From<AnyMessage> for Message {
 impl From<crate::model::Request> for Request {
     fn from(value: crate::model::Request) -> Self {
         Request {
-            messages: Some(
-                value
+            messages: {
+                let result = value.tool_result
+                    .into_iter()
+                    .map(|tool_result| {
+                        let id = tool_result.tool_use_id.0;
+                        let value = tool_result.content;
+
+                        let mut  content = HashMap::new();
+                            content.insert("content", value.to_string());
+                            content.insert("role", "tool".to_string());
+                            content.insert("tool_use_id", id);
+                        Message {
+                            role: User::name(),
+                            content: serde_json::to_string(&content).unwrap(),
+                            name: None,
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                let mut messages = value
                     .context
                     .into_iter()
                     .map(Message::from)
-                    .collect::<Vec<_>>(),
-            ),
+                    .collect::<Vec<_>>();
+
+                messages.extend(result);
+
+                Some(messages)
+            },
             tools: {
                 let tools = value
                     .tools
