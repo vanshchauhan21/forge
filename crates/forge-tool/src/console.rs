@@ -116,7 +116,6 @@ impl ToolTrait for WriteLine {
     type Input = WriteLineInput;
     type Output = ();
 
-    
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         println!("{}", input.message);
         Ok(())
