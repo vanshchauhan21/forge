@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::{Display, From};
+use derive_setters::Setters;
 
 #[derive(Display, From)]
 pub enum Error {
@@ -20,7 +21,7 @@ impl std::fmt::Debug for Error {
     }
 }
 
-#[derive(Clone, derive_setters::Setters)]
+#[derive(Clone, Setters)]
 pub struct Errata {
     pub title: String,
     #[setters(strip_option, into)]

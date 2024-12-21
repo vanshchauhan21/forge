@@ -10,10 +10,10 @@ async fn main() -> Result<()> {
 
     // Initialize logging with level from CLI
     tracing_subscriber::fmt()
-        .with_max_level(cli.log_level.unwrap_or_default())
+        .with_max_level(cli.log_level.clone().unwrap_or_default())
         .init();
 
-    let engine = Engine::new(cli.key, Path::new(".").to_path_buf());
+    let engine = Engine::new(cli, Path::new(".").to_path_buf());
     engine.launch().await?;
 
     Ok(())

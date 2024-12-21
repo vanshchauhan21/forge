@@ -2,7 +2,7 @@ use clap::Parser;
 
 use crate::log::LogLevel;
 
-#[derive(Parser, Debug)]
+#[derive(Clone, Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
     /// API Key to be used

@@ -8,6 +8,7 @@ use futures::future::join_all;
 use serde_json::Value;
 use tracing::debug;
 
+use crate::cli::Cli;
 use crate::error::Result;
 
 pub struct Engine {
@@ -17,10 +18,10 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(key: String, cwd: PathBuf) -> Self {
+    pub fn new(cli: Cli, cwd: PathBuf) -> Self {
         Self {
             tool_engine: Router::default(),
-            provider: Provider::open_router(key, None, None),
+            provider: Provider::open_router(cli.key, cli.model, cli.base_url),
             prompt: UserPrompt::new(cwd),
         }
     }
