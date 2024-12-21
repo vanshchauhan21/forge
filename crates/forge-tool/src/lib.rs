@@ -13,7 +13,6 @@ pub(crate) trait ToolTrait {
     type Input;
     type Output;
 
-    fn description(&self) -> String;
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }
 

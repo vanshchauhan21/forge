@@ -57,10 +57,6 @@ impl ToolTrait for FSRead {
     type Input = FSReadInput;
     type Output = String;
 
-    fn description(&self) -> String {
-        "Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.".to_string()
-    }
-
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let content = tokio::fs::read_to_string(&input.path)
             .await
@@ -73,10 +69,6 @@ impl ToolTrait for FSRead {
 impl ToolTrait for FSSearch {
     type Input = FSSearchInput;
     type Output = Vec<String>;
-
-    fn description(&self) -> String {
-        "Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items. Great for finding files when you don't know their exact location. Only searches within allowed directories.".to_string()
-    }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let pattern = input.pattern.to_lowercase();
@@ -110,10 +102,6 @@ impl ToolTrait for FSList {
     type Input = FSListInput;
     type Output = Vec<String>;
 
-    fn description(&self) -> String {
-        "Get a detailed listing of all files and directories in a specified path. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes. This tool is essential for understanding directory structure and finding specific files within a directory. Only works within allowed directories.".to_string()
-    }
-
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let dir = std::path::Path::new(&input.path);
         let mut paths = Vec::new();
@@ -136,10 +124,6 @@ impl ToolTrait for FSList {
 impl ToolTrait for FSFileInfo {
     type Input = FSFileInfoInput;
     type Output = String;
-
-    fn description(&self) -> String {
-        "Retrieve detailed metadata about a file or directory. Returns comprehensive information including size, creation time, last modified time, permissions, and type. This tool is perfect for understanding file characteristics without reading the actual content. Only works within allowed directories.".to_string()
-    }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let meta = tokio::fs::metadata(input.path)

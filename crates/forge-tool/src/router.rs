@@ -20,10 +20,6 @@ where
     type Input = Value;
     type Output = Value;
 
-    fn description(&self) -> String {
-        self.0.description()
-    }
-
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let input: T::Input = serde_json::from_value(input).map_err(|e| e.to_string())?;
         let output: T::Output = self.0.call(input).await?;

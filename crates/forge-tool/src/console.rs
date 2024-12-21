@@ -70,10 +70,6 @@ impl ToolTrait for ReadLine {
     type Input = ReadLineInput;
     type Output = Prompt;
 
-    fn description(&self) -> String {
-        "Read a line from the console".to_string()
-    }
-
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         // TODO: improve the file listing logic not to execute on each call.
         let suggestions = ls_files(std::path::Path::new("."))
@@ -120,10 +116,7 @@ impl ToolTrait for WriteLine {
     type Input = WriteLineInput;
     type Output = ();
 
-    fn description(&self) -> String {
-        "Write a line to the console".to_string()
-    }
-
+    
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         println!("{}", input.message);
         Ok(())

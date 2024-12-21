@@ -116,10 +116,6 @@ impl ToolTrait for Think {
     type Input = Value;
     type Output = Value;
 
-    fn description(&self) -> String {
-        "A detailed tool for dynamic and reflective problem-solving through thoughts.".into()
-    }
-
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let mut thinker = self.clone();
         let thought_result = thinker.process_thought(input).map_err(|e| e.to_string())?;
