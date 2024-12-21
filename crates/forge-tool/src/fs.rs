@@ -1,4 +1,3 @@
-
 use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
