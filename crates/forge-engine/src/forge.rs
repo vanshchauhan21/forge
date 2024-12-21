@@ -44,20 +44,20 @@ impl CodeForge {
         // let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         // TODO: add message to history
-        let context = Request::default()
-            .add_message(Message::system(include_str!("./prompt.md").to_string()))
-            .extend_tools(self.tool_engine.list())
-            .add_message(Message::user(prompt.message))
-            .extend_messages(
-                prompt
-                    .files
-                    .into_iter()
-                    .map(|f| Message::user(format!("{}\n{}", f.path, f.content)))
-                    .collect(),
-            );
+        // let context = Request::default()
+        //     .add_message(Message::system(include_str!("./prompt.md").to_string()))
+        //     .extend_tools(self.tool_engine.list())
+        //     .add_message(Message::user(prompt.message()))
+        //     .extend_messages(
+        //         prompt
+        //             .files()
+        //             .into_iter()
+        //             .map(|f| Message::user(format!("{}\n{}", f.path, f.content)))
+        //             .collect(),
+        //     );
 
         // TODO: Streaming is making the design complicated
-        let response = self.provider.chat(context).await?;
+        // let response = self.provider.chat(context).await?;
 
         // TODO: need to handle errors more concisely
         todo!()

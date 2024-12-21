@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
 
         let mut spinner = Spinner::new(spinners::Spinners::Dots);
 
-        let prompt = Prompt::parse(prompt).await.map_err(|e| e.to_string())?;
+        let prompt = Prompt::parse(prompt).map_err(|e| e.to_string())?;
         let mut stream = agent.chat(prompt).await?;
 
         let buffer = String::new();

@@ -81,7 +81,7 @@ impl ToolTrait for ReadLine {
             .prompt()
             .map_err(|e| e.to_string())?;
 
-        Prompt::parse(prompt).await
+        Prompt::parse(prompt)
     }
 }
 
