@@ -638,22 +638,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "forge-engine"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "derive_more",
- "derive_setters",
- "forge-provider",
- "forge-tool",
- "serde",
- "serde_json",
- "thiserror 2.0.8",
- "tokio",
- "tokio-stream",
-]
-
-[[package]]
 name = "forge-outline"
 version = "0.1.0"
 dependencies = [
