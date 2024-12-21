@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_tool::Tool;
+use forge_tool::{Tool, ToolId};
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::{HeaderMap, HeaderValue};
 use reqwest_middleware::reqwest::Client;
@@ -11,9 +11,7 @@ use tracing::info;
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
 use crate::log::LoggingMiddleware;
-use crate::model::UseId;
-use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, User};
-use forge_tool::ToolId;
+use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 struct Model {

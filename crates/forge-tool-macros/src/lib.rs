@@ -26,14 +26,11 @@ pub fn derive_description(input: TokenStream) -> TokenStream {
                 })
                 .flatten()
             {
-                match t {
-                    TokenTree::Literal(lit) => {
-                        let str = lit.to_string();
-                        if !str.is_empty() {
-                            doc_lines.push(lit.to_string());
-                        }
+                if let TokenTree::Literal(lit) = t {
+                    let str = lit.to_string();
+                    if !str.is_empty() {
+                        doc_lines.push(lit.to_string());
                     }
-                    _ => {}
                 }
             }
         }

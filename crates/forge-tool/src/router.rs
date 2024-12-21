@@ -53,7 +53,7 @@ impl ToolId {
     pub fn new(id: &str) -> Self {
         Self(id.to_string())
     }
-    
+
     pub fn into_string(self) -> String {
         self.0
     }
