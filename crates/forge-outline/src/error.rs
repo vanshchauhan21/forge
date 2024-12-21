@@ -7,7 +7,7 @@ pub enum Error {
     DirectoryRead(io::Error),
     FileRead { path: String, error: io::Error },
     UnsupportedLanguage(String),
-    QueryError(String),
+    Query(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -21,7 +21,7 @@ impl Display for Error {
             Error::DirectoryRead(e) => write!(f, "Failed to read directory: {}", e),
             Error::FileRead { path, error } => write!(f, "Failed to read file {}: {}", path, error),
             Error::UnsupportedLanguage(msg) => write!(f, "Language error: {}", msg),
-            Error::QueryError(msg) => write!(f, "Query error: {}", msg),
+            Error::Query(msg) => write!(f, "Query error: {}", msg),
         }
     }
 }

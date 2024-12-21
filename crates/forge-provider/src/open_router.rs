@@ -379,7 +379,6 @@ impl Provider {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Provider;
 
     fn models() -> &'static str {
         include_str!("models.json")
@@ -387,8 +386,7 @@ mod test {
 
     #[test]
     fn test_ser_of_models() {
-        let response: Result<ListModelResponse, serde_json::Error> = serde_json::from_str(models());
-        assert!(response.is_ok())
+        let _: ListModelResponse = serde_json::from_str(models()).unwrap();
     }
 
     #[tokio::test]
@@ -396,9 +394,8 @@ mod test {
         let api_key =
             "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".to_string();
         let provider = OpenRouter::new(api_key, None, None);
-        let request = crate::mode::Request::default()
+        let request = crate::model::Request::default()
             .add_message(crate::model::Message::user("How are you doing sir?"));
-        request.prompt = Some("Hello, how are you?".to_string());
         let response = provider.chat(request).await;
         assert!(response.is_ok())
     }

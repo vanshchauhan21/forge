@@ -104,7 +104,7 @@ pub fn parse_source_code_for_definitions(files: Vec<(PathBuf, String)>) -> Resul
                         .set_language(language)
                         .map_err(|e| Error::UnsupportedLanguage(e.to_string()))?;
                     let query = Query::new(language, queries[lang_name])
-                        .map_err(|e| Error::QueryError(e.to_string()))?;
+                        .map_err(|e| Error::Query(e.to_string()))?;
                     parsers.insert(lang_name, (parser, query));
                 }
 

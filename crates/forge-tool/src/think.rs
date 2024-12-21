@@ -70,13 +70,11 @@ impl Think {
         let border_len = header.len().max(thought_data.thought.len()) + 4;
         let border = "─".repeat(border_len);
 
+        let thought_data = format!("{:width$}", thought_data.thought, width = border_len - 2);
+
         format!(
             "\n┌{}┐\n│ {} │\n├{}┤\n│ {} │\n└{}┘",
-            border,
-            header,
-            border,
-            format!("{:width$}", thought_data.thought, width = border_len - 2),
-            border
+            border, header, border, thought_data, border
         )
     }
 
