@@ -50,30 +50,55 @@ struct ListModelResponse {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 struct Request {
+    #[serde(skip_serializing_if = "Option::is_none")]
     messages: Option<Vec<Message>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<ResponseFormat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tools: Option<Vec<OpenRouterTool>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<ToolChoice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     seed: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     top_k: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     frequency_penalty: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     presence_penalty: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     repetition_penalty: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     logit_bias: Option<std::collections::HashMap<u32, f32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     top_logprobs: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     min_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     top_a: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     prediction: Option<Prediction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     transforms: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     models: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     route: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     provider: Option<ProviderPreferences>,
 }
 
@@ -105,7 +130,7 @@ enum ContentPart {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Message {
     role: String,
-    content: ContentPart,
+    content: String,
     name: Option<String>,
 }
 
@@ -144,9 +169,10 @@ struct Prediction {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Response {
     id: String,
+    provider: String,
+    model: String,
     choices: Vec<Choice>,
     created: u64,
-    model: String,
     object: String,
     system_fingerprint: Option<String>,
     usage: Option<ResponseUsage>,
@@ -160,6 +186,7 @@ struct ResponseUsage {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
 enum Choice {
     NonChat {
         finish_reason: Option<String>,
@@ -167,6 +194,8 @@ enum Choice {
         error: Option<ErrorResponse>,
     },
     NonStreaming {
+        logprobs: Option<serde_json::Value>,
+        index: u32,
         finish_reason: Option<String>,
         message: ResponseMessage,
         error: Option<ErrorResponse>,
@@ -189,7 +218,8 @@ struct ErrorResponse {
 struct ResponseMessage {
     content: Option<String>,
     role: Option<String>,
-    tool_calls: Vec<ToolCall>,
+    tool_calls: Option<Vec<ToolCall>>,
+    refusal: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -224,28 +254,15 @@ impl From<AnyMessage> for Message {
         match value {
             AnyMessage::Assistant(assistant) => Message {
                 role: Assistant::name(),
-                content: ContentPart::Text(TextContent {
-                    r#type: "text".to_string(),
-                    text: assistant.content,
-                }),
+                content: assistant.content,
                 name: None,
             },
-            AnyMessage::System(sys) => Message {
-                role: System::name(),
-                content: ContentPart::Text(TextContent {
-                    r#type: "text".to_string(),
-                    text: sys.content,
-                }),
-                name: None,
-            },
-            AnyMessage::User(usr) => Message {
-                role: User::name(),
-                content: ContentPart::Text(TextContent {
-                    r#type: "text".to_string(),
-                    text: usr.content,
-                }),
-                name: None,
-            },
+            AnyMessage::System(sys) => {
+                Message { role: System::name(), content: sys.content, name: None }
+            }
+            AnyMessage::User(usr) => {
+                Message { role: User::name(), content: usr.content, name: None }
+            }
         }
     }
 }
@@ -260,21 +277,40 @@ impl From<crate::model::Request> for Request {
                     .map(Message::from)
                     .collect::<Vec<_>>(),
             ),
-            tools: Some(
-                value
+            tools: {
+                let tools = value
                     .tools
                     .into_iter()
                     .map(OpenRouterTool::from)
-                    .collect::<Vec<_>>(),
-            ),
+                    .collect::<Vec<_>>();
+                if tools.is_empty() {
+                    None
+                } else {
+                    Some(tools)
+                }
+            },
             ..Default::default()
         }
     }
 }
 
-impl From<Response> for crate::model::Response {
-    fn from(_: Response) -> Self {
-        todo!()
+impl TryFrom<Response> for crate::model::Response {
+    type Error = crate::error::Error;
+
+    fn try_from(res: Response) -> Result<Self> {
+        if let Some(choice) = res.choices.first() {
+            Ok(match choice {
+                Choice::NonChatChoice { text, .. } => crate::model::Response::new(text.clone()),
+                Choice::NonStreamingChoice { message, .. } => {
+                    crate::model::Response::new(message.content.clone().unwrap_or_default())
+                }
+                Choice::StreamingChoice { delta, .. } => {
+                    crate::model::Response::new(delta.content.clone().unwrap_or_default())
+                }
+            })
+        } else {
+            Err(crate::error::Error::empty_response("Open Router"))
+        }
     }
 }
 
@@ -351,7 +387,7 @@ impl InnerProvider for OpenRouter {
             .json::<Response>() // Adjusted to use ResponseType
             .await?;
 
-        Ok(response.into())
+        Ok(response.try_into()?)
     }
 
     async fn models(&self) -> Result<Vec<String>> {
