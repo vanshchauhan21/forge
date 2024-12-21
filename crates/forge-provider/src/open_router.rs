@@ -278,16 +278,17 @@ impl From<crate::model::Request> for Request {
     fn from(value: crate::model::Request) -> Self {
         Request {
             messages: {
-                let result = value.tool_result
+                let result = value
+                    .tool_result
                     .into_iter()
                     .map(|tool_result| {
                         let id = tool_result.tool_use_id.0;
                         let value = tool_result.content;
 
-                        let mut  content = HashMap::new();
-                            content.insert("content", value.to_string());
-                            content.insert("role", "tool".to_string());
-                            content.insert("tool_use_id", id);
+                        let mut content = HashMap::new();
+                        content.insert("content", value.to_string());
+                        content.insert("role", "tool".to_string());
+                        content.insert("tool_use_id", id);
                         Message {
                             role: User::name(),
                             content: serde_json::to_string(&content).unwrap(),

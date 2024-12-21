@@ -144,7 +144,7 @@ impl Response {
 
 /// Unique identifier for a using a tool
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UseId(pub (crate) String);
+pub struct UseId(pub(crate) String);
 
 impl UseId {
     #[allow(unused)]

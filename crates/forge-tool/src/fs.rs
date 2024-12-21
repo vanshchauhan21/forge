@@ -56,12 +56,12 @@ pub(crate) struct FSFileInfo;
 /// files or overwriting existing files with new content. Only works within
 /// allowed directories.
 #[derive(Description)]
-pub (crate) struct FSWrite;
+pub(crate) struct FSWrite;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
-   pub  path: String,
-   pub  content: String,
+    pub path: String,
+    pub content: String,
 }
 #[async_trait::async_trait]
 impl ToolTrait for FSWrite {
@@ -75,7 +75,6 @@ impl ToolTrait for FSWrite {
         Ok("Write successful".to_string())
     }
 }
-
 
 #[async_trait::async_trait]
 impl ToolTrait for FSRead {
@@ -498,10 +497,13 @@ mod test {
         let file_path = temp_dir.path().join("test.txt");
 
         let fs_write = FSWrite;
-        let _ = fs_write.call(FSWriteInput {
-            path: file_path.to_string_lossy().to_string(),
-            content: "Hello, World!".to_string(),
-        }).await.unwrap();
+        let _ = fs_write
+            .call(FSWriteInput {
+                path: file_path.to_string_lossy().to_string(),
+                content: "Hello, World!".to_string(),
+            })
+            .await
+            .unwrap();
         let s = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(s, "Hello, World!")
     }
