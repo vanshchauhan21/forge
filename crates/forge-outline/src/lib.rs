@@ -1,15 +1,13 @@
 mod error;
-
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+pub use error::*;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 pub const JAVASCRIPT: &str = include_str!("./queries/javascript.rkt");
 pub const PYTHON: &str = include_str!("./queries/python.rkt");
 pub const RUST: &str = include_str!("./queries/rust.rkt");
-
-use error::{Error, Result};
 
 fn load_language_parser(language_name: &str) -> Result<Language> {
     match language_name {

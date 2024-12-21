@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use clap::Parser;
-use error::Result;
 use forge_cli::command::Cli;
-use forge_cli::{error, Engine};
+use forge_cli::{Engine, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {

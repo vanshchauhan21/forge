@@ -1,4 +1,5 @@
-pub mod error;
+mod error;
+pub use error::*;
 mod log;
 pub mod model;
 #[allow(unused)]

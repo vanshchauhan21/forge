@@ -7,7 +7,7 @@ pub enum Error {
     Inquire(inquire::InquireError),
     // TODO: drop `Custom` because its too generic
     Custom(String),
-    Provider(forge_provider::error::Error),
+    Provider(forge_provider::Error),
     IO(std::io::Error),
 }
 
