@@ -300,11 +300,11 @@ impl TryFrom<Response> for crate::model::Response {
     fn try_from(res: Response) -> Result<Self> {
         if let Some(choice) = res.choices.first() {
             Ok(match choice {
-                Choice::NonChatChoice { text, .. } => crate::model::Response::new(text.clone()),
-                Choice::NonStreamingChoice { message, .. } => {
+                Choice::NonChat { text, .. } => crate::model::Response::new(text.clone()),
+                Choice::NonStreaming { message, .. } => {
                     crate::model::Response::new(message.content.clone().unwrap_or_default())
                 }
-                Choice::StreamingChoice { delta, .. } => {
+                Choice::Streaming{ delta, .. } => {
                     crate::model::Response::new(delta.content.clone().unwrap_or_default())
                 }
             })
