@@ -1,4 +1,4 @@
-pub mod command;
+pub mod cli;
 pub mod completion;
 mod engine;
 mod error;

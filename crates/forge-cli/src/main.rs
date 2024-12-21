@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use clap::Parser;
-use forge_cli::command::Cli;
+use forge_cli::cli::Cli;
 use forge_cli::{Engine, Result};
 
 #[tokio::main]
