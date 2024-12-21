@@ -19,6 +19,7 @@ pub struct FSSearchInput {
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
     pub path: String,
+    pub recursive: Option<bool>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -41,9 +42,10 @@ pub(crate) struct FSRead;
 pub(crate) struct FSSearch;
 /// Get a detailed listing of all files and directories in a specified path.
 /// Results clearly distinguish between files and directories with [FILE] and
-/// [DIR] prefixes. This tool is essential for understanding directory structure
-/// and finding specific files within a directory. Only works within allowed
-/// directories.
+/// [DIR] prefixes. When recursive is true, lists contents of all subdirectories.
+/// When recursive is false or not provided, only lists top-level contents.
+/// This tool is essential for understanding directory structure and finding
+/// specific files within a directory. Only works within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSList;
 /// Retrieve detailed metadata about a file or directory. Returns comprehensive
@@ -127,19 +129,24 @@ impl ToolTrait for FSList {
     type Output = Vec<String>;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let dir = std::path::Path::new(&input.path);
-        let mut paths = Vec::new();
-        let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
+        async fn list_dir(dir: &std::path::Path, recursive: bool) -> Result<Vec<String>, String> {
+            let mut paths = Vec::new();
+            let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
 
-        while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
-            let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
-            let prefix = if file_type.is_dir() {
-                "[DIR]"
-            } else {
-                "[FILE]"
-            };
-            paths.push(format!("{} {}", prefix, entry.path().display()));
+            while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
+                let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
+                let prefix = if file_type.is_dir() { "[DIR]" } else { "[FILE]" };
+                paths.push(format!("{} {}", prefix, entry.path().display()));
+
+                if recursive && file_type.is_dir() {
+                    paths.extend(Box::pin(list_dir(&entry.path(), true)).await?);
+                }
+            }
+            Ok(paths)
         }
+
+        let dir = std::path::Path::new(&input.path);
+        let paths = list_dir(dir, input.recursive.unwrap_or(false)).await?;
         debug!("Found items {}", paths.join("\n"));
         Ok(paths)
     }
@@ -263,7 +270,10 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
+            .call(FSListInput { 
+                path: temp_dir.path().to_string_lossy().to_string(),
+                recursive: None 
+            })
             .await
             .unwrap();
 
@@ -285,7 +295,10 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
+            .call(FSListInput { 
+                path: temp_dir.path().to_string_lossy().to_string(),
+                recursive: None
+            })
             .await
             .unwrap();
 
@@ -310,7 +323,10 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { path: nonexistent_dir.to_string_lossy().to_string() })
+            .call(FSListInput { 
+                path: nonexistent_dir.to_string_lossy().to_string(),
+                recursive: None
+            })
             .await;
 
         assert!(result.is_err());
@@ -332,7 +348,10 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
+            .call(FSListInput { 
+                path: temp_dir.path().to_string_lossy().to_string(),
+                recursive: None
+            })
             .await
             .unwrap();
 
@@ -489,6 +508,58 @@ mod test {
     #[test]
     fn test_description() {
         assert!(FSRead::description().len() > 100)
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_recursive() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // Create nested directory structure
+        fs::create_dir(temp_dir.path().join("dir1")).await.unwrap();
+        fs::write(temp_dir.path().join("dir1/file1.txt"), "content1")
+            .await
+            .unwrap();
+        fs::create_dir(temp_dir.path().join("dir1/subdir")).await.unwrap();
+        fs::write(temp_dir.path().join("dir1/subdir/file2.txt"), "content2")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("root.txt"), "content3")
+            .await
+            .unwrap();
+
+        let fs_list = FSList;
+        
+        // Test recursive listing
+        let result = fs_list
+            .call(FSListInput { 
+                path: temp_dir.path().to_string_lossy().to_string(),
+                recursive: Some(true)
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 5); // root.txt, dir1, file1.txt, subdir, file2.txt
+        assert!(result.iter().any(|p| p.contains("root.txt")));
+        assert!(result.iter().any(|p| p.contains("dir1")));
+        assert!(result.iter().any(|p| p.contains("file1.txt")));
+        assert!(result.iter().any(|p| p.contains("subdir")));
+        assert!(result.iter().any(|p| p.contains("file2.txt")));
+
+        // Test non-recursive listing of same structure
+        let result = fs_list
+            .call(FSListInput { 
+                path: temp_dir.path().to_string_lossy().to_string(),
+                recursive: Some(false)
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 2); // Only root.txt and dir1
+        assert!(result.iter().any(|p| p.contains("root.txt")));
+        assert!(result.iter().any(|p| p.contains("dir1")));
+        assert!(!result.iter().any(|p| p.contains("file1.txt")));
+        assert!(!result.iter().any(|p| p.contains("subdir")));
+        assert!(!result.iter().any(|p| p.contains("file2.txt")));
     }
 
     #[tokio::test]
