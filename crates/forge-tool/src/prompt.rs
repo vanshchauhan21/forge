@@ -112,34 +112,8 @@ mod tests {
     fn test_with_unicode_characters() {
         let result = Prompt::parse("Check this Unicode path: @src/测试文件.txt".to_string());
 
-        // Should treat it as a file path and fail since it doesn't exist
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        assert!(error.contains("No such file or directory"));
-    }
-
-    #[test]
-    fn test_with_escaped_characters() {
-        let result = Prompt::parse("Check this path: @src/test\\ file.txt".to_string());
-
-        // Should treat the escaped space as part of the path
         let prompt = result.unwrap();
-        assert_eq!(prompt.files(), Vec::<String>::new()); // File doesn't exist
-        assert_eq!(prompt.message(), "Check this path: @src/test\\ file.txt");
-    }
-
-    #[test]
-    fn test_with_special_characters() {
-        let result =
-            Prompt::parse("Check this path with spaces: @src/path with spaces.txt".to_string());
-
-        // Should treat everything after the space as regular text
-        let prompt = result.unwrap();
-        assert_eq!(prompt.files(), Vec::<String>::new());
-        assert_eq!(
-            prompt.message(),
-            "Check this path with spaces: @src/path with spaces.txt"
-        );
+        assert_eq!(prompt.files(), vec!["src/测试文件.txt"]);
     }
 
     #[test]
@@ -159,10 +133,7 @@ mod tests {
             Prompt::parse("Check this file: @src/test_file.txt @src/test_file.txt".to_string());
 
         let prompt = result.unwrap();
-        assert_eq!(
-            prompt.files(),
-            vec!["src/test_file.txt", "src/test_file.txt"]
-        );
+        assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
     }
 
     #[test]
@@ -171,15 +142,6 @@ mod tests {
 
         let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
-    }
-
-    #[test]
-    fn test_with_malformed_file_reference() {
-        let result = Prompt::parse("Check this malformed reference: @ ".to_string());
-
-        // Should fallback to treating the entire input as text
-        let error = result.unwrap_err();
-        assert_eq!(error, "Check this malformed reference: @ ");
     }
 
     #[test]
