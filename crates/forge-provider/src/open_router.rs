@@ -13,6 +13,8 @@ use super::provider::{InnerProvider, Provider};
 use crate::log::LoggingMiddleware;
 use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
 
+const DEFAULT_MODEL: &str = "google/gemini-flash-1.5-8b-exp";
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 struct Model {
     id: String,
@@ -395,7 +397,7 @@ impl OpenRouter {
         Self {
             http_client,
             config,
-            model: model.unwrap_or("openai/gpt-4o-mini".to_string()),
+            model: model.unwrap_or(DEFAULT_MODEL.to_string()),
         }
     }
 }
