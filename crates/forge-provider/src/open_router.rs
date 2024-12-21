@@ -237,7 +237,7 @@ struct ToolCall {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct FunctionCall {
     name: String,
-    arguments: serde_json::Value,
+    arguments: String,
 }
 
 impl From<Tool> for OpenRouterTool {
@@ -314,7 +314,7 @@ impl TryFrom<Response> for crate::model::Response {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: UseId::new(tool_call.id.clone()),
                                 tool_id: ToolId::new(&tool_call.function.name),
-                                input: tool_call.function.arguments.clone(),
+                                input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
                     }
@@ -328,7 +328,7 @@ impl TryFrom<Response> for crate::model::Response {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: UseId::new(tool_call.id.clone()),
                                 tool_id: ToolId::new(&tool_call.function.name),
-                                input: tool_call.function.arguments.clone(),
+                                input: serde_json::from_str(&tool_call.function.arguments)?
                             });
                         }
                     }

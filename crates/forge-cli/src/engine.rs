@@ -6,7 +6,7 @@ use forge_tool::{Prompt, Router};
 use futures::future::join_all;
 use futures::FutureExt;
 use serde_json::Value;
-
+use tracing::debug;
 use crate::completion::Completion;
 use crate::error::Result;
 use crate::walker::Walker;
@@ -35,6 +35,7 @@ impl Engine {
         loop {
             let response = self.provider.chat(request.clone()).await?;
             if !response.tool_use.is_empty() {
+                debug!("Tool use detected: {:?}", response.tool_use);
                 let results = join_all(
                     response
                         .tool_use
@@ -42,6 +43,8 @@ impl Engine {
                         .map(|tool_use| self.use_tool(tool_use)),
                 )
                 .await;
+
+                debug!("Tool results: {:?}", results);
 
                 request = request.extend_tool_results(results);
             } else {
