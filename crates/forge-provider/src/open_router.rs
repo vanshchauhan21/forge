@@ -421,18 +421,14 @@ mod test {
     }
 
     #[test]
-    fn test_ser_of_models() {
+    fn test_de_ser_of_models() {
         let _: ListModelResponse = serde_json::from_str(models()).unwrap();
     }
 
-    #[tokio::test]
-    async fn test_chat() {
-        let api_key =
-            "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".to_string();
-        let provider = OpenRouter::new(api_key, None, None);
-        let request = crate::model::Request::default()
-            .add_message(crate::model::Message::user("How are you doing sir?"));
-        let response = provider.chat(request).await;
-        assert!(response.is_ok())
+    #[test]
+    fn test_de_ser_of_response() {
+        let response = r#"{"id":"gen-1734752897-QSJJJjXmljCFFkUZHtFk","provider":"Anthropic","model":"anthropic/claude-3.5-sonnet","object":"chat.completion","created":1734752897,"choices":[{"logprobs":null,"finish_reason":"end_turn","index":0,"message":{"role":"assistant","content":"I aim to be direct and honest in my interactions: I'm an AI assistant, so I don't experience feelings in the way humans do. I aim to be helpful while being transparent about what I am. How can I assist you today?","refusal":""}}],"usage":{"prompt_tokens":13,"completion_tokens":54,"total_tokens":67}}"#;
+
+        let _: Response = serde_json::from_str(response).unwrap();
     }
 }
