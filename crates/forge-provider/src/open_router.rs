@@ -304,7 +304,7 @@ impl TryFrom<Response> for crate::model::Response {
                 Choice::NonStreaming { message, .. } => {
                     crate::model::Response::new(message.content.clone().unwrap_or_default())
                 }
-                Choice::Streaming{ delta, .. } => {
+                Choice::Streaming { delta, .. } => {
                     crate::model::Response::new(delta.content.clone().unwrap_or_default())
                 }
             })
