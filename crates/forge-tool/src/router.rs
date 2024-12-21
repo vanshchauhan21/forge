@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use inflector::Inflector;
+use schemars::JsonSchema;
 use serde_json::Value;
 
 use crate::console::{ReadLine, WriteLine};
@@ -13,8 +14,8 @@ struct JsonTool<T>(T);
 #[async_trait::async_trait]
 impl<T: ToolTrait + Sync> ToolTrait for JsonTool<T>
 where
-    T::Input: serde::de::DeserializeOwned,
-    T::Output: serde::Serialize,
+    T::Input: serde::de::DeserializeOwned + JsonSchema,
+    T::Output: serde::Serialize + JsonSchema,
 {
     type Input = Value;
     type Output = Value;
@@ -47,24 +48,11 @@ pub struct Router {
 }
 
 #[derive(Debug, Clone)]
-pub struct JsonSchema(Value);
-
-impl JsonSchema {
-    pub(crate) fn from_value(value: Value) -> Self {
-        JsonSchema(value)
-    }
-
-    pub fn into_value(self) -> Value {
-        self.0
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct Tool {
     pub id: ToolId,
     pub description: String,
-    pub input_schema: JsonSchema,
-    pub output_schema: Option<JsonSchema>,
+    pub input_schema: Value,
+    pub output_schema: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -91,8 +79,8 @@ impl Router {
     fn import<T>(tool: T) -> (ToolId, Box<dyn ToolTrait<Input = Value, Output = Value>>)
     where
         T: ToolTrait + Send + Sync + 'static,
-        T::Input: serde::de::DeserializeOwned,
-        T::Output: serde::Serialize,
+        T::Input: serde::de::DeserializeOwned + JsonSchema,
+        T::Output: serde::Serialize + JsonSchema,
     {
         let id = std::any::type_name::<T>()
             .split("::")

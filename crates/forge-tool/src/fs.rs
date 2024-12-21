@@ -1,6 +1,29 @@
 use forge_tool_macros::Description;
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 use crate::{Description, ToolTrait};
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FSReadInput {
+    pub path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FSSearchInput {
+    pub dir: String,
+    pub pattern: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FSListInput {
+    pub path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FSFileInfoInput {
+    pub path: String,
+}
 
 /// Read the complete contents of a file from the file system. Handles various
 /// text encodings and provides detailed error messages if the file cannot be
@@ -31,7 +54,7 @@ pub(crate) struct FSFileInfo;
 
 #[async_trait::async_trait]
 impl ToolTrait for FSRead {
-    type Input = String;
+    type Input = FSReadInput;
     type Output = String;
 
     fn description(&self) -> String {
@@ -39,7 +62,7 @@ impl ToolTrait for FSRead {
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let content = tokio::fs::read_to_string(&input)
+        let content = tokio::fs::read_to_string(&input.path)
             .await
             .map_err(|e| e.to_string())?;
         Ok(content)
@@ -48,7 +71,7 @@ impl ToolTrait for FSRead {
 
 #[async_trait::async_trait]
 impl ToolTrait for FSSearch {
-    type Input = (String, String);
+    type Input = FSSearchInput;
     type Output = Vec<String>;
 
     fn description(&self) -> String {
@@ -56,8 +79,7 @@ impl ToolTrait for FSSearch {
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let (dir, pattern) = input;
-        let pattern = pattern.to_lowercase();
+        let pattern = input.pattern.to_lowercase();
 
         async fn search(dir: &std::path::Path, pattern: &str) -> Result<Vec<String>, String> {
             let mut matches = Vec::new();
@@ -79,13 +101,13 @@ impl ToolTrait for FSSearch {
             Ok(matches)
         }
 
-        Ok(Box::pin(search(std::path::Path::new(&dir), &pattern)).await?)
+        Ok(Box::pin(search(std::path::Path::new(&input.dir), &pattern)).await?)
     }
 }
 
 #[async_trait::async_trait]
 impl ToolTrait for FSList {
-    type Input = String;
+    type Input = FSListInput;
     type Output = Vec<String>;
 
     fn description(&self) -> String {
@@ -93,7 +115,7 @@ impl ToolTrait for FSList {
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let dir = std::path::Path::new(&input);
+        let dir = std::path::Path::new(&input.path);
         let mut paths = Vec::new();
         let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
 
@@ -112,7 +134,7 @@ impl ToolTrait for FSList {
 
 #[async_trait::async_trait]
 impl ToolTrait for FSFileInfo {
-    type Input = String;
+    type Input = FSFileInfoInput;
     type Output = String;
 
     fn description(&self) -> String {
@@ -120,7 +142,7 @@ impl ToolTrait for FSFileInfo {
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let meta = tokio::fs::metadata(input)
+        let meta = tokio::fs::metadata(input.path)
             .await
             .map_err(|e| e.to_string())?;
         Ok(format!("{:?}", meta))
@@ -144,7 +166,7 @@ mod test {
 
         let fs_read = FSRead;
         let result = fs_read
-            .call(file_path.to_string_lossy().to_string())
+            .call(FSReadInput { path: file_path.to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -158,7 +180,7 @@ mod test {
 
         let fs_read = FSRead;
         let result = fs_read
-            .call(nonexistent_file.to_string_lossy().to_string())
+            .call(FSReadInput { path: nonexistent_file.to_string_lossy().to_string() })
             .await;
 
         assert!(result.is_err());
@@ -172,7 +194,7 @@ mod test {
 
         let fs_read = FSRead;
         let result = fs_read
-            .call(file_path.to_string_lossy().to_string())
+            .call(FSReadInput { path: file_path.to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -187,7 +209,7 @@ mod test {
 
         let fs_info = FSFileInfo;
         let result = fs_info
-            .call(file_path.to_string_lossy().to_string())
+            .call(FSFileInfoInput { path: file_path.to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -204,7 +226,7 @@ mod test {
 
         let fs_info = FSFileInfo;
         let result = fs_info
-            .call(dir_path.to_string_lossy().to_string())
+            .call(FSFileInfoInput { path: dir_path.to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -220,7 +242,7 @@ mod test {
 
         let fs_info = FSFileInfo;
         let result = fs_info
-            .call(nonexistent_path.to_string_lossy().to_string())
+            .call(FSFileInfoInput { path: nonexistent_path.to_string_lossy().to_string() })
             .await;
 
         assert!(result.is_err());
@@ -232,7 +254,7 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(temp_dir.path().to_string_lossy().to_string())
+            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -254,7 +276,7 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(temp_dir.path().to_string_lossy().to_string())
+            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -279,7 +301,7 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(nonexistent_dir.to_string_lossy().to_string())
+            .call(FSListInput { path: nonexistent_dir.to_string_lossy().to_string() })
             .await;
 
         assert!(result.is_err());
@@ -301,7 +323,7 @@ mod test {
 
         let fs_list = FSList;
         let result = fs_list
-            .call(temp_dir.path().to_string_lossy().to_string())
+            .call(FSListInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -327,10 +349,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                temp_dir.path().to_string_lossy().to_string(),
-                "test".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: temp_dir.path().to_string_lossy().to_string(),
+                pattern: "test".to_string(),
+            })
             .await
             .unwrap();
 
@@ -354,10 +376,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                temp_dir.path().to_string_lossy().to_string(),
-                "test".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: temp_dir.path().to_string_lossy().to_string(),
+                pattern: "test".to_string(),
+            })
             .await
             .unwrap();
 
@@ -379,10 +401,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                temp_dir.path().to_string_lossy().to_string(),
-                "test".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: temp_dir.path().to_string_lossy().to_string(),
+                pattern: "test".to_string(),
+            })
             .await
             .unwrap();
 
@@ -401,10 +423,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                temp_dir.path().to_string_lossy().to_string(),
-                "".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: temp_dir.path().to_string_lossy().to_string(),
+                pattern: "".to_string(),
+            })
             .await
             .unwrap();
 
@@ -419,10 +441,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                nonexistent_dir.to_string_lossy().to_string(),
-                "test".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: nonexistent_dir.to_string_lossy().to_string(),
+                pattern: "test".to_string(),
+            })
             .await;
 
         assert!(result.is_err());
@@ -444,10 +466,10 @@ mod test {
 
         let fs_search = FSSearch;
         let result = fs_search
-            .call((
-                temp_dir.path().to_string_lossy().to_string(),
-                "test".to_string(),
-            ))
+            .call(FSSearchInput {
+                dir: temp_dir.path().to_string_lossy().to_string(),
+                pattern: "test".to_string(),
+            })
             .await
             .unwrap();
 

@@ -2,7 +2,8 @@ use forge_tool_macros::Description;
 use ignore::WalkBuilder;
 use inquire::autocompletion::Replacement;
 use inquire::Autocomplete;
-use serde::Serialize;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::model::Prompt;
 use crate::{Description, ToolTrait};
@@ -59,9 +60,14 @@ impl Autocomplete for Completion {
     }
 }
 
+#[derive(JsonSchema, Deserialize)]
+pub struct ReadLineInput {
+    pub message: Option<String>,
+}
+
 #[async_trait::async_trait]
 impl ToolTrait for ReadLine {
-    type Input = Option<String>;
+    type Input = ReadLineInput;
     type Output = Prompt;
 
     fn description(&self) -> String {
@@ -74,8 +80,8 @@ impl ToolTrait for ReadLine {
             .map(|v| v.into_iter().map(|a| format!("@{}", a)).collect::<Vec<_>>())
             .unwrap_or_default();
 
-        let input = input.unwrap_or_default();
-        let prompt = inquire::Text::new(&input)
+        let message = input.message.unwrap_or_default();
+        let prompt = inquire::Text::new(&message)
             .with_autocomplete(Completion::new(suggestions))
             .prompt()
             .map_err(|e| e.to_string())?;
@@ -104,9 +110,14 @@ fn ls_files(path: &std::path::Path) -> std::io::Result<Vec<String>> {
     Ok(paths)
 }
 
+#[derive(JsonSchema, Deserialize)]
+pub struct WriteLineInput {
+    pub message: String,
+}
+
 #[async_trait::async_trait]
 impl ToolTrait for WriteLine {
-    type Input = String;
+    type Input = WriteLineInput;
     type Output = ();
 
     fn description(&self) -> String {
@@ -114,7 +125,7 @@ impl ToolTrait for WriteLine {
     }
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        println!("{}", input);
+        println!("{}", input.message);
         Ok(())
     }
 }

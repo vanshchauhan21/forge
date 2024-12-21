@@ -153,7 +153,7 @@ impl From<Tool> for OpenRouterTool {
             function: FunctionDescription {
                 description: Some(value.description),
                 name: value.id.into_string(),
-                parameters: value.input_schema.into_value(),
+                parameters: value.input_schema,
             },
         }
     }

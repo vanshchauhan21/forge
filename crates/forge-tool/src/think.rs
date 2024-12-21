@@ -88,7 +88,7 @@ impl Think {
 
         self.thought_history.push(thought_data.clone());
 
-        if let (Some(branch_from), Some(branch_id)) =
+        if let (Some(_), Some(branch_id)) =
             (thought_data.branch_from_thought, &thought_data.branch_id)
         {
             self.branches

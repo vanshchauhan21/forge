@@ -1,14 +1,15 @@
+use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::prompt_parser::{PromptParser, Token};
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub struct Prompt {
     pub message: String,
     pub files: Vec<File>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub struct File {
     pub path: String,
     pub content: String,
