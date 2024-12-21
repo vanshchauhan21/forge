@@ -2,11 +2,8 @@ mod console;
 mod fs;
 #[allow(unused)]
 mod mcp;
-mod prompt;
 mod router;
 mod think;
-
-pub use prompt::Prompt;
 pub use router::*;
 
 #[async_trait::async_trait]

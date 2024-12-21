@@ -5,10 +5,8 @@ use nom::combinator::{map, opt, recognize};
 use nom::multi::many0;
 use nom::sequence::{pair, preceded};
 use nom::IResult;
-use schemars::JsonSchema;
-use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone)]
 pub struct Prompt {
     pub tokens: Vec<Token>,
 }
@@ -43,7 +41,7 @@ impl Prompt {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Literal(String),
     File(String),

@@ -1,14 +1,15 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use derive_more::derive::From;
+use derive_more::derive::{Display, From};
 
-#[derive(From)]
+#[derive(Display, From)]
 pub enum Error {
     Inquire(inquire::InquireError),
     // TODO: drop `Custom` because its too generic
     Custom(String),
     Provider(forge_provider::Error),
     IO(std::io::Error),
+    Prompt(forge_prompt::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -57,6 +58,7 @@ impl From<&Error> for Errata {
             Error::Custom(error) => Errata::new(error.to_string()),
             Error::Provider(error) => Errata::new(format!("{}", error)),
             Error::IO(error) => Errata::new(format!("{}", error)),
+            Error::Prompt(error) => Errata::new(format!("{}", error)),
         }
     }
 }

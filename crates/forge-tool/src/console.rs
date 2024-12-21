@@ -1,63 +1,51 @@
+use forge_prompt::ResolvePrompt;
 use forge_tool_macros::Description;
-use ignore::WalkBuilder;
-use inquire::autocompletion::Replacement;
-use inquire::Autocomplete;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Description, Prompt, ToolTrait};
+use crate::{Description, ToolTrait};
 
 /// Read a line from the console
-#[derive(Serialize, Description)]
-pub(crate) struct ReadLine;
+#[derive(Description)]
+pub(crate) struct ReadLine {
+    prompt: forge_prompt::UserPrompt,
+}
+
+#[derive(JsonSchema, Serialize)]
+pub struct File {
+    pub path: String,
+    pub content: String,
+}
+
+#[derive(JsonSchema, Serialize)]
+pub struct ReadLineOutput {
+    pub message: String,
+    pub files: Vec<File>,
+}
+
+impl From<ResolvePrompt> for ReadLineOutput {
+    fn from(value: ResolvePrompt) -> Self {
+        let files = value
+            .files
+            .into_iter()
+            .map(|file| File { content: file.content, path: file.path })
+            .collect();
+
+        Self { message: value.message, files }
+    }
+}
+
+impl Default for ReadLine {
+    fn default() -> Self {
+        Self {
+            prompt: forge_prompt::UserPrompt::new(std::env::current_dir().unwrap()),
+        }
+    }
+}
 
 /// Write a line to the console
-#[derive(Serialize, Description)]
+#[derive(Description)]
 pub(crate) struct WriteLine;
-
-#[derive(Clone)]
-struct Completion {
-    suggestions: Vec<String>,
-}
-
-impl Completion {
-    pub fn new(suggestions: Vec<String>) -> Self {
-        Self { suggestions }
-    }
-}
-
-impl Autocomplete for Completion {
-    fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, inquire::CustomUserError> {
-        // Performs a case-insensitive substring search on the suggestions.
-        let input = input.trim().to_lowercase();
-        let suggestions = if input.is_empty() {
-            Vec::new()
-        } else {
-            self.suggestions
-                .iter()
-                .filter(|c| match &input {
-                    s if s.starts_with("@") => input
-                        .split("@")
-                        .last()
-                        .filter(|file| !file.contains("@") && !file.is_empty())
-                        .is_some_and(|file| c.to_lowercase().contains(file)),
-                    _ => false,
-                })
-                .cloned()
-                .collect()
-        };
-
-        Ok(suggestions)
-    }
-
-    fn get_completion(
-        &mut self,
-        _: &str,
-        highlighted_suggestion: Option<String>,
-    ) -> Result<inquire::autocompletion::Replacement, inquire::CustomUserError> {
-        Ok(Replacement::from(highlighted_suggestion))
-    }
-}
 
 #[derive(JsonSchema, Deserialize)]
 pub struct ReadLineInput {
@@ -67,40 +55,19 @@ pub struct ReadLineInput {
 #[async_trait::async_trait]
 impl ToolTrait for ReadLine {
     type Input = ReadLineInput;
-    type Output = Prompt;
+    type Output = ReadLineOutput;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        // TODO: improve the file listing logic not to execute on each call.
-        let suggestions = ls_files(std::path::Path::new("."))
-            .map(|v| v.into_iter().map(|a| format!("@{}", a)).collect::<Vec<_>>())
-            .unwrap_or_default();
-
-        let message = input.message.unwrap_or_default();
-        let prompt = inquire::Text::new(&message)
-            .with_autocomplete(Completion::new(suggestions))
-            .prompt()
+        let message = input.message;
+        let prompt = self
+            .prompt
+            .ask(message.as_deref())
+            .await
+            // TODO: Can't return strings over here
             .map_err(|e| e.to_string())?;
 
-        Prompt::parse(prompt)
+        Ok(prompt.into())
     }
-}
-
-fn ls_files(path: &std::path::Path) -> std::io::Result<Vec<String>> {
-    let mut paths = Vec::new();
-    let walker = WalkBuilder::new(path)
-        .hidden(true) // Skip hidden files
-        .git_global(true) // Use global gitignore
-        .git_ignore(true) // Use local .gitignore
-        .ignore(true) // Use .ignore files
-        .build();
-
-    for entry in walker.flatten() {
-        if entry.file_type().is_some_and(|ft| ft.is_file()) {
-            paths.push(entry.path().display().to_string());
-        }
-    }
-
-    Ok(paths)
 }
 
 #[derive(JsonSchema, Deserialize)]

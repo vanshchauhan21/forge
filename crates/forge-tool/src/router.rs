@@ -103,7 +103,7 @@ impl Default for Router {
             Router::import(FSFileInfo),
             Router::import(FSWrite),
             Router::import(Think::default()),
-            Router::import(ReadLine),
+            Router::import(ReadLine::default()),
             Router::import(WriteLine),
         ]);
 
