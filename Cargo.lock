@@ -641,6 +641,7 @@ dependencies = [
 name = "forge-prompt"
 version = "0.1.0"
 dependencies = [
+ "colorize",
  "derive_more",
  "futures",
  "ignore",

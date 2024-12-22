@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use colorize::AnsiColor;
 use forge_prompt::{PromptData, UserPrompt};
 use spinners::Spinner;
 
@@ -15,7 +16,7 @@ impl Tui {
     }
 
     pub async fn ask(&self, prompt: Option<&str>) -> Result<PromptData> {
-        println!("│");
+        println!("{}", "│".to_string().cyan());
         let input = self.prompt.ask(prompt).await?;
 
         Ok(input)
@@ -29,7 +30,7 @@ pub struct Loader {
 
 impl Loader {
     pub fn start(title: &str) -> Self {
-        println!("│");
+        println!("{}", "|".cyan());
         let sp = Spinner::new(spinners::Spinners::Dots, format!(" {}", title));
         Self { sp, title: title.to_string() }
     }
@@ -38,6 +39,11 @@ impl Loader {
     pub fn stop(self) {
         let title = self.title.clone();
         self.stop_with(title.as_str());
+    }
+
+    pub fn print_row(&self, is_first: bool, text: &str) {
+        let char = if is_first { "◉" } else { "│" };
+        println!("{}  {}", char.cyan(), text);
     }
 
     pub fn stop_with(mut self, text: &str) {
@@ -59,20 +65,12 @@ impl Loader {
                 let mut start = 0;
                 while start < line.len() {
                     let end = std::cmp::min(start + size, line.len());
-                    if is_first {
-                        println!("◉  {}", &line[start..end]);
-                    } else {
-                        println!("│  {}", &line[start..end]);
-                    }
+                    self.print_row(is_first, &line[start..end]);
                     is_first = false;
                     start = end;
                 }
             } else {
-                if is_first {
-                    println!("◉  {}", line);
-                } else {
-                    println!("│  {}", line);
-                }
+                self.print_row(is_first, &line);
                 is_first = false;
             }
         }

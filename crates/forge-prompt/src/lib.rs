@@ -3,6 +3,7 @@ mod error;
 mod walker;
 use std::path::PathBuf;
 mod prompt;
+use colorize::AnsiColor;
 use completion::Completion;
 pub use error::*;
 use futures::future::join_all;
@@ -36,9 +37,10 @@ impl UserPrompt {
     pub async fn ask(&self, message: Option<&str>) -> Result<PromptData> {
         let suggestions = self.walker.get()?;
         let completions = Completion::new(suggestions.iter().map(|s| format!("@{}", s)).collect());
+        let dot = "◉".cyan();
         let config = RenderConfig {
             prompt_prefix: Styled::new("○"),
-            answered_prompt_prefix: Styled::new("◉"),
+            answered_prompt_prefix: Styled::new(dot.as_str()),
             ..RenderConfig::default()
         };
         let input = inquire::Text::new(message.unwrap_or(""))

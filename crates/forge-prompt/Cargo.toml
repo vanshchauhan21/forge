@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+colorize = "0.1.0"
 derive_more = {version = "1.0.0", features = ["from", "display"]}
 futures = "0.3.31"
 ignore = "0.4.23"
