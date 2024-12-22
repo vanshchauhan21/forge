@@ -1,14 +1,13 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
-use crate::ToolTrait;
+use crate::{Description, ToolTrait};
 
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");
@@ -112,7 +111,9 @@ impl ToolTrait for Outline {
                     && e.path()
                         .extension()
                         .and_then(|e| e.to_str())
-                        .map(|ext| extensions_to_languages.contains_key(ext.to_lowercase().as_str()))
+                        .map(|ext| {
+                            extensions_to_languages.contains_key(ext.to_lowercase().as_str())
+                        })
                         .unwrap_or(false)
             })
             .collect::<Vec<_>>();
@@ -121,13 +122,13 @@ impl ToolTrait for Outline {
             let path = entry.path().to_path_buf();
             if let Ok(content) = fs::read_to_string(&path).await {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if let Some(&lang_name) = extensions_to_languages.get(ext.to_lowercase().as_str()) {
+                    if let Some(&lang_name) =
+                        extensions_to_languages.get(ext.to_lowercase().as_str())
+                    {
                         if !parsers.contains_key(lang_name) {
                             let language = load_language_parser(lang_name)?;
                             let mut parser = Parser::new();
-                            parser
-                                .set_language(language)
-                                .map_err(|e| e.to_string())?;
+                            parser.set_language(language).map_err(|e| e.to_string())?;
                             let query = Query::new(language, queries[lang_name])
                                 .map_err(|e| e.to_string())?;
                             parsers.insert(lang_name, (parser, query));
@@ -160,10 +161,11 @@ impl ToolTrait for Outline {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use insta::assert_snapshot;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_outline_rust() {
@@ -189,9 +191,7 @@ impl User {
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -221,9 +221,7 @@ class ShoppingCart {
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -249,9 +247,7 @@ class Person:
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -261,7 +257,7 @@ class Person:
     #[tokio::test]
     async fn test_outline_multiple_files() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Rust file
         fs::write(
             temp_dir.path().join("main.rs"),
@@ -288,9 +284,7 @@ class Person:
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -303,9 +297,7 @@ class Person:
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 
@@ -315,13 +307,13 @@ class Person:
     #[tokio::test]
     async fn test_outline_unsupported_files() {
         let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("data.txt"), "Some text").await.unwrap();
+        fs::write(temp_dir.path().join("data.txt"), "Some text")
+            .await
+            .unwrap();
 
         let outline = Outline;
         let result = outline
-            .call(OutlineInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-            })
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
             .await
             .unwrap();
 

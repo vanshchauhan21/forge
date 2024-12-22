@@ -1,13 +1,12 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::pin::Pin;
-use std::collections::HashSet;
 
 use forge_tool_macros::Description;
-use walkdir::WalkDir;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tokio::task;
 use tracing::debug;
+use walkdir::WalkDir;
 
 use crate::{Description, ToolTrait};
 
@@ -46,10 +45,10 @@ pub struct FSFileInfoInput {
 /// Only works within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSRead;
-/// Recursively search through file contents using regex patterns. Provides context
-/// around matches and supports filtering by file patterns. Returns matches with
-/// surrounding lines for better context understanding. Great for finding code
-/// patterns or specific content across multiple files.
+/// Recursively search through file contents using regex patterns. Provides
+/// context around matches and supports filtering by file patterns. Returns
+/// matches with surrounding lines for better context understanding. Great for
+/// finding code patterns or specific content across multiple files.
 #[derive(Description)]
 pub(crate) struct FSSearch;
 /// Get a detailed listing of all files and directories in a specified path.
@@ -105,8 +104,8 @@ impl ToolTrait for FSRead {
 }
 
 /// Replace content in a file using SEARCH/REPLACE blocks. Each block defines
-/// exact changes to make to specific parts of the file. Supports multiple blocks
-/// for complex changes while preserving file formatting and structure.
+/// exact changes to make to specific parts of the file. Supports multiple
+/// blocks for complex changes while preserving file formatting and structure.
 #[derive(Description)]
 pub(crate) struct FSReplace;
 
@@ -169,7 +168,8 @@ impl ToolTrait for FSSearch {
                 if seen_paths.insert(path.to_string()) {
                     matches.push(format!(
                         "File: {}\nLines 1-1:\n{}\n",
-                        path, path.to_string()
+                        path,
+                        path
                     ));
                 }
                 continue;
@@ -178,10 +178,7 @@ impl ToolTrait for FSSearch {
             // Check filename and directory name for match
             if regex.is_match(&name) {
                 if seen_paths.insert(path.to_string()) {
-                    matches.push(format!(
-                        "File: {}\nLines 1-1:\n{}\n",
-                        path, name
-                    ));
+                    matches.push(format!("File: {}\nLines 1-1:\n{}\n", path, name));
                 }
                 if !is_file {
                     continue;
@@ -206,7 +203,7 @@ impl ToolTrait for FSSearch {
 
             let lines: Vec<&str> = content.lines().collect();
             let mut content_matches = Vec::new();
-            
+
             for (line_num, line) in lines.iter().enumerate() {
                 if regex.is_match(line) {
                     // Get context (3 lines before and after)
@@ -257,9 +254,7 @@ impl ToolTrait for FSReplace {
                 continue;
             }
 
-            let search = parts[0]
-                .trim_start_matches("<<<<<<< SEARCH")
-                .trim();
+            let search = parts[0].trim_start_matches("<<<<<<< SEARCH").trim();
             let replace = parts[1].trim();
 
             // Process one replacement at a time to maintain order
@@ -270,7 +265,7 @@ impl ToolTrait for FSReplace {
             while i < lines.len() {
                 let mut found = false;
                 let search_lines: Vec<&str> = search.lines().collect();
-                
+
                 if i + search_lines.len() <= lines.len() {
                     let mut matches = true;
                     for (j, search_line) in search_lines.iter().enumerate() {
@@ -339,7 +334,11 @@ impl ToolTrait for FSList {
 
             let file_type = entry.file_type();
             if file_type.is_file() || file_type.is_dir() {
-                let prefix = if file_type.is_dir() { "[DIR]" } else { "[FILE]" };
+                let prefix = if file_type.is_dir() {
+                    "[DIR]"
+                } else {
+                    "[FILE]"
+                };
                 paths.push(format!("{} {}", prefix, entry.path().display()));
             }
         }
