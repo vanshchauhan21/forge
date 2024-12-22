@@ -1,6 +1,6 @@
 use http::Extensions;
 use reqwest_middleware::{Middleware, Next, Result};
-use tracing::info;
+use tracing::debug;
 
 pub struct LoggingMiddleware;
 
@@ -12,9 +12,9 @@ impl Middleware for LoggingMiddleware {
         extensions: &mut Extensions,
         next: Next<'_>,
     ) -> Result<reqwest_middleware::reqwest::Response> {
-        info!("Request: {:?}", req);
+        debug!("Request: {:?}", req);
         let response = next.run(req, extensions).await;
-        info!("Response: {:?}", response);
+        debug!("Response: {:?}", response);
         response
     }
 }

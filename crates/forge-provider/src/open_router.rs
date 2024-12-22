@@ -6,7 +6,7 @@ use http::{HeaderMap, HeaderValue};
 use reqwest_middleware::reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::debug;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
@@ -433,7 +433,7 @@ impl InnerProvider for OpenRouter {
 
         let body = serde_json::to_string(&new_request)?;
 
-        info!("Request Body: {}", body);
+        debug!("Request Body: {}", body);
 
         let body = self
             .http_client
@@ -445,7 +445,7 @@ impl InnerProvider for OpenRouter {
             .text()
             .await?;
 
-        info!("Response Body: {}", body);
+        debug!("Response Body: {}", body);
         let response = serde_json::from_str::<Response>(&body)?;
 
         Ok(response.try_into()?)
