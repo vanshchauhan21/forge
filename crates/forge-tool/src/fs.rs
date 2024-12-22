@@ -149,7 +149,8 @@ impl ToolTrait for FSList {
                 for result in walker {
                     let entry = result.map_err(|e| e.to_string())?;
                     if !entry
-                        .file_type().is_some_and(|ft| ft.is_file() || ft.is_dir())
+                        .file_type()
+                        .is_some_and(|ft| ft.is_file() || ft.is_dir())
                     {
                         continue;
                     }
