@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::{future::Future, usize};
+use std::usize;
 
 use forge_prompt::{PromptData, UserPrompt};
 use spinners::Spinner;
