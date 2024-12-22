@@ -1,4 +1,4 @@
-use forge_prompt::ResolvePrompt;
+use forge_prompt::PromptData;
 use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -23,8 +23,8 @@ pub struct ReadLineOutput {
     pub files: Vec<File>,
 }
 
-impl From<ResolvePrompt> for ReadLineOutput {
-    fn from(value: ResolvePrompt) -> Self {
+impl From<PromptData> for ReadLineOutput {
+    fn from(value: PromptData) -> Self {
         let files = value
             .files
             .into_iter()

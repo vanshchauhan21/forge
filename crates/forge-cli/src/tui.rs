@@ -1,6 +1,9 @@
+use std::future::Future;
+use std::path::PathBuf;
+
+use forge_prompt::{PromptData, UserPrompt};
+
 use crate::Result;
-use forge_prompt::{ResolvePrompt, UserPrompt};
-use std::{future::Future, path::PathBuf};
 
 pub struct Tui {
     prompt: UserPrompt,
@@ -11,22 +14,27 @@ impl Tui {
         Self { prompt: UserPrompt::new(cwd) }
     }
 
-    pub async fn ask(&self, prompt: Option<&str>) -> Result<ResolvePrompt> {
+    pub async fn ask(&self, prompt: Option<&str>) -> Result<PromptData> {
         println!("│");
-        Ok(self.prompt.ask(prompt).await?)
+        let input = self.prompt.ask(prompt).await?;
+
+        Ok(input)
     }
 
-    pub async fn task<A, F>(&self, message: &str, task: F) -> A
+    pub async fn task<A, F>(&self, title: &str, task: F) -> A
     where
         F: Future<Output = A>,
     {
         println!("│");
-
-        let mut sp = spinners::Spinner::new(spinners::Spinners::Dots, format!(" {}", message));
+        let mut sp = spinners::Spinner::new(spinners::Spinners::Dots, format!(" {}", title));
         let result = task.await;
         sp.stop();
-        println!("\r◉  {}", message);
+        println!("\r◉  {}", title);
 
         result
+    }
+
+    pub fn item(&self, message: &str) {
+        message.lines().for_each(|line| println!("│  {}", line));
     }
 }

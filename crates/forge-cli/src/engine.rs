@@ -1,14 +1,15 @@
 use std::path::PathBuf;
 
-use crate::cli::Cli;
-use crate::error::Result;
-use crate::tui::Tui;
 use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
 use futures::future::join_all;
 use serde_json::Value;
 use tracing::debug;
+
+use crate::cli::Cli;
+use crate::error::Result;
+use crate::tui::Tui;
 
 pub struct Engine {
     tool_engine: Router,
@@ -27,6 +28,7 @@ impl Engine {
 
     pub async fn launch(&self) -> Result<()> {
         let prompt = self.tui.ask(None).await?;
+        let mut last_message = prompt.message.clone();
         let mut request = Request::default()
             .add_message(Message::system(include_str!("./prompts/system.md")))
             .add_message(Message::try_from(prompt)?)
@@ -35,8 +37,13 @@ impl Engine {
         loop {
             let response = self
                 .tui
-                .task("API Request", self.provider.chat(request.clone()))
+                .task(
+                    last_message.clone().as_str(),
+                    self.provider.chat(request.clone()),
+                )
                 .await?;
+
+            self.tui.item(response.message.content.as_str());
 
             if !response.tool_use.is_empty() {
                 debug!(
@@ -57,6 +64,7 @@ impl Engine {
                 request = request.extend_tool_results(results);
             } else {
                 let prompt = self.tui.ask(None).await?;
+                last_message = prompt.message.clone();
                 request = request.add_message(Message::try_from(prompt)?);
             }
         }
@@ -66,19 +74,27 @@ impl Engine {
         let engine = &self.tool_engine;
 
         self.tui
-            .task(tool.tool_id.clone().as_str(), async move {
-                let result = engine.call(&tool.tool_id, tool.input.clone()).await;
+            .task(
+                format!(
+                    "{} {}",
+                    tool.tool_id.clone().as_str(),
+                    serde_json::to_string(&tool.input).unwrap().as_str()
+                )
+                .as_str(),
+                async move {
+                    let result = engine.call(&tool.tool_id, tool.input.clone()).await;
 
-                match result {
-                    Ok(content) => {
-                        ToolResult { tool_use_id: tool.tool_use_id, content: content.clone() }
+                    match result {
+                        Ok(content) => {
+                            ToolResult { tool_use_id: tool.tool_use_id, content: content.clone() }
+                        }
+                        Err(error) => ToolResult {
+                            tool_use_id: tool.tool_use_id,
+                            content: Value::from(error.to_owned()),
+                        },
                     }
-                    Err(error) => ToolResult {
-                        tool_use_id: tool.tool_use_id,
-                        content: Value::from(error.to_owned()),
-                    },
-                }
-            })
+                },
+            )
             .await
     }
 }
