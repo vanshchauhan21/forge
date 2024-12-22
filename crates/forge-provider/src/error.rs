@@ -12,7 +12,6 @@ pub enum Error {
     ReqwestMiddleware(#[from] reqwest_middleware::Error),
     Reqwest(#[from] reqwest_middleware::reqwest::Error),
     SerdeJson(#[from] serde_json::Error),
-    SerdeXml(#[from] serde_xml_rs::Error),
 }
 
 impl Error {

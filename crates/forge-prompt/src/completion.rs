@@ -29,8 +29,8 @@ impl Autocomplete for Completion {
             self.suggestions
                 .iter()
                 .filter(|c| match &input {
-                    s if s.starts_with("/") => c.to_lowercase().starts_with(&input),
-                    s if s.starts_with("@") => input
+                    input if input.starts_with("/") => c.to_lowercase().starts_with(input),
+                    input if input.contains("@") => input
                         .split("@")
                         .last()
                         .filter(|file| !file.contains("@") && !file.is_empty())
@@ -46,10 +46,14 @@ impl Autocomplete for Completion {
 
     fn get_completion(
         &mut self,
-        _: &str,
+        text: &str,
         highlighted_suggestion: Option<String>,
     ) -> Result<inquire::autocompletion::Replacement, inquire::CustomUserError> {
-        Ok(Replacement::from(highlighted_suggestion))
+        Ok(Replacement::from(format!(
+            "{}{}",
+            text,
+            highlighted_suggestion.unwrap_or_default()
+        )))
     }
 }
 

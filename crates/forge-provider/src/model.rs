@@ -103,10 +103,7 @@ impl Message<User> {
     /// Creates a user message from any serializable item. The message is
     /// typically in a XML format
     pub fn try_from(item: impl Serialize) -> Result<Self, crate::error::Error> {
-        Ok(Message::user(
-            serde_xml_rs::to_string(&item)?
-                .replace(r#"<?xml version="1.0" encoding="UTF-8"?>"#, ""),
-        ))
+        Ok(Message::user(serde_json::to_string(&item)?))
     }
 }
 
