@@ -70,7 +70,7 @@ impl Loader {
                     start = end;
                 }
             } else {
-                self.print_row(is_first, &line);
+                self.print_row(is_first, line);
                 is_first = false;
             }
         }
