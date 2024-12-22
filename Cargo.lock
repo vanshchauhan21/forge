@@ -693,6 +693,7 @@ dependencies = [
  "colorize",
  "forge-prompt",
  "forge-tool-macros",
+ "ignore",
  "schemars",
  "serde",
  "serde_json",

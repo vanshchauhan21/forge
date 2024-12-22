@@ -1,7 +1,12 @@
+use std::path::Path;
+
 use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tracing::debug;
+use ignore::WalkBuilder;
+use std::pin::Pin;
+use tokio::task;
 
 use crate::{Description, ToolTrait};
 
@@ -64,7 +69,7 @@ pub(crate) struct FSWrite;
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
     pub path: String,
-    pub content: String,
+    pub content: Option<String>,
 }
 #[async_trait::async_trait]
 impl ToolTrait for FSWrite {
@@ -72,10 +77,10 @@ impl ToolTrait for FSWrite {
     type Output = String;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        tokio::fs::write(&input.path, &input.content)
+        tokio::fs::write(&input.path, &input.content.unwrap_or_default())
             .await
             .map_err(|e| e.to_string())?;
-        Ok(format!("Wrote to file: {}", input.path))
+        Ok(format!("Successfully wrote to {}", input.path))
     }
 }
 
@@ -124,37 +129,60 @@ impl ToolTrait for FSSearch {
     }
 }
 
+type BoxedFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
+
 #[async_trait::async_trait]
 impl ToolTrait for FSList {
     type Input = FSListInput;
     type Output = Vec<String>;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        async fn list_dir(dir: &std::path::Path, recursive: bool) -> Result<Vec<String>, String> {
-            let mut paths = Vec::new();
-            let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
-
-            while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
-                let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
-                let prefix = if file_type.is_dir() {
-                    "[DIR]"
-                } else {
-                    "[FILE]"
-                };
-                paths.push(format!("{} {}", prefix, entry.path().display()));
-
-                if recursive && file_type.is_dir() {
-                    paths.extend(Box::pin(list_dir(&entry.path(), true)).await?);
+        fn list_dir(dir: &Path, recursive: bool) -> BoxedFuture<'_, Result<Vec<String>, String>> {
+            Box::pin(async move {
+                let mut paths = Vec::new();
+    
+                let walker = WalkBuilder::new(dir)
+                    .hidden(false) // Ignore hidden files
+                    .standard_filters(true) // Use `.gitignore` rules
+                    .build();
+    
+                for result in walker {
+                    let entry = result.map_err(|e| e.to_string())?;
+                    if !entry.file_type().map_or(false, |ft| ft.is_file() || ft.is_dir()) {
+                        continue;
+                    }
+    
+                    let file_type = entry.file_type().unwrap();
+                    let prefix = if file_type.is_dir() {
+                        "[DIR]"
+                    } else {
+                        "[FILE]"
+                    };
+    
+                    paths.push(format!("{} {}", prefix, entry.path().display()));
+    
+                    if recursive && file_type.is_dir() {
+                        let sub_dir = entry.path().to_path_buf();
+                        let sub_paths: Vec<String> = task::spawn(async move {
+                            list_dir(&sub_dir, true).await.unwrap_or_default()
+                        })
+                        .await
+                        .map_err(|e| e.to_string())?;
+    
+                        paths.extend(sub_paths);
+                    }
                 }
-            }
-            Ok(paths)
+    
+                Ok(paths)
+            })
         }
-
-        let dir = std::path::Path::new(&input.path);
+    
+        let dir = Path::new(&input.path);
         let paths = list_dir(dir, input.recursive.unwrap_or(false)).await?;
         debug!("Found items {}", paths.join("\n"));
         Ok(paths)
     }
+    
 }
 
 #[async_trait::async_trait]
@@ -578,7 +606,7 @@ mod test {
         let _ = fs_write
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
-                content: "Hello, World!".to_string(),
+                content: Some("Hello, World!".to_string()),
             })
             .await
             .unwrap();

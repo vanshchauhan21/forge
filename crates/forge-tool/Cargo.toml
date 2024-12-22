@@ -16,6 +16,7 @@ Inflector = "0.11.4"
 forge-tool-macros = { path = "../forge-tool-macros" }
 forge-prompt = { path = "../forge-prompt" }
 schemars = "0.8.21"
+ignore = "0.4"
 
 [dev-dependencies]
 tempfile = "3.8.1"
