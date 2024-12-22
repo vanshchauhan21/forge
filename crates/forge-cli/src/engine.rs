@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
+use colorize::AnsiColor;
 use forge_prompt::UserPrompt;
 use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
 use futures::future::join_all;
 use serde_json::Value;
+use spinners::{Spinner, Spinners};
 use tracing::debug;
 
 use crate::cli::Cli;
@@ -34,7 +36,16 @@ impl Engine {
             .tools(self.tool_engine.list());
 
         loop {
+            println!("│");
+
+            let message = format!("{}", "API Request");
+            let mut sp = Spinner::new(Spinners::Dots, format!(" {}", message));
+
             let response = self.provider.chat(request.clone()).await?;
+
+            sp.stop();
+            println!("\r◉  {}", message);
+
             if !response.tool_use.is_empty() {
                 debug!("Tool use detected: {:?}", response.tool_use);
                 let results = join_all(
@@ -56,10 +67,28 @@ impl Engine {
     }
 
     async fn use_tool(&self, tool: ToolUse) -> ToolResult {
+        println!("{}", "│".yellow());
+
+        let message = format!(
+            "{} {}",
+            tool.tool_id
+                .as_str()
+                .to_string()
+                .to_ascii_lowercase()
+                .yellow()
+                .bold(),
+            serde_json::to_string(&tool.input).unwrap().grey()
+        );
+        let mut sp = Spinner::new(Spinners::Dots, format!(" {}", message));
+
         let result = self
             .tool_engine
             .call(&tool.tool_id, tool.input.clone())
             .await;
+
+        sp.stop();
+
+        println!("{}", format!("\r◉  {}", message).yellow());
 
         match result {
             Ok(content) => ToolResult { tool_use_id: tool.tool_use_id, content },

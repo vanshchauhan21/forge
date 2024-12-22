@@ -4,8 +4,8 @@ use tracing::level_filters::LevelFilter;
 #[derive(Default, Debug, Clone, ValueEnum)]
 pub enum LogLevel {
     Trace,
-    #[default]
     Debug,
+    #[default]
     Info,
     Warn,
     Error,

@@ -81,7 +81,11 @@ impl Router {
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
-        let id = std::any::type_name::<T>().to_snake_case();
+        let id = std::any::type_name::<T>()
+            .split("::")
+            .last()
+            .unwrap()
+            .to_snake_case();
         let executable = Box::new(JsonTool(tool));
         let tool = Tool {
             id: ToolId(id.clone()),
