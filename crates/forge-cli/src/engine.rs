@@ -47,7 +47,11 @@ impl Engine {
             println!("\r◉  {}", message);
 
             if !response.tool_use.is_empty() {
-                debug!("Tool use detected: {:?} /n items: {}", response.tool_use, response.tool_use.len());
+                debug!(
+                    "Tool use detected: {:?} /n items: {}",
+                    response.tool_use,
+                    response.tool_use.len()
+                );
                 let results = join_all(
                     response
                         .tool_use

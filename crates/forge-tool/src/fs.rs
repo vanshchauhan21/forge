@@ -1,12 +1,12 @@
 use std::path::Path;
+use std::pin::Pin;
 
 use forge_tool_macros::Description;
+use ignore::WalkBuilder;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::debug;
-use ignore::WalkBuilder;
-use std::pin::Pin;
 use tokio::task;
+use tracing::debug;
 
 use crate::{Description, ToolTrait};
 
@@ -140,27 +140,29 @@ impl ToolTrait for FSList {
         fn list_dir(dir: &Path, recursive: bool) -> BoxedFuture<'_, Result<Vec<String>, String>> {
             Box::pin(async move {
                 let mut paths = Vec::new();
-    
+
                 let walker = WalkBuilder::new(dir)
                     .hidden(false) // Ignore hidden files
                     .standard_filters(true) // Use `.gitignore` rules
                     .build();
-    
+
                 for result in walker {
                     let entry = result.map_err(|e| e.to_string())?;
-                    if !entry.file_type().map_or(false, |ft| ft.is_file() || ft.is_dir()) {
+                    if !entry
+                        .file_type().is_some_and(|ft| ft.is_file() || ft.is_dir())
+                    {
                         continue;
                     }
-    
+
                     let file_type = entry.file_type().unwrap();
                     let prefix = if file_type.is_dir() {
                         "[DIR]"
                     } else {
                         "[FILE]"
                     };
-    
+
                     paths.push(format!("{} {}", prefix, entry.path().display()));
-    
+
                     if recursive && file_type.is_dir() {
                         let sub_dir = entry.path().to_path_buf();
                         let sub_paths: Vec<String> = task::spawn(async move {
@@ -168,21 +170,20 @@ impl ToolTrait for FSList {
                         })
                         .await
                         .map_err(|e| e.to_string())?;
-    
+
                         paths.extend(sub_paths);
                     }
                 }
-    
+
                 Ok(paths)
             })
         }
-    
+
         let dir = Path::new(&input.path);
         let paths = list_dir(dir, input.recursive.unwrap_or(false)).await?;
         debug!("Found items {}", paths.join("\n"));
         Ok(paths)
     }
-    
 }
 
 #[async_trait::async_trait]
