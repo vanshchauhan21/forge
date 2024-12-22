@@ -166,11 +166,7 @@ impl ToolTrait for FSSearch {
             // For empty pattern
             if input.regex.is_empty() {
                 if seen_paths.insert(path.to_string()) {
-                    matches.push(format!(
-                        "File: {}\nLines 1-1:\n{}\n",
-                        path,
-                        path
-                    ));
+                    matches.push(format!("File: {}\nLines 1-1:\n{}\n", path, path));
                 }
                 continue;
             }
