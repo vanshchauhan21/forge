@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
-use futures::future::join_all;
 use serde_json::Value;
 use tracing::debug;
 
@@ -44,17 +43,12 @@ impl Engine {
                     response.tool_use,
                     response.tool_use.len()
                 );
-                let results = join_all(
-                    response
-                        .tool_use
-                        .into_iter()
-                        .map(|tool_use| self.use_tool(tool_use)),
-                )
-                .await;
 
-                debug!("Tool results: {:?} /n items: {}", results, results.len());
-
-                request = request.extend_tool_results(results);
+                // Should run the tool requests in sequence so that the UI preserves order
+                for tool in response.tool_use.into_iter() {
+                    let tool_result = self.use_tool(tool).await;
+                    request = request.add_tool_result(tool_result);
+                }
             } else {
                 let prompt = self.tui.ask(None).await?;
                 request = request.add_message(Message::try_from(prompt)?);
@@ -63,16 +57,29 @@ impl Engine {
     }
 
     async fn use_tool(&self, tool: ToolUse) -> ToolResult {
-        let engine = &self.tool_engine;
         let loader = Loader::start(tool.tool_id.as_str());
+        let engine = &self.tool_engine;
         let result = engine.call(&tool.tool_id, tool.input.clone()).await;
-        loader.stop();
-        match result {
+
+        debug!("Tool Results: {:?}", result);
+
+        let result = match result {
             Ok(content) => ToolResult { tool_use_id: tool.tool_use_id, content: content.clone() },
             Err(error) => ToolResult {
                 tool_use_id: tool.tool_use_id,
                 content: Value::from(error.to_owned()),
             },
-        }
+        };
+
+        loader.stop_with(
+            format!(
+                "{}\n{}",
+                tool.tool_id.as_str(),
+                result.content.to_string().as_str()
+            )
+            .as_str(),
+        );
+
+        result
     }
 }
