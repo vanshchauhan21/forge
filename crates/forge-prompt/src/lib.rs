@@ -7,6 +7,7 @@ use completion::Completion;
 pub use error::*;
 use futures::future::join_all;
 use futures::FutureExt;
+use inquire::ui::{RenderConfig, Styled};
 use prompt::Prompt;
 use serde::{Deserialize, Serialize};
 use walker::Walker;
@@ -35,9 +36,14 @@ impl UserPrompt {
     pub async fn ask(&self, message: Option<&str>) -> Result<PromptData> {
         let suggestions = self.walker.get()?;
         let completions = Completion::new(suggestions.iter().map(|s| format!("@{}", s)).collect());
-
+        let config = RenderConfig {
+            prompt_prefix: Styled::new("○"),
+            answered_prompt_prefix: Styled::new("◉"),
+            ..RenderConfig::default()
+        };
         let input = inquire::Text::new(message.unwrap_or(""))
             .with_autocomplete(completions)
+            .with_render_config(config)
             .prompt()?;
 
         let prompt = Prompt::parse(input).map_err(Error::Parse)?;

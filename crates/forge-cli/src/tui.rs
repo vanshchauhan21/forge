@@ -1,7 +1,8 @@
-use std::future::Future;
 use std::path::PathBuf;
+use std::{future::Future, usize};
 
 use forge_prompt::{PromptData, UserPrompt};
+use spinners::Spinner;
 
 use crate::Result;
 
@@ -20,21 +21,43 @@ impl Tui {
 
         Ok(input)
     }
+}
 
-    pub async fn task<A, F>(&self, title: &str, task: F) -> A
-    where
-        F: Future<Output = A>,
-    {
+pub struct Loader {
+    sp: Spinner,
+    title: String,
+}
+
+impl Loader {
+    pub fn start(title: &str) -> Self {
         println!("│");
-        let mut sp = spinners::Spinner::new(spinners::Spinners::Dots, format!(" {}", title));
-        let result = task.await;
-        sp.stop();
-        println!("\r◉  {}", title);
-
-        result
+        let sp = Spinner::new(spinners::Spinners::Dots, format!(" {}", title));
+        Self { sp, title: title.to_string() }
     }
 
-    pub fn item(&self, message: &str) {
-        message.lines().for_each(|line| println!("│  {}", line));
+    pub fn stop(self) {
+        let title = self.title.clone();
+        self.stop_with(title.as_str());
+    }
+    pub fn stop_with(mut self, text: &str) {
+        self.sp.stop();
+
+        let size = termsize::get()
+            .map(|u| u.cols as usize)
+            .unwrap_or(usize::MAX)
+            - 4;
+        print!("\r");
+        for line in text.lines() {
+            if line.len() > size {
+                let mut start = 0;
+                while start < line.len() {
+                    let end = std::cmp::min(start + size, line.len());
+                    println!("│  {}", &line[start..end]);
+                    start = end;
+                }
+            } else {
+                println!("│  {}", line);
+            }
+        }
     }
 }
