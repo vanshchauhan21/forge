@@ -1,9 +1,9 @@
 mod console;
 mod fs;
-pub mod shell;
 #[allow(unused)]
 mod mcp;
 mod router;
+pub mod shell;
 mod think;
 pub use router::*;
 

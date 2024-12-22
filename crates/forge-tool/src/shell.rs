@@ -22,8 +22,8 @@ pub struct ShellOutput {
 }
 
 /// Execute shell commands with safety checks and validation. This tool provides
-/// controlled access to system shell commands while preventing dangerous operations
-/// through a comprehensive blacklist and validation system.
+/// controlled access to system shell commands while preventing dangerous
+/// operations through a comprehensive blacklist and validation system.
 #[derive(Description)]
 pub struct Shell {
     blacklist: HashSet<String>,
@@ -37,7 +37,7 @@ impl Default for Shell {
         blacklist.insert("rmdir".to_string());
         blacklist.insert("del".to_string());
 
-        // Disk/Filesystem Commands  
+        // Disk/Filesystem Commands
         blacklist.insert("format".to_string());
         blacklist.insert("mkfs".to_string());
         blacklist.insert("dd".to_string());
@@ -125,9 +125,7 @@ mod tests {
     async fn test_shell_echo() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "echo 'Hello, World!'".to_string(),
-            })
+            .call(ShellInput { command: "echo 'Hello, World!'".to_string() })
             .await
             .unwrap();
 
@@ -140,9 +138,7 @@ mod tests {
     async fn test_shell_invalid_command() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "nonexistentcommand".to_string(),
-            })
+            .call(ShellInput { command: "nonexistentcommand".to_string() })
             .await
             .unwrap();
 
@@ -154,9 +150,7 @@ mod tests {
     async fn test_shell_blacklisted_command() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "rm -rf /".to_string(),
-            })
+            .call(ShellInput { command: "rm -rf /".to_string() })
             .await;
 
         assert!(result.is_err());
@@ -176,9 +170,7 @@ mod tests {
     async fn test_shell_pwd() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "pwd".to_string(),
-            })
+            .call(ShellInput { command: "pwd".to_string() })
             .await
             .unwrap();
 
@@ -191,9 +183,7 @@ mod tests {
     async fn test_shell_multiple_commands() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "echo 'first' && echo 'second'".to_string(),
-            })
+            .call(ShellInput { command: "echo 'first' && echo 'second'".to_string() })
             .await
             .unwrap();
 
@@ -207,9 +197,7 @@ mod tests {
     async fn test_shell_with_environment_variables() {
         let shell = Shell::default();
         let result = shell
-            .call(ShellInput {
-                command: "echo $PATH".to_string(),
-            })
+            .call(ShellInput { command: "echo $PATH".to_string() })
             .await
             .unwrap();
 
