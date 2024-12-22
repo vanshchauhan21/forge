@@ -7,7 +7,12 @@ use serde_json::Value;
 use tracing::debug;
 
 use crate::console::{ReadLine, WriteLine};
-use crate::fs::{FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite};
+use crate::fs::file_info::FSFileInfo;
+use crate::fs::list::FSList;
+use crate::fs::read::FSRead;
+use crate::fs::replace::FSReplace;
+use crate::fs::search::FSSearch;
+use crate::fs::write::FSWrite;
 use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;

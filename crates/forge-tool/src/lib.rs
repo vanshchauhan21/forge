@@ -1,5 +1,5 @@
 mod console;
-mod fs;
+pub mod fs;
 #[allow(unused)]
 mod mcp;
 mod outline;
