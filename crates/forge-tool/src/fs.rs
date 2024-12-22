@@ -1,8 +1,9 @@
 use std::path::Path;
 use std::pin::Pin;
+use std::collections::HashSet;
 
 use forge_tool_macros::Description;
-use ignore::WalkBuilder;
+use walkdir::WalkDir;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tokio::task;
@@ -17,8 +18,15 @@ pub struct FSReadInput {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {
-    pub dir: String,
-    pub pattern: String,
+    pub path: String,
+    pub regex: String,
+    pub file_pattern: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FSReplaceInput {
+    pub path: String,
+    pub diff: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -38,11 +46,10 @@ pub struct FSFileInfoInput {
 /// Only works within allowed directories.
 #[derive(Description)]
 pub(crate) struct FSRead;
-/// Recursively search for files and directories matching a pattern. Searches
-/// through all subdirectories from the starting path. The search is
-/// case-insensitive and matches partial names. Returns full paths to all
-/// matching items. Great for finding files when you don't know their exact
-/// location. Only searches within allowed directories.
+/// Recursively search through file contents using regex patterns. Provides context
+/// around matches and supports filtering by file patterns. Returns matches with
+/// surrounding lines for better context understanding. Great for finding code
+/// patterns or specific content across multiple files.
 #[derive(Description)]
 pub(crate) struct FSSearch;
 /// Get a detailed listing of all files and directories in a specified path.
@@ -97,35 +104,206 @@ impl ToolTrait for FSRead {
     }
 }
 
+/// Replace content in a file using SEARCH/REPLACE blocks. Each block defines
+/// exact changes to make to specific parts of the file. Supports multiple blocks
+/// for complex changes while preserving file formatting and structure.
+#[derive(Description)]
+pub(crate) struct FSReplace;
+
 #[async_trait::async_trait]
 impl ToolTrait for FSSearch {
     type Input = FSSearchInput;
     type Output = Vec<String>;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let pattern = input.pattern.to_lowercase();
+        use regex::Regex;
+        use walkdir::WalkDir;
 
-        async fn search(dir: &std::path::Path, pattern: &str) -> Result<Vec<String>, String> {
-            let mut matches = Vec::new();
-            let mut walker = tokio::fs::read_dir(dir).await.map_err(|e| e.to_string())?;
+        let dir = Path::new(&input.path);
+        if !dir.exists() {
+            return Err("Directory does not exist".to_string());
+        }
 
-            while let Some(entry) = walker.next_entry().await.map_err(|e| e.to_string())? {
-                let path = entry.path();
-                if let Some(name) = path.file_name() {
-                    let name = name.to_string_lossy().to_lowercase();
-                    if name.contains(pattern) {
-                        matches.push(path.to_string_lossy().to_string());
+        // Create case-insensitive regex pattern
+        let pattern = if input.regex.is_empty() {
+            ".*".to_string()
+        } else {
+            format!("(?i){}", regex::escape(&input.regex)) // Add back regex::escape for literal matches
+        };
+        let regex = Regex::new(&pattern).map_err(|e| e.to_string())?;
+
+        let mut matches = Vec::new();
+        let mut seen_paths = HashSet::new();
+        let walker = WalkDir::new(dir)
+            .follow_links(false)
+            .same_file_system(true)
+            .into_iter();
+
+        let entries = if let Some(ref pattern) = input.file_pattern {
+            let glob = glob::Pattern::new(pattern).map_err(|e| e.to_string())?;
+            walker
+                .filter_entry(move |e| {
+                    if !e.file_type().is_file() {
+                        return true; // Keep traversing directories
+                    }
+                    e.file_name()
+                        .to_str()
+                        .map(|name| glob.matches(name))
+                        .unwrap_or(false)
+                })
+                .filter_map(Result::ok)
+                .collect::<Vec<_>>()
+        } else {
+            walker.filter_map(Result::ok).collect::<Vec<_>>()
+        };
+
+        for entry in entries {
+            let path = entry.path().to_string_lossy();
+
+            let name = entry.file_name().to_string_lossy();
+            let is_file = entry.file_type().is_file();
+            let is_dir = entry.file_type().is_dir();
+
+            // For empty pattern
+            if input.regex.is_empty() {
+                if seen_paths.insert(path.to_string()) {
+                    matches.push(format!(
+                        "File: {}\nLines 1-1:\n{}\n",
+                        path, path.to_string()
+                    ));
+                }
+                continue;
+            }
+
+            // Check filename and directory name for match
+            if regex.is_match(&name) {
+                if seen_paths.insert(path.to_string()) {
+                    matches.push(format!(
+                        "File: {}\nLines 1-1:\n{}\n",
+                        path, name
+                    ));
+                }
+                if !is_file {
+                    continue;
+                }
+            }
+
+            // Skip content check for directories
+            if !is_file {
+                continue;
+            }
+
+            // Skip content check if already matched by name
+            if seen_paths.contains(&path.to_string()) {
+                continue;
+            }
+
+            // Check file content
+            let content = match tokio::fs::read_to_string(entry.path()).await {
+                Ok(content) => content,
+                Err(_) => continue,
+            };
+
+            let lines: Vec<&str> = content.lines().collect();
+            let mut content_matches = Vec::new();
+            
+            for (line_num, line) in lines.iter().enumerate() {
+                if regex.is_match(line) {
+                    // Get context (3 lines before and after)
+                    let start = line_num.saturating_sub(3);
+                    let end = (line_num + 4).min(lines.len());
+                    let context = lines[start..end].join("\n");
+
+                    content_matches.push(format!(
+                        "File: {}\nLines {}-{}:\n{}\n",
+                        path,
+                        start + 1,
+                        end,
+                        context
+                    ));
+                }
+            }
+
+            if !content_matches.is_empty() {
+                matches.extend(content_matches);
+                seen_paths.insert(path.to_string());
+            }
+        }
+
+        Ok(matches)
+    }
+}
+
+#[async_trait::async_trait]
+impl ToolTrait for FSReplace {
+    type Input = FSReplaceInput;
+    type Output = String;
+
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        let content = tokio::fs::read_to_string(&input.path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let mut result = content;
+        let blocks: Vec<&str> = input.diff.split(">>>>>>> REPLACE").collect();
+
+        for block in blocks {
+            if block.trim().is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = block.split("=======").collect();
+            if parts.len() != 2 {
+                continue;
+            }
+
+            let search = parts[0]
+                .trim_start_matches("<<<<<<< SEARCH")
+                .trim();
+            let replace = parts[1].trim();
+
+            // Process one replacement at a time to maintain order
+            let lines: Vec<&str> = result.lines().collect();
+            let mut new_lines = Vec::new();
+            let mut i = 0;
+
+            while i < lines.len() {
+                let mut found = false;
+                let search_lines: Vec<&str> = search.lines().collect();
+                
+                if i + search_lines.len() <= lines.len() {
+                    let mut matches = true;
+                    for (j, search_line) in search_lines.iter().enumerate() {
+                        if lines[i + j].trim() != search_line.trim() {
+                            matches = false;
+                            break;
+                        }
+                    }
+                    if matches {
+                        if replace.is_empty() {
+                            new_lines.push("");
+                        } else {
+                            new_lines.extend(replace.lines());
+                        }
+                        i += search_lines.len();
+                        found = true;
                     }
                 }
 
-                if path.is_dir() {
-                    matches.extend(Box::pin(search(&path, pattern)).await?);
+                if !found {
+                    new_lines.push(lines[i]);
+                    i += 1;
                 }
             }
-            Ok(matches)
+
+            result = new_lines.join("\n");
         }
 
-        Ok(Box::pin(search(std::path::Path::new(&input.dir), &pattern)).await?)
+        tokio::fs::write(&input.path, result)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(format!("Successfully replaced content in {}", input.path))
     }
 }
 
@@ -137,51 +315,35 @@ impl ToolTrait for FSList {
     type Output = Vec<String>;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        fn list_dir(dir: &Path, recursive: bool) -> BoxedFuture<'_, Result<Vec<String>, String>> {
-            Box::pin(async move {
-                let mut paths = Vec::new();
-
-                let walker = WalkBuilder::new(dir)
-                    .hidden(false) // Ignore hidden files
-                    .standard_filters(true) // Use `.gitignore` rules
-                    .build();
-
-                for result in walker {
-                    let entry = result.map_err(|e| e.to_string())?;
-                    if !entry
-                        .file_type()
-                        .is_some_and(|ft| ft.is_file() || ft.is_dir())
-                    {
-                        continue;
-                    }
-
-                    let file_type = entry.file_type().unwrap();
-                    let prefix = if file_type.is_dir() {
-                        "[DIR]"
-                    } else {
-                        "[FILE]"
-                    };
-
-                    paths.push(format!("{} {}", prefix, entry.path().display()));
-
-                    if recursive && file_type.is_dir() {
-                        let sub_dir = entry.path().to_path_buf();
-                        let sub_paths: Vec<String> = task::spawn(async move {
-                            list_dir(&sub_dir, true).await.unwrap_or_default()
-                        })
-                        .await
-                        .map_err(|e| e.to_string())?;
-
-                        paths.extend(sub_paths);
-                    }
-                }
-
-                Ok(paths)
-            })
+        let dir = Path::new(&input.path);
+        if !dir.exists() {
+            return Err("Directory does not exist".to_string());
         }
 
-        let dir = Path::new(&input.path);
-        let paths = list_dir(dir, input.recursive.unwrap_or(false)).await?;
+        let mut paths = Vec::new();
+        let recursive = input.recursive.unwrap_or(false);
+        let max_depth = if recursive { std::usize::MAX } else { 1 };
+
+        let walker = WalkDir::new(dir)
+            .min_depth(0)
+            .max_depth(max_depth)
+            .follow_links(false)
+            .same_file_system(true)
+            .into_iter();
+
+        for entry in walker.filter_map(Result::ok) {
+            // Skip the root directory itself
+            if entry.path() == dir {
+                continue;
+            }
+
+            let file_type = entry.file_type();
+            if file_type.is_file() || file_type.is_dir() {
+                let prefix = if file_type.is_dir() { "[DIR]" } else { "[FILE]" };
+                paths.push(format!("{} {}", prefix, entry.path().display()));
+            }
+        }
+
         debug!("Found items {}", paths.join("\n"));
         Ok(paths)
     }
@@ -397,31 +559,86 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_fs_search_basic() {
+    async fn test_fs_search_content() {
         let temp_dir = TempDir::new().unwrap();
 
-        fs::write(temp_dir.path().join("test1.txt"), "")
+        fs::write(temp_dir.path().join("test1.txt"), "Hello test world")
             .await
             .unwrap();
-        fs::write(temp_dir.path().join("test2.txt"), "")
+        fs::write(temp_dir.path().join("test2.txt"), "Another test case")
             .await
             .unwrap();
-        fs::write(temp_dir.path().join("other.txt"), "")
+        fs::write(temp_dir.path().join("other.txt"), "No match here")
             .await
             .unwrap();
 
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: temp_dir.path().to_string_lossy().to_string(),
-                pattern: "test".to_string(),
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
             })
             .await
             .unwrap();
 
         assert_eq!(result.len(), 2);
-        assert!(result.iter().any(|p| p.ends_with("test1.txt")));
-        assert!(result.iter().any(|p| p.ends_with("test2.txt")));
+        assert!(result.iter().any(|p| p.contains("test1.txt")));
+        assert!(result.iter().any(|p| p.contains("test2.txt")));
+        assert!(result.iter().all(|p| p.contains("Lines")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_with_pattern() {
+        let temp_dir = TempDir::new().unwrap();
+
+        fs::write(temp_dir.path().join("test1.txt"), "Hello test world")
+            .await
+            .unwrap();
+        fs::write(temp_dir.path().join("test2.rs"), "fn test() {}")
+            .await
+            .unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call(FSSearchInput {
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: Some("*.rs".to_string()),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert!(result.iter().any(|p| p.contains("test2.rs")));
+    }
+
+    #[tokio::test]
+    async fn test_fs_search_with_context() {
+        let temp_dir = TempDir::new().unwrap();
+        let content = "line 1\nline 2\ntest line\nline 4\nline 5";
+
+        fs::write(temp_dir.path().join("test.txt"), content)
+            .await
+            .unwrap();
+
+        let fs_search = FSSearch;
+        let result = fs_search
+            .call(FSSearchInput {
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        let output = &result[0];
+        assert!(output.contains("line 1"));
+        assert!(output.contains("line 2"));
+        assert!(output.contains("test line"));
+        assert!(output.contains("line 4"));
+        assert!(output.contains("line 5"));
     }
 
     #[tokio::test]
@@ -440,8 +657,9 @@ mod test {
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: temp_dir.path().to_string_lossy().to_string(),
-                pattern: "test".to_string(),
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
             })
             .await
             .unwrap();
@@ -465,8 +683,9 @@ mod test {
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: temp_dir.path().to_string_lossy().to_string(),
-                pattern: "test".to_string(),
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
             })
             .await
             .unwrap();
@@ -487,8 +706,9 @@ mod test {
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: temp_dir.path().to_string_lossy().to_string(),
-                pattern: "".to_string(),
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "".to_string(),
+                file_pattern: None,
             })
             .await
             .unwrap();
@@ -505,8 +725,9 @@ mod test {
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: nonexistent_dir.to_string_lossy().to_string(),
-                pattern: "test".to_string(),
+                path: nonexistent_dir.to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
             })
             .await;
 
@@ -530,8 +751,9 @@ mod test {
         let fs_search = FSSearch;
         let result = fs_search
             .call(FSSearchInput {
-                dir: temp_dir.path().to_string_lossy().to_string(),
-                pattern: "test".to_string(),
+                path: temp_dir.path().to_string_lossy().to_string(),
+                regex: "test".to_string(),
+                file_pattern: None,
             })
             .await
             .unwrap();
@@ -614,5 +836,97 @@ mod test {
             .unwrap();
         let s = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(s, "Hello, World!")
+    }
+
+    #[tokio::test]
+    async fn test_fs_replace_single_block() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        let content = "Hello World\nTest Line\nGoodbye World";
+
+        fs::write(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nHello World\n=======\nHi World\n>>>>>>> REPLACE".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully replaced"));
+
+        let new_content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(new_content, "Hi World\nTest Line\nGoodbye World");
+    }
+
+    #[tokio::test]
+    async fn test_fs_replace_multiple_blocks() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        let content = "Hello World\nTest Line\nGoodbye World";
+
+        fs::write(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nHello World\n=======\nHi World\n>>>>>>> REPLACE\n\n<<<<<<< SEARCH\nGoodbye World\n=======\nBye World\n>>>>>>> REPLACE".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully replaced"));
+
+        let new_content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(new_content, "Hi World\nTest Line\nBye World");
+    }
+
+    #[tokio::test]
+    async fn test_fs_replace_no_match() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        let content = "Hello World\nTest Line\nGoodbye World";
+
+        fs::write(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nNo Match\n=======\nReplacement\n>>>>>>> REPLACE".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully replaced"));
+
+        let new_content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(new_content, content);
+    }
+
+    #[tokio::test]
+    async fn test_fs_replace_empty_block() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        let content = "Hello World\nTest Line\nGoodbye World";
+
+        fs::write(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nTest Line\n=======\n>>>>>>> REPLACE".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully replaced"));
+
+        let new_content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(new_content, "Hello World\n\nGoodbye World");
     }
 }

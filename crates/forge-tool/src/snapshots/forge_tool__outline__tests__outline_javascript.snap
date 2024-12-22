@@ -1,0 +1,10 @@
+---
+source: crates/forge-tool/src/outline.rs
+expression: result
+---
+test.js
+│function calculateTotal(items) {
+|----
+│class ShoppingCart {
+|----
+│addItem(item) {

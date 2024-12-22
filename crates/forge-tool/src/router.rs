@@ -7,7 +7,8 @@ use serde_json::Value;
 use tracing::debug;
 
 use crate::console::{ReadLine, WriteLine};
-use crate::fs::{FSFileInfo, FSList, FSRead, FSSearch, FSWrite};
+use crate::fs::{FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite};
+use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
 use crate::{Description, ToolTrait};
@@ -107,6 +108,8 @@ impl Default for Router {
             Router::import(FSList),
             Router::import(FSFileInfo),
             Router::import(FSWrite),
+            Router::import(FSReplace),
+            Router::import(Outline),
             Router::import(Think::default()),
             Router::import(ReadLine::default()),
             Router::import(WriteLine),

@@ -2,6 +2,7 @@ mod console;
 mod fs;
 #[allow(unused)]
 mod mcp;
+mod outline;
 mod router;
 pub mod shell;
 mod think;

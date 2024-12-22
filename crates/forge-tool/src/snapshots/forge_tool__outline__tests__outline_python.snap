@@ -1,0 +1,11 @@
+---
+source: crates/forge-tool/src/outline.rs
+expression: result
+---
+test.py
+│def greet(name):
+|----
+│class Person:
+│def __init__(self, name):
+|----
+│def say_hello(self):
