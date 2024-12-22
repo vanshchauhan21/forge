@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-use colorize::AnsiColor;
-use forge_prompt::UserPrompt;
 use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
@@ -12,11 +10,12 @@ use tracing::debug;
 
 use crate::cli::Cli;
 use crate::error::Result;
+use crate::tui::Tui;
 
 pub struct Engine {
     tool_engine: Router,
     provider: Provider,
-    prompt: UserPrompt,
+    tui: Tui,
 }
 
 impl Engine {
@@ -24,27 +23,21 @@ impl Engine {
         Self {
             tool_engine: Router::default(),
             provider: Provider::open_router(cli.key, cli.model, cli.base_url),
-            prompt: UserPrompt::new(cwd),
+            tui: Tui::new(cwd),
         }
     }
 
     pub async fn launch(&self) -> Result<()> {
-        let prompt = self.prompt.ask(None).await?;
+        let prompt = self.tui.ask(None).await?;
         let mut request = Request::default()
             .add_message(Message::system(include_str!("./prompts/system.md")))
             .add_message(Message::try_from(prompt)?)
             .tools(self.tool_engine.list());
 
         loop {
-            println!("│");
-
-            let message = "API Request".to_string();
-            let mut sp = Spinner::new(Spinners::Dots, format!(" {}", message));
+            let message = format!("{}", "API Request");
 
             let response = self.provider.chat(request.clone()).await?;
-
-            sp.stop();
-            println!("\r◉  {}", message);
 
             if !response.tool_use.is_empty() {
                 debug!(
@@ -64,39 +57,29 @@ impl Engine {
 
                 request = request.extend_tool_results(results);
             } else {
-                let prompt = self.prompt.ask(None).await?;
+                let prompt = self.tui.ask(None).await?;
                 request = request.add_message(Message::try_from(prompt)?);
             }
         }
     }
 
     async fn use_tool(&self, tool: ToolUse) -> ToolResult {
-        println!("{}", "│".yellow());
+        let engine = &self.tool_engine;
 
-        let message = format!(
-            "{} {}",
-            tool.tool_id
-                .as_str()
-                .to_string()
-                .to_ascii_lowercase()
-                .yellow()
-                .bold(),
-            serde_json::to_string(&tool.input).unwrap().grey()
-        );
-        let mut sp = Spinner::new(Spinners::Dots, format!(" {}", message));
+        self.tui
+            .task(tool.tool_id.clone().as_str(), async move {
+                let result = engine.call(&tool.tool_id, tool.input.clone()).await;
 
-        let result = self
-            .tool_engine
-            .call(&tool.tool_id, tool.input.clone())
-            .await;
-
-        sp.stop();
-
-        println!("{}", format!("\r◉  {}", message).yellow());
-
-        match result {
-            Ok(content) => ToolResult { tool_use_id: tool.tool_use_id, content },
-            Err(error) => ToolResult { tool_use_id: tool.tool_use_id, content: Value::from(error) },
-        }
+                match result {
+                    Ok(content) => {
+                        ToolResult { tool_use_id: tool.tool_use_id, content: content.clone() }
+                    }
+                    Err(error) => ToolResult {
+                        tool_use_id: tool.tool_use_id,
+                        content: Value::from(error.to_owned()),
+                    },
+                }
+            })
+            .await
     }
 }
