@@ -8,6 +8,7 @@ use tracing::debug;
 
 use crate::console::{ReadLine, WriteLine};
 use crate::fs::{FSFileInfo, FSList, FSRead, FSSearch, FSWrite};
+use crate::shell::Shell;
 use crate::think::Think;
 use crate::{Description, ToolTrait};
 
@@ -109,6 +110,7 @@ impl Default for Router {
             Router::import(Think::default()),
             Router::import(ReadLine::default()),
             Router::import(WriteLine),
+            Router::import(Shell::default()),
         ]);
 
         Self { tools }

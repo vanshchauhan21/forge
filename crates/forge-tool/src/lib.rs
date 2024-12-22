@@ -1,5 +1,6 @@
 mod console;
 mod fs;
+pub mod shell;
 #[allow(unused)]
 mod mcp;
 mod router;
