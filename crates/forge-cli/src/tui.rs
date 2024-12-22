@@ -12,6 +12,7 @@ impl Tui {
     }
 
     pub async fn ask(&self, prompt: Option<&str>) -> Result<ResolvePrompt> {
+        println!("│");
         Ok(self.prompt.ask(prompt).await?)
     }
 

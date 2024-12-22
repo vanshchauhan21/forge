@@ -1,16 +1,14 @@
 use std::path::PathBuf;
 
+use crate::cli::Cli;
+use crate::error::Result;
+use crate::tui::Tui;
 use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
 use futures::future::join_all;
 use serde_json::Value;
-use spinners::{Spinner, Spinners};
 use tracing::debug;
-
-use crate::cli::Cli;
-use crate::error::Result;
-use crate::tui::Tui;
 
 pub struct Engine {
     tool_engine: Router,
@@ -35,9 +33,10 @@ impl Engine {
             .tools(self.tool_engine.list());
 
         loop {
-            let message = format!("{}", "API Request");
-
-            let response = self.provider.chat(request.clone()).await?;
+            let response = self
+                .tui
+                .task("API Request", self.provider.chat(request.clone()))
+                .await?;
 
             if !response.tool_use.is_empty() {
                 debug!(
