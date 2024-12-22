@@ -1,9 +1,0 @@
----
-source: crates/forge-outline/src/lib.rs
-expression: result
----
-test.rs
-│fn test_function() {}
-|----
-test.js
-│function jsFunction() {}

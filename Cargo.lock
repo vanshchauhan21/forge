@@ -638,18 +638,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "forge-outline"
-version = "0.1.0"
-dependencies = [
- "insta",
- "tempfile",
- "tree-sitter",
- "tree-sitter-javascript",
- "tree-sitter-python",
- "tree-sitter-rust",
-]
-
-[[package]]
 name = "forge-prompt"
 version = "0.1.0"
 dependencies = [
