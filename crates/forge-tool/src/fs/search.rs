@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::path::Path;
+
+use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use walkdir::WalkDir;
 
 use crate::{Description, ToolTrait};
-use forge_tool_macros::Description as DescriptionDerive;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {
@@ -141,9 +141,10 @@ impl ToolTrait for FSSearch {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_fs_search_content() {

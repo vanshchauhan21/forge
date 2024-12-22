@@ -1,11 +1,12 @@
 use std::path::Path;
+
+use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tracing::debug;
 use walkdir::WalkDir;
 
 use crate::{Description, ToolTrait};
-use forge_tool_macros::Description as DescriptionDerive;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
@@ -69,9 +70,10 @@ impl ToolTrait for FSList {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_fs_list_empty_directory() {

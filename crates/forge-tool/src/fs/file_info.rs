@@ -1,8 +1,8 @@
+use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{Description, ToolTrait};
-use forge_tool_macros::Description as DescriptionDerive;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFileInfoInput {
@@ -31,9 +31,10 @@ impl ToolTrait for FSFileInfo {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_fs_file_info_on_file() {

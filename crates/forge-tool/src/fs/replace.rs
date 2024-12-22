@@ -1,8 +1,8 @@
+use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{Description, ToolTrait};
-use forge_tool_macros::Description as DescriptionDerive;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReplaceInput {
@@ -29,7 +29,11 @@ impl ToolTrait for FSReplace {
         let mut result = content;
 
         // Process each block
-        for block in input.diff.split(">>>>>>> REPLACE").filter(|b| !b.trim().is_empty()) {
+        for block in input
+            .diff
+            .split(">>>>>>> REPLACE")
+            .filter(|b| !b.trim().is_empty())
+        {
             let parts: Vec<&str> = block.split("=======").collect();
             if parts.len() != 2 {
                 continue;
@@ -43,7 +47,7 @@ impl ToolTrait for FSReplace {
             let replace_lines: Vec<&str> = replace.lines().collect();
 
             // Convert current content to lines
-            let mut lines: Vec<String> = result.lines().map(|s| s.to_string()).collect();
+            let lines: Vec<String> = result.lines().map(|s| s.to_string()).collect();
             let mut new_lines = Vec::new();
             let mut i = 0;
 
@@ -83,9 +87,10 @@ impl ToolTrait for FSReplace {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_fs_replace_single_block() {
@@ -122,10 +127,7 @@ mod test {
         let diff = "<<<<<<< SEARCH\nHello World\n=======\nHi World\n>>>>>>> REPLACE\n\n<<<<<<< SEARCH\nGoodbye World\n=======\nBye World\n>>>>>>> REPLACE".to_string();
 
         let result = fs_replace
-            .call(FSReplaceInput {
-                path: file_path.to_string_lossy().to_string(),
-                diff,
-            })
+            .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
             .unwrap();
 

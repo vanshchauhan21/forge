@@ -1,8 +1,8 @@
+use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{Description, ToolTrait};
-use forge_tool_macros::Description as DescriptionDerive;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
@@ -31,9 +31,10 @@ impl ToolTrait for FSWrite {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use tempfile::TempDir;
     use tokio::fs;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_fs_write_success() {
