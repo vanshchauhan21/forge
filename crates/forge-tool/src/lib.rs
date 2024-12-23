@@ -1,13 +1,16 @@
 mod fs;
-pub use fs::*;
+
 #[allow(unused)]
 mod mcp;
 mod outline;
 mod router;
-pub mod shell;
+mod shell;
 mod think;
+
+pub use fs::*;
 pub use outline::*;
 pub use router::*;
+pub use shell::*;
 
 #[async_trait::async_trait]
 pub(crate) trait ToolTrait {
