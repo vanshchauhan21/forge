@@ -4,6 +4,7 @@ use forge_provider::model::{Message, Request, ToolResult, ToolUse};
 use forge_provider::Provider;
 use forge_tool::Router;
 use serde_json::Value;
+use tokio::sync::broadcast;
 use tracing::debug;
 
 use crate::cli::Cli;
@@ -14,14 +15,16 @@ pub struct Engine {
     tool_engine: Router,
     provider: Provider,
     tui: Tui,
+    tx: broadcast::Sender<String>,
 }
 
 impl Engine {
-    pub fn new(cli: Cli, cwd: PathBuf) -> Self {
+    pub fn new(cli: Cli, cwd: PathBuf, tx: broadcast::Sender<String>) -> Self {
         Self {
             tool_engine: Router::default(),
             provider: Provider::open_router(cli.key, cli.model, cli.base_url),
             tui: Tui::new(cwd),
+            tx,
         }
     }
 
@@ -35,7 +38,11 @@ impl Engine {
         loop {
             let l = Loader::start("Processing...");
             let response = self.provider.chat(request.clone()).await?;
-            l.stop_with(response.message.content.as_str());
+            let content = response.message.content.as_str();
+            l.stop_with(content);
+            
+            // Broadcast the message through SSE
+            let _ = self.tx.send(content.to_string());
 
             if !response.tool_use.is_empty() {
                 debug!(
