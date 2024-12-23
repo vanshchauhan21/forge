@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/conversation", get(conversation_handler))
         .route("/completions", get(completions_handler))
+        .route("/health", get(health_handler))
         .layer(CorsLayer::new().allow_origin(Any))
         .with_state(state.clone());
 
@@ -60,4 +61,11 @@ async fn conversation_handler(
     State(state): State<Arc<app::AppState<String>>>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, Infallible>>> {
     Sse::new(state.as_stream().await)
+}
+
+async fn health_handler() -> axum::response::Response {
+    axum::response::Response::builder()
+        .status(200)
+        .body(axum::body::Body::empty())
+        .unwrap()
 }
