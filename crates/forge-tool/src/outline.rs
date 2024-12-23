@@ -288,6 +288,11 @@ class Person:
             .await
             .unwrap();
 
+        let seperator = "\n|----\n";
+        let mut result = result.split(seperator).collect::<Vec<_>>();
+        result.sort();
+        result = result.iter().map(|x| x.trim()).collect();
+        let result = result.join(seperator);
         assert_snapshot!("outline_multiple_files", result);
     }
 

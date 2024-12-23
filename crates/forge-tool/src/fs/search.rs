@@ -222,6 +222,12 @@ mod test {
 
         assert_eq!(result.len(), 1);
         let output = &result[0];
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), 3);
+
+        let output_path = lines[0].split(' ').last().unwrap();
+        let output = std::fs::read_to_string(output_path).unwrap();
+
         assert!(output.contains("line 1"));
         assert!(output.contains("line 2"));
         assert!(output.contains("test line"));
