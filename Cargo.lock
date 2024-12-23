@@ -685,6 +685,7 @@ dependencies = [
  "indoc",
  "inquire",
  "pretty_assertions",
+ "serde",
  "serde_json",
  "spinners",
  "termsize",

@@ -3,10 +3,12 @@ use std::path::Path;
 use std::sync::Arc;
 
 use axum::extract::State;
+mod completion;
 use axum::response::sse::{Event, Sse};
 use axum::routing::get;
 use axum::Router;
 use clap::Parser;
+use completion::{get_completions, Completion};
 use forge_cli::cli::Cli;
 use forge_cli::{Engine, Result};
 use futures::stream::{self, Stream};
@@ -67,6 +69,7 @@ async fn main() -> Result<()> {
     // Setup HTTP server
     let app = Router::new()
         .route("/conversation", get(conversation_handler))
+        .route("/completions", get(completions_handler))
         .layer(CorsLayer::new().allow_origin(Any))
         .with_state(state.clone());
 
@@ -87,4 +90,9 @@ async fn main() -> Result<()> {
     let _ = server.await;
 
     Ok(())
+}
+
+async fn completions_handler() -> axum::Json<Vec<Completion>> {
+    let completions = get_completions().await;
+    axum::Json(completions)
 }
