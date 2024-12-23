@@ -2,6 +2,8 @@ use std::convert::Infallible;
 use std::sync::Arc;
 
 use axum::extract::State;
+
+mod app;
 mod completion;
 use axum::response::sse::{Event, Sse};
 use axum::routing::get;
@@ -10,47 +12,9 @@ use clap::Parser;
 use completion::{get_completions, Completion};
 use forge_cli::cli::Cli;
 use forge_cli::Result;
-use futures::stream::{self, Stream};
-use serde::Serialize;
-use tokio::sync::broadcast;
+use futures::stream::Stream;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
-
-// Shared state between HTTP server and CLI
-#[derive(Clone)]
-struct AppState<T> {
-    tx: broadcast::Sender<String>,
-    _t: std::marker::PhantomData<T>,
-}
-
-impl<T> Default for AppState<T> {
-    fn default() -> Self {
-        let (tx, _) = broadcast::channel::<String>(100);
-        Self { tx, _t: Default::default() }
-    }
-}
-
-impl<T: Serialize> AppState<T> {
-    #[allow(unused)]
-    pub fn dispatch(&self, event: T) -> Result<usize> {
-        let json = serde_json::to_string(&event)?;
-        Ok(self.tx.send(json)?)
-    }
-
-    pub async fn as_stream(&self) -> impl Stream<Item = std::result::Result<Event, Infallible>> {
-        let rx = self.tx.subscribe();
-
-        stream::unfold(rx, |mut rx| async move {
-            match rx.recv().await {
-                Ok(msg) => {
-                    let event = Event::default().data(msg);
-                    Some((Ok(event), rx))
-                }
-                Err(_) => None,
-            }
-        })
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,7 +27,7 @@ async fn main() -> Result<()> {
 
     // Create broadcast channel for SSE
 
-    let state = Arc::new(AppState::<String>::default());
+    let state = Arc::new(app::AppState::<String>::default());
 
     // Setup HTTP server
     let app = Router::new()
@@ -92,7 +56,7 @@ async fn completions_handler() -> axum::Json<Vec<Completion>> {
 }
 
 async fn conversation_handler(
-    State(state): State<Arc<AppState<String>>>,
+    State(state): State<Arc<app::AppState<String>>>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, Infallible>>> {
     Sse::new(state.as_stream().await)
 }
