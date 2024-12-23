@@ -6,16 +6,11 @@ use schemars::{schema_for, JsonSchema};
 use serde_json::Value;
 use tracing::debug;
 
-use crate::fs::file_info::FSFileInfo;
-use crate::fs::list::FSList;
-use crate::fs::read::FSRead;
-use crate::fs::replace::FSReplace;
-use crate::fs::search::FSSearch;
-use crate::fs::write::FSWrite;
-use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
-use crate::{Description, ToolTrait};
+use crate::{
+    Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, ToolTrait,
+};
 
 struct JsonTool<T>(T);
 

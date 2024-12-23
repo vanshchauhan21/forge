@@ -1,10 +1,12 @@
-pub mod fs;
+mod fs;
+pub use fs::*;
 #[allow(unused)]
 mod mcp;
 mod outline;
 mod router;
 pub mod shell;
 mod think;
+pub use outline::*;
 pub use router::*;
 
 #[async_trait::async_trait]
