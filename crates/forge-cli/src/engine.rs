@@ -40,7 +40,7 @@ impl Engine {
             let response = self.provider.chat(request.clone()).await?;
             let content = response.message.content.as_str();
             l.stop_with(content);
-            
+
             // Broadcast the message through SSE
             let _ = self.tx.send(content.to_string());
 

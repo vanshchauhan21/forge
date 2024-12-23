@@ -1,17 +1,18 @@
-use std::{path::Path, convert::Infallible};
-use axum::{
-    routing::get,
-    Router,
-    response::sse::{Event, Sse},
-    extract::State,
-};
+use std::convert::Infallible;
+use std::path::Path;
+use std::sync::Arc;
+
+use axum::extract::State;
+use axum::response::sse::{Event, Sse};
+use axum::routing::get;
+use axum::Router;
 use clap::Parser;
 use forge_cli::cli::Cli;
 use forge_cli::{Engine, Result};
-use futures::{stream::{self, Stream}, StreamExt};
+use futures::stream::{self, Stream};
+use futures::StreamExt;
 use tokio::sync::broadcast;
-use tower_http::cors::{CorsLayer, Any};
-use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 // Shared state between HTTP server and CLI
@@ -24,7 +25,7 @@ async fn conversation_handler(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, Infallible>>> {
     let rx = state.tx.subscribe();
-    
+
     // Create a stream that emits incrementing numbers every second
     let counter_stream = stream::unfold(0u64, |counter| async move {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -44,7 +45,7 @@ async fn conversation_handler(
                 }
                 Err(_) => None,
             }
-        })
+        }),
     );
 
     Sse::new(combined_stream)
@@ -71,7 +72,9 @@ async fn main() -> Result<()> {
 
     // Spawn HTTP server
     let server = tokio::spawn(async move {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+            .await
+            .unwrap();
         info!("Server running on http://127.0.0.1:3000");
         axum::serve(listener, app).await.unwrap();
     });
