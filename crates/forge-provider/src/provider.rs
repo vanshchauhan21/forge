@@ -1,10 +1,8 @@
 use std::pin::Pin;
 
 use super::error::Result;
-use crate::{
-    model::{Request, Response},
-    ResultStream,
-};
+use crate::model::{Request, Response};
+use crate::ResultStream;
 
 pub type MessageStream<A> = Box<dyn futures::Stream<Item = Result<A>>>;
 

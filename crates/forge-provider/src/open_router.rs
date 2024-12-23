@@ -1,14 +1,12 @@
-use reqwest_eventsource::{Event, EventSource, RequestBuilderExt};
 use std::collections::HashMap;
 use std::pin::Pin;
 
 use forge_tool::{Tool, ToolId};
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::{HeaderMap, HeaderValue};
-use reqwest_middleware::reqwest::{Client, RequestBuilder};
+use reqwest_middleware::reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
@@ -407,6 +405,7 @@ impl Config {
 struct OpenRouter {
     http_client: ClientWithMiddleware,
     config: Config,
+    #[allow(unused)]
     model: String,
 }
 
@@ -431,7 +430,7 @@ impl OpenRouter {
 impl InnerProvider for OpenRouter {
     async fn chat(
         &self,
-        request: crate::model::Request,
+        _request: crate::model::Request,
     ) -> Result<Pin<ResultStream<crate::model::Response>>> {
         todo!()
     }
