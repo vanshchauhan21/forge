@@ -8,22 +8,23 @@ mod completion;
 use axum::response::sse::{Event, Sse};
 use axum::routing::get;
 use axum::Router;
-use clap::Parser;
 use completion::{get_completions, Completion};
 use forge_cli::cli::Cli;
 use forge_cli::Result;
 use futures::stream::Stream;
+use tailcall_valid::Validator;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = Cli::parse();
+    tracing_subscriber::fmt().init();
 
-    // Initialize logging with level from CLI
-    tracing_subscriber::fmt()
-        .with_max_level(cli.log_level.clone().unwrap_or_default())
-        .init();
+    if dotenv::dotenv().is_ok() {
+        info!("Loaded .env file");
+    }
+
+    let _cli = Cli::new().to_result();
 
     // Create broadcast channel for SSE
 

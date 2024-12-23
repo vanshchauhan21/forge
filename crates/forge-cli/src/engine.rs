@@ -6,15 +6,14 @@ use forge_tool::Router;
 use serde_json::Value;
 use tokio::sync::broadcast;
 use tracing::debug;
-
 use crate::cli::Cli;
+
 use crate::error::Result;
 use crate::tui::{Loader, Tui};
 
 pub struct Engine {
     tool_engine: Router,
     provider: Provider,
-    tui: Tui,
     tx: broadcast::Sender<String>,
 }
 
@@ -23,7 +22,6 @@ impl Engine {
         Self {
             tool_engine: Router::default(),
             provider: Provider::open_router(cli.key, cli.model, cli.base_url),
-            tui: Tui::new(cwd),
             tx,
         }
     }
