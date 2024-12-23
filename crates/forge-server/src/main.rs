@@ -9,7 +9,7 @@ use axum::response::sse::{Event, Sse};
 use axum::routing::get;
 use axum::Router;
 use completion::{get_completions, Completion};
-use forge_cli::Result;
+use forge_server::Result;
 use futures::stream::Stream;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
