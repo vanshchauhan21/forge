@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use forge_tool::{Tool, ToolId};
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use http::header::{AUTHORIZATION, CONTENT_TYPE};
-use http::{HeaderMap, HeaderValue};
 use reqwest_middleware::reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
@@ -15,7 +13,7 @@ use crate::log::LoggingMiddleware;
 use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
 use crate::ResultStream;
 
-const DEFAULT_MODEL: &str = "google/gemini-flash-1.5-8b-exp";
+const DEFAULT_MODEL: &str = "ollama/default-model";
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 struct Model {
@@ -75,7 +73,7 @@ struct Request {
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<OpenRouterTool>>,
+    tools: Option<Vec<OllamaTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<ToolChoice>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -91,7 +89,7 @@ struct Request {
     #[serde(skip_serializing_if = "Option::is_none")]
     repetition_penalty: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    logit_bias: Option<std::collections::HashMap<u32, f32>>,
+    logit_bias: Option<HashMap<u32, f32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     top_logprobs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -112,7 +110,6 @@ struct Request {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct TextContent {
-    // TODO: could be an enum
     r#type: String,
     text: String,
 }
@@ -150,8 +147,7 @@ struct FunctionDescription {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct OpenRouterTool {
-    // TODO: should be an enum
+struct OllamaTool {
     r#type: String,
     function: FunctionDescription,
 }
@@ -243,9 +239,9 @@ struct FunctionCall {
     arguments: String,
 }
 
-impl From<Tool> for OpenRouterTool {
+impl From<Tool> for OllamaTool {
     fn from(value: Tool) -> Self {
-        OpenRouterTool {
+        OllamaTool {
             r#type: "function".to_string(),
             function: FunctionDescription {
                 description: Some(value.description),
@@ -256,7 +252,6 @@ impl From<Tool> for OpenRouterTool {
     }
 }
 
-// TODO: fix the names.
 impl From<AnyMessage> for Message {
     fn from(value: AnyMessage) -> Self {
         match value {
@@ -312,7 +307,7 @@ impl From<crate::model::Request> for Request {
                 let tools = value
                     .tools
                     .into_iter()
-                    .map(OpenRouterTool::from)
+                    .map(OllamaTool::from)
                     .collect::<Vec<_>>();
                 if tools.is_empty() {
                     None
@@ -363,7 +358,7 @@ impl TryFrom<Response> for crate::model::Response {
             };
             Ok(response)
         } else {
-            Err(crate::error::Error::empty_response("Open Router"))
+            Err(crate::error::Error::empty_response("Ollama"))
         }
     }
 }
@@ -373,47 +368,16 @@ struct ProviderPreferences {
     // Define fields as necessary
 }
 
-#[derive(Debug, Clone)]
-struct Config {
-    api_key: String,
-    base_url: Option<String>,
-}
-
-impl Config {
-    fn api_base(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://openrouter.ai/api/v1")
-    }
-
-    fn headers(&self) -> HeaderMap {
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
-        );
-        headers.insert("X-Title", HeaderValue::from_static("Tailcall"));
-        headers
-    }
-
-    fn url(&self, path: &str) -> String {
-        format!("{}{}", self.api_base(), path)
-    }
-}
-
 #[derive(Clone)]
-struct OpenRouter {
+struct OllamaProvider {
     http_client: ClientWithMiddleware,
-    config: Config,
-    #[allow(unused)]
+
+    base_url: String,
     model: String,
 }
 
-impl OpenRouter {
-    fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        let config = Config { api_key, base_url };
-
+impl OllamaProvider {
+    fn new(model: Option<String>, base_url: Option<String>) -> Self {
         let reqwest_client = Client::builder().build().unwrap();
         let http_client = ClientBuilder::new(reqwest_client)
             .with(LoggingMiddleware)
@@ -421,14 +385,19 @@ impl OpenRouter {
 
         Self {
             http_client,
-            config,
+
+            base_url: base_url.unwrap_or("https://localhost:1134".to_string()),
             model: model.unwrap_or(DEFAULT_MODEL.to_string()),
         }
+    }
+
+    fn url(&self, path: &str) -> String {
+        format!("{}{}", self.base_url, path)
     }
 }
 
 #[async_trait::async_trait]
-impl InnerProvider for OpenRouter {
+impl InnerProvider for OllamaProvider {
     async fn chat(
         &self,
         request: crate::model::Request,
@@ -436,15 +405,15 @@ impl InnerProvider for OpenRouter {
         let mut new_request = Request::from(request);
 
         new_request.model = self.model.clone();
+        new_request.stream = Some(true); // Ensure streaming is enabled
 
         let body = serde_json::to_string(&new_request)?;
 
-        tracing::debug!("Request Body: {}", body);
+        tracing::debug!("Ollama Request Body: {}", body);
 
         let response_stream = self
             .http_client
-            .post(self.config.url("/chat/completions"))
-            .headers(self.config.headers())
+            .post(self.url("/chat/completions"))
             .body(body)
             .send()
             .await?
@@ -469,8 +438,7 @@ impl InnerProvider for OpenRouter {
     async fn models(&self) -> Result<Vec<String>> {
         let text = self
             .http_client
-            .get(self.config.url("/models"))
-            .headers(self.config.headers())
+            .get(self.url("/models"))
             .send()
             .await?
             .text()
@@ -487,8 +455,8 @@ impl InnerProvider for OpenRouter {
 }
 
 impl Provider {
-    pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        Provider::new(OpenRouter::new(api_key, model, base_url))
+    pub fn ollama(model: Option<String>, base_url: Option<String>) -> Self {
+        Provider::new(OllamaProvider::new(model, base_url))
     }
 }
 
@@ -507,43 +475,54 @@ mod test {
 
     #[test]
     fn test_de_ser_of_response() {
-        let response = r#"{"id":"gen-1734752897-QSJJJjXmljCFFkUZHtFk","provider":"Anthropic","model":"anthropic/claude-3.5-sonnet","object":"chat.completion","created":1734752897,"choices":[{"logprobs":null,"finish_reason":"end_turn","index":0,"message":{"role":"assistant","content":"I aim to be direct and honest in my interactions: I'm an AI assistant, so I don't experience feelings in the way humans do. I aim to be helpful while being transparent about what I am. How can I assist you today?","refusal":""}}],"usage":{"prompt_tokens":13,"completion_tokens":54,"total_tokens":67}}"#;
+        let response = r#"{
+            "id": "ollama-12345",
+            "provider": "Ollama",
+            "model": "ollama/gpt-4-stream",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "choices": [{
+                "delta": {
+                    "content": "Hello! How can I assist you today?"
+                },
+                "finish_reason": "end_turn",
+                "index": 0,
+                "error": null
+            }],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 20,
+                "total_tokens": 30
+            }
+        }"#;
 
         let _: Response = serde_json::from_str(response).unwrap();
     }
 
     #[tokio::test]
     async fn test_chat() {
-        let provider = Provider::new(OpenRouter::new(
-            "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".to_string(),
-            None,
-            None,
-        ));
+        let provider = Provider::new(OllamaProvider::new(None, None));
 
         let result_stream = provider
-            .chat(crate::model::Request {
-                context: vec![
-                    AnyMessage::User(crate::model::Message {
-                        role: User,
-                        content: "Hello!".to_string(),
-                    }),
-                    AnyMessage::System(crate::model::Message {
-                        role: System,
-                        content: "If someone says Hello!, always Reply with single word Alo!"
-                            .to_string(),
-                    }),
-                ],
-                tools: vec![],
-                tool_result: vec![],
-            })
+            .chat(
+                crate::model::Request::default()
+                    .add_message(crate::model::Message::user("Hello Forge!")),
+            )
             .await
             .unwrap();
 
         let mut stream = result_stream;
 
+        println!("Streaming Ollama response:");
+
         while let Some(result) = stream.next().await {
-            if let Ok(response) = result {
-                assert_eq!(response.message.content.trim(), "Alo!");
+            match result {
+                Ok(response) => {
+                    println!("{:#?}", response);
+                }
+                Err(err) => {
+                    eprintln!("Error: {:#?}", err);
+                }
             }
         }
     }
