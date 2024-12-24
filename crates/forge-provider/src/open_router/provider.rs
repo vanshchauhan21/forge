@@ -1,7 +1,6 @@
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
-use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::model_response::ListModelResponse;
@@ -85,48 +84,33 @@ impl InnerProvider for OpenRouter {
             .headers(self.config.headers())
             .body(body);
 
-        let mut es = EventSource::new(rb).unwrap();
+        let es = EventSource::new(rb).unwrap();
 
-        let (tx, rx) = tokio::sync::mpsc::channel::<Result<crate::Response>>(100);
-        while let Some(event) = es.next().await {
-            match event {
-                Ok(event) => match event {
-                    Event::Open => {}
-                    Event::Message(event) => {
-                        if event.data == "[DONE]" {
-                            break;
-                        }
-
-                        match serde_json::from_str::<Response>(&event.data) {
-                            Ok(response) => {
-                                let response = crate::Response::try_from(response);
-                                tx.send(response).await.unwrap();
-                            }
-                            Err(_) => {
-                                let value: serde_json::Value =
-                                    serde_json::from_str(&event.data).unwrap();
-
-                                tx.send(Err(Error::Provider {
-                                    provider: PROVIDER_NAME.to_string(),
-                                    error: ProviderError::UpstreamError(value),
-                                }))
-                                .await
-                                .unwrap();
-                                break;
-                            }
-                        }
+        let stream = es.filter_map(|event| match event {
+            Ok(ref event) => match event {
+                Event::Open => None,
+                Event::Message(event) => {
+                    if event.data == "[DONE]" {
+                        return None;
                     }
-                },
-                Err(err) => {
-                    tx.send(Err(err.into())).await.unwrap();
-                    break;
+
+                    Some(match serde_json::from_str::<Response>(&event.data) {
+                        Ok(response) => crate::Response::try_from(response),
+                        Err(_) => {
+                            let value: serde_json::Value =
+                                serde_json::from_str(&event.data).unwrap();
+                            Err(Error::Provider {
+                                provider: PROVIDER_NAME.to_string(),
+                                error: ProviderError::UpstreamError(value),
+                            })
+                        }
+                    })
                 }
-            }
-        }
+            },
+            Err(err) => Some(Err(err.into())),
+        });
 
-        let processed_stream = ReceiverStream::new(rx);
-
-        Ok(Box::pin(Box::new(processed_stream)))
+        Ok(Box::pin(Box::new(stream)))
     }
 
     async fn models(&self) -> Result<Vec<String>> {
