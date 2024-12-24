@@ -1,10 +1,10 @@
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
-use serde::{Deserialize, Serialize};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
+use super::model_response::ListModelResponse;
 use super::request::Request;
 use super::response::Response;
 use crate::error::Result;
@@ -13,46 +13,6 @@ use crate::{Error, ProviderError, ResultStream};
 
 const DEFAULT_MODEL: &str = "openai/gpt-4o-mini";
 const PROVIDER_NAME: &str = "Open Router";
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-struct Model {
-    id: String,
-    name: String,
-    created: u64,
-    description: String,
-    context_length: u64,
-    architecture: Architecture,
-    pricing: Pricing,
-    top_provider: TopProvider,
-    per_request_limits: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-struct Architecture {
-    modality: String,
-    tokenizer: String,
-    instruct_type: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-struct Pricing {
-    prompt: String,
-    completion: String,
-    image: String,
-    request: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-struct TopProvider {
-    context_length: Option<u64>,
-    max_completion_tokens: Option<u64>,
-    is_moderated: bool,
-}
-
-#[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
-struct ListModelResponse {
-    data: Vec<Model>,
-}
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -83,7 +43,7 @@ impl Config {
 }
 
 #[derive(Clone)]
-pub struct OpenRouter {
+struct OpenRouter {
     client: Client,
     config: Config,
     #[allow(unused)]
@@ -91,7 +51,7 @@ pub struct OpenRouter {
 }
 
 impl OpenRouter {
-    pub fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
+    fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         let config = Config { api_key, base_url };
 
         let client = Client::builder().build().unwrap();
