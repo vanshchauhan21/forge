@@ -9,7 +9,7 @@ pub struct App {
 
 impl App {
     pub fn new(working_dir: impl Into<String>) -> Self {
-        let engine = Conversation::default();
+        let engine = Conversation;
         Self { completion: Completion::new(working_dir), engine }
     }
 }

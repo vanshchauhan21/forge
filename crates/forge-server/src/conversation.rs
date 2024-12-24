@@ -1,13 +1,12 @@
-use crate::broadcast::Broadcast;
-use crate::EventStream;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::Stream;
 
 #[derive(Default)]
-pub struct Conversation {
-    broadcast: Broadcast,
-}
+pub struct Conversation;
 
 #[derive(Debug, serde::Serialize)]
-enum Action {}
+pub enum Action {}
 
 #[derive(serde::Deserialize)]
 pub struct Request {
@@ -17,7 +16,9 @@ pub struct Request {
 }
 
 impl Conversation {
-    pub async fn chat(&self, _request: Request) -> EventStream {
-        Box::new(Box::pin(self.broadcast.as_stream().await))
+    pub async fn chat(&self, _request: Request) -> impl Stream<Item = Action> {
+        let (_, rx) = mpsc::channel::<Action>(100);
+
+        ReceiverStream::new(rx)
     }
 }

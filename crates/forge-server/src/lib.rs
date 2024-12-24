@@ -1,5 +1,4 @@
 mod app;
-mod broadcast;
 mod completion;
 mod conversation;
 mod error;
@@ -10,7 +9,7 @@ use std::convert::Infallible;
 
 use axum::response::sse::Event;
 pub use error::*;
-use futures::Stream;
 pub use server::Server;
+use tokio_stream::Stream;
 
 type EventStream = Box<dyn Stream<Item = std::result::Result<Event, Infallible>> + Send + Unpin>;

@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
 use axum::extract::{Json, State};
-use axum::response::sse::Sse;
+use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
+use tokio_stream::StreamExt;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::app::App;
 use crate::completion::File;
-use crate::conversation::{self, Request};
+use crate::conversation::{self};
 use crate::{EventStream, Result};
 
 pub struct Server {
@@ -65,7 +66,12 @@ async fn conversation_handler(
     Json(request): Json<conversation::Request>,
 ) -> Sse<EventStream> {
     // Use payload.message or other fields as needed
-    Sse::new(state.engine.chat(request).await)
+    Sse::new(Box::new(Box::pin(state.engine.chat(request).await.map(
+        |action| {
+            let data = serde_json::to_string(&action).expect("Failed to serialize action");
+            Ok(Event::default().data(data))
+        },
+    ))))
 }
 
 async fn health_handler() -> axum::response::Response {
