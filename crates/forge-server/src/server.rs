@@ -20,7 +20,7 @@ pub struct Server {
 impl Default for Server {
     fn default() -> Self {
         dotenv::dotenv().ok();
-        let api_key = std::env::var("API_KEY").expect("API_KEY must be set");
+        let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
         Self { state: Arc::new(App::new(api_key, ".".to_string())) }
     }
 }
