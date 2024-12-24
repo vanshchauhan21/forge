@@ -37,4 +37,6 @@ pub enum ProviderError {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type ResultStream<T> = Pin<Box<dyn tokio_stream::Stream<Item = Result<T>> + Send>>;
+pub type BoxStream<A, E> =
+    Pin<Box<dyn tokio_stream::Stream<Item = std::result::Result<A, E>> + Send>>;
+pub type ResultStream<A> = BoxStream<A, Error>;

@@ -8,5 +8,3 @@ mod provider;
 pub use error::*;
 pub use model::*;
 pub use provider::*;
-
-pub type Stream<A> = Box<dyn tokio_stream::Stream<Item = A> + Unpin>;
