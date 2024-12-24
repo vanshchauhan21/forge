@@ -91,13 +91,8 @@ impl InnerProvider for OpenRouter {
         while let Some(event) = es.next().await {
             match event {
                 Ok(event) => match event {
-                    Event::Open => {
-                        dbg!("Connection Opened");
-                    }
+                    Event::Open => {}
                     Event::Message(event) => {
-                        dbg!(&event.event);
-                        dbg!(&event.data);
-
                         if event.data == "[DONE]" {
                             break;
                         }
