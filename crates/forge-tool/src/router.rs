@@ -123,18 +123,12 @@ mod test {
 
     #[test]
     fn test_id() {
-        assert!(Router::import(FSRead)
-            .0
-            .into_string()
-            .ends_with("fs_read"));
+        assert!(Router::import(FSRead).0.into_string().ends_with("fs_read"));
         assert!(Router::import(FSSearch)
             .0
             .into_string()
             .ends_with("fs_search"));
-        assert!(Router::import(FSList)
-            .0
-            .into_string()
-            .ends_with("fs_list"));
+        assert!(Router::import(FSList).0.into_string().ends_with("fs_list"));
         assert!(Router::import(FSFileInfo)
             .0
             .into_string()

@@ -62,7 +62,7 @@ impl Display for PromptTemplate {
 
                 f.write_str(">")?;
 
-                f.write_str(&content)?;
+                f.write_str(content)?;
 
                 f.write_str("<")?;
                 f.write_str(&tag_name)?;

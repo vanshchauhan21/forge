@@ -172,7 +172,7 @@ mod tests {
 
         let prompt = result.unwrap();
         assert_eq!(prompt.files(), Vec::<String>::new());
-        assert_eq!(prompt.message(), "Just a regular message");
+        assert_eq!(prompt.to_string(), "Just a regular message");
     }
 
     #[test]
@@ -181,6 +181,6 @@ mod tests {
 
         let prompt = result.unwrap();
         assert_eq!(prompt.files(), Vec::<String>::new());
-        assert_eq!(prompt.message(), "");
+        assert_eq!(prompt.to_string(), "");
     }
 }

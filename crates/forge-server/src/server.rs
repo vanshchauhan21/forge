@@ -4,14 +4,14 @@ use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::app::App;
 use crate::completion::File;
 use crate::conversation::{self};
-use crate::{EventStream, Result};
+use crate::Result;
 
 pub struct Server {
     state: Arc<App>,
@@ -21,9 +21,7 @@ impl Default for Server {
     fn default() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("API_KEY").expect("API_KEY must be set");
-        Self {
-            state: Arc::new(App::new(api_key, ".".to_string()))
-        }
+        Self { state: Arc::new(App::new(api_key, ".".to_string())) }
     }
 }
 
@@ -68,8 +66,12 @@ async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<Fi
 async fn conversation_handler(
     State(state): State<Arc<App>>,
     Json(request): Json<conversation::ChatRequest>,
-) -> Sse<impl Stream<Item = Result<Event, std::convert::Infallible>>> {
-    let stream = state.engine.chat(request).await;
+) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
+    let stream = state
+        .engine
+        .chat(request)
+        .await
+        .expect("Engine failed to respond with a chat message");
     Sse::new(stream.map(|action| {
         let data = serde_json::to_string(&action).expect("Failed to serialize action");
         Ok(Event::default().data(data))

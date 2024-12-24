@@ -1,16 +1,15 @@
 use std::sync::Arc;
 
-use crate::template::PromptTemplate;
-use crate::Result;
 use forge_prompt::Prompt;
-use forge_provider::{Message, Provider, Request};
-use forge_provider::{ToolResult, ToolUse};
+use forge_provider::{Message, Provider, Request, ToolResult, ToolUse};
 use forge_tool::Router;
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tokio_stream::Stream;
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
+
+use crate::template::PromptTemplate;
+use crate::Result;
 
 #[derive(Debug, serde::Serialize)]
 pub enum ChatEvent {
@@ -42,10 +41,7 @@ impl Conversation {
         }
     }
 
-    pub async fn chat(
-        &self,
-        chat: ChatRequest,
-    ) -> Result<impl Stream<Item = ChatEvent> + Send> {
+    pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatEvent> + Send> {
         let (tx, rx) = mpsc::channel::<ChatEvent>(100);
 
         let prompt = Prompt::parse(chat.message.clone()).unwrap_or(Prompt::new(chat.message));
@@ -85,10 +81,10 @@ impl Conversation {
 
             while let Some(message) = response.next().await {
                 let message = message?;
-                let _ = tx.send(ChatEvent::Text(message.message.content)).await?;
+                tx.send(ChatEvent::Text(message.message.content)).await?;
                 if !message.tool_use.is_empty() {
                     for tool in message.tool_use.into_iter() {
-                        let tool_result = Self::use_tool(&tool_engine, tool.clone(), &tx).await?;
+                        let tool_result = Self::use_tool(&tool_engine, tool.clone(), tx).await?;
                         request = request.add_tool_result(tool_result);
                     }
                 } else {
