@@ -35,7 +35,7 @@ struct ToolDefinition {
     tool: Tool,
 }
 
-pub struct Provider {
+pub struct Router {
     tools: HashMap<ToolId, ToolDefinition>,
 }
 
@@ -64,7 +64,7 @@ impl ToolId {
     }
 }
 
-impl Provider {
+impl Router {
     pub async fn call(&self, tool_id: &ToolId, input: Value) -> Result<Value, String> {
         match self.tools.get(tool_id) {
             Some(tool) => tool.executable.call(input).await,
@@ -99,18 +99,18 @@ impl Provider {
     }
 }
 
-impl Default for Provider {
+impl Default for Router {
     fn default() -> Self {
         let tools: HashMap<ToolId, ToolDefinition> = HashMap::from([
-            Provider::import(FSRead),
-            Provider::import(FSSearch),
-            Provider::import(FSList),
-            Provider::import(FSFileInfo),
-            Provider::import(FSWrite),
-            Provider::import(FSReplace),
-            Provider::import(Outline),
-            Provider::import(Think::default()),
-            Provider::import(Shell::default()),
+            Router::import(FSRead),
+            Router::import(FSSearch),
+            Router::import(FSList),
+            Router::import(FSFileInfo),
+            Router::import(FSWrite),
+            Router::import(FSReplace),
+            Router::import(Outline),
+            Router::import(Think::default()),
+            Router::import(Shell::default()),
         ]);
 
         Self { tools }
@@ -123,23 +123,23 @@ mod test {
 
     #[test]
     fn test_id() {
-        assert!(Provider::import(FSRead)
+        assert!(Router::import(FSRead)
             .0
             .into_string()
             .ends_with("fs_read"));
-        assert!(Provider::import(FSSearch)
+        assert!(Router::import(FSSearch)
             .0
             .into_string()
             .ends_with("fs_search"));
-        assert!(Provider::import(FSList)
+        assert!(Router::import(FSList)
             .0
             .into_string()
             .ends_with("fs_list"));
-        assert!(Provider::import(FSFileInfo)
+        assert!(Router::import(FSFileInfo)
             .0
             .into_string()
             .ends_with("file_info"));
-        assert!(Provider::import(Think::default())
+        assert!(Router::import(Think::default())
             .0
             .into_string()
             .ends_with("think"));

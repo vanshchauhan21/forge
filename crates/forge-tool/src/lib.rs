@@ -4,14 +4,14 @@ mod ask;
 #[allow(unused)]
 mod mcp;
 mod outline;
-mod provider;
+mod router;
 mod shell;
 mod think;
 
 pub use ask::*;
 pub use fs::*;
 pub use outline::*;
-pub use provider::*;
+pub use router::*;
 pub use shell::*;
 
 #[async_trait::async_trait]
