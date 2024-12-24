@@ -3,13 +3,10 @@ use std::sync::Arc;
 
 use axum::extract::State;
 
-mod app;
-mod completion;
 use axum::response::sse::{Event, Sse};
 use axum::routing::get;
 use axum::Router;
-use completion::{get_completions, Completion};
-use forge_server::Result;
+use forge_server::{App, Completion, File, Result};
 use futures::stream::Stream;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -24,7 +21,7 @@ async fn main() -> Result<()> {
 
     // Create broadcast channel for SSE
 
-    let state = Arc::new(app::AppState::<String>::default());
+    let state = Arc::new(App::<String>::default());
 
     // Setup HTTP server
     let app = Router::new()
@@ -49,12 +46,13 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn completions_handler() -> axum::Json<Vec<Completion>> {
-    axum::Json(get_completions().await)
+async fn completions_handler() -> axum::Json<Vec<File>> {
+    let completions = Completion::list().await;
+    axum::Json(completions)
 }
 
 async fn conversation_handler(
-    State(state): State<Arc<app::AppState<String>>>,
+    State(state): State<Arc<App<String>>>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, Infallible>>> {
     Sse::new(state.as_stream().await)
 }

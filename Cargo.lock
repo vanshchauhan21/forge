@@ -726,6 +726,7 @@ dependencies = [
  "dotenv",
  "forge-provider",
  "forge-tool",
+ "forge-walker",
  "futures",
  "indoc",
  "inquire",

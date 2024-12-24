@@ -1,5 +1,7 @@
-// mod engine;
+mod app;
+mod completion;
 mod error;
-pub use error::*;
 mod log;
-// pub use engine::Engine;
+pub use app::*;
+pub use completion::*;
+pub use error::*;
