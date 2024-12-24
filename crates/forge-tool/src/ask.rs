@@ -9,10 +9,10 @@ pub struct AskFollowUpQuestionInput {
     pub question: String,
 }
 
-/// Ask the user a question to gather additional information needed to complete the task.
-/// This tool should be used when you encounter ambiguities, need clarification, or
-/// require more details to proceed effectively. It allows for interactive problem-solving
-/// by enabling direct communication with the user.
+/// Ask the user a question to gather additional information needed to complete
+/// the task. This tool should be used when you encounter ambiguities, need
+/// clarification, or require more details to proceed effectively. It allows for
+/// interactive problem-solving by enabling direct communication with the user.
 #[derive(DescriptionDerive)]
 pub struct AskFollowUpQuestion;
 
@@ -34,9 +34,7 @@ mod test {
     async fn test_ask_followup_question() {
         let ask = AskFollowUpQuestion;
         let result = ask
-            .call(AskFollowUpQuestionInput {
-                question: "What is your favorite color?".to_string(),
-            })
+            .call(AskFollowUpQuestionInput { question: "What is your favorite color?".to_string() })
             .await
             .unwrap();
 
