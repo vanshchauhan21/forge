@@ -9,36 +9,30 @@ use crate::Result;
 
 // Shared state between HTTP server and CLI
 #[derive(Clone)]
-pub struct App<T> {
-    tx: broadcast::Sender<String>,
-    _t: std::marker::PhantomData<T>,
+pub struct Broadcast {
+    tx: broadcast::Sender<Event>,
 }
 
-impl<T> Default for App<T> {
+impl Default for Broadcast {
     fn default() -> Self {
-        let (tx, _) = broadcast::channel::<String>(100);
-        Self { tx, _t: Default::default() }
+        let (tx, _) = broadcast::channel(100);
+        Self { tx }
     }
 }
 
-impl<T: Serialize> App<T> {
+impl Broadcast {
     #[allow(unused)]
-    pub fn dispatch(&self, event: T) -> Result<usize> {
+    pub fn dispatch(&self, event: impl Serialize) -> Result<usize> {
         let json = serde_json::to_string(&event)?;
-        Ok(self.tx.send(json)?)
+        Ok(self.tx.send(Event::default().data(json))?)
     }
 
     pub async fn as_stream(&self) -> impl Stream<Item = std::result::Result<Event, Infallible>> {
         let rx = self.tx.subscribe();
 
         stream::unfold(rx, |mut rx| async move {
-            match rx.recv().await {
-                Ok(msg) => {
-                    let event = Event::default().data(msg);
-                    Some((Ok(event), rx))
-                }
-                Err(_) => None,
-            }
+            let event = rx.recv().await.expect("Broadcast channel closed");
+            Some((Ok(event), rx))
         })
     }
 }

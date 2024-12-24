@@ -1,17 +1,15 @@
-use std::convert::Infallible;
 use std::sync::Arc;
 
 use axum::extract::State;
-use axum::response::sse::{Event, Sse};
+use axum::response::sse::Sse;
 use axum::routing::get;
 use axum::Router;
-use futures::stream::Stream;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::app::App;
 use crate::completion::File;
-use crate::Result;
+use crate::{EventStream, Result};
 
 pub struct Server {
     state: Arc<App>,
@@ -61,11 +59,8 @@ async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<Fi
 }
 
 #[axum::debug_handler]
-async fn conversation_handler(
-    State(state): State<Arc<App>>,
-) -> Sse<Box<dyn Stream<Item = std::result::Result<Event, Infallible>> + Send + Unpin>> {
-    // Sse::new(state.engine.as_stream().await.unwrap())
-    todo!()
+async fn conversation_handler(State(state): State<Arc<App>>) -> Sse<EventStream> {
+    Sse::new(state.engine.as_stream().await)
 }
 
 async fn health_handler() -> axum::response::Response {
