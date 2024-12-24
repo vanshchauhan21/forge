@@ -85,7 +85,9 @@ impl Conversation {
                 empty_response = false;
                 let message = message?;
                 if message.tool_use.is_empty() {
-                    tx.send(ChatEvent::Text(message.message.content)).await.unwrap();
+                    tx.send(ChatEvent::Text(message.message.content))
+                        .await
+                        .unwrap();
                 } else {
                     for tool in message.tool_use.into_iter() {
                         let tool_result = Self::use_tool(&tool_engine, tool.clone(), tx).await?;

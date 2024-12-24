@@ -472,7 +472,7 @@ mod test {
     use super::*;
 
     fn models() -> &'static str {
-        include_str!("models.json")
+        include_str!("./models.json")
     }
 
     #[test]

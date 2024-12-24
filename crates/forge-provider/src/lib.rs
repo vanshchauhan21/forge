@@ -1,6 +1,6 @@
 mod error;
 mod model;
-mod ollama;
+// mod ollama;
 // mod open_ai;
 mod open_router;
 mod provider;
