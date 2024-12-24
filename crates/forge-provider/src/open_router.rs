@@ -1,18 +1,21 @@
 use std::collections::HashMap;
 
 use forge_tool::{Tool, ToolId};
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
+use reqwest_eventsource::{Event, EventSource};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
 use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
-use crate::ResultStream;
+use crate::{Error, ProviderError, ResultStream};
 
-const DEFAULT_MODEL: &str = "google/gemini-flash-1.5-8b-exp";
+const DEFAULT_MODEL: &str = "openai/gpt-4o-mini";
+const PROVIDER_NAME: &str = "Open Router";
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 struct Model {
@@ -387,7 +390,6 @@ impl Config {
 
     fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         headers.insert(
             AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
@@ -427,47 +429,65 @@ impl OpenRouter {
 impl InnerProvider for OpenRouter {
     async fn chat(
         &self,
-        request: crate::model::Request,
+        body: crate::model::Request,
     ) -> Result<ResultStream<crate::model::Response>> {
-        let mut new_request = Request::from(request);
+        let mut new_body = Request::from(body);
 
-        new_request.model = self.model.clone();
+        new_body.model = self.model.clone();
+        new_body.stream = Some(true);
 
-        let body = serde_json::to_string(&new_request)?;
+        let body = serde_json::to_string(&new_body)?;
 
         tracing::debug!("Request Body: {}", body);
 
-        let response_stream = self
+        let rb = self
             .client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .body(body)
-            .send()
-            .await?
-            .bytes_stream();
+            .body(body);
 
-        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        let mut es = EventSource::new(rb).unwrap();
 
-        tokio::spawn(async move {
-            let mut response_stream = response_stream;
-            while let Some(chunk_result) = response_stream.next().await {
-                match chunk_result {
-                    Ok(chunk) => {
-                        if let Ok(response) = serde_json::from_slice::<Response>(&chunk) {
-                            if let Ok(model_response) = crate::model::Response::try_from(response) {
-                                if tx.send(Ok(model_response)).await.is_err() {
-                                    break;
-                                }
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<crate::Response>>(100);
+        while let Some(event) = es.next().await {
+            match event {
+                Ok(event) => match event {
+                    Event::Open => {
+                        dbg!("Connection Opened");
+                    }
+                    Event::Message(event) => {
+                        dbg!(&event.event);
+                        dbg!(&event.data);
+
+                        if event.data == "[DONE]" {
+                            break;
+                        }
+
+                        match serde_json::from_str::<Response>(&event.data) {
+                            Ok(response) => {
+                                let response = crate::Response::try_from(response);
+                                tx.send(response).await.unwrap();
+                            }
+                            Err(_) => {
+                                let value: Value = serde_json::from_str(&event.data).unwrap();
+
+                                tx.send(Err(Error::Provider {
+                                    provider: PROVIDER_NAME.to_string(),
+                                    error: ProviderError::UpstreamError(value),
+                                }))
+                                .await
+                                .unwrap();
+                                break;
                             }
                         }
                     }
-                    Err(err) => {
-                        let _ = tx.send(Err(crate::error::Error::from(err))).await;
-                        break;
-                    }
+                },
+                Err(err) => {
+                    tx.send(Err(err.into())).await.unwrap();
+                    break;
                 }
             }
-        });
+        }
 
         let processed_stream = ReceiverStream::new(rx);
 
