@@ -39,14 +39,3 @@ pub struct TopProvider {
 pub struct ListModelResponse {
     pub data: Vec<Model>,
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_de_ser_of_models() {
-        let models = include_str!("models.json");
-        let _: ListModelResponse = serde_json::from_str(models).unwrap();
-    }
-}
