@@ -1,12 +1,11 @@
-use forge_tool::ToolId;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{
-    error::Error,
-    model::{Response as ModelResponse, ToolUse},
-    UseId,
-};
+use forge_tool::ToolId;
+use serde::{Deserialize, Serialize};
+
+use crate::error::Error;
+use crate::model::{Response as ModelResponse, ToolUse};
+use crate::UseId;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Response {

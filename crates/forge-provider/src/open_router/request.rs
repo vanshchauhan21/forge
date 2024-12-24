@@ -1,11 +1,10 @@
-use forge_tool::Tool;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{
-    model::{AnyMessage, Assistant, System, User},
-    Role,
-};
+use forge_tool::Tool;
+use serde::{Deserialize, Serialize};
+
+use crate::model::{AnyMessage, Assistant, System, User};
+use crate::Role;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
