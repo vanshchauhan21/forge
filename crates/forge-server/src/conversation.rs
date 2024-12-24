@@ -28,6 +28,7 @@ pub struct ChatRequest {
     pub model: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct Conversation {
     provider: Arc<Provider>,
     tool_engine: Arc<Router>,
@@ -57,11 +58,9 @@ impl Conversation {
             .add_message(message)
             .tools(self.tool_engine.list());
 
-        let provider = self.provider.clone();
-        let tool_engine = self.tool_engine.clone();
-
+        let this = self.clone();
         tokio::task::spawn(async move {
-            match Self::run_forever(provider, tool_engine, &tx, request).await {
+            match this.run_forever(&tx, request).await {
                 Ok(_) => {}
                 Err(e) => tx.send(ChatEvent::Fail(e.to_string())).await.unwrap(),
             }
@@ -70,16 +69,11 @@ impl Conversation {
         Ok(ReceiverStream::new(rx))
     }
 
-    async fn run_forever(
-        provider: Arc<Provider>,
-        tool_engine: Arc<Router>,
-        tx: &mpsc::Sender<ChatEvent>,
-        mut request: Request,
-    ) -> Result<()> {
+    async fn run_forever(&self, tx: &mpsc::Sender<ChatEvent>, mut request: Request) -> Result<()> {
         loop {
             let mut pending_request = false;
             let mut empty_response = true;
-            let mut response = provider.chat(request.clone()).await?;
+            let mut response = self.provider.chat(request.clone()).await?;
 
             while let Some(message) = response.next().await {
                 empty_response = false;
@@ -90,7 +84,7 @@ impl Conversation {
                         .unwrap();
                 } else {
                     for tool in message.tool_use.into_iter() {
-                        let tool_result = Self::use_tool(&tool_engine, tool.clone(), tx).await?;
+                        let tool_result = self.use_tool(tool.clone(), tx).await?;
                         request = request.add_tool_result(tool_result);
                         pending_request = true
                     }
@@ -107,14 +101,11 @@ impl Conversation {
         }
     }
 
-    async fn use_tool(
-        tool_engine: &Arc<Router>,
-        tool: ToolUse,
-        tx: &mpsc::Sender<ChatEvent>,
-    ) -> Result<ToolResult> {
+    async fn use_tool(&self, tool: ToolUse, tx: &mpsc::Sender<ChatEvent>) -> Result<ToolResult> {
         tx.send(ChatEvent::ToolUseStart(tool.tool_id.clone().into_string()))
             .await?;
-        let content = tool_engine
+        let content = self
+            .tool_engine
             .call(&tool.tool_id, tool.input.unwrap_or_default().clone())
             .await?;
 
