@@ -4,7 +4,7 @@ mod conversation;
 mod error;
 mod log;
 mod server;
-
+mod template;
 use std::convert::Infallible;
 
 use axum::response::sse::Event;

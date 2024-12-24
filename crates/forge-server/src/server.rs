@@ -19,7 +19,11 @@ pub struct Server {
 
 impl Default for Server {
     fn default() -> Self {
-        Self { state: Arc::new(App::new(".")) }
+        dotenv::dotenv().ok();
+        let api_key = std::env::var("API_KEY").expect("API_KEY must be set");
+        Self {
+            state: Arc::new(App::new(api_key, ".".to_string()))
+        }
     }
 }
 
@@ -63,15 +67,13 @@ async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<Fi
 #[axum::debug_handler]
 async fn conversation_handler(
     State(state): State<Arc<App>>,
-    Json(request): Json<conversation::Request>,
-) -> Sse<EventStream> {
-    // Use payload.message or other fields as needed
-    Sse::new(Box::new(Box::pin(state.engine.chat(request).await.map(
-        |action| {
-            let data = serde_json::to_string(&action).expect("Failed to serialize action");
-            Ok(Event::default().data(data))
-        },
-    ))))
+    Json(request): Json<conversation::ChatRequest>,
+) -> Sse<impl Stream<Item = Result<Event, std::convert::Infallible>>> {
+    let stream = state.engine.chat(request).await;
+    Sse::new(stream.map(|action| {
+        let data = serde_json::to_string(&action).expect("Failed to serialize action");
+        Ok(Event::default().data(data))
+    }))
 }
 
 async fn health_handler() -> axum::response::Response {
