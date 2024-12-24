@@ -58,15 +58,7 @@ impl Debug for Errata {
 
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
-        match error {
-            Error::Custom(error) => Errata::new(error.to_string()),
-            Error::Provider(error) => Errata::new(format!("{}", error)),
-            Error::IO(error) => Errata::new(format!("{}", error)),
-            Error::SendError(send_error) => Errata::new(format!("{}", send_error)),
-            Error::Serde(error) => Errata::new(format!("{}", error)),
-            Error::Env(error) => Errata::new(format!("{}", error)),
-            Error::EmptyResponse => Errata::new("Empty response"),
-        }
+        Errata::new(error.to_string())
     }
 }
 
