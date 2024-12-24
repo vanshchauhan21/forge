@@ -38,7 +38,19 @@ impl Server {
             .route("/conversation", post(conversation_handler))
             .route("/completions", get(completions_handler))
             .route("/health", get(health_handler))
-            .layer(CorsLayer::new().allow_origin(Any))
+            .layer(
+                CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods([
+                        axum::http::Method::GET,
+                        axum::http::Method::POST,
+                        axum::http::Method::OPTIONS,
+                    ])
+                    .allow_headers([
+                        axum::http::header::CONTENT_TYPE,
+                        axum::http::header::AUTHORIZATION,
+                    ])
+            )
             .with_state(self.state.clone());
 
         // Spawn HTTP server
