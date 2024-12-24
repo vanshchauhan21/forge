@@ -1,17 +1,14 @@
 use std::collections::HashMap;
 
 use forge_tool::{Tool, ToolId};
-use http::header::{AUTHORIZATION, CONTENT_TYPE};
-use http::{HeaderMap, HeaderValue};
-use reqwest_middleware::reqwest::Client;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
-use crate::log::LoggingMiddleware;
 use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
 use crate::ResultStream;
 
@@ -406,7 +403,7 @@ impl Config {
 
 #[derive(Clone)]
 struct OpenRouter {
-    http_client: ClientWithMiddleware,
+    client: Client,
     config: Config,
     #[allow(unused)]
     model: String,
@@ -416,13 +413,10 @@ impl OpenRouter {
     fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         let config = Config { api_key, base_url };
 
-        let reqwest_client = Client::builder().build().unwrap();
-        let http_client = ClientBuilder::new(reqwest_client)
-            .with(LoggingMiddleware)
-            .build();
+        let client = Client::builder().build().unwrap();
 
         Self {
-            http_client,
+            client,
             config,
             model: model.unwrap_or(DEFAULT_MODEL.to_string()),
         }
@@ -444,7 +438,7 @@ impl InnerProvider for OpenRouter {
         tracing::debug!("Request Body: {}", body);
 
         let response_stream = self
-            .http_client
+            .client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
             .body(body)
@@ -482,7 +476,7 @@ impl InnerProvider for OpenRouter {
 
     async fn models(&self) -> Result<Vec<String>> {
         let text = self
-            .http_client
+            .client
             .get(self.config.url("/models"))
             .headers(self.config.headers())
             .send()

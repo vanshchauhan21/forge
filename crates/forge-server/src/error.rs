@@ -14,7 +14,7 @@ pub enum Error {
     Env(std::env::VarError),
     SendError(tokio::sync::mpsc::error::SendError<ChatEvent>),
     Serde(serde_json::Error),
-    EmptyResponse
+    EmptyResponse,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

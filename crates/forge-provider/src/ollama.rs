@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
 use forge_tool::{Tool, ToolId};
-use reqwest_middleware::reqwest::Client;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::error::Result;
 use super::provider::{InnerProvider, Provider};
-use crate::log::LoggingMiddleware;
 use crate::model::{AnyMessage, Assistant, Role, System, ToolUse, UseId, User};
 use crate::ResultStream;
 
@@ -372,22 +370,17 @@ struct ProviderPreferences {
 
 #[derive(Clone)]
 struct OllamaProvider {
-    http_client: ClientWithMiddleware,
-
+    client: Client,
     base_url: String,
     model: String,
 }
 
 impl OllamaProvider {
     fn new(model: Option<String>, base_url: Option<String>) -> Self {
-        let reqwest_client = Client::builder().build().unwrap();
-        let http_client = ClientBuilder::new(reqwest_client)
-            .with(LoggingMiddleware)
-            .build();
+        let client = Client::builder().build().unwrap();
 
         Self {
-            http_client,
-
+            client,
             base_url: base_url.unwrap_or("https://localhost:1134".to_string()),
             model: model.unwrap_or(DEFAULT_MODEL.to_string()),
         }
@@ -414,7 +407,7 @@ impl InnerProvider for OllamaProvider {
         tracing::debug!("Ollama Request Body: {}", body);
 
         let response_stream = self
-            .http_client
+            .client
             .post(self.url("/chat/completions"))
             .body(body)
             .send()
@@ -451,7 +444,7 @@ impl InnerProvider for OllamaProvider {
 
     async fn models(&self) -> Result<Vec<String>> {
         let text = self
-            .http_client
+            .client
             .get(self.url("/models"))
             .send()
             .await?

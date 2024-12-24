@@ -11,8 +11,7 @@ pub enum Error {
         provider: String,
         error: ProviderError,
     },
-    ReqwestMiddleware(#[from] reqwest_middleware::Error),
-    Reqwest(#[from] reqwest_middleware::reqwest::Error),
+    Reqwest(#[from] reqwest::Error),
     SerdeJson(#[from] serde_json::Error),
 }
 

@@ -1,5 +1,4 @@
 mod error;
-mod log;
 mod model;
 mod ollama;
 #[allow(unused)]
