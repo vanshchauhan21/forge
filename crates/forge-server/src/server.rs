@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
-use axum::extract::State;
+use axum::extract::{Json, State};
 use axum::response::sse::Sse;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::app::App;
 use crate::completion::File;
+use crate::conversation::{self, Request};
 use crate::{EventStream, Result};
 
 pub struct Server {
@@ -31,7 +32,7 @@ impl Server {
 
         // Setup HTTP server
         let app = Router::new()
-            .route("/conversation", get(conversation_handler))
+            .route("/conversation", post(conversation_handler))
             .route("/completions", get(completions_handler))
             .route("/health", get(health_handler))
             .layer(CorsLayer::new().allow_origin(Any))
@@ -59,8 +60,12 @@ async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<Fi
 }
 
 #[axum::debug_handler]
-async fn conversation_handler(State(state): State<Arc<App>>) -> Sse<EventStream> {
-    Sse::new(state.engine.as_stream().await)
+async fn conversation_handler(
+    State(state): State<Arc<App>>,
+    Json(request): Json<conversation::Request>,
+) -> Sse<EventStream> {
+    // Use payload.message or other fields as needed
+    Sse::new(state.engine.chat(request).await)
 }
 
 async fn health_handler() -> axum::response::Response {

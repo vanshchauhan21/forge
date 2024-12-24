@@ -1,7 +1,7 @@
 mod app;
 mod broadcast;
 mod completion;
-mod engine;
+mod conversation;
 mod error;
 mod log;
 mod server;
