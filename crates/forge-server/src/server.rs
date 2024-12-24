@@ -10,16 +10,16 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::app::App;
-use crate::completion::{Completion, File};
+use crate::completion::File;
 use crate::Result;
 
 pub struct Server {
-    state: Arc<App<String>>,
+    state: Arc<App>,
 }
 
 impl Default for Server {
     fn default() -> Self {
-        Self { state: Arc::new(App::<String>::default()) }
+        Self { state: Arc::new(App::new(".")) }
     }
 }
 
@@ -55,15 +55,17 @@ impl Server {
     }
 }
 
-async fn completions_handler() -> axum::Json<Vec<File>> {
-    let completions = Completion::new(".").list().await;
+async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<File>> {
+    let completions = state.completion.list().await;
     axum::Json(completions)
 }
 
+#[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<App<String>>>,
-) -> Sse<impl Stream<Item = std::result::Result<Event, Infallible>>> {
-    Sse::new(state.as_stream().await)
+    State(state): State<Arc<App>>,
+) -> Sse<Box<dyn Stream<Item = std::result::Result<Event, Infallible>> + Send + Unpin>> {
+    // Sse::new(state.engine.as_stream().await.unwrap())
+    todo!()
 }
 
 async fn health_handler() -> axum::response::Response {

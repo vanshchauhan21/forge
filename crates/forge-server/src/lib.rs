@@ -1,5 +1,6 @@
 mod app;
 mod completion;
+mod engine;
 mod error;
 mod log;
 mod server;
