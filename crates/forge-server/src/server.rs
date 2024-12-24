@@ -49,7 +49,7 @@ impl Server {
                     .allow_headers([
                         axum::http::header::CONTENT_TYPE,
                         axum::http::header::AUTHORIZATION,
-                    ])
+                    ]),
             )
             .with_state(self.state.clone());
 
