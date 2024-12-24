@@ -1,5 +1,5 @@
 [package]
-name = "forge-tool-macros"
+name = "forge_tool_macros"
 version = "0.1.0"
 edition = "2021"
 

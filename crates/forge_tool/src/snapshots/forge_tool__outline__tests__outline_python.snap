@@ -1,5 +1,5 @@
 ---
-source: crates/forge-tool/src/outline.rs
+source: crates/forge_tool/src/outline.rs
 expression: result
 ---
 test.py

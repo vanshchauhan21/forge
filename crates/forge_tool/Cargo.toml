@@ -1,5 +1,5 @@
 [package]
-name = "forge-tool"
+name = "forge_tool"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,7 +13,7 @@ url = { version = "2.5", features = ["serde"] }
 tracing = "0.1"
 colorize = "0.1.0"
 Inflector = "0.11.4"
-forge-tool-macros = { path = "../forge-tool-macros" }
+forge_tool_macros = { path = "../forge_tool_macros" }
 schemars = "0.8.21"
 regex = "1.10.2"
 walkdir = "2.4.0"

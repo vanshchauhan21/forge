@@ -1,9 +1,9 @@
 [package]
-name = "forge-main"
+name = "forge_main"
 version = "0.1.0"
 edition = "2021"
 
 
 [dependencies]
-forge-server = { path = "../forge-server" }
+forge_server = { path = "../forge_server" }
 tokio = { version = "1.0", features = ["full"] }

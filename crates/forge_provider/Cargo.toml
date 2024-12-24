@@ -1,5 +1,5 @@
 [package]
-name = "forge-provider"
+name = "forge_provider"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,5 +13,5 @@ tracing = "0.1.41"
 async-trait = "0.1.83"
 derive_more = { version = "1.0.0", features = ["from", "display"] }
 derive_setters = "0.1.6"
-forge-tool = { path = "../forge-tool" }
+forge_tool = { path = "../forge_tool" }
 reqwest-eventsource = "0.6.0"
