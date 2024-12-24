@@ -1,6 +1,9 @@
 use std::convert::Infallible;
 use std::sync::Arc;
 
+use crate::app::App;
+use crate::completion::{Completion, File};
+use crate::Result;
 use axum::extract::State;
 use axum::response::sse::{Event, Sse};
 use axum::routing::get;
@@ -8,8 +11,6 @@ use axum::Router;
 use futures::stream::Stream;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
-
-use crate::{App, Completion, File, Result};
 
 pub struct Server {
     state: Arc<App<String>>,

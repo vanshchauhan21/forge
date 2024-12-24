@@ -693,6 +693,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-main"
+version = "0.1.0"
+dependencies = [
+ "forge-server",
+ "tokio",
+]
+
+[[package]]
 name = "forge-provider"
 version = "0.1.0"
 dependencies = [
