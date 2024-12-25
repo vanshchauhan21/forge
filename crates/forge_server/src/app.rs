@@ -9,10 +9,9 @@ pub struct App {
 
 impl App {
     pub fn new(api_key: String, working_dir: impl Into<String>) -> Self {
-        let engine = Conversation::new(api_key);
         Self {
             completion: Completion::new(working_dir),
-            conversation: engine,
+            conversation: Conversation::new(api_key),
         }
     }
 }
