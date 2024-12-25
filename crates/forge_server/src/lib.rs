@@ -1,6 +1,7 @@
 mod api;
 #[allow(unused)]
 mod app;
+mod atomic;
 mod completion;
 mod error;
 mod log;

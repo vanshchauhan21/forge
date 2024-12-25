@@ -1,6 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use forge_prompt::Prompt;
+use crate::atomic::AtomicRef;
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response, ToolResult, ToolUse};
 use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
@@ -12,27 +13,6 @@ use crate::app::{ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
 use crate::template::PromptTemplate;
 use crate::{Error, Result};
-
-#[derive(Debug, Clone)]
-struct AtomicRef<A> {
-    inner: Arc<Mutex<A>>,
-}
-
-impl<A: Clone> AtomicRef<A> {
-    fn new(request: A) -> Self {
-        Self { inner: Arc::new(Mutex::new(request)) }
-    }
-
-    fn get(&self) -> A {
-        self.inner.lock().unwrap().clone()
-    }
-
-    fn set(&self, update: impl FnOnce(A) -> A) -> A {
-        let mut request = self.inner.lock().unwrap();
-        *request = update(request.clone());
-        request.clone()
-    }
-}
 
 #[derive(Clone)]
 pub struct Server {
