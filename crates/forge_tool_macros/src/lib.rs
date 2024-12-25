@@ -28,8 +28,10 @@ pub fn derive_description(input: TokenStream) -> TokenStream {
             {
                 if let TokenTree::Literal(lit) = t {
                     let str = lit.to_string();
-                    if !str.is_empty() {
-                        doc_lines.push(lit.to_string());
+                    // Remove surrounding quotes from the doc string
+                    let clean_str = str.trim_matches('"').to_string();
+                    if !clean_str.is_empty() {
+                        doc_lines.push(clean_str);
                     }
                 }
             }
@@ -40,7 +42,7 @@ pub fn derive_description(input: TokenStream) -> TokenStream {
     if doc_lines.is_empty() {
         panic!("No doc comment found for {}", name);
     }
-    let doc_string = doc_lines.join(" ");
+    let doc_string = doc_lines.join("").trim().to_string();
 
     // Generate an implementation of `Description` that returns the doc string
     let expanded = quote! {
