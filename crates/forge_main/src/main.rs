@@ -1,6 +1,6 @@
-use forge_server::{Result, Server};
+use forge_server::{Result, API};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Server::default().launch().await
+    API::default().launch().await
 }

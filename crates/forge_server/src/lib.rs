@@ -2,8 +2,8 @@ mod completion;
 mod conversation;
 mod error;
 mod log;
-mod server;
+mod api;
 mod template;
 
 pub use error::*;
-pub use server::Server;
+pub use api::API;

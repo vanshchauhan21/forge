@@ -26,12 +26,12 @@ struct CompletionResponse {
     files: Vec<File>,
 }
 
-pub struct Server {
+pub struct API {
     // TODO: rename Conversation to Server and drop Server
     state: Arc<Conversation>,
 }
 
-impl Default for Server {
+impl Default for API {
     fn default() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
@@ -39,7 +39,7 @@ impl Default for Server {
     }
 }
 
-impl Server {
+impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
 
