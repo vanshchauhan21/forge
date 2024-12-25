@@ -4,7 +4,7 @@ use forge_tool::{Tool, ToolName};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Setters, Debug, Clone)]
+#[derive(Setters, Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
     pub context: Vec<AnyMessage>,
     pub tools: Vec<Tool>,
@@ -55,11 +55,11 @@ impl Request {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct System;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Assistant;
 
 pub trait Role {
@@ -84,7 +84,7 @@ impl Role for Assistant {
     }
 }
 
-#[derive(Setters, Debug, Clone)]
+#[derive(Setters, Debug, Clone, Serialize, Deserialize)]
 pub struct Message<R: Role> {
     pub content: String,
     pub role: R,
@@ -123,7 +123,7 @@ impl Message<Assistant> {
     }
 }
 
-#[derive(Debug, Clone, From)]
+#[derive(Debug, Clone, From, Serialize, Deserialize)]
 pub enum AnyMessage {
     System(Message<System>),
     User(Message<User>),
@@ -153,7 +153,7 @@ impl Response {
 }
 
 /// Unique identifier for a using a tool
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UseId(pub(crate) String);
 
 #[derive(Setters, Debug, Clone)]
@@ -168,7 +168,7 @@ pub struct ToolUse {
     pub input: Option<Value>,
 }
 
-#[derive(Setters, Debug, Clone)]
+#[derive(Setters, Debug, Clone, Serialize, Deserialize)]
 pub struct ToolResult {
     pub tool_use_id: Option<UseId>,
     pub content: Value,
@@ -184,3 +184,9 @@ pub struct Model {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct ModelId(String);
+
+impl Default for ModelId {
+    fn default() -> Self {
+        ModelId("openai/gpt-3.5-turbo".to_string())
+    }
+}
