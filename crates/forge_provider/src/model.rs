@@ -4,7 +4,7 @@ use forge_tool::{Tool, ToolName};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Setters, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Setters, Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
     pub context: Vec<AnyMessage>,
     pub tools: Vec<Tool>,
@@ -23,35 +23,59 @@ impl Request {
     }
 
     pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
-        let tool: Tool = tool.into();
-        self.tools.push(tool);
+        self.add_tool_mut(tool);
         self
     }
 
     pub fn add_tool_result(mut self, tool_result: impl Into<ToolResult>) -> Self {
-        self.tool_result.push(tool_result.into());
+        self.add_tool_result_mut(tool_result);
         self
     }
 
     pub fn add_message(mut self, message: impl Into<AnyMessage>) -> Self {
-        self.context.push(message.into());
+        self.add_message_mut(message);
         self
     }
 
     pub fn extend_tools(mut self, tools: Vec<impl Into<Tool>>) -> Self {
-        self.tools.extend(tools.into_iter().map(Into::into));
+        self.extend_tools_mut(tools);
         self
     }
 
     pub fn extend_tool_results(mut self, tool_results: Vec<impl Into<ToolResult>>) -> Self {
-        self.tool_result
-            .extend(tool_results.into_iter().map(Into::into));
+        self.extend_tool_results_mut(tool_results);
         self
     }
 
     pub fn extend_messages(mut self, messages: Vec<impl Into<AnyMessage>>) -> Self {
-        self.context.extend(messages.into_iter().map(Into::into));
+        self.extend_messages_mut(messages);
         self
+    }
+
+    pub fn add_tool_mut(&mut self, tool: impl Into<Tool>) {
+        let tool: Tool = tool.into();
+        self.tools.push(tool);
+    }
+
+    pub fn add_tool_result_mut(&mut self, tool_result: impl Into<ToolResult>) {
+        self.tool_result.push(tool_result.into());
+    }
+
+    pub fn add_message_mut(&mut self, message: impl Into<AnyMessage>) {
+        self.context.push(message.into());
+    }
+
+    pub fn extend_tools_mut(&mut self, tools: Vec<impl Into<Tool>>) {
+        self.tools.extend(tools.into_iter().map(Into::into));
+    }
+
+    pub fn extend_tool_results_mut(&mut self, tool_results: Vec<impl Into<ToolResult>>) {
+        self.tool_result
+            .extend(tool_results.into_iter().map(Into::into));
+    }
+
+    pub fn extend_messages_mut(&mut self, messages: Vec<impl Into<AnyMessage>>) {
+        self.context.extend(messages.into_iter().map(Into::into));
     }
 }
 
