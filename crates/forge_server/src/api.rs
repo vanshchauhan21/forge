@@ -13,7 +13,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::completion::File;
-use crate::conversation::{ChatRequest, Conversation};
+use crate::server::{ChatRequest, Server};
 use crate::Result;
 
 #[derive(serde::Serialize)]
@@ -28,14 +28,14 @@ struct CompletionResponse {
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
-    state: Arc<Conversation>,
+    state: Arc<Server>,
 }
 
 impl Default for API {
     fn default() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
-        Self { state: Arc::new(Conversation::new(".", api_key)) }
+        Self { state: Arc::new(Server::new(".", api_key)) }
     }
 }
 
@@ -86,9 +86,7 @@ impl API {
     }
 }
 
-async fn completions_handler(
-    State(state): State<Arc<Conversation>>,
-) -> axum::Json<CompletionResponse> {
+async fn completions_handler(State(state): State<Arc<Server>>) -> axum::Json<CompletionResponse> {
     let completions = state
         .completions()
         .await
@@ -98,7 +96,7 @@ async fn completions_handler(
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<Conversation>>,
+    State(state): State<Arc<Server>>,
     Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
@@ -112,7 +110,7 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<Conversation>>) -> Json<Vec<Tool>> {
+async fn tools_handler(State(state): State<Arc<Server>>) -> Json<Vec<Tool>> {
     let tools = state.tools();
     Json(tools)
 }
@@ -124,12 +122,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<Conversation>>) -> Json<ModelsResponse> {
+async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelsResponse> {
     let models = state.models().await.unwrap_or_default();
     Json(ModelsResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<Conversation>>) -> Json<Request> {
+async fn context_handler(State(state): State<Arc<Server>>) -> Json<Request> {
     let request = state.context();
     Json(request)
 }

@@ -51,19 +51,19 @@ impl<A: Clone> Context<A> {
 }
 
 #[derive(Clone)]
-pub struct Conversation {
+pub struct Server {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
     tools: Arc<ToolEngine>,
     context: Context<Request>,
     completions: Arc<Completion>,
 }
 
-impl Conversation {
+impl Server {
     pub async fn completions(&self) -> Result<Vec<File>> {
         self.completions.list().await
     }
 
-    pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Conversation {
+    pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
         let request = Request::new(ModelId::default())
             .add_message(Message::system(include_str!("./prompts/system.md")))
