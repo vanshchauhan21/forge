@@ -1,7 +1,7 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
 use forge_tool::{Tool, ToolName};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Default, Setters, Debug, Clone)]
@@ -162,4 +162,11 @@ pub struct ToolUse {
 pub struct ToolResult {
     pub tool_use_id: Option<UseId>,
     pub content: Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Model {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
 }

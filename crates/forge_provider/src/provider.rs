@@ -1,5 +1,5 @@
 use super::error::Result;
-use crate::ResultStream;
+use crate::{Model, ResultStream};
 
 #[async_trait::async_trait]
 pub(crate) trait InnerProvider: Send + Sync + 'static {
@@ -8,7 +8,7 @@ pub(crate) trait InnerProvider: Send + Sync + 'static {
     type Error: Send + Sync + 'static;
 
     async fn chat(&self, request: Self::Request) -> ResultStream<Self::Response, Self::Error>;
-    async fn models(&self) -> Result<Vec<String>>;
+    async fn models(&self) -> Result<Vec<Model>>;
 }
 
 pub struct Provider<Request, Response, Error> {
@@ -25,7 +25,7 @@ impl<
         self.provider.chat(request).await
     }
 
-    pub async fn models(&self) -> Result<Vec<String>> {
+    pub async fn models(&self) -> Result<Vec<Model>> {
         self.provider.models().await
     }
 

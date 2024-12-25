@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_prompt::Prompt;
-use forge_provider::{Message, Provider, Request, Response, ToolResult, ToolUse};
+use forge_provider::{Message, Model, Provider, Request, Response, ToolResult, ToolUse};
 use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
 use tokio::sync::mpsc;
@@ -44,6 +44,10 @@ impl Conversation {
 
     pub fn tools(&self) -> Vec<Tool> {
         self.tools.list()
+    }
+
+    pub async fn models(&self) -> Result<Vec<Model>> {
+        Ok(self.provider.models().await?)
     }
 
     pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatEvent> + Send> {

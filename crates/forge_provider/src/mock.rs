@@ -2,11 +2,11 @@ use derive_setters::Setters;
 
 use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
-use crate::ResultStream;
+use crate::{Model, ResultStream};
 
 #[derive(Clone, Setters)]
 pub struct Mock<Request, Response, Error> {
-    models: Vec<String>,
+    models: Vec<Model>,
     events: std::result::Result<Vec<std::result::Result<Response, Error>>, Error>,
     _request: std::marker::PhantomData<Request>,
 }
@@ -29,7 +29,7 @@ impl<
         Ok(Box::pin(stream))
     }
 
-    async fn models(&self) -> Result<Vec<String>> {
+    async fn models(&self) -> Result<Vec<Model>> {
         Ok(self.models.clone())
     }
 }

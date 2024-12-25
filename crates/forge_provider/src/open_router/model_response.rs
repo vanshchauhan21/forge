@@ -5,7 +5,7 @@ pub struct Model {
     pub id: String,
     pub name: String,
     pub created: u64,
-    pub description: String,
+    pub description: Option<String>,
     pub context_length: u64,
     pub architecture: Architecture,
     pub pricing: Pricing,

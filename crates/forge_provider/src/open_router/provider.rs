@@ -5,7 +5,7 @@ use tokio_stream::StreamExt;
 
 use super::chat_request::ChatRequest;
 use super::chat_response::ChatResponse;
-use super::model_response::ListModelResponse;
+use super::model_response::{ListModelResponse, Model};
 use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
 use crate::{Error, ProviderError, Request, Response, ResultStream};
@@ -117,7 +117,7 @@ impl InnerProvider for OpenRouter {
         Ok(Box::pin(Box::new(stream)))
     }
 
-    async fn models(&self) -> Result<Vec<String>> {
+    async fn models(&self) -> Result<Vec<crate::Model>> {
         let text = self
             .client
             .get(self.config.url("/models"))
@@ -132,13 +132,23 @@ impl InnerProvider for OpenRouter {
         Ok(response
             .data
             .iter()
-            .map(|r| r.name.clone())
-            .collect::<Vec<String>>())
+            .map(|r| r.clone().into())
+            .collect::<Vec<crate::Model>>())
     }
 }
 
 impl Provider<Request, Response, Error> {
     pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         Provider::new(OpenRouter::new(api_key, model, base_url))
+    }
+}
+
+impl From<Model> for crate::Model {
+    fn from(value: Model) -> Self {
+        crate::Model {
+            id: value.id,
+            name: value.name,
+            description: value.description,
+        }
     }
 }
