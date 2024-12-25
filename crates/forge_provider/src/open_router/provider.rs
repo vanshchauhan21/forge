@@ -82,30 +82,37 @@ impl InnerProvider for OpenRouter {
 
         let es = EventSource::new(rb).unwrap();
 
-        let stream = es.filter_map(|event| match event {
-            Ok(ref event) => match event {
-                Event::Open => None,
-                Event::Message(event) => {
-                    // Ignoring wasteful events
-                    if ["[DONE]", ""].contains(&event.data.as_str()) {
-                        return None;
-                    }
-
-                    Some(match serde_json::from_str::<ChatResponse>(&event.data) {
-                        Ok(response) => crate::Response::try_from(response),
-                        Err(_) => {
-                            let value: serde_json::Value =
-                                serde_json::from_str(&event.data).unwrap();
-                            Err(Error::Provider {
-                                provider: PROVIDER_NAME.to_string(),
-                                error: ProviderError::UpstreamError(value),
-                            })
+        let stream = es
+            .filter_map(|event| match event {
+                Ok(ref event) => match event {
+                    Event::Open => None,
+                    Event::Message(event) => {
+                        // Ignoring wasteful events
+                        if ["[DONE]", ""].contains(&event.data.as_str()) {
+                            return None;
                         }
-                    })
-                }
-            },
-            Err(err) => Some(Err(err.into())),
-        });
+
+                        Some(match serde_json::from_str::<ChatResponse>(&event.data) {
+                            Ok(response) => crate::Response::try_from(response),
+                            Err(_) => {
+                                let value: serde_json::Value =
+                                    serde_json::from_str(&event.data).unwrap();
+                                Err(Error::Provider {
+                                    provider: PROVIDER_NAME.to_string(),
+                                    error: ProviderError::UpstreamError(value),
+                                })
+                            }
+                        })
+                    }
+                },
+                Err(err) => Some(Err(err.into())),
+            })
+            .take_while(|message| {
+                !matches!(
+                    message,
+                    Err(Error::EventSource(reqwest_eventsource::Error::StreamEnded))
+                )
+            });
 
         Ok(Box::pin(Box::new(stream)))
     }

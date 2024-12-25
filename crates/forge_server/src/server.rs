@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+const SERVER_PORT: u16 = 8080;
+
 use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
@@ -55,10 +57,10 @@ impl Server {
 
         // Spawn HTTP server
         let server = tokio::spawn(async move {
-            let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+            let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{SERVER_PORT}"))
                 .await
                 .unwrap();
-            info!("Server running on http://127.0.0.1:3000");
+            info!("Server running on http://127.0.0.1:{SERVER_PORT}");
             axum::serve(listener, app).await.unwrap();
         });
 
