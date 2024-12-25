@@ -1,11 +1,8 @@
-use tokio_stream::StreamExt;
 
-use crate::{
-    error::{Error, Result},
-    model::{Message, Request, Response},
-    provider::{InnerProvider, Provider},
-    ResultStream,
-};
+use crate::error::{Error, Result};
+use crate::model::{Request, Response};
+use crate::provider::{InnerProvider, Provider};
+use crate::ResultStream;
 
 #[derive(Clone)]
 pub struct Mock {
@@ -40,7 +37,7 @@ impl InnerProvider for Mock {
             "mock/neural-phoenix".to_string(),
             "mock/cosmic-oracle".to_string(),
             "mock/digital-alchemist".to_string(),
-            "mock/cyber-sentinel".to_string()
+            "mock/cyber-sentinel".to_string(),
         ])
     }
 }
