@@ -12,8 +12,9 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
+use crate::app::ChatRequest;
 use crate::completion::File;
-use crate::server::{ChatRequest, Server};
+use crate::server::Server;
 use crate::Result;
 
 #[derive(serde::Serialize)]

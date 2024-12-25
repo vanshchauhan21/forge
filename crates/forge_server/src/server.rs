@@ -2,49 +2,33 @@ use std::sync::{Arc, Mutex};
 
 use forge_prompt::Prompt;
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response, ToolResult, ToolUse};
-use forge_tool::{Tool, ToolEngine, ToolName};
+use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
 
+use crate::app::{ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
 use crate::template::PromptTemplate;
 use crate::{Error, Result};
 
-#[derive(Debug, serde::Serialize)]
-pub enum ChatEvent {
-    Text(String),
-    ToolUseStart(ToolName),
-    ToolUseEnd(String, Value),
-    Complete,
-    Fail(String),
-}
-
-#[allow(unused)]
-#[derive(Debug, serde::Deserialize)]
-pub struct ChatRequest {
-    // Add fields as needed, for example:
-    pub message: String,
-    pub model: ModelId,
-}
-
 #[derive(Debug, Clone)]
-struct Context<A> {
-    request: Arc<Mutex<A>>,
+struct AtomicRef<A> {
+    inner: Arc<Mutex<A>>,
 }
 
-impl<A: Clone> Context<A> {
+impl<A: Clone> AtomicRef<A> {
     fn new(request: A) -> Self {
-        Self { request: Arc::new(Mutex::new(request)) }
+        Self { inner: Arc::new(Mutex::new(request)) }
     }
 
     fn get(&self) -> A {
-        self.request.lock().unwrap().clone()
+        self.inner.lock().unwrap().clone()
     }
 
     fn set(&self, update: impl FnOnce(A) -> A) -> A {
-        let mut request = self.request.lock().unwrap();
+        let mut request = self.inner.lock().unwrap();
         *request = update(request.clone());
         request.clone()
     }
@@ -54,7 +38,7 @@ impl<A: Clone> Context<A> {
 pub struct Server {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
     tools: Arc<ToolEngine>,
-    context: Context<Request>,
+    context: AtomicRef<Request>,
     completions: Arc<Completion>,
 }
 
@@ -72,7 +56,7 @@ impl Server {
         Self {
             provider: Arc::new(Provider::open_router(api_key.into(), None)),
             tools: Arc::new(tools),
-            context: Context::new(request),
+            context: AtomicRef::new(request),
             completions: Arc::new(Completion::new(cwd)),
         }
     }
@@ -89,9 +73,9 @@ impl Server {
         Ok(self.provider.models().await?)
     }
 
-    pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatEvent> + Send> {
+    pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatResponse> + Send> {
         dbg!(&chat);
-        let (tx, rx) = mpsc::channel::<ChatEvent>(100);
+        let (tx, rx) = mpsc::channel::<ChatResponse>(100);
 
         let prompt = Prompt::parse(chat.message.clone()).unwrap_or(Prompt::new(chat.message));
         let mut message = PromptTemplate::task(prompt.to_string());
@@ -108,14 +92,14 @@ impl Server {
         tokio::task::spawn(async move {
             match this.run_forever(&tx).await {
                 Ok(_) => {}
-                Err(e) => tx.send(ChatEvent::Fail(e.to_string())).await.unwrap(),
+                Err(e) => tx.send(ChatResponse::Fail(e.to_string())).await.unwrap(),
             }
         });
 
         Ok(ReceiverStream::new(rx))
     }
 
-    async fn run_forever(&self, tx: &mpsc::Sender<ChatEvent>) -> Result<()> {
+    async fn run_forever(&self, tx: &mpsc::Sender<ChatResponse>) -> Result<()> {
         loop {
             let mut pending_request = false;
             let mut empty_response = true;
@@ -126,7 +110,7 @@ impl Server {
                 empty_response = false;
                 let message = message?;
                 if message.tool_use.is_empty() {
-                    tx.send(ChatEvent::Text(message.message.content))
+                    tx.send(ChatResponse::Text(message.message.content))
                         .await
                         .unwrap();
                 } else {
@@ -150,9 +134,9 @@ impl Server {
         }
     }
 
-    async fn use_tool(&self, tool: ToolUse, tx: &mpsc::Sender<ChatEvent>) -> Result<ToolResult> {
+    async fn use_tool(&self, tool: ToolUse, tx: &mpsc::Sender<ChatResponse>) -> Result<ToolResult> {
         if let Some(tool) = tool.tool_name {
-            tx.send(ChatEvent::ToolUseStart(tool)).await?;
+            tx.send(ChatResponse::ToolUseStart(tool)).await?;
         }
 
         // let content = self

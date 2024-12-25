@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use derive_more::derive::{Display, From};
 use derive_setters::Setters;
 
-use crate::server::ChatEvent;
+use crate::app::ChatResponse;
 
 #[derive(Display, From)]
 pub enum Error {
@@ -12,7 +12,7 @@ pub enum Error {
     Provider(forge_provider::Error),
     IO(std::io::Error),
     Env(std::env::VarError),
-    SendError(tokio::sync::mpsc::error::SendError<ChatEvent>),
+    SendError(tokio::sync::mpsc::error::SendError<ChatResponse>),
     Serde(serde_json::Error),
     EmptyResponse,
     Walk(forge_walker::Error),
