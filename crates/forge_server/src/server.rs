@@ -6,6 +6,7 @@ use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
+use forge_tool::Tool;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -40,6 +41,7 @@ impl Server {
             .route("/conversation", post(conversation_handler))
             .route("/completions", get(completions_handler))
             .route("/health", get(health_handler))
+            .route("/tools", get(tools_handler))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
@@ -82,7 +84,7 @@ async fn conversation_handler(
     Json(request): Json<conversation::ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
-        .engine
+        .conversation
         .chat(request)
         .await
         .expect("Engine failed to respond with a chat message");
@@ -90,6 +92,12 @@ async fn conversation_handler(
         let data = serde_json::to_string(&action).expect("Failed to serialize action");
         Ok(Event::default().data(data))
     }))
+}
+
+#[axum::debug_handler]
+async fn tools_handler(State(state): State<Arc<App>>) -> Json<Vec<Tool>> {
+    let tools = state.conversation.tools();
+    Json(tools)
 }
 
 async fn health_handler() -> axum::response::Response {

@@ -34,11 +34,11 @@ struct ToolDefinition {
     tool: Tool,
 }
 
-pub struct Router {
+pub struct ToolEngine {
     tools: HashMap<ToolId, ToolDefinition>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Tool {
     pub id: ToolId,
     pub description: String,
@@ -46,7 +46,7 @@ pub struct Tool {
     pub output_schema: Option<RootSchema>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct ToolId(String);
 
 impl ToolId {
@@ -63,7 +63,7 @@ impl ToolId {
     }
 }
 
-impl Router {
+impl ToolEngine {
     pub async fn call(&self, tool_id: &ToolId, input: Value) -> Result<Value, String> {
         match self.tools.get(tool_id) {
             Some(tool) => tool.executable.call(input).await,
@@ -98,18 +98,18 @@ impl Router {
     }
 }
 
-impl Default for Router {
+impl Default for ToolEngine {
     fn default() -> Self {
         let tools: HashMap<ToolId, ToolDefinition> = HashMap::from([
-            Router::import(FSRead),
-            Router::import(FSSearch),
-            Router::import(FSList),
-            Router::import(FSFileInfo),
-            Router::import(FSWrite),
-            Router::import(FSReplace),
-            Router::import(Outline),
-            Router::import(Think::default()),
-            Router::import(Shell::default()),
+            ToolEngine::import(FSRead),
+            ToolEngine::import(FSSearch),
+            ToolEngine::import(FSList),
+            ToolEngine::import(FSFileInfo),
+            ToolEngine::import(FSWrite),
+            ToolEngine::import(FSReplace),
+            ToolEngine::import(Outline),
+            ToolEngine::import(Think::default()),
+            ToolEngine::import(Shell::default()),
         ]);
 
         Self { tools }
@@ -122,17 +122,23 @@ mod test {
 
     #[test]
     fn test_id() {
-        assert!(Router::import(FSRead).0.into_string().ends_with("fs_read"));
-        assert!(Router::import(FSSearch)
+        assert!(ToolEngine::import(FSRead)
+            .0
+            .into_string()
+            .ends_with("fs_read"));
+        assert!(ToolEngine::import(FSSearch)
             .0
             .into_string()
             .ends_with("fs_search"));
-        assert!(Router::import(FSList).0.into_string().ends_with("fs_list"));
-        assert!(Router::import(FSFileInfo)
+        assert!(ToolEngine::import(FSList)
+            .0
+            .into_string()
+            .ends_with("fs_list"));
+        assert!(ToolEngine::import(FSFileInfo)
             .0
             .into_string()
             .ends_with("file_info"));
-        assert!(Router::import(Think::default())
+        assert!(ToolEngine::import(Think::default())
             .0
             .into_string()
             .ends_with("think"));

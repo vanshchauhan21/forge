@@ -4,15 +4,15 @@ mod ask;
 #[allow(unused)]
 mod mcp;
 mod outline;
-mod router;
 mod shell;
 mod think;
+mod tool_engine;
 
 pub use ask::*;
 pub use fs::*;
 pub use outline::*;
-pub use router::*;
 pub use shell::*;
+pub use tool_engine::*;
 
 #[async_trait::async_trait]
 pub trait ToolTrait {

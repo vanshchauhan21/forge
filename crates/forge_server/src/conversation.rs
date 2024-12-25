@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use forge_prompt::Prompt;
 use forge_provider::{Message, Provider, Request, Response, ToolResult, ToolUse};
-use forge_tool::Router;
+use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -31,15 +31,19 @@ pub struct ChatRequest {
 #[derive(Clone)]
 pub struct Conversation {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
-    tool_engine: Arc<Router>,
+    tools: Arc<ToolEngine>,
 }
 
 impl Conversation {
     pub fn new(api_key: String) -> Conversation {
         Self {
             provider: Arc::new(Provider::open_router(api_key, None, None)),
-            tool_engine: Arc::new(Router::default()),
+            tools: Arc::new(ToolEngine::default()),
         }
+    }
+
+    pub fn tools(&self) -> Vec<Tool> {
+        self.tools.list()
     }
 
     pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatEvent> + Send> {
@@ -56,7 +60,7 @@ impl Conversation {
         let request = Request::default()
             .add_message(Message::system(include_str!("./prompts/system.md")))
             .add_message(message)
-            .tools(self.tool_engine.list());
+            .tools(self.tools.list());
 
         let this = self.clone();
         tokio::task::spawn(async move {
@@ -104,8 +108,9 @@ impl Conversation {
     async fn use_tool(&self, tool: ToolUse, tx: &mpsc::Sender<ChatEvent>) -> Result<ToolResult> {
         tx.send(ChatEvent::ToolUseStart(tool.tool_id.clone().into_string()))
             .await?;
+
         let content = self
-            .tool_engine
+            .tools
             .call(&tool.tool_id, tool.input.unwrap_or_default().clone())
             .await?;
 
