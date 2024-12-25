@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use forge_prompt::Prompt;
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response, ToolResult, ToolUse};
-use forge_tool::{Tool, ToolEngine};
+use forge_tool::{Tool, ToolEngine, ToolName};
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -14,14 +14,14 @@ use crate::{Error, Result};
 #[derive(Debug, serde::Serialize)]
 pub enum ChatEvent {
     Text(String),
-    ToolUseStart(String),
+    ToolUseStart(ToolName),
     ToolUseEnd(String, Value),
     Complete,
     Fail(String),
 }
 
 #[allow(unused)]
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct ChatRequest {
     // Add fields as needed, for example:
     pub message: String,
@@ -83,6 +83,7 @@ impl Conversation {
     }
 
     pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatEvent> + Send> {
+        dbg!(&chat);
         let (tx, rx) = mpsc::channel::<ChatEvent>(100);
 
         let prompt = Prompt::parse(chat.message.clone()).unwrap_or(Prompt::new(chat.message));
@@ -143,21 +144,22 @@ impl Conversation {
     }
 
     async fn use_tool(&self, tool: ToolUse, tx: &mpsc::Sender<ChatEvent>) -> Result<ToolResult> {
-        tx.send(ChatEvent::ToolUseStart(tool.tool_id.clone().into_string()))
-            .await?;
+        if let Some(tool) = tool.tool_name {
+            tx.send(ChatEvent::ToolUseStart(tool)).await?;
+        }
 
-        let content = self
-            .tools
-            .call(&tool.tool_id, tool.input.unwrap_or_default().clone())
-            .await?;
+        // let content = self
+        //     .tools
+        //     .call(&tool.tool_id, tool.input.clone())
+        //     .await?;
 
-        tx.send(ChatEvent::ToolUseEnd(
-            tool.tool_id.into_string(),
-            content.clone(),
-        ))
-        .await?;
+        // tx.send(ChatEvent::ToolUseEnd(
+        //     tool.tool_name.into_string(),
+        //     content.clone(),
+        // ))
+        // .await?;
 
-        let result = ToolResult { tool_use_id: tool.tool_use_id, content: content.clone() };
+        let result = ToolResult { tool_use_id: tool.tool_use_id, content: Value::default() };
 
         Ok(result)
     }

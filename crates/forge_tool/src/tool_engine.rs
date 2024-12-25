@@ -52,13 +52,10 @@ pub struct Tool {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ToolName(String);
 
 impl ToolName {
-    pub fn new(name: &str) -> Self {
-        Self(name.to_string())
-    }
-
     pub fn into_string(self) -> String {
         self.0
     }

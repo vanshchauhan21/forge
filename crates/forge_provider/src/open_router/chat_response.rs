@@ -65,7 +65,7 @@ pub struct ResponseMessage {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ToolCall {
-    pub id: Option<String>,
+    pub id: Option<UseId>,
     pub r#type: String,
     pub function: FunctionCall,
 }
@@ -88,8 +88,8 @@ impl TryFrom<ChatResponse> for ModelResponse {
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
-                                tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: tool_call.function.name.clone(),
+                                tool_use_id: tool_call.id.clone(),
+                                tool_name: tool_call.function.name.clone(),
                                 input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
@@ -101,8 +101,8 @@ impl TryFrom<ChatResponse> for ModelResponse {
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
-                                tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: tool_call.function.name.clone(),
+                                tool_use_id: tool_call.id.clone(),
+                                tool_name: tool_call.function.name.clone(),
                                 input: tool_call.function.arguments.clone(),
                             });
                         }
