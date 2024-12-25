@@ -6,7 +6,7 @@ use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
-use forge_provider::Model;
+use forge_provider::{Model, Request};
 use forge_tool::Tool;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
@@ -49,6 +49,7 @@ impl Server {
             .route("/health", get(health_handler))
             .route("/tools", get(tools_handler))
             .route("/models", get(models_handler))
+            .route("/context", get(context_handler))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
@@ -117,4 +118,9 @@ async fn health_handler() -> axum::response::Response {
 async fn models_handler(State(state): State<Arc<App>>) -> Json<ModelsResponse> {
     let models = state.conversation.models().await.unwrap_or_default();
     Json(ModelsResponse { models })
+}
+
+async fn context_handler(State(state): State<Arc<App>>) -> Json<Request> {
+    let request = state.conversation.context();
+    Json(request)
 }
