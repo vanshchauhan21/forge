@@ -67,7 +67,7 @@ impl InnerProvider for OpenRouter {
     async fn chat(
         &self,
         request: crate::model::Request,
-    ) -> Result<ResultStream<crate::model::Response>> {
+    ) -> ResultStream<crate::model::Response, Error> {
         let mut request = ChatRequest::from(request);
         request.model = self.model.clone();
         request.stream = Some(true);
