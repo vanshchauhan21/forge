@@ -1,4 +1,3 @@
-mod app;
 mod completion;
 mod conversation;
 mod error;

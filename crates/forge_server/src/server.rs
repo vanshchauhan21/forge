@@ -12,9 +12,8 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
-use crate::app::App;
 use crate::completion::File;
-use crate::conversation::{self};
+use crate::conversation::{ChatRequest, Conversation};
 use crate::Result;
 
 #[derive(serde::Serialize)]
@@ -22,15 +21,21 @@ struct ModelsResponse {
     models: Vec<Model>,
 }
 
+#[derive(serde::Serialize)]
+struct CompletionResponse {
+    files: Vec<File>,
+}
+
 pub struct Server {
-    state: Arc<App>,
+    // TODO: rename Conversation to Server and drop Server
+    state: Arc<Conversation>,
 }
 
 impl Default for Server {
     fn default() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
-        Self { state: Arc::new(App::new(api_key, ".".to_string())) }
+        Self { state: Arc::new(Conversation::new(".", api_key)) }
     }
 }
 
@@ -81,18 +86,22 @@ impl Server {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<App>>) -> axum::Json<Vec<File>> {
-    let completions = state.completion.list().await;
-    axum::Json(completions)
+async fn completions_handler(
+    State(state): State<Arc<Conversation>>,
+) -> axum::Json<CompletionResponse> {
+    let completions = state
+        .completions()
+        .await
+        .expect("Failed to get completions");
+    axum::Json(CompletionResponse { files: completions })
 }
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<App>>,
-    Json(request): Json<conversation::ChatRequest>,
+    State(state): State<Arc<Conversation>>,
+    Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
-        .conversation
         .chat(request)
         .await
         .expect("Engine failed to respond with a chat message");
@@ -103,8 +112,8 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<App>>) -> Json<Vec<Tool>> {
-    let tools = state.conversation.tools();
+async fn tools_handler(State(state): State<Arc<Conversation>>) -> Json<Vec<Tool>> {
+    let tools = state.tools();
     Json(tools)
 }
 
@@ -115,12 +124,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<App>>) -> Json<ModelsResponse> {
-    let models = state.conversation.models().await.unwrap_or_default();
+async fn models_handler(State(state): State<Arc<Conversation>>) -> Json<ModelsResponse> {
+    let models = state.models().await.unwrap_or_default();
     Json(ModelsResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<App>>) -> Json<Request> {
-    let request = state.conversation.context();
+async fn context_handler(State(state): State<Arc<Conversation>>) -> Json<Request> {
+    let request = state.context();
     Json(request)
 }

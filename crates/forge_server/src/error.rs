@@ -15,6 +15,7 @@ pub enum Error {
     SendError(tokio::sync::mpsc::error::SendError<ChatEvent>),
     Serde(serde_json::Error),
     EmptyResponse,
+    Walk(forge_walker::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

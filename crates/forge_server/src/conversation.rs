@@ -8,6 +8,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
 
+use crate::completion::{Completion, File};
 use crate::template::PromptTemplate;
 use crate::{Error, Result};
 
@@ -54,19 +55,25 @@ pub struct Conversation {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
     tools: Arc<ToolEngine>,
     context: Context<Request>,
+    completions: Arc<Completion>,
 }
 
 impl Conversation {
-    pub fn new(api_key: String) -> Conversation {
+    pub async fn completions(&self) -> Result<Vec<File>> {
+        self.completions.list().await
+    }
+
+    pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Conversation {
         let tools = ToolEngine::default();
         let request = Request::new(ModelId::default())
             .add_message(Message::system(include_str!("./prompts/system.md")))
             .tools(tools.list());
 
         Self {
-            provider: Arc::new(Provider::open_router(api_key, None)),
+            provider: Arc::new(Provider::open_router(api_key.into(), None)),
             tools: Arc::new(tools),
             context: Context::new(request),
+            completions: Arc::new(Completion::new(cwd)),
         }
     }
 
