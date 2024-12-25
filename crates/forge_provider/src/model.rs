@@ -4,14 +4,24 @@ use forge_tool::{Tool, ToolName};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Default, Setters, Debug, Clone)]
+#[derive(Setters, Debug, Clone)]
 pub struct Request {
     pub context: Vec<AnyMessage>,
     pub tools: Vec<Tool>,
     pub tool_result: Vec<ToolResult>,
+    pub model: ModelId,
 }
 
 impl Request {
+    pub fn new(id: ModelId) -> Self {
+        Request {
+            context: vec![],
+            tools: vec![],
+            tool_result: vec![],
+            model: id,
+        }
+    }
+
     pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
         let tool: Tool = tool.into();
         self.tools.push(tool);
@@ -166,7 +176,11 @@ pub struct ToolResult {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Model {
-    pub id: String,
+    pub id: ModelId,
     pub name: String,
     pub description: Option<String>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct ModelId(String);

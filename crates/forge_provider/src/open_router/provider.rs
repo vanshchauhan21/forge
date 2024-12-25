@@ -10,7 +10,6 @@ use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
 use crate::{Error, ProviderError, Request, Response, ResultStream};
 
-const DEFAULT_MODEL: &str = "openai/gpt-4o-mini";
 const PROVIDER_NAME: &str = "Open Router";
 
 #[derive(Debug, Clone)]
@@ -45,20 +44,15 @@ impl Config {
 struct OpenRouter {
     client: Client,
     config: Config,
-    model: String,
 }
 
 impl OpenRouter {
-    fn new(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
+    fn new(api_key: String, base_url: Option<String>) -> Self {
         let config = Config { api_key, base_url };
 
         let client = Client::builder().build().unwrap();
 
-        Self {
-            client,
-            config,
-            model: model.unwrap_or(DEFAULT_MODEL.to_string()),
-        }
+        Self { client, config }
     }
 }
 
@@ -70,7 +64,6 @@ impl InnerProvider for OpenRouter {
 
     async fn chat(&self, request: Self::Request) -> ResultStream<Self::Response, Self::Error> {
         let mut request = ChatRequest::from(request);
-        request.model = self.model.clone();
         request.stream = Some(true);
         let request = serde_json::to_string(&request)?;
 
@@ -138,8 +131,8 @@ impl InnerProvider for OpenRouter {
 }
 
 impl Provider<Request, Response, Error> {
-    pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
-        Provider::new(OpenRouter::new(api_key, model, base_url))
+    pub fn open_router(api_key: String, base_url: Option<String>) -> Self {
+        Provider::new(OpenRouter::new(api_key, base_url))
     }
 }
 

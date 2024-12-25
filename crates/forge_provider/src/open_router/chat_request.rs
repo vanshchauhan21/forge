@@ -4,7 +4,7 @@ use forge_tool::Tool;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{AnyMessage, Assistant, System, User};
-use crate::Role;
+use crate::{ModelId, Role};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
@@ -75,13 +75,13 @@ pub struct ProviderPreferences {
     // Define fields as necessary
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub messages: Option<Vec<Message>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
-    pub model: String,
+    pub model: ModelId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_format: Option<ResponseFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -206,7 +206,29 @@ impl From<crate::model::Request> for ChatRequest {
                     Some(tools)
                 }
             },
-            ..Default::default()
+            model: value.model,
+            prompt: Default::default(),
+            response_format: Default::default(),
+            stop: Default::default(),
+            stream: Default::default(),
+            max_tokens: Default::default(),
+            temperature: Default::default(),
+            tool_choice: Default::default(),
+            seed: Default::default(),
+            top_p: Default::default(),
+            top_k: Default::default(),
+            frequency_penalty: Default::default(),
+            presence_penalty: Default::default(),
+            repetition_penalty: Default::default(),
+            logit_bias: Default::default(),
+            top_logprobs: Default::default(),
+            min_p: Default::default(),
+            top_a: Default::default(),
+            prediction: Default::default(),
+            transforms: Default::default(),
+            models: Default::default(),
+            route: Default::default(),
+            provider: Default::default(),
         }
     }
 }

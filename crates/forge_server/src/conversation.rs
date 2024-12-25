@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_prompt::Prompt;
-use forge_provider::{Message, Model, Provider, Request, Response, ToolResult, ToolUse};
+use forge_provider::{Message, Model, ModelId, Provider, Request, Response, ToolResult, ToolUse};
 use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
 use tokio::sync::mpsc;
@@ -25,7 +25,7 @@ pub enum ChatEvent {
 pub struct ChatRequest {
     // Add fields as needed, for example:
     pub message: String,
-    pub model: Option<String>,
+    pub model: ModelId,
 }
 
 #[derive(Clone)]
@@ -37,7 +37,7 @@ pub struct Conversation {
 impl Conversation {
     pub fn new(api_key: String) -> Conversation {
         Self {
-            provider: Arc::new(Provider::open_router(api_key, None, None)),
+            provider: Arc::new(Provider::open_router(api_key, None)),
             tools: Arc::new(ToolEngine::default()),
         }
     }
@@ -61,7 +61,7 @@ impl Conversation {
             message = message.append(PromptTemplate::file(file, content));
         }
 
-        let request = Request::default()
+        let request = Request::new(chat.model)
             .add_message(Message::system(include_str!("./prompts/system.md")))
             .add_message(message)
             .tools(self.tools.list());
