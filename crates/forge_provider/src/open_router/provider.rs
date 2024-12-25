@@ -45,7 +45,6 @@ impl Config {
 struct OpenRouter {
     client: Client,
     config: Config,
-    #[allow(unused)]
     model: String,
 }
 
@@ -67,20 +66,18 @@ impl OpenRouter {
 impl InnerProvider for OpenRouter {
     async fn chat(
         &self,
-        body: crate::model::Request,
+        request: crate::model::Request,
     ) -> Result<ResultStream<crate::model::Response>> {
-        let mut new_body = ChatRequest::from(body);
-
-        new_body.model = self.model.clone();
-        new_body.stream = Some(true);
-
-        let body = serde_json::to_string(&new_body)?;
+        let mut request = ChatRequest::from(request);
+        request.model = self.model.clone();
+        request.stream = Some(true);
+        let request = serde_json::to_string(&request)?;
 
         let rb = self
             .client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .body(body);
+            .body(request);
 
         let es = EventSource::new(rb).unwrap();
 
@@ -88,7 +85,8 @@ impl InnerProvider for OpenRouter {
             Ok(ref event) => match event {
                 Event::Open => None,
                 Event::Message(event) => {
-                    if event.data == "[DONE]" {
+                    // Ignoring wasteful events
+                    if ["[DONE]", ""].contains(&event.data.as_str()) {
                         return None;
                     }
 
