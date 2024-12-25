@@ -80,6 +80,7 @@ impl InnerProvider for OpenRouter {
                 Ok(ref event) => match event {
                     Event::Open => None,
                     Event::Message(event) => {
+                        dbg!(&event);
                         // Ignoring wasteful events
                         if ["[DONE]", ""].contains(&event.data.as_str()) {
                             return None;

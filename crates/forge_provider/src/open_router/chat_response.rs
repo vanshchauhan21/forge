@@ -103,7 +103,7 @@ impl TryFrom<ChatResponse> for ModelResponse {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: tool_call.id.clone().map(UseId),
                                 tool_id: ToolName::new(&tool_call.function.name),
-                                input: serde_json::from_str(&tool_call.function.arguments).ok(),
+                                input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
                     }
