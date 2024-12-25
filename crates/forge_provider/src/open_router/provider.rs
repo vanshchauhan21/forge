@@ -8,7 +8,7 @@ use super::chat_response::ChatResponse;
 use super::model_response::ListModelResponse;
 use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
-use crate::{Error, ProviderError, ResultStream};
+use crate::{Error, ProviderError, Request, Response, ResultStream};
 
 const DEFAULT_MODEL: &str = "openai/gpt-4o-mini";
 const PROVIDER_NAME: &str = "Open Router";
@@ -64,10 +64,11 @@ impl OpenRouter {
 
 #[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
-    async fn chat(
-        &self,
-        request: crate::model::Request,
-    ) -> ResultStream<crate::model::Response, Error> {
+    type Request = crate::model::Request;
+    type Response = crate::model::Response;
+    type Error = Error;
+
+    async fn chat(&self, request: Self::Request) -> ResultStream<Self::Response, Self::Error> {
         let mut request = ChatRequest::from(request);
         request.model = self.model.clone();
         request.stream = Some(true);
@@ -129,7 +130,7 @@ impl InnerProvider for OpenRouter {
     }
 }
 
-impl Provider {
+impl Provider<Request, Response, Error> {
     pub fn open_router(api_key: String, model: Option<String>, base_url: Option<String>) -> Self {
         Provider::new(OpenRouter::new(api_key, model, base_url))
     }

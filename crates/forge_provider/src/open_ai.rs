@@ -178,7 +178,11 @@ fn get_message(
 
 #[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
-    async fn chat(&self, request: Request) -> Result<ResultStream<Response>> {
+    type Request = Request;
+    type Response = Response;
+    type Error = Error;
+
+    async fn chat(&self, request: Self::Request) -> ResultStream<Self::Response, Self::Error> {
         let client = self.client.clone();
         let chat = client.chat();
         let response = chat.create_stream(request.into()).await?;

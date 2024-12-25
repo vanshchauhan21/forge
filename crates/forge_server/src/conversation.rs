@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_prompt::Prompt;
-use forge_provider::{Message, Provider, Request, ToolResult, ToolUse};
+use forge_provider::{Message, Provider, Request, Response, ToolResult, ToolUse};
 use forge_tool::Router;
 use serde_json::Value;
 use tokio::sync::mpsc;
@@ -30,7 +30,7 @@ pub struct ChatRequest {
 
 #[derive(Clone)]
 pub struct Conversation {
-    provider: Arc<Provider>,
+    provider: Arc<Provider<Request, Response, forge_provider::Error>>,
     tool_engine: Arc<Router>,
 }
 

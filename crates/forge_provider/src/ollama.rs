@@ -393,10 +393,14 @@ impl OllamaProvider {
 
 #[async_trait::async_trait]
 impl InnerProvider for OllamaProvider {
+    type Request = crate::model::Request;
+    type Response = crate::model::Response;
+    type Error = crate::error::Error;
+
     async fn chat(
         &self,
-        request: crate::model::Request,
-    ) -> Result<ResultStream<crate::model::Response>> {
+        request: Self::Request,
+    ) -> ResultStream<Self::Response, Self::Error> {
         let mut new_request = Request::from(request);
 
         new_request.model = self.model.clone();
