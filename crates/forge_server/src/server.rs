@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use forge_prompt::Prompt;
-use crate::atomic::AtomicRef;
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response, ToolResult, ToolUse};
 use forge_tool::{Tool, ToolEngine};
 use serde_json::Value;
@@ -10,6 +9,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt};
 
 use crate::app::{ChatRequest, ChatResponse};
+use crate::atomic::AtomicRef;
 use crate::completion::{Completion, File};
 use crate::template::PromptTemplate;
 use crate::{Error, Result};
