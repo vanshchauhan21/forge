@@ -8,7 +8,7 @@ use crate::model::{Response as ModelResponse, ToolUse};
 use crate::UseId;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Response {
+pub struct ChatResponse {
     pub id: String,
     pub provider: String,
     pub model: String,
@@ -76,10 +76,10 @@ pub struct FunctionCall {
     pub arguments: String,
 }
 
-impl TryFrom<Response> for ModelResponse {
+impl TryFrom<ChatResponse> for ModelResponse {
     type Error = Error;
 
-    fn try_from(res: Response) -> Result<Self, Self::Error> {
+    fn try_from(res: ChatResponse) -> Result<Self, Self::Error> {
         if let Some(choice) = res.choices.first() {
             let response = match choice {
                 Choice::NonChat { text, .. } => ModelResponse::new(text.clone()),

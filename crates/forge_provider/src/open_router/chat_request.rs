@@ -76,7 +76,7 @@ pub struct ProviderPreferences {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct Request {
+pub struct ChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub messages: Option<Vec<Message>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,9 +159,9 @@ impl From<AnyMessage> for Message {
     }
 }
 
-impl From<crate::model::Request> for Request {
+impl From<crate::model::Request> for ChatRequest {
     fn from(value: crate::model::Request) -> Self {
-        Request {
+        ChatRequest {
             messages: {
                 let result = value
                     .tool_result

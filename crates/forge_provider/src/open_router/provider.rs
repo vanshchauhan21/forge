@@ -3,9 +3,9 @@ use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
 use tokio_stream::StreamExt;
 
+use super::chat_request::ChatRequest;
+use super::chat_response::ChatResponse;
 use super::model_response::ListModelResponse;
-use super::request::Request;
-use super::response::Response;
 use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
 use crate::{Error, ProviderError, ResultStream};
@@ -69,7 +69,7 @@ impl InnerProvider for OpenRouter {
         &self,
         body: crate::model::Request,
     ) -> Result<ResultStream<crate::model::Response>> {
-        let mut new_body = Request::from(body);
+        let mut new_body = ChatRequest::from(body);
 
         new_body.model = self.model.clone();
         new_body.stream = Some(true);
@@ -94,7 +94,7 @@ impl InnerProvider for OpenRouter {
                         return None;
                     }
 
-                    Some(match serde_json::from_str::<Response>(&event.data) {
+                    Some(match serde_json::from_str::<ChatResponse>(&event.data) {
                         Ok(response) => crate::Response::try_from(response),
                         Err(_) => {
                             let value: serde_json::Value =
