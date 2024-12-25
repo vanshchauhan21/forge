@@ -72,7 +72,7 @@ pub struct ToolCall {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FunctionCall {
-    pub name: String,
+    pub name: Option<ToolName>,
     pub arguments: String,
 }
 
@@ -89,7 +89,7 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: ToolName::new(&tool_call.function.name),
+                                tool_id: tool_call.function.name.clone(),
                                 input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
@@ -102,8 +102,8 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: ToolName::new(&tool_call.function.name),
-                                input: serde_json::from_str(&tool_call.function.arguments)?,
+                                tool_id: tool_call.function.name.clone(),
+                                input: tool_call.function.arguments.clone(),
                             });
                         }
                     }
