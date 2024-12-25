@@ -42,7 +42,6 @@ pub struct ToolEngine {
 ///
 /// Refer to the specification over here:
 /// https://glama.ai/blog/2024-11-25-model-context-protocol-quickstart#server
-///
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Tool {
     pub name: ToolName,
