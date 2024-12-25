@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::shell::Shell;
@@ -42,7 +43,7 @@ pub struct ToolEngine {
 ///
 /// Refer to the specification over here:
 /// https://glama.ai/blog/2024-11-25-model-context-protocol-quickstart#server
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tool {
     pub name: ToolName,
     pub description: String,
@@ -50,7 +51,7 @@ pub struct Tool {
     pub output_schema: Option<RootSchema>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ToolName(String);
 
 impl ToolName {
