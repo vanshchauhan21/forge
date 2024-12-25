@@ -1,6 +1,6 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
-use forge_tool::{Tool, ToolId};
+use forge_tool::{Tool, ToolName};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -151,7 +151,7 @@ pub struct ToolUse {
     /// Optional unique identifier that represents a single call to the tool
     /// use. NOTE: Not all models support a call ID for using a tool
     pub tool_use_id: Option<UseId>,
-    pub tool_id: ToolId,
+    pub tool_id: ToolName,
 
     /// Arguments that need to be passed to the tool. NOTE: Not all tools
     /// require input

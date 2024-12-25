@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_tool::ToolId;
+use forge_tool::ToolName;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -89,7 +89,7 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: ToolId::new(&tool_call.function.name),
+                                tool_id: ToolName::new(&tool_call.function.name),
                                 input: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
@@ -102,7 +102,7 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
                                 tool_use_id: tool_call.id.clone().map(UseId),
-                                tool_id: ToolId::new(&tool_call.function.name),
+                                tool_id: ToolName::new(&tool_call.function.name),
                                 input: serde_json::from_str(&tool_call.function.arguments).ok(),
                             });
                         }

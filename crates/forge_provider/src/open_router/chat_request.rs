@@ -134,7 +134,7 @@ impl From<Tool> for OpenRouterTool {
             r#type: "function".to_string(),
             function: FunctionDescription {
                 description: Some(value.description),
-                name: value.id.into_string(),
+                name: value.name.into_string(),
                 parameters: serde_json::to_value(value.input_schema).unwrap(),
             },
         }
