@@ -1,4 +1,3 @@
-
 use crate::error::{Error, Result};
 use crate::model::{Request, Response};
 use crate::provider::{InnerProvider, Provider};
