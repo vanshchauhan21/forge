@@ -5,7 +5,6 @@ use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
-use tracing::debug;
 
 use crate::{Description, ToolTrait};
 
@@ -82,8 +81,6 @@ impl Shell {
     }
 
     async fn execute_command(&self, command: &str) -> Result<ShellOutput, String> {
-        debug!("Executing command: {}", command);
-
         let output = if cfg!(target_os = "windows") {
             Command::new("cmd")
                 .args(["/C", command])

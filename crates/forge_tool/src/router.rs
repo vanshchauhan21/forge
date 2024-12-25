@@ -4,7 +4,6 @@ use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
 use serde_json::Value;
-use tracing::debug;
 
 use crate::shell::Shell;
 use crate::think::Think;
@@ -94,7 +93,7 @@ impl Router {
             input_schema: schema_for!(T::Input),
             output_schema: Some(schema_for!(T::Output)),
         };
-        debug!("Imported tool: {:?}", tool);
+
         (ToolId(id), ToolDefinition { executable, tool })
     }
 }

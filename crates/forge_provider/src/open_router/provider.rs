@@ -76,8 +76,6 @@ impl InnerProvider for OpenRouter {
 
         let body = serde_json::to_string(&new_body)?;
 
-        tracing::debug!("Request Body: {}", body);
-
         let rb = self
             .client
             .post(self.config.url("/chat/completions"))

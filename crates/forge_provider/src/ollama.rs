@@ -404,8 +404,6 @@ impl InnerProvider for OllamaProvider {
 
         let body = serde_json::to_string(&new_request)?;
 
-        tracing::debug!("Ollama Request Body: {}", body);
-
         let response_stream = self
             .client
             .post(self.url("/chat/completions"))

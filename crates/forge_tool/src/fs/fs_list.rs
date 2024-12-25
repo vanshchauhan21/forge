@@ -3,7 +3,6 @@ use std::path::Path;
 use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::debug;
 use walkdir::WalkDir;
 
 use crate::{Description, ToolTrait};
@@ -63,7 +62,6 @@ impl ToolTrait for FSList {
             }
         }
 
-        debug!("Found items {}", paths.join("\n"));
         Ok(paths)
     }
 }
