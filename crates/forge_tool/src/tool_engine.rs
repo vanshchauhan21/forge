@@ -6,12 +6,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::shell::Shell;
-use crate::think::Think;
-use crate::{
-    AskFollowUpQuestion, Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite,
-    Outline, ToolTrait,
-};
+use crate::{Description, FSList, FSRead, FSWrite, ToolTrait};
 
 struct JsonTool<T>(T);
 
@@ -110,15 +105,16 @@ impl Default for ToolEngine {
     fn default() -> Self {
         let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
             ToolEngine::import(FSRead),
-            ToolEngine::import(FSSearch),
-            ToolEngine::import(FSList),
-            ToolEngine::import(FSFileInfo),
             ToolEngine::import(FSWrite),
-            ToolEngine::import(FSReplace),
-            ToolEngine::import(Outline),
-            ToolEngine::import(Think::default()),
-            ToolEngine::import(Shell::default()),
-            ToolEngine::import(AskFollowUpQuestion),
+            ToolEngine::import(FSList),
+            // TODO: uncomment them later on, as of now we only need the above tools.
+            // ToolEngine::import(FSSearch),
+            // ToolEngine::import(FSFileInfo),
+            // ToolEngine::import(FSReplace),
+            // ToolEngine::import(Outline),
+            // ToolEngine::import(Think::default()),
+            // ToolEngine::import(Shell::default()),
+            // ToolEngine::import(AskFollowUpQuestion),
         ]);
 
         Self { tools }
@@ -128,6 +124,8 @@ impl Default for ToolEngine {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::think::Think;
+    use crate::{FSFileInfo, FSSearch};
 
     #[test]
     fn test_id() {
