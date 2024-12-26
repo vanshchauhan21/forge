@@ -67,10 +67,11 @@ impl ToolName {
 }
 
 impl ToolEngine {
-    pub async fn call(&self, tool_id: &ToolName, input: Value) -> Result<Value, String> {
-        match self.tools.get(tool_id) {
+    pub async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
+        println!("{}({})", name.as_str(), input);
+        match self.tools.get(name) {
             Some(tool) => tool.executable.call(input).await,
-            None => Err(format!("No such tool found: {}", tool_id.as_str())),
+            None => Err(format!("No such tool found: {}", name.as_str())),
         }
     }
 
