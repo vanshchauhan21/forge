@@ -9,17 +9,26 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
+    #[schemars(
+        description = "The path of the directory to list contents for (relative to the current working directory {{cwd}})"
+    )]
     pub path: String,
+    #[schemars(
+        description = "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only."
+    )]
     pub recursive: Option<bool>,
 }
 
-/// Get a detailed listing of all files and directories in a specified path.
-/// Results clearly distinguish between files and directories with [FILE] and
-/// [DIR] prefixes. When recursive is true, lists contents of all
-/// subdirectories. When recursive is false or not provided, only lists
-/// top-level contents. This tool is essential for understanding directory
-/// structure and finding specific files within a directory. Only works within
-/// allowed directories.
+/// Request to list files and directories within the specified directory. If
+/// recursive is true, it will list all files and directories recursively. If
+/// recursive is false or not provided, it will only list the top-level
+/// contents. Do not use this tool to confirm the existence of files you may
+/// have created, as the user will let you know if the files were created
+/// successfully or not. Parameters:
+/// - path: (required) The path of the directory to list contents for (relative
+///   to the current working directory {{cwd}})
+/// - recursive: (optional) Whether to list files recursively. Use true for
+///   recursive listing, false or omit for top-level only.
 #[derive(DescriptionDerive)]
 pub struct FSList;
 

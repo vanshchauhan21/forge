@@ -93,8 +93,18 @@ impl ToolEngine {
     pub fn list(&self) -> Vec<Tool> {
         self.tools.values().map(|tool| tool.tool.clone()).collect()
     }
+}
 
-    fn import<T>(tool: T) -> (ToolName, ToolDefinition)
+struct ToolImporter {
+    env: Environment,
+}
+
+impl ToolImporter {
+    fn new(env: Environment) -> Self {
+        Self { env }
+    }
+
+    fn import<T>(&self, tool: T) -> (ToolName, ToolDefinition)
     where
         T: ToolTrait + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
@@ -106,16 +116,35 @@ impl ToolEngine {
             .unwrap()
             .to_snake_case();
         let executable = Box::new(JsonTool(tool));
+
+        let input: RootSchema = schema_for!(T::Input);
+        let input: RootSchema = serde_json::from_str(
+            &self
+                .env
+                .render(&serde_json::to_string(&input).unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+
+        let output: RootSchema = schema_for!(T::Output);
+        let output: RootSchema = serde_json::from_str(
+            &self
+                .env
+                .render(&serde_json::to_string(&output).unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+
         let tool = Tool {
             name: ToolName(name.clone()),
-            description: Environment::render(T::description()).unwrap_or_else(|err| {
+            description: self.env.render(T::description()).unwrap_or_else(|err| {
                 panic!(
                     "Unable to render description for tool {}, err: {:?}",
                     name, err
                 )
             }),
-            input_schema: schema_for!(T::Input),
-            output_schema: Some(schema_for!(T::Output)),
+            input_schema: input,
+            output_schema: Some(output),
         };
 
         (ToolName(name), ToolDefinition { executable, tool })
@@ -124,18 +153,21 @@ impl ToolEngine {
 
 impl Default for ToolEngine {
     fn default() -> Self {
+        let ctx = Environment::from_env();
+        let importer = ToolImporter::new(ctx);
+
         let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
-            ToolEngine::import(FSRead),
-            ToolEngine::import(FSWrite),
-            ToolEngine::import(FSList),
+            importer.import(FSRead),
+            importer.import(FSWrite),
+            importer.import(FSList),
+            importer.import(FSSearch),
+            importer.import(FSFileInfo),
+            importer.import(FSReplace),
+            importer.import(Outline),
+            importer.import(Shell::default()),
             // TODO: uncomment them later on, as of now we only need the above tools.
-            ToolEngine::import(FSSearch),
-            ToolEngine::import(FSFileInfo),
-            ToolEngine::import(FSReplace),
-            ToolEngine::import(Outline),
-            // ToolEngine::import(Think::default()),
-            ToolEngine::import(Shell::default()),
-            // ToolEngine::import(AskFollowUpQuestion),
+            // importer.import(Think::default()),
+            // importer::import(AskFollowUpQuestion),
         ]);
 
         Self { tools }
@@ -144,31 +176,64 @@ impl Default for ToolEngine {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
     use crate::think::Think;
     use crate::{FSFileInfo, FSSearch};
 
+    fn new_importer() -> ToolImporter {
+        ToolImporter::new(Environment {
+            cwd: Some("/Users/test".into()),
+            os: Some("TestOS".into()),
+            shell: Some("ZSH".into()),
+            home: Some("/Users".into()),
+        })
+    }
+
+    impl ToolEngine {
+        fn build(importer: ToolImporter) -> Self {
+            let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
+                importer.import(FSRead),
+                importer.import(FSWrite),
+                importer.import(FSList),
+                importer.import(FSSearch),
+                importer.import(FSFileInfo),
+                importer.import(Think::default()),
+            ]);
+            Self { tools }
+        }
+    }
+
     #[test]
     fn test_id() {
-        assert!(ToolEngine::import(FSRead)
-            .0
-            .into_string()
-            .ends_with("fs_read"));
-        assert!(ToolEngine::import(FSSearch)
+        let importer = new_importer();
+
+        assert!(importer.import(FSRead).0.into_string().ends_with("fs_read"));
+        assert!(importer
+            .import(FSSearch)
             .0
             .into_string()
             .ends_with("fs_search"));
-        assert!(ToolEngine::import(FSList)
-            .0
-            .into_string()
-            .ends_with("fs_list"));
-        assert!(ToolEngine::import(FSFileInfo)
+        assert!(importer.import(FSList).0.into_string().ends_with("fs_list"));
+        assert!(importer
+            .import(FSFileInfo)
             .0
             .into_string()
             .ends_with("file_info"));
-        assert!(ToolEngine::import(Think::default())
+        assert!(importer
+            .import(Think::default())
             .0
             .into_string()
             .ends_with("think"));
+    }
+
+    #[test]
+    fn test_description() {
+        let tool_engine = ToolEngine::build(new_importer());
+
+        for tool in tool_engine.list() {
+            let tool_str = serde_json::to_string_pretty(&tool).unwrap();
+            insta::assert_snapshot!(tool.name.as_str(), tool_str);
+        }
     }
 }

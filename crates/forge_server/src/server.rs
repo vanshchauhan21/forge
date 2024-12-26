@@ -27,7 +27,9 @@ impl Server {
     pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
 
-        let system_prompt = Environment::render(include_str!("./prompts/system.md"))
+        let env_ctx = Environment::from_env();
+        let system_prompt = env_ctx
+            .render(include_str!("./prompts/system.md"))
             .expect("Failed to render system prompt");
 
         let request = Request::new(ModelId::default())

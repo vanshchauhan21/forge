@@ -6,13 +6,19 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFileInfoInput {
+    #[schemars(
+        description = "The path of the file or directory to inspect (relative to the current working directory {{cwd}})"
+    )]
     pub path: String,
 }
 
-/// Retrieve detailed metadata about a file or directory. Returns comprehensive
-/// information including size, creation time, last modified time, permissions,
-/// and type. This tool is perfect for understanding file characteristics
-/// without reading the actual content. Only works within allowed directories.
+/// Request to retrieve detailed metadata about a file or directory at the
+/// specified path. Returns comprehensive information including size, creation
+/// time, last modified time, permissions, and type. Use this when you need to
+/// understand file characteristics without reading the actual content.
+/// Parameters:
+/// - path: (required) The path of the file or directory to inspect (relative to
+///   the current working directory {{cwd}})
 #[derive(DescriptionDerive)]
 pub struct FSFileInfo;
 

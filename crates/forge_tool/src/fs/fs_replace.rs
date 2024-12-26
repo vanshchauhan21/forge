@@ -19,7 +19,7 @@ pub struct FSReplaceInput {
 /// used when you need to make targeted changes to specific parts of a file.
 /// Parameters:
 ///     - path: (required) The path of the file to modify (relative to the
-///       current working directory {{current_working_dir}}) Critical rules:
+///       current working directory {{cwd}}) Critical rules:
 ///       1. SEARCH content must match the associated file section to find
 ///          EXACTLY:
 ///          * Match character-for-character including whitespace, indentation,

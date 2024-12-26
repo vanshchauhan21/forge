@@ -1,36 +1,57 @@
-use handlebars::Handlebars;
+use handlebars::{Handlebars, RenderError};
 use serde::Serialize;
 
-use crate::{Error, Platform, Result};
-
-#[derive(Serialize)]
-struct EnvironmentValue {
-    operating_system: String,
-    current_working_dir: String,
-    default_shell: String,
-    home_directory: String,
+#[derive(Serialize, Debug)]
+pub struct Environment {
+    pub os: Option<String>,
+    pub cwd: Option<String>,
+    pub shell: Option<String>,
+    pub home: Option<String>,
 }
 
-pub struct Environment;
+impl Environment {
+    pub fn from_env() -> Self {
+        Environment {
+            os: Some(std::env::consts::OS.to_string()),
+            cwd: std::env::current_dir()
+                .ok()
+                .map(|p| p.display().to_string()),
+            shell: if cfg!(windows) {
+                std::env::var("COMSPEC").ok().map(String::from)
+            } else {
+                std::env::var("SHELL").ok().or(Some("/bin/sh".to_string()))
+            },
+            home: dirs::home_dir().map(|a| a.display().to_string()),
+        }
+    }
+}
 
 impl Environment {
-    pub fn render(template: &str) -> Result<String> {
-        let env = EnvironmentValue {
-            operating_system: std::env::consts::OS.to_string(),
-            current_working_dir: std::env::current_dir()?.display().to_string(),
-            default_shell: if cfg!(windows) {
-                std::env::var("COMSPEC").or(Err(Error::IndeterminateShell(Platform::Windows)))?
-            } else {
-                std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
-            },
-            home_directory: dirs::home_dir()
-                .ok_or(Error::IndeterminateHomeDir)?
-                .display()
-                .to_string(),
-        };
-
+    pub fn render(&self, template: &str) -> Result<String, RenderError> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
-        Ok(hb.render_template(template, &env)?)
+        hb.render_template(template, &self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // use crate::default_ctx for unit test in the project.
+
+    fn test_env() -> Environment {
+        Environment {
+            cwd: Some("/Users/test".into()),
+            os: Some("TestOS".into()),
+            shell: Some("ZSH".into()),
+            home: Some("/Users".into()),
+        }
+    }
+
+    #[test]
+    fn test_render_with_custom_context() {
+        let result = test_env().render("OS: {{os}}, CWD: {{cwd}}").unwrap();
+        assert_eq!(result, "OS: TestOS, CWD: /Users/test");
     }
 }
