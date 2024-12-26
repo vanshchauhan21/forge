@@ -6,7 +6,10 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell, ToolTrait};
+use crate::{
+    Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell,
+    ToolTrait,
+};
 
 struct JsonTool<T>(T);
 
