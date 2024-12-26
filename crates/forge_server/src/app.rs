@@ -20,7 +20,6 @@ pub struct FileResponse {
 #[allow(unused)]
 #[derive(Debug, serde::Deserialize)]
 pub struct ChatRequest {
-    // Add fields as needed, for example:
     pub message: String,
     pub model: ModelId,
 }
