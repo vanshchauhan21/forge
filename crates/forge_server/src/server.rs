@@ -8,9 +8,9 @@ use tokio_stream::Stream;
 
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
-use crate::system::SystemPrompt;
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
+use crate::system::SystemPrompt;
 use crate::Result;
 
 #[derive(Clone)]
