@@ -8,7 +8,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use crate::app::{Action, App, ChatRequest, ChatResponse, Command, FileResponse};
 use crate::completion::Completion;
-use crate::{Error, Result};
+use crate::Error;
 
 pub struct AppRuntime {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
