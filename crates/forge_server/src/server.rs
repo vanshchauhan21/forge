@@ -31,7 +31,7 @@ impl Server {
         let system_prompt = include_str!("./prompts/system.md");
 
         let system_prompt = handlebar_register
-            .render_template(&system_prompt, &Environment::default())
+            .render_template(system_prompt, &Environment::default())
             .expect("Failed to render system prompt");
 
         let request = Request::new(ModelId::default())
