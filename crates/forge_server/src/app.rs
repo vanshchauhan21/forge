@@ -8,7 +8,6 @@ use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
 
-
 #[derive(Debug)]
 pub enum Action {
     UserChatMessage(ChatRequest),
@@ -17,7 +16,6 @@ pub enum Action {
     ToolUseResponse(String),
 }
 
-#[derive(Clone)]
 #[derive(Debug, Clone)]
 pub struct FileResponse {
     pub path: String,
