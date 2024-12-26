@@ -111,27 +111,28 @@ impl Role for Assistant {
 #[derive(Setters, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Message<R: Role> {
     pub content: String,
-    pub role: R,
+    #[serde(skip)]
+    _r: std::marker::PhantomData<R>,
 }
 
 impl<T: Role> Message<T> {
     pub fn extend(self, other: Message<T>) -> Message<T> {
         Message {
             content: format!("{}\n{}", self.content, other.content),
-            role: self.role,
+            _r: Default::default(),
         }
     }
 }
 
 impl Message<System> {
     pub fn system(content: impl Into<String>) -> Self {
-        Message { content: content.into(), role: System {} }
+        Message { content: content.into(), _r: Default::default() }
     }
 }
 
 impl Message<User> {
     pub fn user(content: impl Into<String>) -> Self {
-        Message { content: content.into(), role: User {} }
+        Message { content: content.into(), _r: Default::default() }
     }
 
     /// Creates a user message from any serializable item. The message is
@@ -143,7 +144,7 @@ impl Message<User> {
 
 impl Message<Assistant> {
     pub fn assistant(content: impl Into<String>) -> Self {
-        Message { content: content.into(), role: Assistant {} }
+        Message { content: content.into(), _r: Default::default() }
     }
 }
 
