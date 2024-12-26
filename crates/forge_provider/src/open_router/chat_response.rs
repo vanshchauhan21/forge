@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 use crate::model::{Response as ModelResponse, ToolUse};
-use crate::UseId;
+use crate::{FinishReason, UseId};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ChatResponse {
@@ -82,9 +82,11 @@ impl TryFrom<ChatResponse> for ModelResponse {
     fn try_from(res: ChatResponse) -> Result<Self, Self::Error> {
         if let Some(choice) = res.choices.first() {
             let response = match choice {
-                Choice::NonChat { text, .. } => ModelResponse::new(text.clone()),
-                Choice::NonStreaming { message, .. } => {
-                    let mut resp = ModelResponse::new(message.content.clone().unwrap_or_default());
+                Choice::NonChat { text, finish_reason, .. } => ModelResponse::new(text.clone())
+                    .finish_reason(finish_reason.clone().and_then(FinishReason::parse)),
+                Choice::NonStreaming { message, finish_reason, .. } => {
+                    let mut resp = ModelResponse::new(message.content.clone().unwrap_or_default())
+                        .finish_reason(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
@@ -96,8 +98,9 @@ impl TryFrom<ChatResponse> for ModelResponse {
                     }
                     resp
                 }
-                Choice::Streaming { delta, .. } => {
-                    let mut resp = ModelResponse::new(delta.content.clone().unwrap_or_default());
+                Choice::Streaming { delta, finish_reason, .. } => {
+                    let mut resp = ModelResponse::new(delta.content.clone().unwrap_or_default())
+                        .finish_reason(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_call(ToolUse {
@@ -110,6 +113,7 @@ impl TryFrom<ChatResponse> for ModelResponse {
                     resp
                 }
             };
+
             Ok(response)
         } else {
             Err(Error::empty_response("Open Router"))

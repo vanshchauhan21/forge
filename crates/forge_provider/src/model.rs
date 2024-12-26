@@ -158,11 +158,30 @@ pub enum AnyMessage {
 pub struct Response {
     pub message: Message<Assistant>,
     pub tool_use: Vec<ToolUse>,
+    pub finish_reason: Option<FinishReason>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FinishReason {
+    ToolUse,
+}
+
+impl FinishReason {
+    pub fn parse(reason: String) -> Option<Self> {
+        match reason.as_str() {
+            "tool_use" => Some(FinishReason::ToolUse),
+            _ => None,
+        }
+    }
 }
 
 impl Response {
     pub fn new(message: String) -> Response {
-        Response { message: Message::assistant(message), tool_use: vec![] }
+        Response {
+            message: Message::assistant(message),
+            tool_use: vec![],
+            finish_reason: None,
+        }
     }
 
     pub fn add_call(mut self, call_tool: impl Into<ToolUse>) -> Self {
