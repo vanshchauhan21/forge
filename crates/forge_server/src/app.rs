@@ -1,8 +1,9 @@
 use forge_prompt::Prompt;
 use forge_provider::{FinishReason, Message, ModelId, Request, Response};
-use forge_tool::{ToolEngine, ToolName};
+use forge_tool::ToolName;
 use serde_json::Value;
 
+use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
 pub enum Action {
@@ -17,7 +18,6 @@ pub struct FileResponse {
     pub content: String,
 }
 
-#[allow(unused)]
 #[derive(Debug, serde::Deserialize)]
 pub struct ChatRequest {
     pub message: String,
@@ -74,11 +74,11 @@ impl Command {
 
 #[derive(Debug, Clone)]
 pub struct App {
-    context: Request,
-    user_message: Option<MessageTemplate>,
-    tool_use: bool,
-    tool_raw_arguments: String,
-    tool_name: Option<ToolName>,
+    pub context: Request,
+    pub user_message: Option<MessageTemplate>,
+    pub tool_use: bool,
+    pub tool_raw_arguments: String,
+    pub tool_name: Option<ToolName>,
 }
 
 impl App {
@@ -91,7 +91,14 @@ impl App {
             tool_name: None,
         }
     }
-    pub fn run(mut self, action: Action) -> Result<(Self, Command)> {
+}
+
+impl Application for App {
+    type Action = Action;
+    type Error = crate::Error;
+    type Command = Command;
+
+    fn update(mut self, action: Action) -> Result<(Self, Command)> {
         let cmd: Command = match action {
             Action::UserChatMessage(chat) => {
                 let prompt = Prompt::parse(chat.message.clone())

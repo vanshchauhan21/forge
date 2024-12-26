@@ -129,6 +129,6 @@ async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelsResponse
 }
 
 async fn context_handler(State(state): State<Arc<Server>>) -> Json<Request> {
-    let request = state.context();
+    let request = state.context().await;
     Json(request)
 }

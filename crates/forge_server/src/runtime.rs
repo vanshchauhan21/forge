@@ -1,12 +1,13 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use forge_provider::ResultStream;
+use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
-pub trait Application: Sized + Default + Clone {
-    type Action;
-    type Error;
-    type Command;
+pub trait Application: Send + Sync + Sized + Clone {
+    type Action: Send;
+    type Error: Send;
+    type Command: Send;
     fn update(
         self,
         action: Self::Action,
@@ -14,21 +15,34 @@ pub trait Application: Sized + Default + Clone {
 }
 
 pub struct ApplicationRuntime<A: Application> {
-    app: A,
-    executor: Box<dyn Executor<Command = A::Command, Action = A::Action, Error = A::Error>>,
     state: Arc<Mutex<A>>,
 }
 
 impl<A: Application> ApplicationRuntime<A> {
-    pub async fn execute(&self, a: A::Action) -> std::result::Result<(), A::Error> {
-        let mut guard = self.state.lock().unwrap();
+    pub fn new(app: A) -> Self {
+        Self { state: Arc::new(Mutex::new(app)) }
+    }
+
+    pub async fn state(&self) -> A {
+        self.state.lock().await.clone()
+    }
+}
+
+impl<A: Application> ApplicationRuntime<A> {
+    #[async_recursion::async_recursion]
+    pub async fn execute(
+        &self,
+        a: A::Action,
+        executor: &impl Executor<Command = A::Command, Action = A::Action, Error = A::Error>,
+    ) -> std::result::Result<(), A::Error> {
+        let mut guard = self.state.lock().await;
         let app = guard.clone();
         let (app, command) = app.update(a)?;
         *guard = app;
-        let mut stream = self.executor.execute(&command).await?;
+        let mut stream = executor.execute(&command).await?;
 
         while let Some(result) = stream.next().await {
-            self.execute(result?).await?;
+            self.execute(result?, executor).await?;
         }
 
         Ok(())
@@ -36,7 +50,7 @@ impl<A: Application> ApplicationRuntime<A> {
 }
 
 #[async_trait::async_trait]
-pub trait Executor {
+pub trait Executor: Send + Sync {
     type Command;
     type Action;
     type Error;

@@ -1,12 +1,10 @@
 mod api;
-#[allow(unused)]
 mod app;
-mod runtime;
-mod atomic;
-mod executor;
 mod completion;
 mod error;
+mod executor;
 mod log;
+mod runtime;
 mod server;
 mod template;
 
