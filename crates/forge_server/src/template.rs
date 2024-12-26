@@ -3,14 +3,14 @@ use std::fmt::Display;
 use forge_provider::{AnyMessage, Message};
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Tag {
     // TODO: move to enum type
-    name: String,
-    attributes: Vec<(String, String)>,
+    pub name: String,
+    pub attributes: Vec<(String, String)>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum MessageTemplate {
     Tagged {
         tag: Tag,
@@ -23,7 +23,7 @@ pub enum MessageTemplate {
 }
 
 impl MessageTemplate {
-    fn new(tag: Tag, content: String) -> Self {
+    pub fn new(tag: Tag, content: String) -> Self {
         Self::Tagged { tag, content }
     }
 

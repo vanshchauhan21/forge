@@ -8,6 +8,7 @@ use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
 
+
 #[derive(Debug)]
 pub enum Action {
     UserChatMessage(ChatRequest),
@@ -16,19 +17,20 @@ pub enum Action {
     ToolUseResponse(String),
 }
 
+#[derive(Clone)]
 #[derive(Debug, Clone)]
 pub struct FileResponse {
     pub path: String,
     pub content: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize,Clone)]
 pub struct ChatRequest {
     pub message: String,
     pub model: ModelId,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum Command {
     #[default]
     Empty,
@@ -40,8 +42,8 @@ pub enum Command {
 }
 
 impl<T> From<T> for Command
-where
-    T: IntoIterator<Item = Command>,
+    where
+        T: IntoIterator<Item=Command>,
 {
     fn from(value: T) -> Self {
         let mut command = Command::default();
@@ -170,4 +172,123 @@ impl Application for App {
 }
 
 #[cfg(test)]
-mod test {}
+mod tests {
+    use super::*;
+    use forge_provider::{Assistant, Message, Request};
+    use crate::template::Tag;
+
+    #[test]
+    fn test_user_chat_message_action() {
+        let context = Request::default();
+        let app = App::new(context.clone());
+
+        let chat_request = ChatRequest {
+            message: "Hello, world!".to_string(),
+            model: ModelId::default(),
+        };
+
+        let action = Action::UserChatMessage(chat_request.clone());
+        let (updated_app, command) = app.update(action).unwrap();
+
+        assert_eq!(&updated_app.context.model, &chat_request.model);
+        assert!(matches!(command, Command::Empty));
+    }
+
+    #[test]
+    fn test_prompt_file_loaded_action() {
+        let context = Request::default();
+        let mut app = App::new(context.clone());
+        app.user_message = Some(MessageTemplate::new(Tag {
+            name: "test".to_string(),
+            attributes: vec![],
+        }, "Test message".to_string()));
+
+        let files = vec![FileResponse {
+            path: "test_path.txt".to_string(),
+            content: "Test content".to_string(),
+        }];
+
+        let action = Action::PromptFileLoaded(files.clone());
+        let (updated_app, command) = app.update(action).unwrap();
+
+        assert!(matches!(command, Command::DispatchAgentMessage(_)));
+
+        for file in files {
+            assert!(updated_app.context.context.iter().any(|msg| {
+                msg.content().contains(&file.path) && msg.content().contains(&file.content)
+            }));
+        }
+    }
+
+    #[test]
+    fn test_agent_chat_response_action_with_tool_use() {
+        let context = Request::default();
+        let app = App::new(context.clone());
+
+        let response = Response {
+            message: Message {
+                content: "Tool response".to_string(),
+                role: Assistant,
+            },
+            tool_use: vec![
+                forge_provider::ToolUse {
+                    tool_use_id: None,
+                    tool_name: Some(ToolName::from("test_tool")),
+                    input: r#"{"key": "value"}"#.to_string(),
+                },
+            ],
+            finish_reason: Some(FinishReason::ToolUse),
+        };
+
+        let action = Action::AgentChatResponse(response);
+        let (_, command) = app.update(action).unwrap();
+
+        if let Command::Combine(left, right) = command {
+            assert!(matches!(*left, Command::Empty));
+            assert!(matches!(*right, Command::DispatchToolUse(_, _)));
+        } else {
+            panic!("Expected Command::Combine");
+        }
+    }
+
+    #[test]
+    fn test_tool_use_response_action() {
+        let context = Request::default();
+        let app = App::new(context.clone());
+
+        let tool_response = "Tool result".to_string();
+        let action = Action::ToolUseResponse(tool_response.clone());
+
+        let (updated_app, command) = app.update(action).unwrap();
+
+        assert!(matches!(command, Command::DispatchAgentMessage(_)));
+        assert!(updated_app
+            .context
+            .context
+            .iter()
+            .any(|msg| msg.content() == tool_response));
+    }
+
+    #[test]
+    fn test_empty_command_when_condition_false() {
+        let cmd = Command::default();
+        let result = cmd.when(false);
+        assert!(matches!(result, Command::Empty));
+    }
+
+    #[test]
+    fn test_combine_commands() {
+        let cmd1 = Command::DispatchUserMessage("First command".to_string());
+        let cmd2 = Command::DispatchUserMessage("Second command".to_string());
+
+        let combined = cmd1.and_then(cmd2);
+
+        if let Command::Combine(left, right) = combined {
+            assert!(matches!(*left, Command::DispatchUserMessage(_)));
+            assert!(matches!(*right, Command::DispatchUserMessage(_)));
+        } else {
+            panic!("Expected Command::Combine");
+        }
+    }
+}
+

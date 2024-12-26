@@ -43,7 +43,7 @@ pub struct ToolEngine {
 ///
 /// Refer to the specification over here:
 /// https://glama.ai/blog/2024-11-25-model-context-protocol-quickstart#server
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Tool {
     pub name: ToolName,
     pub description: String,
@@ -54,6 +54,12 @@ pub struct Tool {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ToolName(String);
+
+impl<A: ToString> From<A> for ToolName {
+    fn from(value: A) -> Self {
+        ToolName(value.to_string())
+    }
+}
 
 impl ToolName {
     pub fn into_string(self) -> String {
