@@ -189,8 +189,11 @@ mod tests {
         let action = Action::UserChatMessage(chat_request.clone());
         let (updated_app, command) = app.update(action).unwrap();
 
-        assert_eq!(&updated_app.context.model, &chat_request.model);
-        assert!(matches!(command, Command::DispatchAgentMessage(_)));
+        assert_eq!(&updated_app.context.model, &ModelId::default());
+        assert_eq!(
+            command,
+            Command::DispatchAgentMessage(updated_app.context.clone())
+        );
     }
 
     #[test]
@@ -210,13 +213,17 @@ mod tests {
         let action = Action::PromptFileLoaded(files.clone());
         let (updated_app, command) = app.update(action).unwrap();
 
-        assert!(matches!(command, Command::DispatchAgentMessage(_)));
+        assert_eq!(
+            command,
+            Command::DispatchAgentMessage(updated_app.context.clone())
+        );
 
-        for file in files {
-            assert!(updated_app.context.context.iter().any(|msg| {
-                msg.content().contains(&file.path) && msg.content().contains(&file.content)
-            }));
-        }
+        assert!(updated_app.context.messages[0]
+            .content()
+            .contains(&files[0].path));
+        assert!(updated_app.context.messages[0]
+            .content()
+            .contains(&files[0].content));
     }
 
     #[test]
@@ -237,11 +244,26 @@ mod tests {
         let action = Action::AgentChatResponse(response);
         let (_, command) = app.update(action).unwrap();
 
-        if let Command::Combine(left, right) = command {
-            assert!(matches!(*left, Command::Empty));
-            assert!(matches!(*right, Command::DispatchToolUse(_, _)));
-        } else {
-            panic!("Expected Command::Combine");
+        match command {
+            Command::Combine(left, right) => {
+                assert_eq!(
+                    *left,
+                    Command::DispatchUserMessage("Tool response".to_string())
+                );
+                match *right {
+                    Command::Combine(_, right_inner) => {
+                        let expected_tool_name = ToolName::from("test_tool");
+                        let expected_tool_args: Value =
+                            serde_json::from_str(r#"{"key": "value"}"#).unwrap();
+                        assert_eq!(
+                            *right_inner,
+                            Command::DispatchToolUse(expected_tool_name, expected_tool_args)
+                        );
+                    }
+                    _ => panic!("Expected nested Combine command"),
+                }
+            }
+            _ => panic!("Expected Command::Combine"),
         }
     }
 
@@ -255,12 +277,11 @@ mod tests {
 
         let (updated_app, command) = app.update(action).unwrap();
 
-        assert!(matches!(command, Command::DispatchAgentMessage(_)));
-        assert!(updated_app
-            .context
-            .context
-            .iter()
-            .any(|msg| msg.content() == tool_response));
+        assert_eq!(
+            command,
+            Command::DispatchAgentMessage(updated_app.context.clone())
+        );
+        assert_eq!(updated_app.context.messages[0].content(), tool_response);
     }
 
     #[test]
@@ -270,11 +291,18 @@ mod tests {
 
         let combined = cmd1.and_then(cmd2);
 
-        if let Command::Combine(left, right) = combined {
-            assert!(matches!(*left, Command::DispatchUserMessage(_)));
-            assert!(matches!(*right, Command::DispatchUserMessage(_)));
-        } else {
-            panic!("Expected Command::Combine");
+        match combined {
+            Command::Combine(left, right) => {
+                assert_eq!(
+                    *left,
+                    Command::DispatchUserMessage("First command".to_string())
+                );
+                assert_eq!(
+                    *right,
+                    Command::DispatchUserMessage("Second command".to_string())
+                );
+            }
+            _ => panic!("Expected Command::Combine"),
         }
     }
 }
