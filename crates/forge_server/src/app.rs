@@ -107,7 +107,6 @@ impl Application for App {
     type Command = Command;
 
     fn update(mut self, action: Action) -> Result<(Self, Command)> {
-        dbg!(&action);
         let cmd: Command = match action {
             Action::UserChatMessage(chat) => {
                 let prompt = Prompt::parse(chat.message.clone())

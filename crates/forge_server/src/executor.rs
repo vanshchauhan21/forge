@@ -33,7 +33,6 @@ impl Executor for ChatCommandExecutor {
     type Action = Action;
     type Error = Error;
     async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error> {
-        dbg!(command);
         match command {
             Command::Empty => {
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
