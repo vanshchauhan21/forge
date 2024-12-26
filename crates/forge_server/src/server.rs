@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response};
 use forge_tool::{Tool, ToolEngine};
+use handlebars::Handlebars;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::Stream;
@@ -10,6 +11,7 @@ use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
+use crate::specification::Environment;
 use crate::Result;
 
 #[derive(Clone)]
@@ -25,8 +27,15 @@ pub struct Server {
 impl Server {
     pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
+        let handlebar_register = Handlebars::new();
+        let system_prompt = include_str!("./prompts/system.md");
+
+        let system_prompt = handlebar_register
+            .render_template(&system_prompt, &Environment::default())
+            .expect("Failed to render system prompt");
+
         let request = Request::new(ModelId::default())
-            .add_message(Message::system(include_str!("./prompts/system.md")))
+            .add_message(Message::system(system_prompt))
             .tools(tools.list());
 
         let cwd: String = cwd.into();
