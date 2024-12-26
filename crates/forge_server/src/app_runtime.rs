@@ -15,7 +15,7 @@ pub trait Application: Sized + Default + Clone {
 
 struct ApplicationRuntime<A: Application> {
     app: A,
-    executor: Box<dyn Executor<A>>,
+    executor: Box<dyn Executor<Command = A::Command, Action = A::Action, Error = A::Error>>,
     state: Arc<Mutex<A>>,
 }
 
@@ -36,6 +36,9 @@ impl<A: Application> ApplicationRuntime<A> {
 }
 
 #[async_trait::async_trait]
-pub trait Executor<A: Application> {
-    async fn execute(&self, command: &A::Command) -> ResultStream<A::Action, A::Error>;
+pub trait Executor {
+    type Command;
+    type Action;
+    type Error;
+    async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
 }
