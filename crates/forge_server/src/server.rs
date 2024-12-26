@@ -62,9 +62,14 @@ impl Server {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
 
         let executor = ChatCommandExecutor::new(tx, self.api_key.clone());
-        self.runtime
-            .execute(Action::UserChatMessage(chat), &executor)
-            .await?;
+
+        let runtime = self.runtime.clone();
+        tokio::spawn(async move {
+            runtime
+                .clone()
+                .execute(Action::UserChatMessage(chat), &executor)
+                .await
+        });
 
         Ok(ReceiverStream::new(rx))
     }

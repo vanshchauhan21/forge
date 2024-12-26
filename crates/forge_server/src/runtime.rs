@@ -39,6 +39,7 @@ impl<A: Application> ApplicationRuntime<A> {
         let app = guard.clone();
         let (app, command) = app.update(a)?;
         *guard = app;
+        drop(guard);
         let mut stream = executor.execute(&command).await?;
 
         while let Some(result) = stream.next().await {

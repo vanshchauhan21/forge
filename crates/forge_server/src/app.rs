@@ -62,14 +62,6 @@ impl Command {
     fn and_then(self, second: Command) -> Self {
         Self::Combine(Box::new(self), Box::new(second))
     }
-
-    fn when(self, condition: bool) -> Self {
-        if condition {
-            self
-        } else {
-            Command::Empty
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -107,7 +99,11 @@ impl Application for App {
                 self.context = self.context.model(chat.model.clone());
                 self.user_message = Some(MessageTemplate::task(prompt.to_string()));
 
-                Command::LoadPromptFiles(prompt.files()).when(!prompt.files().is_empty())
+                if prompt.files().is_empty() {
+                    Command::DispatchAgentMessage(self.context.clone())
+                } else {
+                    Command::LoadPromptFiles(prompt.files())
+                }
             }
             Action::PromptFileLoaded(files) => {
                 if let Some(message) = self.user_message.clone() {
@@ -137,6 +133,7 @@ impl Application for App {
                         self.tool_raw_arguments.push_str(tool.input.as_str());
 
                         if let Some(FinishReason::ToolUse) = response.finish_reason {
+                            self.tool_use = false;
                             let argument = serde_json::from_str(&self.tool_raw_arguments)?;
                             if let Some(tool_name) = self.tool_name.clone() {
                                 commands.push(Command::DispatchToolUse(tool_name, argument));
@@ -149,6 +146,7 @@ impl Application for App {
             }
             Action::ToolUseResponse(response) => {
                 self.context = self.context.add_message(Message::user(response));
+
                 Command::DispatchAgentMessage(self.context.clone())
             }
         };
