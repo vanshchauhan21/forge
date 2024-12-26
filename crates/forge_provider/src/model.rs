@@ -227,6 +227,7 @@ pub struct ToolUse {
 
 #[derive(Setters, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolResult {
+    pub tool_name: ToolName,
     pub tool_use_id: Option<UseId>,
     pub content: Value,
 }

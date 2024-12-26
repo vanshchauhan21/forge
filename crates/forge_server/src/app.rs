@@ -1,5 +1,7 @@
+use derive_more::derive::From;
+use derive_setters::Setters;
 use forge_prompt::Prompt;
-use forge_provider::{FinishReason, Message, ModelId, Request, Response};
+use forge_provider::{FinishReason, Message, ModelId, Request, Response, ToolResult};
 use forge_tool::ToolName;
 use serde::Serialize;
 use serde_json::Value;
@@ -8,12 +10,12 @@ use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
 
-#[derive(Debug)]
+#[derive(Debug, From)]
 pub enum Action {
     UserChatMessage(ChatRequest),
     PromptFileLoaded(Vec<FileResponse>),
     AgentChatResponse(Response),
-    ToolUseResponse(String),
+    ToolUseResponse(ToolResult),
 }
 
 #[derive(Debug, Clone)]
@@ -36,7 +38,10 @@ pub enum Command {
     LoadPromptFiles(Vec<String>),
     DispatchAgentMessage(Request),
     DispatchUserMessage(String),
-    DispatchToolUse(ToolName, Value),
+    DispatchToolUse {
+        tool_name: ToolName,
+        arguments: Value,
+    },
 }
 
 impl<T> From<T> for Command
@@ -68,7 +73,8 @@ impl Command {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Default, Debug, Clone, Serialize, Setters)]
+#[setters(strip_option)]
 pub struct App {
     pub user_message: Option<MessageTemplate>,
     pub assistant_buffer: String,
@@ -150,9 +156,9 @@ impl Application for App {
 
                     if let Some(FinishReason::ToolUse) = response.finish_reason {
                         self.tool_use = false;
-                        let argument = serde_json::from_str(&self.tool_raw_arguments)?;
+                        let arguments = serde_json::from_str(&self.tool_raw_arguments)?;
                         if let Some(tool_name) = self.tool_name.clone() {
-                            commands.push(Command::DispatchToolUse(tool_name, argument));
+                            commands.push(Command::DispatchToolUse { tool_name, arguments });
                         }
                     }
                 }
@@ -160,7 +166,9 @@ impl Application for App {
                 Command::DispatchUserMessage(response.message.content).and_then(commands.into())
             }
             Action::ToolUseResponse(response) => {
-                self.context = self.context.add_message(Message::user(response));
+                self.context = self
+                    .context
+                    .add_message(Message::user(serde_json::to_string(&response.content)?));
 
                 Command::DispatchAgentMessage(self.context.clone())
             }
@@ -171,15 +179,16 @@ impl Application for App {
 
 #[cfg(test)]
 mod tests {
-    use forge_provider::{Assistant, Message, Request};
+    use forge_provider::Message;
+    use serde_json::json;
 
     use super::*;
     use crate::template::Tag;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_user_chat_message_action() {
-        let context = Request::default();
-        let app = App::new(context.clone());
+        let app = App::default();
 
         let chat_request = ChatRequest {
             message: "Hello, world!".to_string(),
@@ -198,9 +207,7 @@ mod tests {
 
     #[test]
     fn test_prompt_file_loaded_action() {
-        let context = Request::default();
-        let mut app = App::new(context.clone());
-        app.user_message = Some(MessageTemplate::new(
+        let app = App::default().user_message(MessageTemplate::new(
             Tag { name: "test".to_string(), attributes: vec![] },
             "Test message".to_string(),
         ));
@@ -228,11 +235,10 @@ mod tests {
 
     #[test]
     fn test_agent_chat_response_action_with_tool_use() {
-        let context = Request::default();
-        let app = App::new(context.clone());
+        let app = App::default();
 
         let response = Response {
-            message: Message { content: "Tool response".to_string(), role: Assistant },
+            message: Message::assistant("Tool response"),
             tool_use: vec![forge_provider::ToolUse {
                 tool_use_id: None,
                 tool_name: Some(ToolName::from("test_tool")),
@@ -257,7 +263,10 @@ mod tests {
                             serde_json::from_str(r#"{"key": "value"}"#).unwrap();
                         assert_eq!(
                             *right_inner,
-                            Command::DispatchToolUse(expected_tool_name, expected_tool_args)
+                            Command::DispatchToolUse {
+                                tool_name: expected_tool_name,
+                                arguments: expected_tool_args
+                            }
                         );
                     }
                     _ => panic!("Expected nested Combine command"),
@@ -269,11 +278,19 @@ mod tests {
 
     #[test]
     fn test_tool_use_response_action() {
-        let context = Request::default();
-        let app = App::new(context.clone());
+        let app = App::default();
 
-        let tool_response = "Tool result".to_string();
-        let action = Action::ToolUseResponse(tool_response.clone());
+        let tool_response = json!({
+            "key": "value",
+            "nested": {
+                "key": "value"
+            }
+        });
+        let action = Action::ToolUseResponse(ToolResult {
+            tool_use_id: None,
+            tool_name: ToolName::from("test_tool"),
+            content: tool_response.clone(),
+        });
 
         let (updated_app, command) = app.update(action).unwrap();
 
@@ -281,7 +298,10 @@ mod tests {
             command,
             Command::DispatchAgentMessage(updated_app.context.clone())
         );
-        assert_eq!(updated_app.context.messages[0].content(), tool_response);
+        assert_eq!(
+            updated_app.context.messages[0].content(),
+            serde_json::to_string(&tool_response).unwrap()
+        );
     }
 
     #[test]

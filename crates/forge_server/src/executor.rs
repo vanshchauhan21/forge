@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use forge_provider::{BoxStream, Provider, Request, Response, ResultStream};
+use forge_provider::{BoxStream, Provider, Request, Response, ResultStream, ToolResult};
 use forge_tool::ToolEngine;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -73,10 +73,12 @@ impl Executor for ChatCommandExecutor {
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
             }
-            Command::DispatchToolUse(a, b) => {
-                let tool_use_response = Action::ToolUseResponse(serde_json::to_string(
-                    &self.tools.call(a, b.clone()).await?,
-                )?);
+            Command::DispatchToolUse { tool_name, arguments } => {
+                let tool_use_response = Action::ToolUseResponse(ToolResult {
+                    content: self.tools.call(tool_name, arguments.clone()).await?,
+                    tool_use_id: None,
+                    tool_name: tool_name.clone(),
+                });
 
                 let stream: BoxStream<Action, Error> =
                     Box::pin(tokio_stream::once(Ok(tool_use_response)));
