@@ -2,24 +2,26 @@ use std::fmt::Display;
 
 use forge_provider::{AnyMessage, Message};
 
+#[derive(Debug, Clone)]
 pub struct Tag {
     // TODO: move to enum type
     name: String,
     attributes: Vec<(String, String)>,
 }
 
-pub enum PromptTemplate {
+#[derive(Debug, Clone)]
+pub enum MessageTemplate {
     Tagged {
         tag: Tag,
         content: String,
     },
     Combine {
-        left: Box<PromptTemplate>,
-        right: Box<PromptTemplate>,
+        left: Box<MessageTemplate>,
+        right: Box<MessageTemplate>,
     },
 }
 
-impl PromptTemplate {
+impl MessageTemplate {
     fn new(tag: Tag, content: String) -> Self {
         Self::Tagged { tag, content }
     }
@@ -44,10 +46,10 @@ impl PromptTemplate {
     }
 }
 
-impl Display for PromptTemplate {
+impl Display for MessageTemplate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PromptTemplate::Tagged { tag, content } => {
+            MessageTemplate::Tagged { tag, content } => {
                 let tag_name = tag.name.to_uppercase();
                 f.write_str("<")?;
                 f.write_str(&tag_name)?;
@@ -68,7 +70,7 @@ impl Display for PromptTemplate {
                 f.write_str(&tag_name)?;
                 f.write_str("/>")?;
             }
-            PromptTemplate::Combine { left, right } => {
+            MessageTemplate::Combine { left, right } => {
                 write!(f, "{}\n{}", left, right)?;
             }
         }
@@ -77,8 +79,8 @@ impl Display for PromptTemplate {
     }
 }
 
-impl From<PromptTemplate> for AnyMessage {
-    fn from(value: PromptTemplate) -> Self {
+impl From<MessageTemplate> for AnyMessage {
+    fn from(value: MessageTemplate) -> Self {
         Message::user(value.to_string()).into()
     }
 }

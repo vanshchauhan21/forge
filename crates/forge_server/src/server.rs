@@ -11,7 +11,7 @@ use tokio_stream::{Stream, StreamExt};
 use crate::app::{ChatRequest, ChatResponse};
 use crate::atomic::AtomicRef;
 use crate::completion::{Completion, File};
-use crate::template::PromptTemplate;
+use crate::template::MessageTemplate;
 use crate::{Error, Result};
 
 #[derive(Clone)]
@@ -58,11 +58,11 @@ impl Server {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
 
         let prompt = Prompt::parse(chat.message.clone()).unwrap_or(Prompt::new(chat.message));
-        let mut message = PromptTemplate::task(prompt.to_string());
+        let mut message = MessageTemplate::task(prompt.to_string());
 
         for file in prompt.files() {
             let content = tokio::fs::read_to_string(file.clone()).await?;
-            message = message.append(PromptTemplate::file(file, content));
+            message = message.append(MessageTemplate::file(file, content));
         }
 
         self.context
