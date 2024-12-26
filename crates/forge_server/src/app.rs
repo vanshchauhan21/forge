@@ -192,7 +192,7 @@ mod tests {
         let (updated_app, command) = app.update(action).unwrap();
 
         assert_eq!(&updated_app.context.model, &chat_request.model);
-        assert!(matches!(command, Command::Empty));
+        assert!(matches!(command, Command::DispatchAgentMessage(_)));
     }
 
     #[test]
@@ -263,13 +263,6 @@ mod tests {
             .context
             .iter()
             .any(|msg| msg.content() == tool_response));
-    }
-
-    #[test]
-    fn test_empty_command_when_condition_false() {
-        let cmd = Command::default();
-        let result = cmd.when(false);
-        assert!(matches!(result, Command::Empty));
     }
 
     #[test]
