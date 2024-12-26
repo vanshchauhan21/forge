@@ -13,7 +13,7 @@ pub trait Application: Sized + Default + Clone {
     ) -> std::result::Result<(Self, Self::Command), Self::Error>;
 }
 
-struct ApplicationRuntime<A: Application> {
+pub struct ApplicationRuntime<A: Application> {
     app: A,
     executor: Box<dyn Executor<Command = A::Command, Action = A::Action, Error = A::Error>>,
     state: Arc<Mutex<A>>,

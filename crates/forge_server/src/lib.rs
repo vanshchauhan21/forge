@@ -1,9 +1,9 @@
 mod api;
 #[allow(unused)]
 mod app;
-mod app_runtime;
+mod runtime;
 mod atomic;
-mod command_executor;
+mod executor;
 mod completion;
 mod error;
 mod log;

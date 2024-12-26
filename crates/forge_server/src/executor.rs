@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
 use crate::app::{Action, App, ChatResponse, Command, FileResponse};
-use crate::app_runtime::Executor;
+use crate::runtime::Executor;
 use crate::completion::Completion;
 use crate::Error;
 
