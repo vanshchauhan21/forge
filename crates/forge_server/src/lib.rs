@@ -3,6 +3,7 @@ mod api;
 mod app;
 mod app_runtime;
 mod atomic;
+mod command_executor;
 mod completion;
 mod error;
 mod log;
