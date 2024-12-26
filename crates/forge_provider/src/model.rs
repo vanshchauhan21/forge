@@ -182,6 +182,7 @@ impl FinishReason {
     pub fn parse(reason: String) -> Option<Self> {
         match reason.as_str() {
             "tool_use" => Some(FinishReason::ToolUse),
+            "tool_calls" => Some(FinishReason::ToolUse),
             "end_turn" => Some(FinishReason::EndTurn),
             _ => None,
         }

@@ -24,7 +24,7 @@ pub struct FileResponse {
     pub content: String,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, Clone, Setters)]
 pub struct ChatRequest {
     pub message: String,
     pub model: ModelId,
@@ -81,6 +81,7 @@ pub struct App {
     pub tool_use: bool,
     pub tool_raw_arguments: String,
     pub tool_name: Option<ToolName>,
+    pub files: Vec<String>,
 
     // Keep context at the end so that debugging the Serialized format is easier
     pub context: Request,
@@ -95,6 +96,7 @@ impl App {
             tool_raw_arguments: "".to_string(),
             tool_name: None,
             assistant_buffer: "".to_string(),
+            files: Vec::new(),
         }
     }
 }
@@ -153,14 +155,16 @@ impl Application for App {
                         self.tool_name = Some(tool)
                     }
                     self.tool_raw_arguments.push_str(tool.input.as_str());
+                }
 
-                    if let Some(FinishReason::ToolUse) = response.finish_reason {
-                        self.tool_use = false;
-                        let arguments = serde_json::from_str(&self.tool_raw_arguments)?;
-                        if let Some(tool_name) = self.tool_name.clone() {
-                            commands.push(Command::DispatchToolUse { tool_name, arguments });
-                        }
+                if let Some(FinishReason::ToolUse) = response.finish_reason {
+                    self.tool_use = false;
+                    let arguments = serde_json::from_str(&self.tool_raw_arguments)?;
+                    if let Some(tool_name) = self.tool_name.clone() {
+                        commands.push(Command::DispatchToolUse { tool_name, arguments });
                     }
+                    // since tools is used, clear the tool_raw_arguments.
+                    self.tool_raw_arguments.clear();
                 }
 
                 Command::DispatchUserMessage(response.message.content).and_then(commands.into())
@@ -321,6 +325,77 @@ mod tests {
                     *right,
                     Command::DispatchUserMessage("Second command".to_string())
                 );
+            }
+            _ => panic!("Expected Command::Combine"),
+        }
+    }
+
+    #[test]
+    fn test_use_tool_when_finish_reason_present() {
+        let app = App::default();
+        let response = Response {
+            message: Message::assistant("Tool response"),
+            tool_use: vec![forge_provider::ToolUse {
+                tool_use_id: None,
+                tool_name: Some(ToolName::from("fs_list")),
+                input: r#"{"path": "."}"#.to_string(),
+            }],
+            finish_reason: Some(FinishReason::ToolUse),
+        };
+
+        let action = Action::AgentChatResponse(response);
+        let (app, command) = app.update(action).unwrap();
+
+        assert!(app.tool_raw_arguments.is_empty());
+        match command {
+            Command::Combine(left, right) => {
+                assert_eq!(
+                    *left,
+                    Command::DispatchUserMessage("Tool response".to_string())
+                );
+                match *right {
+                    Command::Combine(_, right_inner) => {
+                        let expected_tool_name = ToolName::from("fs_list");
+                        let expected_tool_args: Value =
+                            serde_json::from_str(r#"{"path": "."}"#).unwrap();
+                        assert_eq!(
+                            *right_inner,
+                            Command::DispatchToolUse {
+                                tool_name: expected_tool_name,
+                                arguments: expected_tool_args
+                            }
+                        );
+                    }
+                    _ => panic!("Expected nested Combine command"),
+                }
+            }
+            _ => panic!("Expected Command::Combine"),
+        }
+    }
+
+    #[test]
+    fn test_should_not_use_tool_when_finish_reason_not_present() {
+        let app = App::default();
+        let response = Response {
+            message: Message::assistant("Tool response"),
+            tool_use: vec![forge_provider::ToolUse {
+                tool_use_id: None,
+                tool_name: Some(ToolName::from("fs_list")),
+                input: r#"{"path": "."}"#.to_string(),
+            }],
+            finish_reason: None,
+        };
+
+        let action = Action::AgentChatResponse(response);
+        let (app, command) = app.update(action).unwrap();
+        assert!(!app.tool_raw_arguments.is_empty());
+        match command {
+            Command::Combine(left, right) => {
+                assert_eq!(
+                    *left,
+                    Command::DispatchUserMessage("Tool response".to_string())
+                );
+                assert_eq!(*right, Command::Empty);
             }
             _ => panic!("Expected Command::Combine"),
         }

@@ -59,14 +59,23 @@ impl Server {
 
     pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatResponse> + Send> {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
-
+        let files = self.completions.list().await?;
+        let file_message = files
+            .into_iter()
+            .map(|file| file.path)
+            .fold("".to_string(), |acc, file| format!("{}{}", acc, file));
         let executor = ChatCommandExecutor::new(tx, self.api_key.clone());
 
         let runtime = self.runtime.clone();
+        let message = format!(
+            "##Requirements\n{}\n##nCurrent Files\n{}",
+            chat.message, file_message
+        );
+
         tokio::spawn(async move {
             runtime
                 .clone()
-                .execute(Action::UserChatMessage(chat), &executor)
+                .execute(Action::UserChatMessage(chat.message(message)), &executor)
                 .await
         });
 
