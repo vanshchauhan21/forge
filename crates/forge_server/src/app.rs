@@ -24,7 +24,7 @@ pub struct FileResponse {
     pub content: String,
 }
 
-#[derive(Debug, serde::Deserialize,Clone)]
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct ChatRequest {
     pub message: String,
     pub model: ModelId,
@@ -42,8 +42,8 @@ pub enum Command {
 }
 
 impl<T> From<T> for Command
-    where
-        T: IntoIterator<Item=Command>,
+where
+    T: IntoIterator<Item = Command>,
 {
     fn from(value: T) -> Self {
         let mut command = Command::default();
@@ -173,8 +173,9 @@ impl Application for App {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use forge_provider::{Assistant, Message, Request};
+
+    use super::*;
     use crate::template::Tag;
 
     #[test]
@@ -198,10 +199,10 @@ mod tests {
     fn test_prompt_file_loaded_action() {
         let context = Request::default();
         let mut app = App::new(context.clone());
-        app.user_message = Some(MessageTemplate::new(Tag {
-            name: "test".to_string(),
-            attributes: vec![],
-        }, "Test message".to_string()));
+        app.user_message = Some(MessageTemplate::new(
+            Tag { name: "test".to_string(), attributes: vec![] },
+            "Test message".to_string(),
+        ));
 
         let files = vec![FileResponse {
             path: "test_path.txt".to_string(),
@@ -226,17 +227,12 @@ mod tests {
         let app = App::new(context.clone());
 
         let response = Response {
-            message: Message {
-                content: "Tool response".to_string(),
-                role: Assistant,
-            },
-            tool_use: vec![
-                forge_provider::ToolUse {
-                    tool_use_id: None,
-                    tool_name: Some(ToolName::from("test_tool")),
-                    input: r#"{"key": "value"}"#.to_string(),
-                },
-            ],
+            message: Message { content: "Tool response".to_string(), role: Assistant },
+            tool_use: vec![forge_provider::ToolUse {
+                tool_use_id: None,
+                tool_name: Some(ToolName::from("test_tool")),
+                input: r#"{"key": "value"}"#.to_string(),
+            }],
             finish_reason: Some(FinishReason::ToolUse),
         };
 
@@ -291,4 +287,3 @@ mod tests {
         }
     }
 }
-
