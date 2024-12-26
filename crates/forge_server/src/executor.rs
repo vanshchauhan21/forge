@@ -73,10 +73,16 @@ impl Executor for ChatCommandExecutor {
                 Ok(stream)
             }
             Command::DispatchToolUse { tool_name, arguments } => {
+                let tool_result = self.tools.call(tool_name, arguments.clone()).await;
+                let is_error = tool_result.is_err();
                 let tool_use_response = Action::ToolUseResponse(ToolResult {
-                    content: self.tools.call(tool_name, arguments.clone()).await?,
+                    content: match tool_result {
+                        Ok(content) => content,
+                        Err(e) => serde_json::Value::from(e),
+                    },
                     tool_use_id: None,
                     tool_name: tool_name.clone(),
+                    is_error,
                 });
 
                 let stream: BoxStream<Action, Error> =

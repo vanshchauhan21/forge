@@ -169,9 +169,16 @@ impl Application for App {
                 Command::DispatchUserMessage(response.message.content).and_then(commands.into())
             }
             Action::ToolUseResponse(response) => {
+                let message = if response.is_error {
+                    "An error occurred while processing the tool.".to_string()
+                } else {
+                    "Tool executed successfully.".to_string()
+                };
+
                 self.context = self
                     .context
-                    .add_message(Message::user(serde_json::to_string(&response.content)?));
+                    .add_message(Message::user(message))
+                    .add_tool_result(response);
 
                 Command::DispatchAgentMessage(self.context.clone())
             }
@@ -293,6 +300,7 @@ mod tests {
             tool_use_id: None,
             tool_name: ToolName::from("test_tool"),
             content: tool_response.clone(),
+            is_error: false,
         });
 
         let (updated_app, command) = app.update(action).unwrap();
@@ -301,10 +309,9 @@ mod tests {
             command,
             Command::DispatchAgentMessage(updated_app.context.clone())
         );
-        assert_eq!(
-            updated_app.context.messages[0].content(),
-            serde_json::to_string(&tool_response).unwrap()
-        );
+        assert!(updated_app.context.messages[0]
+            .content()
+            .contains("Tool executed successfully."));
     }
 
     #[test]

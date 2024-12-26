@@ -231,6 +231,7 @@ pub struct ToolResult {
     pub tool_name: ToolName,
     pub tool_use_id: Option<UseId>,
     pub content: Value,
+    pub is_error: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
