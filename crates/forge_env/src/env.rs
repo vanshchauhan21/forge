@@ -1,6 +1,7 @@
-use crate::Result;
 use handlebars::Handlebars;
 use serde::Serialize;
+
+use crate::Result;
 
 #[derive(Serialize)]
 struct EnvironmentValue {

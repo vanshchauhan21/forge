@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use forge_provider::{Model, ModelId, Provider, Request, Response};
+use forge_env::Environment;
+use forge_provider::{Message, Model, ModelId, Provider, Request, Response};
 use forge_tool::{Tool, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -27,20 +28,21 @@ impl Server {
     pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
 
-        let system_prompt = SystemPrompt::build().expect("Failed to generate system prompt");
+        let system_prompt = Environment::render(include_str!("./prompts/system.md"))
+            .expect("Failed to render system prompt");
 
         let request = Request::new(ModelId::default())
-            .add_message(system_prompt)
+            .add_message(Message::system(system_prompt))
             .tools(tools.list());
 
         let cwd: String = cwd.into();
         let api_key: String = api_key.into();
+
         Self {
             provider: Arc::new(Provider::open_router(api_key.clone(), None)),
             tools: Arc::new(tools),
             completions: Arc::new(Completion::new(cwd.clone())),
             runtime: Arc::new(ApplicationRuntime::new(App::new(request))),
-
             api_key,
         }
     }

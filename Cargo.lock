@@ -623,6 +623,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_env"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "handlebars",
+ "serde",
+]
+
+[[package]]
 name = "forge_main"
 version = "0.1.0"
 dependencies = [
@@ -666,11 +675,11 @@ dependencies = [
  "derive_more",
  "derive_setters",
  "dotenv",
+ "forge_env",
  "forge_prompt",
  "forge_provider",
  "forge_tool",
  "forge_walker",
- "handlebars",
  "indoc",
  "inquire",
  "pretty_assertions",
@@ -692,6 +701,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "colorize",
+ "forge_env",
  "forge_tool_macros",
  "forge_walker",
  "glob",
