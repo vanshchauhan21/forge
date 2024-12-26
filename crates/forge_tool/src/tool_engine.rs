@@ -73,10 +73,21 @@ impl ToolName {
 impl ToolEngine {
     pub async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
         println!("{}({})", name.as_str(), input);
-        match self.tools.get(name) {
-            Some(tool) => tool.executable.call(input).await,
+        let output = match self.tools.get(name) {
+            Some(tool) => {
+                let output = tool.executable.call(input).await;
+                println!(
+                    "{}(...) -> {:?}",
+                    name.as_str(),
+                    serde_json::to_string(&output.clone().ok().unwrap_or_default()).ok()
+                );
+
+                output
+            }
             None => Err(format!("No such tool found: {}", name.as_str())),
-        }
+        };
+
+        output
     }
 
     pub fn list(&self) -> Vec<Tool> {
