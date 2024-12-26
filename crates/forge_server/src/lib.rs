@@ -6,7 +6,6 @@ mod executor;
 mod log;
 mod runtime;
 mod server;
-mod system;
 mod template;
 
 pub use api::API;
