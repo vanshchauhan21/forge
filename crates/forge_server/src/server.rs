@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
-use forge_provider::{Message, Model, ModelId, Provider, Request, Response};
+use forge_provider::{Model, ModelId, Provider, Request, Response};
 use forge_tool::{Tool, ToolEngine};
-use handlebars::Handlebars;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::Stream;
 
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
-use crate::environment::Environment;
+use crate::environment::SystemPrompt;
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
 use crate::Result;
@@ -25,19 +24,13 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
+    pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
-        let mut handlebar_register = Handlebars::new();
-        handlebar_register.set_strict_mode(true);
-        let system_prompt = include_str!("./prompts/system.md");
 
-        let env = Environment::build().await;
-        let system_prompt = handlebar_register
-            .render_template(system_prompt, &env)
-            .expect("Failed to render system prompt");
+        let system_prompt = SystemPrompt::build().expect("Failed to generate system prompt");
 
         let request = Request::new(ModelId::default())
-            .add_message(Message::system(system_prompt))
+            .add_message(system_prompt)
             .tools(tools.list());
 
         let cwd: String = cwd.into();
