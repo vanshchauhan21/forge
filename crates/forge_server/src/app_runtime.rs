@@ -1,15 +1,15 @@
-use std::pin::Pin;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
-use tokio::sync::mpsc;
-use tokio_stream::{Stream, StreamExt};
-use tokio_stream::wrappers::ReceiverStream;
+use std::sync::{Arc, Mutex};
+
 use forge_provider::{BoxStream, Message, ModelId, Provider, Request, Response, ResultStream};
 use forge_tool::ToolEngine;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::{Stream, StreamExt};
+
 use crate::app::{Action, App, ChatRequest, ChatResponse, Command, FileResponse};
 use crate::completion::Completion;
 use crate::Error;
-use crate::template::MessageTemplate;
 
 pub struct AppRuntime {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
@@ -33,16 +33,17 @@ impl AppRuntime {
         }
     }
 
-    pub fn chat(&self, chat: ChatRequest) -> crate::Result<impl Stream<Item=ChatResponse> + Send> {
+    pub fn chat(
+        &self,
+        chat: ChatRequest,
+    ) -> crate::Result<impl Stream<Item = ChatResponse> + Send> {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
         let app = self.context.lock().unwrap().clone();
         let (app, command) = app.run(Action::UserChatMessage(chat))?;
 
         match command {
             Command::Empty => {}
-            Command::Combine(a, b) => {
-
-            }
+            Command::Combine(a, b) => {}
             Command::LoadPromptFiles(_) => {}
             Command::DispatchAgentMessage(_) => {}
             Command::DispatchUserMessage(_) => {}
@@ -53,33 +54,64 @@ impl AppRuntime {
     }
 
     #[async_recursion::async_recursion]
-    async fn command_executor(&self, command: &Command, tx: &Sender<ChatResponse>) -> ResultStream<Action, Error> {
+    async fn command_executor(
+        &self,
+        command: &Command,
+        tx: &Sender<ChatResponse>,
+    ) -> ResultStream<Action, Error> {
         match command {
-            Command::Empty => Ok(Box::pin(tokio_stream::empty::<Action>())),
+            Command::Empty => {
+                let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
+                Ok(stream)
+            }
             Command::Combine(a, b) => {
-                Ok(Box::pin(self.command_executor(a, tx).await?.merge(self.command_executor(b,tx).await?)))
+                let merged: BoxStream<Action, Error> = Box::pin(
+                    self.command_executor(a, tx)
+                        .await?
+                        .merge(self.command_executor(b, tx).await?),
+                );
+
+                Ok(merged)
             }
             Command::LoadPromptFiles(files) => {
                 let mut responses = vec![];
                 for file in files {
                     let content = tokio::fs::read_to_string(file.clone()).await?;
-                    responses.push(FileResponse {
-                        path: file.to_string(),
-                        content,
-                    });
+                    responses.push(FileResponse { path: file.to_string(), content });
                 }
-                Ok(Box::pin(tokio_stream::once(Action::PromptFileLoaded(responses))))
+
+                let stream: BoxStream<Action, Error> =
+                    Box::pin(tokio_stream::once(Ok(Action::PromptFileLoaded(responses))));
+
+                Ok(stream)
             }
             Command::DispatchAgentMessage(a) => {
-                Ok(self.provider.chat(a.clone()).await?)
+                // let stream = self.provider.chat(a.clone()).await?;
+
+                // let actions = stream.map(|response| response.map(|a|
+                // Action::AgentChatResponse(a)));
+
+                // let msg: BoxStream<Action, Error> = Box::pin(actions);
+
+                // Ok(msg)
+
+                todo!()
             }
             Command::DispatchUserMessage(message) => {
-                tx.send(ChatResponse::Text(message.clone()))?;
+                tx.send(ChatResponse::Text(message.clone())).unwrap();
 
-                Ok(Box::pin(tokio_stream::empty::<Action>()))
+                let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
+                Ok(stream)
             }
             Command::DispatchToolUse(a, b) => {
-                Ok(Box::pin(tokio_stream::once(self.tools.call(a, b.clone()).await?)))
+                let tool_use_response = Action::ToolUseResponse(serde_json::to_string(
+                    &self.tools.call(a, b.clone()).await?,
+                )?);
+
+                let stream: BoxStream<Action, Error> =
+                    Box::pin(tokio_stream::once(Ok(tool_use_response)));
+
+                Ok(stream)
             }
         }
     }
