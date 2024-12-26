@@ -31,7 +31,7 @@ impl Config {
             AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
         );
-        headers.insert("X-Title", HeaderValue::from_static("Tailcall"));
+        headers.insert("X-Title", HeaderValue::from_static("Code Forge"));
         headers
     }
 
