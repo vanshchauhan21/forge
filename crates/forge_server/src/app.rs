@@ -1,6 +1,6 @@
 use forge_prompt::Prompt;
 use forge_provider::{FinishReason, Message, ModelId, Request, Response};
-use forge_tool::ToolName;
+use forge_tool::{ToolEngine, ToolName};
 use serde_json::Value;
 
 use crate::template::MessageTemplate;
@@ -72,7 +72,7 @@ impl Command {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 pub struct App {
     context: Request,
     user_message: Option<MessageTemplate>,
@@ -82,7 +82,16 @@ pub struct App {
 }
 
 impl App {
-    fn run(mut self, action: Action) -> Result<(Self, Command)> {
+    pub fn new(context: Request) -> Self {
+        Self {
+            context,
+            user_message: None,
+            tool_use: false,
+            tool_raw_arguments: "".to_string(),
+            tool_name: None,
+        }
+    }
+    pub fn run(mut self, action: Action) -> Result<(Self, Command)> {
         let cmd: Command = match action {
             Action::UserChatMessage(chat) => {
                 let prompt = Prompt::parse(chat.message.clone())
