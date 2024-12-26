@@ -21,7 +21,7 @@ impl Environment {
             default_shell: if cfg!(windows) {
                 std::env::var("COMSPEC").or(Err(Error::IndeterminateShell(Platform::Windows)))?
             } else {
-                std::env::var("SHELL").or(Err(Error::IndeterminateShell(Platform::UnixLike)))?
+                std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
             },
             home_directory: dirs::home_dir()
                 .ok_or(Error::IndeterminateHomeDir)?
