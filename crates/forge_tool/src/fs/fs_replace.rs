@@ -14,9 +14,26 @@ pub struct FSReplaceInput {
     pub diff: String,
 }
 
-/// Replace content in a file using SEARCH/REPLACE blocks. Each block defines
-/// exact changes to make to specific parts of the file. Supports multiple
-/// blocks for complex changes while preserving file formatting and structure.
+/// Replace sections of content in an existing file using SEARCH/REPLACE blocks
+/// that define exact changes to specific parts of the file. This tool should be used when 
+/// you need to make targeted changes to specific parts of a file.
+/// Parameters:
+///     - path: (required) The path of the file to modify (relative to the current working directory ${cwd.toPosix()})
+///       Critical rules:
+///       1. SEARCH content must match the associated file section to find EXACTLY:
+///          * Match character-for-character including whitespace, indentation, line endings
+///          * Include all comments, docstrings, etc.
+///       2. SEARCH/REPLACE blocks will ONLY replace the first match occurrence.
+///          * Including multiple unique SEARCH/REPLACE blocks if you need to make multiple changes.
+///          * Include *just* enough lines in each SEARCH section to uniquely match each set of lines that need to change.
+///       3. Keep SEARCH/REPLACE blocks concise:
+///          * Break large SEARCH/REPLACE blocks into a series of smaller blocks that each change a small portion of the file.
+///          * Include just the changing lines, and a few surrounding lines if needed for uniqueness.
+///          * Do not include long runs of unchanging lines in SEARCH/REPLACE blocks.
+///          * Each line must be complete. Never truncate lines mid-way through as this can cause matching failures.
+///       4. Special operations:
+///          * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
+///          * To delete code: Use empty REPLACE section
 #[derive(DescriptionDerive)]
 pub struct FSReplace;
 
