@@ -23,11 +23,11 @@ pub struct API {
     state: Arc<Server>,
 }
 
-impl Default for API {
-    fn default() -> Self {
+impl API {
+    pub async fn build() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
-        Self { state: Arc::new(Server::new(".", api_key)) }
+        Self { state: Arc::new(Server::new(".", api_key).await) }
     }
 }
 

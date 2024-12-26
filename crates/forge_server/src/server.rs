@@ -11,7 +11,7 @@ use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
-use crate::specification::Environment;
+use crate::environment::Environment;
 use crate::Result;
 
 #[derive(Clone)]
@@ -25,13 +25,15 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
+    pub async fn new(cwd: impl Into<String>, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::default();
-        let handlebar_register = Handlebars::new();
+        let mut handlebar_register = Handlebars::new();
+        handlebar_register.set_strict_mode(true);
         let system_prompt = include_str!("./prompts/system.md");
 
+        let env = Environment::build().await;
         let system_prompt = handlebar_register
-            .render_template(system_prompt, &Environment::default())
+            .render_template(&system_prompt, &env)
             .expect("Failed to render system prompt");
 
         let request = Request::new(ModelId::default())
