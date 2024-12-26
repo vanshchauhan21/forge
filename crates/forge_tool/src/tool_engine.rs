@@ -6,7 +6,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{Description, FSList, FSRead, FSWrite, ToolTrait};
+use crate::{Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell, ToolTrait};
 
 struct JsonTool<T>(T);
 
@@ -109,12 +109,12 @@ impl Default for ToolEngine {
             ToolEngine::import(FSWrite),
             ToolEngine::import(FSList),
             // TODO: uncomment them later on, as of now we only need the above tools.
-            // ToolEngine::import(FSSearch),
-            // ToolEngine::import(FSFileInfo),
-            // ToolEngine::import(FSReplace),
-            // ToolEngine::import(Outline),
+            ToolEngine::import(FSSearch),
+            ToolEngine::import(FSFileInfo),
+            ToolEngine::import(FSReplace),
+            ToolEngine::import(Outline),
             // ToolEngine::import(Think::default()),
-            // ToolEngine::import(Shell::default()),
+            ToolEngine::import(Shell::default()),
             // ToolEngine::import(AskFollowUpQuestion),
         ]);
 
