@@ -180,11 +180,11 @@ impl Application for App {
 #[cfg(test)]
 mod tests {
     use forge_provider::Message;
+    use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use super::*;
     use crate::template::Tag;
-    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_user_chat_message_action() {
