@@ -3,22 +3,22 @@ use handlebars::Handlebars;
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct Environment {
+struct EnvironmentValue {
     operating_system: String,
     current_working_dir: String,
 }
 
+pub struct Environment;
+
 impl Environment {
-    pub fn build() -> Result<Self> {
-        Ok(Self {
+    pub fn render(template: &str) -> Result<String> {
+        let env = EnvironmentValue {
             operating_system: std::env::consts::OS.to_string(),
             current_working_dir: format!("{}", std::env::current_dir()?.display()),
-        })
-    }
+        };
 
-    pub fn render(&self, template: &str) -> Result<String> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
-        Ok(hb.render_template(template, self)?)
+        Ok(hb.render_template(template, &env)?)
     }
 }

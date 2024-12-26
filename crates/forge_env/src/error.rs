@@ -1,6 +1,6 @@
 use derive_more::derive::From;
 
-#[derive(From)]
+#[derive(Debug, From)]
 pub enum Error {
     IO(std::io::Error),
     Handlebars(handlebars::RenderError),

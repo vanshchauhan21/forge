@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use forge_env::Environment;
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
@@ -88,20 +89,21 @@ impl ToolEngine {
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
-        let id = std::any::type_name::<T>()
+        let name = std::any::type_name::<T>()
             .split("::")
             .last()
             .unwrap()
             .to_snake_case();
         let executable = Box::new(JsonTool(tool));
         let tool = Tool {
-            name: ToolName(id.clone()),
-            description: T::description().to_string(),
+            name: ToolName(name.clone()),
+            description: Environment::render(T::description())
+                .expect(format!("Unable to render description for tool {}", name).as_str()),
             input_schema: schema_for!(T::Input),
             output_schema: Some(schema_for!(T::Output)),
         };
 
-        (ToolName(id), ToolDefinition { executable, tool })
+        (ToolName(name), ToolDefinition { executable, tool })
     }
 }
 
