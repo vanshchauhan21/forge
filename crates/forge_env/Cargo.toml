@@ -1,0 +1,9 @@
+[package]
+name = "forge_env"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+derive_more = "1.0.0"
+handlebars = "6.2.0"
+serde = "1.0.216"
