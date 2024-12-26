@@ -6,5 +6,5 @@ edition = "2021"
 [dependencies]
 ignore = "0.4.23"
 tokio = { version = "1.42.0", features = ["fs"] }
-derive_more = "1.0.0"
+derive_more = { version = "1.0.0", features = ["from", "display"] }
 thiserror = "1.0.40"

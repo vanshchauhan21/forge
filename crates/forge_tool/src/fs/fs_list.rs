@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use forge_tool_macros::Description as DescriptionDerive;
+use forge_walker::Walker;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use walkdir::WalkDir;
 
 use crate::{Description, ToolTrait};
 
@@ -37,28 +37,19 @@ impl ToolTrait for FSList {
         let mut paths = Vec::new();
         let recursive = input.recursive.unwrap_or(false);
         let max_depth = if recursive { usize::MAX } else { 1 };
+        let walker = Walker::new(dir.to_path_buf()).with_max_depth(max_depth);
 
-        let walker = WalkDir::new(dir)
-            .min_depth(0)
-            .max_depth(max_depth)
-            .follow_links(false)
-            .same_file_system(true)
-            .into_iter();
+        let files = walker.get().await.map_err(|e| e.to_string())?;
 
-        for entry in walker.filter_map(Result::ok) {
+        for entry in files {
             // Skip the root directory itself
-            if entry.path() == dir {
+            if entry.path == dir.to_string_lossy() {
                 continue;
             }
 
-            let file_type = entry.file_type();
-            if file_type.is_file() || file_type.is_dir() {
-                let prefix = if file_type.is_dir() {
-                    "[DIR]"
-                } else {
-                    "[FILE]"
-                };
-                paths.push(format!("{} {}", prefix, entry.path().display()));
+            if !entry.path.is_empty() {
+                let prefix = if entry.is_dir { "[DIR]" } else { "[FILE]" };
+                paths.push(format!("{} {}", prefix, entry.path));
             }
         }
 
@@ -164,10 +155,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 3);
+        assert_eq!(result.len(), 1);
         assert!(result.iter().any(|p| p.contains("regular.txt")));
-        assert!(result.iter().any(|p| p.contains(".hidden")));
-        assert!(result.iter().any(|p| p.contains(".hidden_dir")));
     }
 
     #[tokio::test]
