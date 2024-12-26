@@ -8,6 +8,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use forge_provider::Model;
 use forge_tool::Tool;
+use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -101,9 +102,9 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<Server>>) -> Json<Vec<Tool>> {
+async fn tools_handler(State(state): State<Arc<Server>>) -> Json<ToolResponse> {
     let tools = state.tools();
-    Json(tools)
+    Json(ToolResponse { tools })
 }
 
 async fn health_handler() -> axum::response::Response {
@@ -113,12 +114,27 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<Server>>) -> Json<Vec<Model>> {
+async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelResponse> {
     let models = state.models().await.unwrap_or_default();
-    Json(models)
+    Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<Server>>) -> Json<App> {
-    let request = state.context().await;
-    Json(request)
+async fn context_handler(State(state): State<Arc<Server>>) -> Json<AppResponse> {
+    let app = state.context().await;
+    Json(AppResponse { app })
+}
+
+#[derive(Serialize)]
+pub struct AppResponse {
+    app: App,
+}
+
+#[derive(Serialize)]
+pub struct ModelResponse {
+    models: Vec<Model>,
+}
+
+#[derive(Serialize)]
+pub struct ToolResponse {
+    tools: Vec<Tool>,
 }
