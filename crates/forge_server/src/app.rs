@@ -1,11 +1,14 @@
 use forge_prompt::Prompt;
 use forge_provider::{FinishReason, Message, ModelId, Request, Response};
 use forge_tool::ToolName;
+use serde::Serialize;
 use serde_json::Value;
 
 use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
+
+#[derive(Debug)]
 pub enum Action {
     UserChatMessage(ChatRequest),
     PromptFileLoaded(Vec<FileResponse>),
@@ -13,6 +16,7 @@ pub enum Action {
     ToolUseResponse(String),
 }
 
+#[derive(Debug, Clone)]
 pub struct FileResponse {
     pub path: String,
     pub content: String,
@@ -64,13 +68,16 @@ impl Command {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct App {
-    pub context: Request,
     pub user_message: Option<MessageTemplate>,
+    pub assistant_buffer: String,
     pub tool_use: bool,
     pub tool_raw_arguments: String,
     pub tool_name: Option<ToolName>,
+
+    // Keep context at the end so that debugging the Serialized format is easier
+    pub context: Request,
 }
 
 impl App {
@@ -81,6 +88,7 @@ impl App {
             tool_use: false,
             tool_raw_arguments: "".to_string(),
             tool_name: None,
+            assistant_buffer: "".to_string(),
         }
     }
 }
@@ -91,6 +99,7 @@ impl Application for App {
     type Command = Command;
 
     fn update(mut self, action: Action) -> Result<(Self, Command)> {
+        dbg!(&action);
         let cmd: Command = match action {
             Action::UserChatMessage(chat) => {
                 let prompt = Prompt::parse(chat.message.clone())
@@ -100,6 +109,7 @@ impl Application for App {
                 self.user_message = Some(MessageTemplate::task(prompt.to_string()));
 
                 if prompt.files().is_empty() {
+                    self.context = self.context.add_message(Message::user(chat.message));
                     Command::DispatchAgentMessage(self.context.clone())
                 } else {
                     Command::LoadPromptFiles(prompt.files())
@@ -121,28 +131,33 @@ impl Application for App {
                 }
             }
             Action::AgentChatResponse(response) => {
-                if response.tool_use.is_empty() {
-                    Command::DispatchUserMessage(response.message.content)
-                } else {
-                    self.tool_use = true;
-                    let mut commands = Vec::new();
-                    for tool in response.tool_use.into_iter() {
-                        if let Some(tool) = tool.tool_name {
-                            self.tool_name = Some(tool)
-                        }
-                        self.tool_raw_arguments.push_str(tool.input.as_str());
+                self.assistant_buffer
+                    .push_str(response.message.content.as_str());
+                if response.finish_reason.is_some() {
+                    self.context = self
+                        .context
+                        .add_message(Message::assistant(self.assistant_buffer.clone()));
+                    self.assistant_buffer.clear();
+                }
 
-                        if let Some(FinishReason::ToolUse) = response.finish_reason {
-                            self.tool_use = false;
-                            let argument = serde_json::from_str(&self.tool_raw_arguments)?;
-                            if let Some(tool_name) = self.tool_name.clone() {
-                                commands.push(Command::DispatchToolUse(tool_name, argument));
-                            }
+                self.tool_use = true;
+                let mut commands = Vec::new();
+                for tool in response.tool_use.into_iter() {
+                    if let Some(tool) = tool.tool_name {
+                        self.tool_name = Some(tool)
+                    }
+                    self.tool_raw_arguments.push_str(tool.input.as_str());
+
+                    if let Some(FinishReason::ToolUse) = response.finish_reason {
+                        self.tool_use = false;
+                        let argument = serde_json::from_str(&self.tool_raw_arguments)?;
+                        if let Some(tool_name) = self.tool_name.clone() {
+                            commands.push(Command::DispatchToolUse(tool_name, argument));
                         }
                     }
-
-                    Command::from(commands)
                 }
+
+                Command::DispatchUserMessage(response.message.content).and_then(commands.into())
             }
             Action::ToolUseResponse(response) => {
                 self.context = self.context.add_message(Message::user(response));

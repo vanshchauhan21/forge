@@ -32,12 +32,12 @@ impl<A: Application> ApplicationRuntime<A> {
     #[async_recursion::async_recursion]
     pub async fn execute(
         &self,
-        a: A::Action,
+        action: A::Action,
         executor: &impl Executor<Command = A::Command, Action = A::Action, Error = A::Error>,
     ) -> std::result::Result<(), A::Error> {
         let mut guard = self.state.lock().await;
         let app = guard.clone();
-        let (app, command) = app.update(a)?;
+        let (app, command) = app.update(action)?;
         *guard = app;
         drop(guard);
         let mut stream = executor.execute(&command).await?;

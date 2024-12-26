@@ -49,8 +49,8 @@ impl Server {
         self.tools.list()
     }
 
-    pub async fn context(&self) -> Request {
-        self.runtime.state().await.context
+    pub async fn context(&self) -> App {
+        self.runtime.state().await
     }
 
     pub async fn models(&self) -> Result<Vec<Model>> {
@@ -58,7 +58,6 @@ impl Server {
     }
 
     pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatResponse> + Send> {
-        dbg!(&chat);
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
 
         let executor = ChatCommandExecutor::new(tx, self.api_key.clone());

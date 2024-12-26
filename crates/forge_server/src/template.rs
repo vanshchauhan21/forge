@@ -1,15 +1,16 @@
 use std::fmt::Display;
 
 use forge_provider::{AnyMessage, Message};
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Tag {
     // TODO: move to enum type
     name: String,
     attributes: Vec<(String, String)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum MessageTemplate {
     Tagged {
         tag: Tag,

@@ -6,26 +6,16 @@ use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
-use forge_provider::{Model, Request};
+use forge_provider::Model;
 use forge_tool::Tool;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
-use crate::app::ChatRequest;
+use crate::app::{App, ChatRequest};
 use crate::completion::File;
 use crate::server::Server;
 use crate::Result;
-
-#[derive(serde::Serialize)]
-struct ModelsResponse {
-    models: Vec<Model>,
-}
-
-#[derive(serde::Serialize)]
-struct CompletionResponse {
-    files: Vec<File>,
-}
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -87,12 +77,12 @@ impl API {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<Server>>) -> axum::Json<CompletionResponse> {
-    let completions = state
+async fn completions_handler(State(state): State<Arc<Server>>) -> axum::Json<Vec<File>> {
+    let files = state
         .completions()
         .await
         .expect("Failed to get completions");
-    axum::Json(CompletionResponse { files: completions })
+    axum::Json(files)
 }
 
 #[axum::debug_handler]
@@ -123,12 +113,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelsResponse> {
+async fn models_handler(State(state): State<Arc<Server>>) -> Json<Vec<Model>> {
     let models = state.models().await.unwrap_or_default();
-    Json(ModelsResponse { models })
+    Json(models)
 }
 
-async fn context_handler(State(state): State<Arc<Server>>) -> Json<Request> {
+async fn context_handler(State(state): State<Arc<Server>>) -> Json<App> {
     let request = state.context().await;
     Json(request)
 }

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 #[derive(Default, Setters, Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
-    pub context: Vec<AnyMessage>,
+    pub messages: Vec<AnyMessage>,
     pub tools: Vec<Tool>,
     pub tool_result: Vec<ToolResult>,
     pub model: ModelId,
@@ -15,7 +15,7 @@ pub struct Request {
 impl Request {
     pub fn new(id: ModelId) -> Self {
         Request {
-            context: vec![],
+            messages: vec![],
             tools: vec![],
             tool_result: vec![],
             model: id,
@@ -62,7 +62,7 @@ impl Request {
     }
 
     pub fn add_message_mut(&mut self, message: impl Into<AnyMessage>) {
-        self.context.push(message.into());
+        self.messages.push(message.into());
     }
 
     pub fn extend_tools_mut(&mut self, tools: Vec<impl Into<Tool>>) {
@@ -75,7 +75,7 @@ impl Request {
     }
 
     pub fn extend_messages_mut(&mut self, messages: Vec<impl Into<AnyMessage>>) {
-        self.context.extend(messages.into_iter().map(Into::into));
+        self.messages.extend(messages.into_iter().map(Into::into));
     }
 }
 
@@ -164,12 +164,14 @@ pub struct Response {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FinishReason {
     ToolUse,
+    EndTurn,
 }
 
 impl FinishReason {
     pub fn parse(reason: String) -> Option<Self> {
         match reason.as_str() {
             "tool_use" => Some(FinishReason::ToolUse),
+            "end_turn" => Some(FinishReason::EndTurn),
             _ => None,
         }
     }

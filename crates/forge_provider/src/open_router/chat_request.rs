@@ -185,7 +185,7 @@ impl From<crate::model::Request> for ChatRequest {
                     .collect::<Vec<_>>();
 
                 let mut messages = value
-                    .context
+                    .messages
                     .into_iter()
                     .map(Message::from)
                     .collect::<Vec<_>>();
