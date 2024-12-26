@@ -1,4 +1,3 @@
-use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 use forge_provider::{BoxStream, Message, ModelId, Provider, Request, Response, ResultStream};
@@ -9,7 +8,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use crate::app::{Action, App, ChatRequest, ChatResponse, Command, FileResponse};
 use crate::completion::Completion;
-use crate::Error;
+use crate::{Error, Result};
 
 pub struct AppRuntime {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
@@ -33,7 +32,7 @@ impl AppRuntime {
         }
     }
 
-    pub fn chat(
+    pub async fn chat(
         &self,
         chat: ChatRequest,
     ) -> crate::Result<impl Stream<Item = ChatResponse> + Send> {
@@ -41,23 +40,20 @@ impl AppRuntime {
         let app = self.context.lock().unwrap().clone();
         let (app, command) = app.run(Action::UserChatMessage(chat))?;
 
-        match command {
-            Command::Empty => {}
-            Command::Combine(a, b) => {}
-            Command::LoadPromptFiles(_) => {}
-            Command::DispatchAgentMessage(_) => {}
-            Command::DispatchUserMessage(_) => {}
-            Command::DispatchToolUse(_, _) => {}
-        }
+        // let stream = self.execute(&command, &tx).await?.fold((), |_, action| {
+        //     let app = self.context.lock().unwrap().clone();
+        //     let (app, command) = app.run(Action::UserChatMessage(chat))?;
+        //     self.execute(command, tx)
+        // });
 
         Ok(ReceiverStream::new(rx))
     }
 
     #[async_recursion::async_recursion]
-    async fn command_executor(
+    async fn execute(
         &self,
         command: &Command,
-        tx: &Sender<ChatResponse>,
+        tx: &mpsc::Sender<ChatResponse>,
     ) -> ResultStream<Action, Error> {
         match command {
             Command::Empty => {
@@ -65,11 +61,8 @@ impl AppRuntime {
                 Ok(stream)
             }
             Command::Combine(a, b) => {
-                let merged: BoxStream<Action, Error> = Box::pin(
-                    self.command_executor(a, tx)
-                        .await?
-                        .merge(self.command_executor(b, tx).await?),
-                );
+                let merged: BoxStream<Action, Error> =
+                    Box::pin(self.execute(a, tx).await?.merge(self.execute(b, tx).await?));
 
                 Ok(merged)
             }
@@ -86,19 +79,17 @@ impl AppRuntime {
                 Ok(stream)
             }
             Command::DispatchAgentMessage(a) => {
-                // let stream = self.provider.chat(a.clone()).await?;
+                let actions =
+                    self.provider.chat(a.clone()).await?.map(|response| {
+                        response.map(Action::AgentChatResponse).map_err(Error::from)
+                    });
 
-                // let actions = stream.map(|response| response.map(|a|
-                // Action::AgentChatResponse(a)));
+                let msg: BoxStream<Action, Error> = Box::pin(actions);
 
-                // let msg: BoxStream<Action, Error> = Box::pin(actions);
-
-                // Ok(msg)
-
-                todo!()
+                Ok(msg)
             }
             Command::DispatchUserMessage(message) => {
-                tx.send(ChatResponse::Text(message.clone())).unwrap();
+                tx.send(ChatResponse::Text(message.clone())).await?;
 
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
