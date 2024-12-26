@@ -9,9 +9,9 @@ use tokio_stream::Stream;
 
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::completion::{Completion, File};
+use crate::environment::Environment;
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
-use crate::environment::Environment;
 use crate::Result;
 
 #[derive(Clone)]
@@ -33,7 +33,7 @@ impl Server {
 
         let env = Environment::build().await;
         let system_prompt = handlebar_register
-            .render_template(&system_prompt, &env)
+            .render_template(system_prompt, &env)
             .expect("Failed to render system prompt");
 
         let request = Request::new(ModelId::default())
