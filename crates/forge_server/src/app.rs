@@ -30,23 +30,33 @@ pub struct ChatRequest {
     pub model: ModelId,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, derive_more::From)]
 pub enum Command {
     #[default]
+    #[from(ignore)]
     Empty,
+    #[from(ignore)]
     Combine(Box<Command>, Box<Command>),
 
+    #[from(ignore)]
     DispatchFileRead(Vec<String>),
-    DispatchAssistantMessage(Request),
-    DispatchUserMessage(String),
-    DispatchToolUse(ToolUse),
+    DispatchAssistantMessage(#[from] Request),
+    DispatchUserMessage(#[from] ChatResponse),
+    DispatchToolUse(#[from] ToolUse),
 }
 
-impl<T> From<T> for Command
-where
-    T: IntoIterator<Item = Command>,
-{
-    fn from(value: T) -> Self {
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ChatResponse {
+    Text(String),
+    ToolUseStart(ToolName),
+    ToolUseEnd(String, Value),
+    Complete,
+    Fail(String),
+}
+
+impl FromIterator<Command> for Command {
+    fn from_iter<T: IntoIterator<Item = Command>>(value: T) -> Self {
         let mut command = Command::default();
         for cmd in value.into_iter() {
             command = command.and_then(cmd);
@@ -56,15 +66,6 @@ where
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
-pub enum ChatResponse {
-    Text(String),
-    ToolUseStart(ToolName),
-    ToolUseEnd(String, Value),
-    Complete,
-    Fail(String),
-}
-
 impl Command {
     fn and_then(self, second: Command) -> Self {
         Self::Combine(Box::new(self), Box::new(second))
@@ -72,6 +73,7 @@ impl Command {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Setters)]
+#[serde(rename_all = "camelCase")]
 #[setters(strip_option)]
 pub struct App {
     pub user_message: Option<MessageTemplate>,
@@ -167,7 +169,8 @@ impl Application for App {
                     self.tool_raw_arguments.clear();
                 }
 
-                Command::DispatchUserMessage(response.message.content).and_then(commands.into())
+                Command::DispatchUserMessage(ChatResponse::Text(response.message.content))
+                    .and_then(commands.into_iter().collect())
             }
             Action::ToolResponse(response) => {
                 let message = if response.is_error {
@@ -265,7 +268,7 @@ mod tests {
             Command::Combine(left, right) => {
                 assert_eq!(
                     *left,
-                    Command::DispatchUserMessage("Tool response".to_string())
+                    ChatResponse::Text("Tool response".to_string()).into()
                 );
                 match *right {
                     Command::Combine(_, right_inner) => {
@@ -315,8 +318,8 @@ mod tests {
 
     #[test]
     fn test_combine_commands() {
-        let cmd1 = Command::DispatchUserMessage("First command".to_string());
-        let cmd2 = Command::DispatchUserMessage("Second command".to_string());
+        let cmd1 = Command::from(ChatResponse::Text("First command".to_string()));
+        let cmd2 = Command::from(ChatResponse::Text("Second command".to_string()));
 
         let combined = cmd1.and_then(cmd2);
 
@@ -324,11 +327,11 @@ mod tests {
             Command::Combine(left, right) => {
                 assert_eq!(
                     *left,
-                    Command::DispatchUserMessage("First command".to_string())
+                    ChatResponse::Text("First command".to_string()).into()
                 );
                 assert_eq!(
                     *right,
-                    Command::DispatchUserMessage("Second command".to_string())
+                    ChatResponse::Text("Second command".to_string()).into()
                 );
             }
             _ => panic!("Expected Command::DispatchSequence"),
@@ -356,7 +359,7 @@ mod tests {
             Command::Combine(left, right) => {
                 assert_eq!(
                     *left,
-                    Command::DispatchUserMessage("Tool response".to_string())
+                    ChatResponse::Text("Tool response".to_string()).into()
                 );
                 match *right {
                     Command::Combine(_, right_inner) => {
@@ -396,7 +399,7 @@ mod tests {
             Command::Combine(left, right) => {
                 assert_eq!(
                     *left,
-                    Command::DispatchUserMessage("Tool response".to_string())
+                    ChatResponse::Text("Tool response".to_string()).into()
                 );
                 assert_eq!(*right, Command::Empty);
             }

@@ -64,7 +64,10 @@ impl Server {
         Ok(self.provider.models().await?)
     }
 
-    pub async fn chat(&self, chat: ChatRequest) -> Result<impl Stream<Item = ChatResponse> + Send> {
+    pub async fn chat(
+        &self,
+        chat: ChatRequest,
+    ) -> Result<impl Stream<Item = ChatResponse> + Send> {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
         let executor = ChatCommandExecutor::new(tx, self.api_key.clone());
         let runtime = self.runtime.clone();
