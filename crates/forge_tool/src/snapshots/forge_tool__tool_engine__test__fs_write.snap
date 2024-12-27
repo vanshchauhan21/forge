@@ -1,7 +1,6 @@
 ---
 source: crates/forge_tool/src/tool_engine.rs
 expression: tool_str
-snapshot_kind: text
 ---
 {
   "name": "fs_write",
@@ -27,7 +26,19 @@ snapshot_kind: text
   },
   "output_schema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "String",
-    "type": "string"
+    "title": "FSWriteOutput",
+    "type": "object",
+    "required": [
+      "content",
+      "path"
+    ],
+    "properties": {
+      "content": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      }
+    }
   }
 }

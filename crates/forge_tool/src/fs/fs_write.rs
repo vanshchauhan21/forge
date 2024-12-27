@@ -1,6 +1,6 @@
 use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{Description, ToolTrait};
 
@@ -32,14 +32,20 @@ pub struct FSWrite;
 #[async_trait::async_trait]
 impl ToolTrait for FSWrite {
     type Input = FSWriteInput;
-    type Output = String;
+    type Output = FSWriteOutput;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
-        Ok(format!("Successfully wrote to {}", input.path))
+        Ok(FSWriteOutput { path: input.path, content: input.content })
     }
+}
+
+#[derive(Serialize, JsonSchema)]
+pub struct FSWriteOutput {
+    pub path: String,
+    pub content: String,
 }
 
 #[cfg(test)]
@@ -55,14 +61,18 @@ mod test {
         let file_path = temp_dir.path().join("test.txt");
 
         let fs_write = FSWrite;
-        let _ = fs_write
+        let output = fs_write
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
                 content: "Hello, World!".to_string(),
             })
             .await
             .unwrap();
-        let s = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(s, "Hello, World!")
+        assert_eq!(output.path, file_path.to_string_lossy().to_string());
+        assert_eq!(output.content, "Hello, World!");
+
+        // Verify file was actually written
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "Hello, World!")
     }
 }

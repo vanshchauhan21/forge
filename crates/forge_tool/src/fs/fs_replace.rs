@@ -4,7 +4,7 @@ use std::path::Path;
 
 use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tracing::{debug, error};
 
@@ -159,7 +159,7 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
     Ok(blocks)
 }
 
-fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<(), String> {
+fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
     debug!("Starting file replacement for {:?}", path.as_ref());
 
     // Create backup of original file
@@ -190,14 +190,18 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<(), Stri
 
     // Handle empty search case (new file)
     if blocks[0].search.is_empty() {
-        if !blocks[0].replace.is_empty() {
-            write!(temp_file, "{}", blocks[0].replace).map_err(|e| e.to_string())?;
-            // Only add newline if it doesn't end with one
-            if !blocks[0].replace.ends_with('\n') {
-                writeln!(temp_file).map_err(|e| e.to_string())?;
+        let content = if !blocks[0].replace.is_empty() {
+            if blocks[0].replace.ends_with('\n') {
+                blocks[0].replace.clone()
+            } else {
+                format!("{}\n", blocks[0].replace)
             }
-        }
-        return persist_changes(temp_file, path, backup_path);
+        } else {
+            String::new()
+        };
+        write!(temp_file, "{}", content).map_err(|e| e.to_string())?;
+        persist_changes(temp_file, path, backup_path)?;
+        return Ok(content);
     }
 
     let mut result = content.clone();
@@ -213,25 +217,31 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<(), Stri
 
     // Write the modified content
     write!(temp_file, "{}", result).map_err(|e| e.to_string())?;
-
-    persist_changes(temp_file, path, backup_path)
+    persist_changes(temp_file, path, backup_path)?;
+    Ok(result)
 }
 
 #[async_trait::async_trait]
 impl ToolTrait for FSReplace {
     type Input = FSReplaceInput;
-    type Output = String;
+    type Output = FSReplaceOutput;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         debug!("FSReplace called for path: {}", input.path);
         let blocks = parse_blocks(&input.diff)?;
         debug!("Parsed {} replacement blocks", blocks.len());
 
-        apply_changes(&input.path, blocks)?;
+        let content = apply_changes(&input.path, blocks)?;
         debug!("Changes applied successfully");
 
-        Ok(format!("Successfully replaced content in {}", input.path))
+        Ok(FSReplaceOutput { path: input.path, content })
     }
+}
+
+#[derive(Serialize, JsonSchema)]
+pub struct FSReplaceOutput {
+    pub path: String,
+    pub content: String,
 }
 
 #[cfg(test)]
@@ -266,7 +276,7 @@ mod test {
         write_test_file(&file_path, content).await.unwrap();
 
         let fs_replace = FSReplace;
-        let result = fs_replace
+        let output = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n    Hello World    \n=======\n    Hi World    \n>>>>>>> REPLACE\n"
@@ -275,7 +285,11 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully replaced"));
+        assert_eq!(output.path, file_path.to_string_lossy().to_string());
+        assert_eq!(
+            output.content,
+            "    Hi World    \n  Test Line  \n   Goodbye World   \n"
+        );
 
         let new_content = read_test_file(&file_path).await.unwrap();
         assert_eq!(
@@ -292,7 +306,7 @@ mod test {
         write_test_file(&file_path, "").await.unwrap();
 
         let fs_replace = FSReplace;
-        let result = fs_replace
+        let output = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n=======\nNew content\n>>>>>>> REPLACE\n".to_string(),
@@ -300,7 +314,8 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully replaced"));
+        assert_eq!(output.path, file_path.to_string_lossy().to_string());
+        assert_eq!(output.content, "New content\n");
 
         let new_content = read_test_file(&file_path).await.unwrap();
         assert_eq!(new_content, "New content\n");
@@ -317,12 +332,16 @@ mod test {
         let fs_replace = FSReplace;
         let diff = "<<<<<<< SEARCH\n    First Line    \n=======\n    New First    \n>>>>>>> REPLACE\n<<<<<<< SEARCH\n    Last Line    \n=======\n    New Last    \n>>>>>>> REPLACE\n".to_string();
 
-        let result = fs_replace
+        let output = fs_replace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully replaced"));
+        assert_eq!(output.path, file_path.to_string_lossy().to_string());
+        assert_eq!(
+            output.content,
+            "    New First    \n  Middle Line  \n    New Last    \n"
+        );
 
         let new_content = read_test_file(&file_path).await.unwrap();
         assert_eq!(
@@ -340,7 +359,7 @@ mod test {
         write_test_file(&file_path, content).await.unwrap();
 
         let fs_replace = FSReplace;
-        let result = fs_replace
+        let output = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n  Middle Line  \n=======\n>>>>>>> REPLACE\n".to_string(),
@@ -348,7 +367,8 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully replaced"));
+        assert_eq!(output.path, file_path.to_string_lossy().to_string());
+        assert_eq!(output.content, "    First Line    \n    Last Line    \n");
 
         let new_content = read_test_file(&file_path).await.unwrap();
         assert_eq!(new_content, "    First Line    \n    Last Line    \n");
@@ -366,14 +386,14 @@ mod test {
         let fs_replace = FSReplace;
 
         // Test 1: Replace content while preserving surrounding newlines
-        let result1 = fs_replace
+        let output1 = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n    let x = 1;\n\n\n    console.log(x);\n=======\n    let y = 2;\n\n\n    console.log(y);\n>>>>>>> REPLACE\n".to_string(),
             })
             .await
             .unwrap();
-        assert!(result1.contains("Successfully replaced"));
+        assert_eq!(output1.path, file_path.to_string_lossy().to_string());
 
         let content1 = read_test_file(&file_path).await.unwrap();
         assert_eq!(
@@ -382,14 +402,14 @@ mod test {
         );
 
         // Test 2: Replace block with different newline pattern
-        let result2 = fs_replace
+        let output2 = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n\n// Footer comment\n\n\n=======\n\n\n\n// Updated footer\n\n>>>>>>> REPLACE\n".to_string(),
             })
             .await
             .unwrap();
-        assert!(result2.contains("Successfully replaced"));
+        assert_eq!(output2.path, file_path.to_string_lossy().to_string());
 
         let content2 = read_test_file(&file_path).await.unwrap();
         assert_eq!(
@@ -398,14 +418,14 @@ mod test {
         );
 
         // Test 3: Replace with empty lines preservation
-        let result3 = fs_replace
+        let output3 = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: "<<<<<<< SEARCH\n\n\n// Header comment\n\n\n=======\n\n\n\n// New header\n\n\n\n>>>>>>> REPLACE\n".to_string(),
             })
             .await
             .unwrap();
-        assert!(result3.contains("Successfully replaced"));
+        assert_eq!(output3.path, file_path.to_string_lossy().to_string());
 
         let final_content = read_test_file(&file_path).await.unwrap();
         assert_eq!(
