@@ -12,10 +12,10 @@ use crate::Result;
 
 #[derive(Debug, From)]
 pub enum Action {
-    UserChatMessage(ChatRequest),
-    PromptFileLoaded(Vec<FileResponse>),
-    AgentChatResponse(Response),
-    ToolUseResponse(ToolResult),
+    UserMessage(ChatRequest),
+    FileLoadResponse(Vec<FileResponse>),
+    AssistantResponse(Response),
+    ToolResponse(ToolResult),
 }
 
 #[derive(Debug, Clone)]
@@ -108,7 +108,7 @@ impl Application for App {
 
     fn update(mut self, action: Action) -> Result<(Self, Command)> {
         let cmd: Command = match action {
-            Action::UserChatMessage(chat) => {
+            Action::UserMessage(chat) => {
                 let prompt = Prompt::parse(chat.message.clone())
                     .unwrap_or(Prompt::new(chat.message.clone()));
 
@@ -122,7 +122,7 @@ impl Application for App {
                     Command::LoadPromptFiles(prompt.files())
                 }
             }
-            Action::PromptFileLoaded(files) => {
+            Action::FileLoadResponse(files) => {
                 if let Some(message) = self.user_message.clone() {
                     for fr in files.into_iter() {
                         self.context = self.context.add_message(
@@ -137,7 +137,7 @@ impl Application for App {
                     Command::default()
                 }
             }
-            Action::AgentChatResponse(response) => {
+            Action::AssistantResponse(response) => {
                 self.assistant_buffer
                     .push_str(response.message.content.as_str());
                 if response.finish_reason.is_some() {
@@ -168,7 +168,7 @@ impl Application for App {
 
                 Command::DispatchUserMessage(response.message.content).and_then(commands.into())
             }
-            Action::ToolUseResponse(response) => {
+            Action::ToolResponse(response) => {
                 let message = if response.is_error {
                     "An error occurred while processing the tool.".to_string()
                 } else {
@@ -197,7 +197,7 @@ mod tests {
     use crate::template::Tag;
 
     #[test]
-    fn test_user_chat_message_action() {
+    fn test_user_message_action() {
         let app = App::default();
 
         let chat_request = ChatRequest {
@@ -205,7 +205,7 @@ mod tests {
             model: ModelId::default(),
         };
 
-        let action = Action::UserChatMessage(chat_request.clone());
+        let action = Action::UserMessage(chat_request.clone());
         let (updated_app, command) = app.update(action).unwrap();
 
         assert_eq!(&updated_app.context.model, &ModelId::default());
@@ -216,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prompt_file_loaded_action() {
+    fn test_file_load_response_action() {
         let app = App::default().user_message(MessageTemplate::new(
             Tag { name: "test".to_string(), attributes: vec![] },
             "Test message".to_string(),
@@ -227,7 +227,7 @@ mod tests {
             content: "Test content".to_string(),
         }];
 
-        let action = Action::PromptFileLoaded(files.clone());
+        let action = Action::FileLoadResponse(files.clone());
         let (updated_app, command) = app.update(action).unwrap();
 
         assert_eq!(
@@ -244,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_chat_response_action_with_tool_use() {
+    fn test_assistant_response_action_with_tool_use() {
         let app = App::default();
 
         let response = Response {
@@ -257,7 +257,7 @@ mod tests {
             finish_reason: Some(FinishReason::ToolUse),
         };
 
-        let action = Action::AgentChatResponse(response);
+        let action = Action::AssistantResponse(response);
         let (_, command) = app.update(action).unwrap();
 
         match command {
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tool_use_response_action() {
+    fn test_tool_response_action() {
         let app = App::default();
 
         let tool_response = json!({
@@ -296,7 +296,7 @@ mod tests {
                 "key": "value"
             }
         });
-        let action = Action::ToolUseResponse(ToolResult {
+        let action = Action::ToolResponse(ToolResult {
             tool_use_id: None,
             tool_name: ToolName::from("test_tool"),
             content: tool_response.clone(),
@@ -349,7 +349,7 @@ mod tests {
             finish_reason: Some(FinishReason::ToolUse),
         };
 
-        let action = Action::AgentChatResponse(response);
+        let action = Action::AssistantResponse(response);
         let (app, command) = app.update(action).unwrap();
 
         assert!(app.tool_raw_arguments.is_empty());
@@ -392,7 +392,7 @@ mod tests {
             finish_reason: None,
         };
 
-        let action = Action::AgentChatResponse(response);
+        let action = Action::AssistantResponse(response);
         let (app, command) = app.update(action).unwrap();
         assert!(!app.tool_raw_arguments.is_empty());
         match command {

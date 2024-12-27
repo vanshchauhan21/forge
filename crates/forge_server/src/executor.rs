@@ -52,14 +52,14 @@ impl Executor for ChatCommandExecutor {
                 }
 
                 let stream: BoxStream<Action, Error> =
-                    Box::pin(tokio_stream::once(Ok(Action::PromptFileLoaded(responses))));
+                    Box::pin(tokio_stream::once(Ok(Action::FileLoadResponse(responses))));
 
                 Ok(stream)
             }
             Command::DispatchAgentMessage(a) => {
                 let actions =
                     self.provider.chat(a.clone()).await?.map(|response| {
-                        response.map(Action::AgentChatResponse).map_err(Error::from)
+                        response.map(Action::AssistantResponse).map_err(Error::from)
                     });
 
                 let msg: BoxStream<Action, Error> = Box::pin(actions);
@@ -75,7 +75,7 @@ impl Executor for ChatCommandExecutor {
             Command::DispatchToolUse { tool_name, arguments } => {
                 let tool_result = self.tools.call(tool_name, arguments.clone()).await;
                 let is_error = tool_result.is_err();
-                let tool_use_response = Action::ToolUseResponse(ToolResult {
+                let tool_use_response = Action::ToolResponse(ToolResult {
                     content: match tool_result {
                         Ok(content) => content,
                         Err(e) => serde_json::Value::from(e),
