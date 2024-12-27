@@ -24,9 +24,6 @@ impl Environment {
             home: dirs::home_dir().map(|a| a.display().to_string()),
         }
     }
-}
-
-impl Environment {
     pub fn render(&self, template: &str) -> Result<String, RenderError> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);

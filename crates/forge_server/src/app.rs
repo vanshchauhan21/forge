@@ -173,9 +173,16 @@ impl Application for App {
             }
             Action::ToolResponse(response) => {
                 let message = if response.is_error {
-                    "An error occurred while processing the tool.".to_string()
+                    format!(
+                        "An error occurred while processing the tool, {}",
+                        response.tool_name.as_str()
+                    )
                 } else {
-                    "Tool executed successfully.".to_string()
+                    format!(
+                        "TOOL Result for {} \n {}",
+                        response.tool_name.as_str(),
+                        response.content
+                    )
                 };
 
                 self.context = self
@@ -312,7 +319,7 @@ mod tests {
         );
         assert!(updated_app.context.messages[0]
             .content()
-            .contains("Tool executed successfully."));
+            .contains("TOOL Result for test_tool"));
     }
 
     #[test]
