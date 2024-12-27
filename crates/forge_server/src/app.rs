@@ -1,7 +1,7 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
 use forge_prompt::Prompt;
-use forge_provider::{FinishReason, Message, ModelId, Request, Response, ToolResult};
+use forge_provider::{FinishReason, Message, ModelId, Request, Response, ToolResult, ToolUse};
 use forge_tool::ToolName;
 use serde::Serialize;
 use serde_json::Value;
@@ -39,10 +39,7 @@ pub enum Command {
     DispatchFileRead(Vec<String>),
     DispatchAssistantMessage(Request),
     DispatchUserMessage(String),
-    DispatchToolUse {
-        tool_name: ToolName,
-        arguments: Value,
-    },
+    DispatchToolUse(ToolUse),
 }
 
 impl<T> From<T> for Command
@@ -159,9 +156,12 @@ impl Application for App {
 
                 if let Some(FinishReason::ToolUse) = response.finish_reason {
                     self.tool_use = false;
-                    let arguments = serde_json::from_str(&self.tool_raw_arguments)?;
                     if let Some(tool_name) = self.tool_name.clone() {
-                        commands.push(Command::DispatchToolUse { tool_name, arguments });
+                        commands.push(Command::DispatchToolUse(forge_provider::ToolUse {
+                            tool_use_id: None,
+                            tool_name: Some(tool_name),
+                            input: self.tool_raw_arguments.clone(),
+                        }));
                     }
                     // since tools is used, clear the tool_raw_arguments.
                     self.tool_raw_arguments.clear();
@@ -269,15 +269,13 @@ mod tests {
                 );
                 match *right {
                     Command::Combine(_, right_inner) => {
-                        let expected_tool_name = ToolName::from("test_tool");
-                        let expected_tool_args: Value =
-                            serde_json::from_str(r#"{"key": "value"}"#).unwrap();
                         assert_eq!(
                             *right_inner,
-                            Command::DispatchToolUse {
-                                tool_name: expected_tool_name,
-                                arguments: expected_tool_args
-                            }
+                            Command::DispatchToolUse(forge_provider::ToolUse {
+                                tool_use_id: None,
+                                tool_name: Some(ToolName::from("test_tool")),
+                                input: r#"{"key": "value"}"#.to_string(),
+                            })
                         );
                     }
                     _ => panic!("Expected nested DispatchSequence command"),
@@ -362,15 +360,13 @@ mod tests {
                 );
                 match *right {
                     Command::Combine(_, right_inner) => {
-                        let expected_tool_name = ToolName::from("fs_list");
-                        let expected_tool_args: Value =
-                            serde_json::from_str(r#"{"path": "."}"#).unwrap();
                         assert_eq!(
                             *right_inner,
-                            Command::DispatchToolUse {
-                                tool_name: expected_tool_name,
-                                arguments: expected_tool_args
-                            }
+                            Command::DispatchToolUse(forge_provider::ToolUse {
+                                tool_use_id: None,
+                                tool_name: Some(ToolName::from("fs_list")),
+                                input: r#"{"path": "."}"#.to_string(),
+                            })
                         );
                     }
                     _ => panic!("Expected nested DispatchSequence command"),

@@ -16,6 +16,7 @@ pub enum Error {
     Serde(serde_json::Error),
     EmptyResponse,
     Walk(forge_walker::Error),
+    ToolCallMissingName
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
