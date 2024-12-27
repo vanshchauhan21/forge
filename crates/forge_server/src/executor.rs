@@ -5,7 +5,7 @@ use forge_tool::ToolEngine;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
-use crate::app::{Action, Command, ChatResponse, FileResponse};
+use crate::app::{Action, ChatResponse, Command, FileResponse};
 use crate::runtime::Executor;
 use crate::Error;
 
@@ -67,9 +67,7 @@ impl Executor for ChatCommandExecutor {
                 Ok(msg)
             }
             Command::DispatchUserMessage(message) => {
-                self.tx
-                    .send(ChatResponse::Text(serde_json::to_string(message)?))
-                    .await?;
+                self.tx.send(message.clone()).await?;
 
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
