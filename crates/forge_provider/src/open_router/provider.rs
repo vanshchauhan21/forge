@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
@@ -103,7 +105,10 @@ impl InnerProvider for OpenRouter {
             })
             .take_while(|message| {
                 match message {
-                    Ok(message) => print!("{}", message.message.content),
+                    Ok(message) => {
+                        print!("{}", message.message.content);
+                        std::io::stdout().flush().unwrap()
+                    }
                     Err(err) => eprintln!("{}", err),
                 };
 
