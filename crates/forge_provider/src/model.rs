@@ -214,7 +214,7 @@ impl Response {
 #[serde(transparent)]
 pub struct UseId(pub(crate) String);
 
-#[derive(Setters, Debug, Clone, Eq, PartialEq)]
+#[derive(Setters, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ToolUse {
     /// Optional unique identifier that represents a single call to the tool
     /// use. NOTE: Not all models support a call ID for using a tool
@@ -226,7 +226,7 @@ pub struct ToolUse {
     pub input: String,
 }
 
-#[derive(Setters, Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Setters, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ToolResult {
     pub tool_name: ToolName,
     pub tool_use_id: Option<UseId>,

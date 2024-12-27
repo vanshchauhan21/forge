@@ -4,7 +4,6 @@ use forge_prompt::Prompt;
 use forge_provider::{FinishReason, Message, ModelId, Request, Response, ToolResult, ToolUse};
 use forge_tool::ToolName;
 use serde::Serialize;
-use serde_json::Value;
 
 use crate::runtime::Application;
 use crate::template::MessageTemplate;
@@ -49,8 +48,8 @@ pub enum Command {
 #[serde(rename_all = "camelCase")]
 pub enum ChatResponse {
     Text(String),
-    ToolUseStart(ToolName),
-    ToolUseEnd(String, Value),
+    ToolUseStart(ToolUse),
+    ToolUseEnd(ToolResult),
     Complete,
     Fail(String),
 }
