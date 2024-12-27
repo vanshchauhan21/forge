@@ -13,7 +13,7 @@ use crate::Result;
 #[derive(Debug, From)]
 pub enum Action {
     UserMessage(ChatRequest),
-    FileLoadResponse(Vec<FileResponse>),
+    FileReadResponse(Vec<FileResponse>),
     AssistantResponse(Response),
     ToolResponse(ToolResult),
 }
@@ -35,8 +35,9 @@ pub enum Command {
     #[default]
     Empty,
     Combine(Box<Command>, Box<Command>),
-    LoadPromptFiles(Vec<String>),
-    DispatchAgentMessage(Request),
+
+    DispatchFileRead(Vec<String>),
+    DispatchAssistantMessage(Request),
     DispatchUserMessage(String),
     DispatchToolUse {
         tool_name: ToolName,
@@ -117,12 +118,12 @@ impl Application for App {
 
                 if prompt.files().is_empty() {
                     self.context = self.context.add_message(Message::user(chat.message));
-                    Command::DispatchAgentMessage(self.context.clone())
+                    Command::DispatchAssistantMessage(self.context.clone())
                 } else {
-                    Command::LoadPromptFiles(prompt.files())
+                    Command::DispatchFileRead(prompt.files())
                 }
             }
-            Action::FileLoadResponse(files) => {
+            Action::FileReadResponse(files) => {
                 if let Some(message) = self.user_message.clone() {
                     for fr in files.into_iter() {
                         self.context = self.context.add_message(
@@ -132,9 +133,9 @@ impl Application for App {
                         );
                     }
 
-                    Command::DispatchAgentMessage(self.context.clone())
+                    Command::DispatchAssistantMessage(self.context.clone())
                 } else {
-                    Command::default()
+                    Command::Empty
                 }
             }
             Action::AssistantResponse(response) => {
@@ -180,7 +181,7 @@ impl Application for App {
                     .add_message(Message::user(message))
                     .add_tool_result(response);
 
-                Command::DispatchAgentMessage(self.context.clone())
+                Command::DispatchAssistantMessage(self.context.clone())
             }
         };
         Ok((self, cmd))
@@ -211,7 +212,7 @@ mod tests {
         assert_eq!(&updated_app.context.model, &ModelId::default());
         assert_eq!(
             command,
-            Command::DispatchAgentMessage(updated_app.context.clone())
+            Command::DispatchAssistantMessage(updated_app.context.clone())
         );
     }
 
@@ -227,12 +228,12 @@ mod tests {
             content: "Test content".to_string(),
         }];
 
-        let action = Action::FileLoadResponse(files.clone());
+        let action = Action::FileReadResponse(files.clone());
         let (updated_app, command) = app.update(action).unwrap();
 
         assert_eq!(
             command,
-            Command::DispatchAgentMessage(updated_app.context.clone())
+            Command::DispatchAssistantMessage(updated_app.context.clone())
         );
 
         assert!(updated_app.context.messages[0]
@@ -279,10 +280,10 @@ mod tests {
                             }
                         );
                     }
-                    _ => panic!("Expected nested Combine command"),
+                    _ => panic!("Expected nested DispatchSequence command"),
                 }
             }
-            _ => panic!("Expected Command::Combine"),
+            _ => panic!("Expected Command::DispatchSequence"),
         }
     }
 
@@ -307,7 +308,7 @@ mod tests {
 
         assert_eq!(
             command,
-            Command::DispatchAgentMessage(updated_app.context.clone())
+            Command::DispatchAssistantMessage(updated_app.context.clone())
         );
         assert!(updated_app.context.messages[0]
             .content()
@@ -332,7 +333,7 @@ mod tests {
                     Command::DispatchUserMessage("Second command".to_string())
                 );
             }
-            _ => panic!("Expected Command::Combine"),
+            _ => panic!("Expected Command::DispatchSequence"),
         }
     }
 
@@ -372,10 +373,10 @@ mod tests {
                             }
                         );
                     }
-                    _ => panic!("Expected nested Combine command"),
+                    _ => panic!("Expected nested DispatchSequence command"),
                 }
             }
-            _ => panic!("Expected Command::Combine"),
+            _ => panic!("Expected Command::DispatchSequence"),
         }
     }
 
@@ -403,7 +404,7 @@ mod tests {
                 );
                 assert_eq!(*right, Command::Empty);
             }
-            _ => panic!("Expected Command::Combine"),
+            _ => panic!("Expected Command::DispatchSequence"),
         }
     }
 }

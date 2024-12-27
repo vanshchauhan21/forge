@@ -44,7 +44,7 @@ impl Executor for ChatCommandExecutor {
 
                 Ok(merged)
             }
-            Command::LoadPromptFiles(files) => {
+            Command::DispatchFileRead(files) => {
                 let mut responses = vec![];
                 for file in files {
                     let content = tokio::fs::read_to_string(file.clone()).await?;
@@ -52,11 +52,11 @@ impl Executor for ChatCommandExecutor {
                 }
 
                 let stream: BoxStream<Action, Error> =
-                    Box::pin(tokio_stream::once(Ok(Action::FileLoadResponse(responses))));
+                    Box::pin(tokio_stream::once(Ok(Action::FileReadResponse(responses))));
 
                 Ok(stream)
             }
-            Command::DispatchAgentMessage(a) => {
+            Command::DispatchAssistantMessage(a) => {
                 let actions =
                     self.provider.chat(a.clone()).await?.map(|response| {
                         response.map(Action::AssistantResponse).map_err(Error::from)
