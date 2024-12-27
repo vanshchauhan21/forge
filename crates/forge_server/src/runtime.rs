@@ -11,7 +11,7 @@ pub trait Application: Send + Sync + Sized + Clone {
     type Command: Send;
     fn update(
         self,
-        action: Self::Action,
+        action: impl Into<Self::Action>,
     ) -> std::result::Result<(Self, Vec<Self::Command>), Self::Error>;
 }
 

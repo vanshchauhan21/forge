@@ -24,7 +24,8 @@ pub struct FileResponse {
     pub content: String,
 }
 
-#[derive(Debug, serde::Deserialize, Clone, Setters)]
+#[derive(Default, Debug, serde::Deserialize, Clone, Setters)]
+#[setters(into)]
 pub struct ChatRequest {
     pub message: String,
     pub model: ModelId,
@@ -53,10 +54,14 @@ pub enum ChatResponse {
 #[serde(rename_all = "camelCase")]
 #[setters(strip_option)]
 pub struct App {
-    pub user_message: Option<MessageTemplate>,
+    // The main objective that the user is trying to achieve
+    pub user_objective: Option<MessageTemplate>,
+
+    // A temp buffer used to store the assistant response (streaming mode only)
     pub assistant_buffer: String,
+
+    // A temp buffer used to store the tool use parts (streaming mode only)
     pub tool_use_part: Vec<ToolUsePart>,
-    pub files: Vec<String>,
 
     // Keep context at the end so that debugging the Serialized format is easier
     pub context: Request,
@@ -66,10 +71,9 @@ impl App {
     pub fn new(context: Request) -> Self {
         Self {
             context,
-            user_message: None,
+            user_objective: None,
             tool_use_part: Vec::new(),
             assistant_buffer: "".to_string(),
-            files: Vec::new(),
         }
     }
 }
@@ -79,7 +83,8 @@ impl Application for App {
     type Error = crate::Error;
     type Command = Command;
 
-    fn update(mut self, action: Action) -> Result<(Self, Vec<Command>)> {
+    fn update(mut self, action: impl Into<Action>) -> Result<(Self, Vec<Command>)> {
+        let action = action.into();
         let mut commands = Vec::new();
         match action {
             Action::UserMessage(chat) => {
@@ -87,7 +92,10 @@ impl Application for App {
                     .unwrap_or(Prompt::new(chat.message.clone()));
 
                 self.context = self.context.model(chat.model.clone());
-                self.user_message = Some(MessageTemplate::task(prompt.to_string()));
+
+                if self.user_objective.is_none() {
+                    self.user_objective = Some(MessageTemplate::task(prompt.to_string()));
+                }
 
                 if prompt.files().is_empty() {
                     self.context = self.context.add_message(Message::user(chat.message));
@@ -97,7 +105,7 @@ impl Application for App {
                 }
             }
             Action::FileReadResponse(files) => {
-                if let Some(message) = self.user_message.clone() {
+                if let Some(message) = self.user_objective.clone() {
                     for fr in files.into_iter() {
                         self.context = self.context.add_message(
                             message
@@ -197,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_file_load_response_action() {
-        let app = App::default().user_message(MessageTemplate::new(
+        let app = App::default().user_objective(MessageTemplate::new(
             Tag { name: "test".to_string(), attributes: vec![] },
             "Test message".to_string(),
         ));
@@ -329,5 +337,19 @@ mod tests {
         assert!(command.contains(&Command::UserMessage(ChatResponse::Text(
             "Tool response".to_string()
         ))));
+    }
+
+    #[test]
+    fn test_should_set_user_objective_only_once() {
+        let app = App::default();
+        let request_0 = ChatRequest::default().message("Hello");
+        let request_1 = ChatRequest::default().message("World");
+        let (app, _) = app.update(request_0).unwrap();
+        let (app, _) = app.update(request_1).unwrap();
+
+        assert_eq!(
+            app.user_objective,
+            Some(MessageTemplate::task("Hello".to_string()))
+        );
     }
 }
