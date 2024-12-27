@@ -4,6 +4,8 @@ use forge_tool::{Tool, ToolName};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::{Error, Result};
+
 #[derive(Default, Setters, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Request {
     pub messages: Vec<AnyMessage>,
@@ -137,7 +139,7 @@ impl Message<User> {
 
     /// Creates a user message from any serializable item. The message is
     /// typically in a XML format
-    pub fn try_from(item: impl Serialize) -> Result<Self, crate::error::Error> {
+    pub fn try_from(item: impl Serialize) -> Result<Self> {
         Ok(Message::user(serde_json::to_string(&item)?))
     }
 }
@@ -168,7 +170,7 @@ impl AnyMessage {
 #[derive(Setters, Debug, Clone)]
 pub struct Response {
     pub message: Message<Assistant>,
-    pub tool_use: Vec<ToolUse>,
+    pub tool_use: Vec<ToolUsePart>,
     pub finish_reason: Option<FinishReason>,
 }
 
@@ -198,12 +200,12 @@ impl Response {
         }
     }
 
-    pub fn add_call(mut self, call_tool: impl Into<ToolUse>) -> Self {
+    pub fn add_call(mut self, call_tool: impl Into<ToolUsePart>) -> Self {
         self.tool_use.push(call_tool.into());
         self
     }
 
-    pub fn extend_calls(mut self, calls: Vec<impl Into<ToolUse>>) -> Self {
+    pub fn extend_calls(mut self, calls: Vec<impl Into<ToolUsePart>>) -> Self {
         self.tool_use.extend(calls.into_iter().map(Into::into));
         self
     }
@@ -214,16 +216,63 @@ impl Response {
 #[serde(transparent)]
 pub struct UseId(pub(crate) String);
 
+impl<A: ToString> From<A> for UseId {
+    fn from(value: A) -> Self {
+        UseId(value.to_string())
+    }
+}
+
+/// Contains a part message for using a tool. This is received as a part of the
+/// response from the model only when streaming is enabled.
 #[derive(Setters, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ToolUse {
+pub struct ToolUsePart {
     /// Optional unique identifier that represents a single call to the tool
     /// use. NOTE: Not all models support a call ID for using a tool
-    pub tool_use_id: Option<UseId>,
-    pub tool_name: Option<ToolName>,
+    pub use_id: Option<UseId>,
+    pub name: Option<ToolName>,
 
     /// Arguments that need to be passed to the tool. NOTE: Not all tools
     /// require input
-    pub input: String,
+    pub argument_part: String,
+}
+
+/// Contains the full information about using a tool. This is received as a part
+/// of the response from the model when streaming is disabled.
+#[derive(Setters, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ToolUse {
+    pub name: ToolName,
+    pub use_id: Option<UseId>,
+    pub arguments: Value,
+}
+
+impl ToolUse {
+    pub fn try_from_parts(parts: Vec<ToolUsePart>) -> Result<Self> {
+        let mut tool_name = None;
+        let mut tool_use_id = None;
+
+        let mut input = String::new();
+        for part in parts {
+            if let Some(value) = part.name {
+                tool_name = Some(value);
+            }
+
+            if let Some(value) = part.use_id {
+                tool_use_id = Some(value);
+            }
+
+            input.push_str(&part.argument_part);
+        }
+
+        if let Some(tool_name) = tool_name {
+            Ok(ToolUse {
+                name: tool_name,
+                use_id: tool_use_id,
+                arguments: serde_json::from_str(&input)?,
+            })
+        } else {
+            Err(Error::ToolUserMissingName)
+        }
+    }
 }
 
 #[derive(Setters, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

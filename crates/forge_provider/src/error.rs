@@ -14,6 +14,7 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     SerdeJson(#[from] serde_json::Error),
     EventSource(#[from] reqwest_eventsource::Error),
+    ToolUserMissingName,
 }
 
 impl Error {

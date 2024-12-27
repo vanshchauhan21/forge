@@ -66,7 +66,7 @@ impl From<&Error> for Errata {
 
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
+
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -74,17 +74,12 @@ mod tests {
     #[test]
     fn test_simple_error() {
         let error = Errata::new("Something went wrong");
-        assert_eq!(format!("{:?}", error), indoc! {"Something went wrong"});
+        assert_eq!(format!("{:?}", error), "Something went wrong");
     }
 
     #[test]
     fn test_error_with_description() {
         let error = Errata::new("Invalid input").description("Expected a number");
-        assert_eq!(
-            format!("{:?}", error),
-            indoc! {"
-                Invalid input
-                Expected a number"}
-        );
+        assert_eq!(format!("{:?}", error), "Invalid input\nExpected a number");
     }
 }

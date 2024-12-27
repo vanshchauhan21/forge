@@ -34,17 +34,7 @@ impl Executor for ChatCommandExecutor {
     type Error = Error;
     async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error> {
         match command {
-            Command::Empty => {
-                let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
-                Ok(stream)
-            }
-            Command::Combine(a, b) => {
-                let merged: BoxStream<Action, Error> =
-                    Box::pin(self.execute(a).await?.merge(self.execute(b).await?));
-
-                Ok(merged)
-            }
-            Command::DispatchFileRead(files) => {
+            Command::FileRead(files) => {
                 let mut responses = vec![];
                 for file in files {
                     let content = tokio::fs::read_to_string(file.clone()).await?;
@@ -56,7 +46,7 @@ impl Executor for ChatCommandExecutor {
 
                 Ok(stream)
             }
-            Command::DispatchAssistantMessage(a) => {
+            Command::AssistantMessage(a) => {
                 let actions =
                     self.provider.chat(a.clone()).await?.map(|response| {
                         response.map(Action::AssistantResponse).map_err(Error::from)
@@ -66,27 +56,25 @@ impl Executor for ChatCommandExecutor {
 
                 Ok(msg)
             }
-            Command::DispatchUserMessage(message) => {
+            Command::UserMessage(message) => {
                 self.tx.send(message.clone()).await?;
 
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
             }
-            Command::DispatchToolUse(tool_use) => {
-                let arguments = serde_json::from_str(&tool_use.input)?;
-                let tool_name = tool_use
-                    .tool_name
-                    .as_ref()
-                    .ok_or(Error::ToolCallMissingName)?;
-                let tool_result = self.tools.call(tool_name, arguments).await;
+            Command::ToolUse(tool_use) => {
+                let tool_result = self
+                    .tools
+                    .call(&tool_use.name, tool_use.arguments.clone())
+                    .await;
                 let is_error = tool_result.is_err();
                 let tool_use_response = Action::ToolResponse(ToolResult {
                     content: match tool_result {
                         Ok(content) => content,
                         Err(e) => serde_json::Value::from(e),
                     },
-                    tool_use_id: None,
-                    tool_name: tool_name.clone(),
+                    tool_use_id: tool_use.use_id.clone(),
+                    tool_name: tool_use.name.clone(),
                     is_error,
                 });
 

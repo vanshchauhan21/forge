@@ -4,7 +4,7 @@ use forge_tool::ToolName;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
-use crate::model::{Response as ModelResponse, ToolUse};
+use crate::model::{Response as ModelResponse, ToolUsePart};
 use crate::{FinishReason, UseId};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -89,10 +89,10 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         .finish_reason(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
-                            resp = resp.add_call(ToolUse {
-                                tool_use_id: tool_call.id.clone(),
-                                tool_name: tool_call.function.name.clone(),
-                                input: serde_json::from_str(&tool_call.function.arguments)?,
+                            resp = resp.add_call(ToolUsePart {
+                                use_id: tool_call.id.clone(),
+                                name: tool_call.function.name.clone(),
+                                argument_part: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
                     }
@@ -103,10 +103,10 @@ impl TryFrom<ChatResponse> for ModelResponse {
                         .finish_reason(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
-                            resp = resp.add_call(ToolUse {
-                                tool_use_id: tool_call.id.clone(),
-                                tool_name: tool_call.function.name.clone(),
-                                input: tool_call.function.arguments.clone(),
+                            resp = resp.add_call(ToolUsePart {
+                                use_id: tool_call.id.clone(),
+                                name: tool_call.function.name.clone(),
+                                argument_part: tool_call.function.arguments.clone(),
                             });
                         }
                     }

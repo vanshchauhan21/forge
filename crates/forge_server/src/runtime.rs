@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use forge_provider::ResultStream;
+use futures::future::join_all;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
@@ -11,7 +12,7 @@ pub trait Application: Send + Sync + Sized + Clone {
     fn update(
         self,
         action: Self::Action,
-    ) -> std::result::Result<(Self, Self::Command), Self::Error>;
+    ) -> std::result::Result<(Self, Vec<Self::Command>), Self::Error>;
 }
 
 pub struct ApplicationRuntime<A: Application> {
@@ -37,14 +38,22 @@ impl<A: Application> ApplicationRuntime<A> {
     ) -> std::result::Result<(), A::Error> {
         let mut guard = self.state.lock().await;
         let app = guard.clone();
-        let (app, command) = app.update(action)?;
+        let (app, commands) = app.update(action)?;
         *guard = app;
         drop(guard);
-        let mut stream = executor.execute(&command).await?;
 
-        while let Some(result) = stream.next().await {
-            self.execute(result?, executor).await?;
-        }
+        join_all(commands.into_iter().map(|command| async move {
+            let _: Result<(), A::Error> = async move {
+                let mut stream = executor.execute(&command).await?;
+                while let Some(action) = stream.next().await {
+                    self.execute(action?, executor).await?;
+                }
+
+                Ok(())
+            }
+            .await;
+        }))
+        .await;
 
         Ok(())
     }
