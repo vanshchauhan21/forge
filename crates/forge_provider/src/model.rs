@@ -283,7 +283,7 @@ pub struct ToolResult {
     pub is_error: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Setters)]
 pub struct Model {
     pub id: ModelId,
     pub name: String,

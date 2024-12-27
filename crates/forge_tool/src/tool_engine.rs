@@ -72,18 +72,8 @@ impl ToolName {
 
 impl ToolEngine {
     pub async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
-        println!("{}({})", name.as_str(), input);
         let output = match self.tools.get(name) {
-            Some(tool) => {
-                let output = tool.executable.call(input).await;
-                println!(
-                    "{}(...) -> {:?}",
-                    name.as_str(),
-                    serde_json::to_string(&output.clone().ok().unwrap_or_default()).ok()
-                );
-
-                output
-            }
+            Some(tool) => tool.executable.call(input).await,
             None => Err(format!("No such tool found: {}", name.as_str())),
         };
 

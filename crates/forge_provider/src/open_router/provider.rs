@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
@@ -82,9 +80,10 @@ impl InnerProvider for OpenRouter {
                 Ok(ref event) => match event {
                     Event::Open => None,
                     Event::Message(event) => {
+                        // TODO: print should happen only in debug mode
+                        println!("{}", &event.data);
                         // Ignoring wasteful events
                         if ["[DONE]", ""].contains(&event.data.as_str()) {
-                            println!();
                             return None;
                         }
 
@@ -104,14 +103,6 @@ impl InnerProvider for OpenRouter {
                 Err(err) => Some(Err(err.into())),
             })
             .take_while(|message| {
-                match message {
-                    Ok(message) => {
-                        print!("{}", message.message.content);
-                        std::io::stdout().flush().unwrap()
-                    }
-                    Err(err) => eprintln!("{}", err),
-                };
-
                 !matches!(
                     message,
                     Err(Error::EventSource(reqwest_eventsource::Error::StreamEnded))

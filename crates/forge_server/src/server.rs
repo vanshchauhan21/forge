@@ -56,8 +56,8 @@ impl Server {
         self.tools.list()
     }
 
-    pub async fn context(&self) -> App {
-        self.runtime.state().await
+    pub async fn context(&self) -> Request {
+        self.runtime.state().await.context
     }
 
     pub async fn models(&self) -> Result<Vec<Model>> {

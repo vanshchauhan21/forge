@@ -6,14 +6,14 @@ use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::Router;
-use forge_provider::Model;
+use forge_provider::{Model, Request};
 use forge_tool::Tool;
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
-use crate::app::{App, ChatRequest};
+use crate::app::ChatRequest;
 use crate::completion::File;
 use crate::server::Server;
 use crate::Result;
@@ -119,14 +119,14 @@ async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelResponse>
     Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<Server>>) -> Json<AppResponse> {
-    let app = state.context().await;
-    Json(AppResponse { app })
+async fn context_handler(State(state): State<Arc<Server>>) -> Json<ContextResponse> {
+    let context = state.context().await;
+    Json(ContextResponse { context })
 }
 
 #[derive(Serialize)]
-pub struct AppResponse {
-    app: App,
+pub struct ContextResponse {
+    context: Request,
 }
 
 #[derive(Serialize)]
