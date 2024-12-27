@@ -73,7 +73,7 @@ impl Server {
         tokio::spawn(async move {
             runtime
                 .clone()
-                .execute(Action::UserMessage(chat.message(message)), &executor)
+                .execute(Action::UserMessage(chat.message(message)), Arc::new(executor))
                 .await
         });
 

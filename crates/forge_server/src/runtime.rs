@@ -15,6 +15,7 @@ pub trait Application: Send + Sync + Sized + Clone {
     ) -> std::result::Result<(Self, Vec<Self::Command>), Self::Error>;
 }
 
+#[derive(Clone)]
 pub struct ApplicationRuntime<A: Application> {
     state: Arc<Mutex<A>>,
 }
@@ -29,12 +30,14 @@ impl<A: Application> ApplicationRuntime<A> {
     }
 }
 
-impl<A: Application> ApplicationRuntime<A> {
+impl<A: Application + 'static> ApplicationRuntime<A> {
     #[async_recursion::async_recursion]
-    pub async fn execute(
-        &self,
+    pub async fn execute<'a>(
+        &'a self,
         action: A::Action,
-        executor: &impl Executor<Command = A::Command, Action = A::Action, Error = A::Error>,
+        executor: Arc<
+            impl Executor<Command = A::Command, Action = A::Action, Error = A::Error> + 'static,
+        >,
     ) -> std::result::Result<(), A::Error> {
         let mut guard = self.state.lock().await;
         let app = guard.clone();
@@ -42,16 +45,23 @@ impl<A: Application> ApplicationRuntime<A> {
         *guard = app;
         drop(guard);
 
-        join_all(commands.into_iter().map(|command| async move {
-            let _: Result<(), A::Error> = async move {
-                let mut stream = executor.execute(&command).await?;
-                while let Some(action) = stream.next().await {
-                    self.execute(action?, executor).await?;
-                }
+        join_all(commands.into_iter().map(|command| {
+            let executor = executor.clone();
 
-                Ok(())
+            async move {
+                let _: Result<(), A::Error> = async move {
+                    let mut stream = executor.clone().execute(&command).await?;
+                    while let Some(action) = stream.next().await {
+                        let this = self.clone();
+                        let executor = executor.clone();
+
+                        tokio::spawn(async move { this.execute(action?, executor).await });
+                    }
+
+                    Ok(())
+                }
+                .await;
             }
-            .await;
         }))
         .await;
 
