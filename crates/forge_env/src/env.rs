@@ -17,7 +17,8 @@ impl Environment {
                 .ok()
                 .map(|p| p.display().to_string()),
             shell: if cfg!(windows) {
-                std::env::var("COMSPEC").ok()} else {
+                std::env::var("COMSPEC").ok()
+            } else {
                 std::env::var("SHELL").ok().or(Some("/bin/sh".to_string()))
             },
             home: dirs::home_dir().map(|a| a.display().to_string()),
