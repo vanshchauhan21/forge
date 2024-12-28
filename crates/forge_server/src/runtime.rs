@@ -54,9 +54,9 @@ impl<A: Application + 'static> ApplicationRuntime<A> {
                     while let Some(action) = stream.next().await {
                         let this = self.clone();
                         let executor = executor.clone();
-
-                        tokio::spawn(async move { this.execute(action?, executor).await });
-                    }
+                        // NOTE: The `execute` call needs to run sequentially. Executing it asynchronously would disrupt the order of `toolUse` content, leading to mixed-up.
+                        this.execute(action?, executor).await?;
+                    }   
 
                     Ok(())
                 }
