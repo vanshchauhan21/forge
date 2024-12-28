@@ -1,4 +1,6 @@
-use forge_provider::{AnyMessage, Request};
+use forge_provider::Request;
+use pulldown_cmark::{html, Options, Parser};
+use std::io::Cursor;
 
 pub struct ContextEngine {
     context: Request,
@@ -13,45 +15,16 @@ impl ContextEngine {
         // Convert context to markdown format
         let mut markdown = String::new();
         for msg in &self.context.messages {
-            let role = match msg {
-                AnyMessage::System(_) => "System",
-                AnyMessage::User(_) => "User",
-                AnyMessage::Assistant(_) => "Assistant",
-            };
-            markdown.push_str(&format!("## {}\n\n{}\n\n", role, msg.content()));
+            let role = msg.role();
+            markdown.push_str(&format!("# [:{}]\n{}\n", role, msg.content()));
         }
 
         // Convert markdown to HTML with basic styling
-        let mut html_output = String::from(r#"
-            <html>
-            <head>
-                <style>
-                    body { 
-                        font-family: system-ui, -apple-system, sans-serif;
-                        line-height: 1.5;
-                        max-width: 800px;
-                        margin: 0 auto;
-                        padding: 2rem;
-                    }
-                    h2 { 
-                        color: #2563eb;
-                        margin-top: 2rem;
-                    }
-                    pre {
-                        background: #f1f5f9;
-                        padding: 1rem;
-                        border-radius: 0.5rem;
-                        overflow-x: auto;
-                    }
-                </style>
-            </head>
-            <body>
-        "#);
-        
-        let parser = pulldown_cmark::Parser::new(&markdown);
-        pulldown_cmark::html::push_html(&mut html_output, parser);
-        html_output.push_str("</body></html>");
-        
-        html_output
+        let parser = Parser::new_ext(&markdown, Options::all());
+        let mut bytes = Vec::new();
+
+        html::write_html(Cursor::new(&mut bytes), parser).unwrap();
+        let html_output = String::from_utf8(bytes).unwrap();
+        include_str!("./context.html").replace("<!-- CURRENT_CONTEXT_INFORMATION -->", &html_output)
     }
 }

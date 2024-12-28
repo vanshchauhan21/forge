@@ -3,11 +3,11 @@ use std::sync::Arc;
 const SERVER_PORT: u16 = 8080;
 
 use axum::extract::{Json, State};
-use crate::context::ContextEngine;
-use axum::response::{sse::{Event, Sse}, Html};
+use axum::response::sse::{Event, Sse};
+use axum::response::Html;
 use axum::routing::{get, post};
 use axum::Router;
-use forge_provider::{Model, Request, AnyMessage};
+use forge_provider::{Model, Request};
 use forge_tool::Tool;
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
@@ -16,6 +16,7 @@ use tracing::info;
 
 use crate::app::ChatRequest;
 use crate::completion::File;
+use crate::context::ContextEngine;
 use crate::server::Server;
 use crate::Result;
 
