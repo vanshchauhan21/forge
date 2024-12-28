@@ -7,6 +7,7 @@ use axum::response::sse::{Event, Sse};
 use axum::response::Html;
 use axum::routing::{get, post};
 use axum::Router;
+use forge_env::Environment;
 use forge_provider::{Model, Request};
 use forge_tool::Tool;
 use serde::Serialize;
@@ -22,14 +23,14 @@ use crate::Result;
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
-    state: Arc<Server>,
+    api_key: String,
 }
 
 impl Default for API {
     fn default() -> Self {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
-        Self { state: Arc::new(Server::new(".", api_key)) }
+        Self { api_key }
     }
 }
 
@@ -42,6 +43,8 @@ async fn context_html_handler(State(state): State<Arc<Server>>) -> Html<String> 
 impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
+        let env = Environment::from_env().await?;
+        let state = Arc::new(Server::new(env, self.api_key));
 
         if dotenv::dotenv().is_ok() {
             info!("Loaded .env file");
@@ -69,7 +72,7 @@ impl API {
                         axum::http::header::AUTHORIZATION,
                     ]),
             )
-            .with_state(self.state.clone());
+            .with_state(state.clone());
 
         // Spawn HTTP server
         let server = tokio::spawn(async move {

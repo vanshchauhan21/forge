@@ -11,11 +11,12 @@ pub enum Error {
     Custom(String),
     Provider(forge_provider::Error),
     IO(std::io::Error),
-    Env(std::env::VarError),
+    Var(std::env::VarError),
     SendError(tokio::sync::mpsc::error::SendError<ChatResponse>),
     Serde(serde_json::Error),
     EmptyResponse,
     Walk(forge_walker::Error),
+    Env(forge_env::Error),
     ToolCallMissingName,
 }
 

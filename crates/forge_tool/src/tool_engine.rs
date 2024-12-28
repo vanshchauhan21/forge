@@ -141,10 +141,9 @@ impl ToolImporter {
     }
 }
 
-impl Default for ToolEngine {
-    fn default() -> Self {
-        let ctx = Environment::from_env();
-        let importer = ToolImporter::new(ctx);
+impl ToolEngine {
+    pub fn new(env: Environment) -> Self {
+        let importer = ToolImporter::new(env);
 
         let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
             importer.import(FSRead),
@@ -171,32 +170,23 @@ mod test {
     use crate::think::Think;
     use crate::{FSFileInfo, FSSearch};
 
-    fn new_importer() -> ToolImporter {
-        ToolImporter::new(Environment {
-            cwd: Some("/Users/test".into()),
-            os: Some("TestOS".into()),
-            shell: Some("ZSH".into()),
-            home: Some("/Users".into()),
-        })
+    fn test_importer() -> ToolImporter {
+        ToolImporter::new(test_env())
     }
 
-    impl ToolEngine {
-        fn build(importer: ToolImporter) -> Self {
-            let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
-                importer.import(FSRead),
-                importer.import(FSWrite),
-                importer.import(FSList),
-                importer.import(FSSearch),
-                importer.import(FSFileInfo),
-                importer.import(Think::default()),
-            ]);
-            Self { tools }
+    fn test_env() -> Environment {
+        Environment {
+            cwd: "/Users/test".into(),
+            os: "TestOS".into(),
+            shell: "ZSH".into(),
+            home: Some("/Users".into()),
+            files: vec!["test.txt".into()],
         }
     }
 
     #[test]
     fn test_id() {
-        let importer = new_importer();
+        let importer = test_importer();
 
         assert!(importer.import(FSRead).0.into_string().ends_with("fs_read"));
         assert!(importer
@@ -219,7 +209,7 @@ mod test {
 
     #[test]
     fn test_description() {
-        let tool_engine = ToolEngine::build(new_importer());
+        let tool_engine = ToolEngine::new(test_env());
 
         for tool in tool_engine.list() {
             let tool_str = serde_json::to_string_pretty(&tool).unwrap();

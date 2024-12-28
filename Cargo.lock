@@ -648,7 +648,9 @@ name = "forge_env"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "derive_setters",
  "dirs",
+ "forge_walker",
  "handlebars",
  "serde",
 ]

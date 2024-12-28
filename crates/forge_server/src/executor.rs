@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use forge_env::Environment;
 use forge_provider::{BoxStream, Provider, Request, Response, ResultStream, ToolResult};
 use forge_tool::ToolEngine;
 use tokio::sync::mpsc;
@@ -16,8 +17,12 @@ pub struct ChatCommandExecutor {
 }
 
 impl ChatCommandExecutor {
-    pub fn new(tx: mpsc::Sender<ChatResponse>, api_key: impl Into<String>) -> Self {
-        let tools = ToolEngine::default();
+    pub fn new(
+        env: Environment,
+        api_key: impl Into<String>,
+        tx: mpsc::Sender<ChatResponse>,
+    ) -> Self {
+        let tools = ToolEngine::new(env);
 
         Self {
             provider: Arc::new(Provider::open_router(api_key.into(), None)),

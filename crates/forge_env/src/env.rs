@@ -1,30 +1,43 @@
+use derive_setters::Setters;
+use forge_walker::Walker;
 use handlebars::{Handlebars, RenderError};
 use serde::Serialize;
 
-#[derive(Serialize, Debug)]
+use crate::Result;
+
+#[derive(Default, Serialize, Debug, Setters, Clone)]
+#[serde(rename_all = "camelCase")]
+#[setters(strip_option)]
 pub struct Environment {
-    pub os: Option<String>,
-    pub cwd: Option<String>,
-    pub shell: Option<String>,
+    pub os: String,
+    pub cwd: String,
+    pub shell: String,
     pub home: Option<String>,
+    pub files: Vec<String>,
 }
 
 impl Environment {
-    pub fn from_env() -> Self {
-        Environment {
-            os: Some(std::env::consts::OS.to_string()),
-            cwd: std::env::current_dir()
-                .ok()
-                .map(|p| p.display().to_string()),
+    pub async fn from_env() -> Result<Self> {
+        let cwd = std::env::current_dir()?;
+        let files = match Walker::new(cwd.clone()).get().await {
+            Ok(files) => files.into_iter().map(|f| f.path).collect(),
+            Err(_) => vec![],
+        };
+
+        Ok(Environment {
+            os: std::env::consts::OS.to_string(),
+            cwd: cwd.display().to_string(),
             shell: if cfg!(windows) {
-                std::env::var("COMSPEC").ok()
+                std::env::var("COMSPEC")?
             } else {
-                std::env::var("SHELL").ok().or(Some("/bin/sh".to_string()))
+                std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
             },
             home: dirs::home_dir().map(|a| a.display().to_string()),
-        }
+            files,
+        })
     }
-    pub fn render(&self, template: &str) -> Result<String, RenderError> {
+
+    pub fn render(&self, template: &str) -> std::result::Result<String, RenderError> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
         hb.render_template(template, &self)
@@ -39,10 +52,11 @@ mod tests {
 
     fn test_env() -> Environment {
         Environment {
-            cwd: Some("/Users/test".into()),
-            os: Some("TestOS".into()),
-            shell: Some("ZSH".into()),
+            cwd: "/Users/test".into(),
+            os: "TestOS".into(),
+            shell: "ZSH".into(),
             home: Some("/Users".into()),
+            files: vec!["test.txt".into()],
         }
     }
 
