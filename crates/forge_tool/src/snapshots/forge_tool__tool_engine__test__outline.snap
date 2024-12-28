@@ -1,0 +1,26 @@
+---
+source: crates/forge_tool/src/tool_engine.rs
+expression: tool_str
+---
+{
+  "name": "outline",
+  "description": "List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.",
+  "input_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "OutlineInput",
+    "type": "object",
+    "required": [
+      "path"
+    ],
+    "properties": {
+      "path": {
+        "type": "string"
+      }
+    }
+  },
+  "output_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "String",
+    "type": "string"
+  }
+}

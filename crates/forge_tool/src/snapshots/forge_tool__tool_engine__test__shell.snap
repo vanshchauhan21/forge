@@ -1,0 +1,42 @@
+---
+source: crates/forge_tool/src/tool_engine.rs
+expression: tool_str
+---
+{
+  "name": "shell",
+  "description": "Execute shell commands with safety checks and validation. This tool provides controlled access to system shell commands while preventing dangerous operations through a comprehensive blacklist and validation system.",
+  "input_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ShellInput",
+    "type": "object",
+    "required": [
+      "command"
+    ],
+    "properties": {
+      "command": {
+        "type": "string"
+      }
+    }
+  },
+  "output_schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ShellOutput",
+    "type": "object",
+    "required": [
+      "stderr",
+      "stdout",
+      "success"
+    ],
+    "properties": {
+      "stderr": {
+        "type": "string"
+      },
+      "stdout": {
+        "type": "string"
+      },
+      "success": {
+        "type": "boolean"
+      }
+    }
+  }
+}
