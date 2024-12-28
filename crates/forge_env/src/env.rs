@@ -1,6 +1,6 @@
 use derive_setters::Setters;
 use forge_walker::Walker;
-use handlebars::{Handlebars, RenderError};
+use handlebars::Handlebars;
 use serde::Serialize;
 
 use crate::Result;
@@ -20,7 +20,11 @@ impl Environment {
     pub async fn from_env() -> Result<Self> {
         let cwd = std::env::current_dir()?;
         let files = match Walker::new(cwd.clone()).get().await {
-            Ok(files) => files.into_iter().map(|f| f.path).collect(),
+            Ok(files) => files
+                .into_iter()
+                .filter(|f| !f.is_dir)
+                .map(|f| f.path)
+                .collect(),
             Err(_) => vec![],
         };
 
@@ -37,10 +41,10 @@ impl Environment {
         })
     }
 
-    pub fn render(&self, template: &str) -> std::result::Result<String, RenderError> {
+    pub fn render(&self, template: &str) -> Result<String> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
-        hb.render_template(template, &self)
+        Ok(hb.render_template(template, &self)?)
     }
 }
 
