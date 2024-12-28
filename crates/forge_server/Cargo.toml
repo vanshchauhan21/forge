@@ -27,6 +27,7 @@ tailcall-valid = "0.1.3"
 tokio-stream = "0.1.17"
 async-recursion = "1.1.1"
 futures = "0.3.31"
+pulldown-cmark = "0.9.3"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

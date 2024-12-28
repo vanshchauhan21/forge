@@ -3,10 +3,11 @@ use std::sync::Arc;
 const SERVER_PORT: u16 = 8080;
 
 use axum::extract::{Json, State};
-use axum::response::sse::{Event, Sse};
+use crate::context::ContextEngine;
+use axum::response::{sse::{Event, Sse}, Html};
 use axum::routing::{get, post};
 use axum::Router;
-use forge_provider::{Model, Request};
+use forge_provider::{Model, Request, AnyMessage};
 use forge_tool::Tool;
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
@@ -31,6 +32,12 @@ impl Default for API {
     }
 }
 
+async fn context_html_handler(State(state): State<Arc<Server>>) -> Html<String> {
+    let context = state.context().await;
+    let engine = ContextEngine::new(context);
+    Html(engine.render_html())
+}
+
 impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
@@ -47,6 +54,7 @@ impl API {
             .route("/tools", get(tools_handler))
             .route("/models", get(models_handler))
             .route("/context", get(context_handler))
+            .route("/context/html", get(context_html_handler))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
