@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use forge_env::Environment;
 use forge_provider::{Message, Model, ModelId, Provider, Request, Response};
-use forge_tool::{Tool, ToolEngine};
+use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::Stream;
@@ -53,7 +53,7 @@ impl Server {
         self.completions.list().await
     }
 
-    pub fn tools(&self) -> Vec<Tool> {
+    pub fn tools(&self) -> Vec<ToolDefinition> {
         self.tools.list()
     }
 

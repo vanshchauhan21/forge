@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_tool::Tool;
+use forge_tool::ToolDefinition;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{AnyMessage, Assistant, System, User};
@@ -154,8 +154,8 @@ pub struct ChatRequest {
     pub provider: Option<ProviderPreferences>,
 }
 
-impl From<Tool> for OpenRouterTool {
-    fn from(value: Tool) -> Self {
+impl From<ToolDefinition> for OpenRouterTool {
+    fn from(value: ToolDefinition) -> Self {
         OpenRouterTool {
             r#type: "function".to_string(),
             function: FunctionDescription {

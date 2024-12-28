@@ -9,7 +9,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use forge_env::Environment;
 use forge_provider::{Model, Request};
-use forge_tool::Tool;
+use forge_tool::ToolDefinition;
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
@@ -148,5 +148,5 @@ pub struct ModelResponse {
 
 #[derive(Serialize)]
 pub struct ToolResponse {
-    tools: Vec<Tool>,
+    tools: Vec<ToolDefinition>,
 }

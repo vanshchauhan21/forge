@@ -1,6 +1,6 @@
 use derive_more::derive::From;
 use derive_setters::Setters;
-use forge_tool::{Tool, ToolName};
+use forge_tool::{ToolDefinition, ToolName};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -9,7 +9,7 @@ use crate::{Error, Result};
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Setters)]
 pub struct Request {
     pub messages: Vec<AnyMessage>,
-    pub tools: Vec<Tool>,
+    pub tools: Vec<ToolDefinition>,
     pub tool_result: Vec<ToolResult>,
     pub model: ModelId,
 }
@@ -24,7 +24,7 @@ impl Request {
         }
     }
 
-    pub fn add_tool(mut self, tool: impl Into<Tool>) -> Self {
+    pub fn add_tool(mut self, tool: impl Into<ToolDefinition>) -> Self {
         self.add_tool_mut(tool);
         self
     }
@@ -39,7 +39,7 @@ impl Request {
         self
     }
 
-    pub fn extend_tools(mut self, tools: Vec<impl Into<Tool>>) -> Self {
+    pub fn extend_tools(mut self, tools: Vec<impl Into<ToolDefinition>>) -> Self {
         self.extend_tools_mut(tools);
         self
     }
@@ -54,8 +54,8 @@ impl Request {
         self
     }
 
-    pub fn add_tool_mut(&mut self, tool: impl Into<Tool>) {
-        let tool: Tool = tool.into();
+    pub fn add_tool_mut(&mut self, tool: impl Into<ToolDefinition>) {
+        let tool: ToolDefinition = tool.into();
         self.tools.push(tool);
     }
 
@@ -67,7 +67,7 @@ impl Request {
         self.messages.push(message.into());
     }
 
-    pub fn extend_tools_mut(&mut self, tools: Vec<impl Into<Tool>>) {
+    pub fn extend_tools_mut(&mut self, tools: Vec<impl Into<ToolDefinition>>) {
         self.tools.extend(tools.into_iter().map(Into::into));
     }
 

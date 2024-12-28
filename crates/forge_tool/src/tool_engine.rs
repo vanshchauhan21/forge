@@ -30,20 +30,20 @@ where
     }
 }
 
-struct ToolDefinition {
+struct Executor {
     executable: Box<dyn ToolTrait<Input = Value, Output = Value> + Send + Sync + 'static>,
-    tool: Tool,
+    tool: ToolDefinition,
 }
 
 pub struct ToolEngine {
-    tools: HashMap<ToolName, ToolDefinition>,
+    tools: HashMap<ToolName, Executor>,
 }
 
 ///
 /// Refer to the specification over here:
 /// https://glama.ai/blog/2024-11-25-model-context-protocol-quickstart#server
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Tool {
+pub struct ToolDefinition {
     pub name: ToolName,
     pub description: String,
     pub input_schema: RootSchema,
@@ -80,7 +80,7 @@ impl ToolEngine {
         output
     }
 
-    pub fn list(&self) -> Vec<Tool> {
+    pub fn list(&self) -> Vec<ToolDefinition> {
         self.tools.values().map(|tool| tool.tool.clone()).collect()
     }
 }
@@ -94,7 +94,7 @@ impl ToolImporter {
         Self { env }
     }
 
-    fn import<T>(&self, tool: T) -> (ToolName, ToolDefinition)
+    fn import<T>(&self, tool: T) -> (ToolName, Executor)
     where
         T: ToolTrait + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
@@ -125,7 +125,7 @@ impl ToolImporter {
         )
         .unwrap();
 
-        let tool = Tool {
+        let tool = ToolDefinition {
             name: ToolName(name.clone()),
             description: self.env.render(T::description()).unwrap_or_else(|err| {
                 panic!(
@@ -137,7 +137,7 @@ impl ToolImporter {
             output_schema: Some(output),
         };
 
-        (ToolName(name), ToolDefinition { executable, tool })
+        (ToolName(name), Executor { executable, tool })
     }
 }
 
@@ -145,7 +145,7 @@ impl ToolEngine {
     pub fn new(env: Environment) -> Self {
         let importer = ToolImporter::new(env);
 
-        let tools: HashMap<ToolName, ToolDefinition> = HashMap::from([
+        let tools: HashMap<ToolName, Executor> = HashMap::from([
             importer.import(FSRead),
             importer.import(FSWrite),
             importer.import(FSList),
