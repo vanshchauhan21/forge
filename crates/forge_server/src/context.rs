@@ -1,6 +1,7 @@
+use std::io::Cursor;
+
 use forge_provider::Request;
 use pulldown_cmark::{html, Options, Parser};
-use std::io::Cursor;
 
 pub struct ContextEngine {
     context: Request,
