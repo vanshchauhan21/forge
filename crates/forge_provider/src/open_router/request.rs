@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-
-use forge_tool::ToolDefinition;
+use derive_more::derive::Display;
+use forge_tool::{ToolDefinition, ToolName};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{AnyMessage, Assistant, System, User};
-use crate::{ModelId, Role};
+use super::response::{FunctionCall, OpenRouterToolCall};
+use crate::{CompletionMessage, ModelId, Request, Role, ToolCallId};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
@@ -22,14 +21,21 @@ pub struct ImageContentPart {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ImageUrl {
     pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Message {
-    pub role: String,
-    pub content: MessageContent,
-    pub name: Option<String>,
+pub struct OpenRouterMessage {
+    pub role: OpenRouterRole,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<MessageContent>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<ToolName>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<ToolCallId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<OpenRouterToolCall>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -37,6 +43,18 @@ pub struct Message {
 pub enum MessageContent {
     Text(String),
     Parts(Vec<ContentPart>),
+}
+
+impl MessageContent {
+    pub fn cached(self) -> Self {
+        match self {
+            MessageContent::Text(text) => MessageContent::Parts(vec![ContentPart::Text {
+                text,
+                cache_control: Some(CacheControl { type_: CacheControlType::Ephemeral }),
+            }]),
+            _ => self,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -102,9 +120,9 @@ pub struct ProviderPreferences {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ChatRequest {
+pub struct OpenRouterRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub messages: Option<Vec<Message>>,
+    pub messages: Option<Vec<OpenRouterMessage>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     pub model: ModelId,
@@ -167,76 +185,20 @@ impl From<ToolDefinition> for OpenRouterTool {
     }
 }
 
-impl From<AnyMessage> for Message {
-    fn from(value: AnyMessage) -> Self {
-        match value {
-            AnyMessage::Assistant(assistant) => Message {
-                role: Assistant::name(),
-                content: parse_message_content(&assistant.content),
-                name: None,
-            },
-            AnyMessage::System(sys) => Message {
-                role: System::name(),
-                content: MessageContent::Parts(vec![ContentPart::Text {
-                    text: sys.content,
-                    cache_control: Some(CacheControl { type_: CacheControlType::Ephemeral }),
-                }]),
-                name: None,
-            },
-            AnyMessage::User(usr) => Message {
-                role: User::name(),
-                content: parse_message_content(&usr.content),
-                name: None,
-            },
-        }
-    }
-}
-
-fn parse_message_content(content: &str) -> MessageContent {
-    if let Ok(parts) = serde_json::from_str::<Vec<ContentPart>>(content) {
-        MessageContent::Parts(parts)
-    } else {
-        MessageContent::Text(content.to_string())
-    }
-}
-
-impl From<crate::model::Request> for ChatRequest {
-    fn from(value: crate::model::Request) -> Self {
-        ChatRequest {
+impl From<Request> for OpenRouterRequest {
+    fn from(request: Request) -> Self {
+        OpenRouterRequest {
             messages: {
-                let result = value
-                    .tool_result
-                    .into_iter()
-                    .map(|tool_result| {
-                        let value = tool_result.content;
-
-                        let mut content = HashMap::new();
-                        content.insert("content", value.to_string());
-                        content.insert("role", "tool".to_string());
-                        if let Some(id) = tool_result.tool_use_id {
-                            content.insert("tool_use_id", id.0);
-                        }
-
-                        Message {
-                            role: User::name(),
-                            content: MessageContent::Text(serde_json::to_string(&content).unwrap()),
-                            name: None,
-                        }
-                    })
-                    .collect::<Vec<_>>();
-
-                let mut messages = value
+                let messages = request
                     .messages
                     .into_iter()
-                    .map(Message::from)
+                    .map(OpenRouterMessage::from)
                     .collect::<Vec<_>>();
 
-                messages.extend(result);
-
-                Some(messages)
+                Some(insert_cache(messages))
             },
             tools: {
-                let tools = value
+                let tools = request
                     .tools
                     .into_iter()
                     .map(OpenRouterTool::from)
@@ -247,7 +209,7 @@ impl From<crate::model::Request> for ChatRequest {
                     Some(tools)
                 }
             },
-            model: value.model,
+            model: request.model,
             prompt: Default::default(),
             response_format: Default::default(),
             stop: Default::default(),
@@ -272,4 +234,68 @@ impl From<crate::model::Request> for ChatRequest {
             provider: Default::default(),
         }
     }
+}
+
+impl From<CompletionMessage> for OpenRouterMessage {
+    fn from(value: CompletionMessage) -> Self {
+        match value {
+            CompletionMessage::ContentMessage(chat_message) => OpenRouterMessage {
+                role: chat_message.role.into(),
+                content: Some(MessageContent::Text(chat_message.content)),
+                name: None,
+                tool_call_id: None,
+                tool_calls: chat_message.tool_call.map(|tool_call| {
+                    // FIXME: All the tool_calls should be added, instead of just one of them
+                    vec![OpenRouterToolCall {
+                        id: tool_call.call_id,
+                        r#type: "function".to_string(),
+                        function: FunctionCall {
+                            arguments: serde_json::to_string(&tool_call.arguments).unwrap(),
+                            name: Some(tool_call.name),
+                        },
+                    }]
+                }),
+            },
+            CompletionMessage::ToolMessage(tool_result) => OpenRouterMessage {
+                role: OpenRouterRole::Tool,
+                content: Some(MessageContent::Text(
+                    serde_json::to_string(&tool_result.content).unwrap(),
+                )),
+                name: Some(tool_result.name),
+                tool_call_id: tool_result.use_id,
+                tool_calls: None,
+            },
+        }
+    }
+}
+
+/// Inserts cache control information into system messages
+/// NOTE: We need to add more caching as the context grows larger
+fn insert_cache(mut message: Vec<OpenRouterMessage>) -> Vec<OpenRouterMessage> {
+    for message in message.iter_mut() {
+        if message.role == OpenRouterRole::System {
+            message.content = message.content.clone().map(|a| a.cached());
+        }
+    }
+
+    message
+}
+
+impl From<Role> for OpenRouterRole {
+    fn from(role: Role) -> Self {
+        match role {
+            Role::System => OpenRouterRole::System,
+            Role::User => OpenRouterRole::User,
+            Role::Assistant => OpenRouterRole::Assistant,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Display, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OpenRouterRole {
+    System,
+    User,
+    Assistant,
+    Tool,
 }

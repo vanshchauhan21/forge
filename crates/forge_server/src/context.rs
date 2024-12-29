@@ -12,11 +12,16 @@ impl ContextEngine {
         Self { context }
     }
 
+    // TODO: It should render HTML based on OpenRouter context
     pub fn render_html(&self) -> String {
         // Convert context to markdown format
         let mut markdown = String::new();
         for msg in &self.context.messages {
-            let role = msg.role();
+            let role = match msg {
+                forge_provider::CompletionMessage::ContentMessage(msg) => msg.role.to_string(),
+                forge_provider::CompletionMessage::ToolMessage(_) => "tool".to_string(),
+            };
+
             markdown.push_str(&format!("# [:{}]\n{}\n", role, msg.content()));
         }
 

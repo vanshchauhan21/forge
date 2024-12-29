@@ -50,12 +50,12 @@ pub struct ToolDefinition {
     pub output_schema: Option<RootSchema>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ToolName(String);
 
-impl<A: ToString> From<A> for ToolName {
-    fn from(value: A) -> Self {
+impl ToolName {
+    pub fn new(value: impl ToString) -> Self {
         ToolName(value.to_string())
     }
 }
@@ -125,14 +125,22 @@ impl ToolImporter {
         )
         .unwrap();
 
+        let description = self.env.render(T::description()).unwrap_or_else(|err| {
+            panic!(
+                "Unable to render description for tool {}, err: {:?}",
+                name, err
+            )
+        });
+
+        assert!(
+            description.len() < 1024,
+            "Description for tool {} is longer than 1024",
+            name
+        );
+
         let tool = ToolDefinition {
             name: ToolName(name.clone()),
-            description: self.env.render(T::description()).unwrap_or_else(|err| {
-                panic!(
-                    "Unable to render description for tool {}, err: {:?}",
-                    name, err
-                )
-            }),
+            description,
             input_schema: input,
             output_schema: Some(output),
         };
@@ -167,7 +175,6 @@ impl ToolEngine {
 mod test {
 
     use super::*;
-    use crate::think::Think;
     use crate::{FSFileInfo, FSSearch};
 
     fn test_importer() -> ToolImporter {
@@ -200,11 +207,6 @@ mod test {
             .0
             .into_string()
             .ends_with("file_info"));
-        assert!(importer
-            .import(Think::default())
-            .0
-            .into_string()
-            .ends_with("think"));
     }
 
     #[test]

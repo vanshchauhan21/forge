@@ -67,24 +67,24 @@ impl Executor for ChatCommandExecutor {
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
             }
-            Command::ToolUse(tool_use) => {
+            Command::ToolUse(tool_call) => {
                 let tool_result = self
                     .tools
-                    .call(&tool_use.name, tool_use.arguments.clone())
+                    .call(&tool_call.name, tool_call.arguments.clone())
                     .await;
                 let is_error = tool_result.is_err();
-                let tool_use_response = Action::ToolResponse(ToolResult {
+                let tool_call_response = Action::ToolResponse(ToolResult {
                     content: match tool_result {
                         Ok(content) => content,
                         Err(e) => serde_json::Value::from(e),
                     },
-                    tool_use_id: tool_use.use_id.clone(),
-                    tool_name: tool_use.name.clone(),
+                    use_id: tool_call.call_id.clone(),
+                    name: tool_call.name.clone(),
                     is_error,
                 });
 
                 let stream: BoxStream<Action, Error> =
-                    Box::pin(tokio_stream::once(Ok(tool_use_response)));
+                    Box::pin(tokio_stream::once(Ok(tool_call_response)));
 
                 Ok(stream)
             }

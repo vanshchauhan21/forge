@@ -32,8 +32,8 @@ impl fmt::Display for Prompt {
 }
 
 impl Prompt {
-    pub fn new(message: impl Into<String>) -> Prompt {
-        Prompt { tokens: vec![Token::Literal(message.into())] }
+    pub fn new(content: impl Into<String>) -> Prompt {
+        Prompt { tokens: vec![Token::Literal(content.into())] }
     }
     pub fn files(&self) -> Vec<String> {
         let mut seen = std::collections::HashSet::new();

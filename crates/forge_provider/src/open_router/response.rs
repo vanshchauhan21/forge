@@ -4,11 +4,11 @@ use forge_tool::ToolName;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
-use crate::model::{Response as ModelResponse, ToolUsePart};
-use crate::{FinishReason, UseId};
+use crate::model::{Response as ModelResponse, ToolCallPart};
+use crate::{FinishReason, ToolCallId};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ChatResponse {
+pub struct OpenRouterResponse {
     pub id: String,
     pub provider: String,
     pub model: String,
@@ -59,13 +59,13 @@ pub struct ErrorResponse {
 pub struct ResponseMessage {
     pub content: Option<String>,
     pub role: Option<String>,
-    pub tool_calls: Option<Vec<ToolCall>>,
+    pub tool_calls: Option<Vec<OpenRouterToolCall>>,
     pub refusal: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ToolCall {
-    pub id: Option<UseId>,
+pub struct OpenRouterToolCall {
+    pub id: Option<ToolCallId>,
     pub r#type: String,
     pub function: FunctionCall,
 }
@@ -76,37 +76,43 @@ pub struct FunctionCall {
     pub arguments: String,
 }
 
-impl TryFrom<ChatResponse> for ModelResponse {
+impl TryFrom<OpenRouterResponse> for ModelResponse {
     type Error = Error;
 
-    fn try_from(res: ChatResponse) -> Result<Self, Self::Error> {
+    fn try_from(res: OpenRouterResponse) -> Result<Self, Self::Error> {
         if let Some(choice) = res.choices.first() {
             let response = match choice {
-                Choice::NonChat { text, finish_reason, .. } => ModelResponse::new(text.clone())
-                    .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse)),
+                Choice::NonChat { text, finish_reason, .. } => {
+                    ModelResponse::assistant(text.clone())
+                        .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse))
+                }
                 Choice::NonStreaming { message, finish_reason, .. } => {
-                    let mut resp = ModelResponse::new(message.content.clone().unwrap_or_default())
-                        .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
+                    let mut resp =
+                        ModelResponse::assistant(message.content.clone().unwrap_or_default())
+                            .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
-                            resp = resp.add_call(ToolUsePart {
-                                use_id: tool_call.id.clone(),
+                            resp = resp.add_tool_call(ToolCallPart {
+                                call_id: tool_call.id.clone(),
                                 name: tool_call.function.name.clone(),
-                                argument_part: serde_json::from_str(&tool_call.function.arguments)?,
+                                arguments_part: serde_json::from_str(
+                                    &tool_call.function.arguments,
+                                )?,
                             });
                         }
                     }
                     resp
                 }
                 Choice::Streaming { delta, finish_reason, .. } => {
-                    let mut resp = ModelResponse::new(delta.content.clone().unwrap_or_default())
-                        .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
+                    let mut resp =
+                        ModelResponse::assistant(delta.content.clone().unwrap_or_default())
+                            .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
-                            resp = resp.add_call(ToolUsePart {
-                                use_id: tool_call.id.clone(),
+                            resp = resp.add_tool_call(ToolCallPart {
+                                call_id: tool_call.id.clone(),
                                 name: tool_call.function.name.clone(),
-                                argument_part: tool_call.function.arguments.clone(),
+                                arguments_part: tool_call.function.arguments.clone(),
                             });
                         }
                     }
