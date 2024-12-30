@@ -10,27 +10,27 @@ use crate::{Description, ToolTrait};
 
 /// A framework for iterative reasoning in problem-solving.
 ///
-/// ## Purpose
+/// Purpose:
 /// Tracks reasoning steps ("thoughts") to solve complex problems:
 /// - Breaks tasks into steps
 /// - Supports revisions and branching
 /// - Tracks confidence and verifies solutions
 ///
-/// ## Key Features
+/// Key Features:
 /// - Adjust `total_thoughts` for complexity
 /// - Link revisions with `revises_thought`
 /// - Branch paths via `branch_from_thought`
 /// - Update `solution_confidence`
 /// - Mark completion with `solution_reached`
 ///
-/// ## Workflow
+/// Workflow:
 /// 1. Initialize `Think` with `total_thoughts`.
 /// 2. Add steps to `thought_history`.
 /// 3. Revise or branch as needed.
 /// 4. Update confidence and validate.
 /// 5. Mark `solution_reached` when done.
 ///
-/// ## Fields
+/// Fields:
 /// - `thought_history`: Steps taken.
 /// - `branches`: Alternate paths.
 /// - `solution_reached`: Final solution.
