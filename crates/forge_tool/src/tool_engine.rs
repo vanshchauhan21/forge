@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::Display;
 
 use forge_env::Environment;
@@ -217,6 +217,13 @@ impl ToolBuilder {
 
         description.push_str("\n\nParameters:\n");
 
+        let required = input
+            .schema
+            .clone()
+            .object
+            .iter()
+            .flat_map(|object| object.required.clone().into_iter())
+            .collect::<BTreeSet<_>>();
         for (name, desc) in input
             .schema
             .object
@@ -238,6 +245,11 @@ impl ToolBuilder {
         {
             description.push_str("- ");
             description.push_str(&name);
+
+            if required.contains(&name) {
+                description.push_str(" (required)");
+            }
+
             description.push_str(": ");
             description.push_str(&desc);
         }
