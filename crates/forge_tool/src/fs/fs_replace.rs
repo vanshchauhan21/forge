@@ -70,6 +70,7 @@ pub struct FSReplaceInput {
 /// 6. For deletes: use empty REPLACE section
 ///
 /// ## Example
+/// \`\`\`
 /// <<<<<<< SEARCH
 /// def old_function(x):
 ///     return x + 1
@@ -77,6 +78,7 @@ pub struct FSReplaceInput {
 /// def new_function(x, y=0):
 ///     return x + y
 /// >>>>>>> REPLACE
+/// \`\`\`
 #[derive(DescriptionDerive)]
 pub struct FSReplace;
 
