@@ -1,0 +1,200 @@
+---
+source: crates/forge_tool/src/tool_engine.rs
+expression: docs
+snapshot_kind: text
+---
+## fs_search
+Request to perform a regex search across files in a specified directory,
+ providing context-rich results. This tool searches for patterns or specific
+ content across multiple files, displaying each match with encapsulating
+ context.
+
+Parameters:
+- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).
+- path (required): The path of the directory to search in (relative to the current working directory /Users/test). This directory will be recursively searched.
+- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
+
+Usage:
+<fs_search>
+<file_pattern>...</file_pattern>
+<path>...</path>
+<regex>...</regex>
+</fs_search>
+
+## shell
+Execute shell commands with safety checks and validation. This tool provides
+ controlled access to system shell commands while preventing dangerous
+ operations through a comprehensive blacklist and validation system.
+
+Parameters:
+- command (required): The shell command to execute.
+
+Usage:
+<shell>
+<command>...</command>
+</shell>
+
+## fs_read
+Request to read the contents of a file at the specified path. Use this when
+ you need to examine the contents of an existing file you do not know the
+ contents of, for example to analyze code, review text files, or extract
+ information from configuration files. Automatically extracts raw text from
+ PDF and DOCX files. May not be suitable for other types of binary files, as
+ it returns the raw content as a string.
+
+Parameters:
+- path (required): The path of the file to read (relative to the current working directory /Users/test)
+
+Usage:
+<fs_read>
+<path>...</path>
+</fs_read>
+
+## fs_list
+Request to list files and directories within the specified directory. If
+ recursive is true, it will list all files and directories recursively. If
+ recursive is false or not provided, it will only list the top-level
+ contents. Do not use this tool to confirm the existence of files you may
+ have created, as the user will let you know if the files were created
+ successfully or not.
+
+Parameters:
+- path (required): The path of the directory to list contents for (relative to the current working directory /Users/test)
+- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
+
+Usage:
+<fs_list>
+<path>...</path>
+<recursive>...</recursive>
+</fs_list>
+
+## fs_replace
+Replace sections in a file using SEARCH/REPLACE blocks for precise
+ modifications.
+ ## Parameters
+ - `path`: File path relative to /Users/test
+ - `diff`: SEARCH/REPLACE blocks defining changes
+ ## Format
+ <<<<<<< SEARCH
+ [exact content to find]
+ =======
+ [new content to replace with]
+ >>>>>>> REPLACE
+ ## Rules
+ 1. SEARCH must match exactly (whitespace, indentation, line endings)
+ 2. Each block replaces first match only
+ 3. Keep blocks minimal - include only changing lines plus needed context
+ 4. Complete lines only - no truncation
+ 5. For moves: use 2 blocks (delete + insert)
+ 6. For deletes: use empty REPLACE section
+ ## Example
+ \\`\\`\\`
+ <<<<<<< SEARCH
+ def old_function(x):
+     return x + 1
+ =======
+ def new_function(x, y=0):
+     return x + y
+ >>>>>>> REPLACE
+ > > > > > > > `\\`\\`
+
+Parameters:
+- diff (required): SEARCH/REPLACE blocks defining changes
+- path (required): File path relative to /Users/test
+
+Usage:
+<fs_replace>
+<diff>...</diff>
+<path>...</path>
+</fs_replace>
+
+## think
+A framework for iterative reasoning in problem-solving.
+ ## Purpose
+ Tracks reasoning steps (\"thoughts\") to solve complex problems:
+ - Breaks tasks into steps
+ - Supports revisions and branching
+ - Tracks confidence and verifies solutions
+ ## Key Features
+ - Adjust `total_thoughts` for complexity
+ - Link revisions with `revises_thought`
+ - Branch paths via `branch_from_thought`
+ - Update `solution_confidence`
+ - Mark completion with `solution_reached`
+ ## Workflow
+ 1. Initialize `Think` with `total_thoughts`.
+ 2. Add steps to `thought_history`.
+ 3. Revise or branch as needed.
+ 4. Update confidence and validate.
+ 5. Mark `solution_reached` when done.
+ ## Fields
+ - `thought_history`: Steps taken.
+ - `branches`: Alternate paths.
+ - `solution_reached`: Final solution.
+
+Parameters:
+- branch_from_thought: The number of the thought from which this thought branches, if this is a branch.
+- branch_id: A unique identifier for the branch, if this is a branch.
+- is_revision: Whether this thought is a revision of a previous thought.
+- needs_more_thoughts: Whether additional thoughts are needed to reach a solution.
+- next_thought_needed (required): Whether another thought is needed to reach a solution.
+- revises_thought: The number of the thought being revised, if this is a revision.
+- solution_confidence: The current confidence in the solution, ranging from 0.0 to 1.0.
+- thought (required): The description of the current thought or reasoning step.
+- thought_number (required): The number of the current thought or reasoning step.
+- total_thoughts (required): The total number of thoughts or reasoning steps expected to reach a solution.
+
+Usage:
+<think>
+<branch_from_thought>...</branch_from_thought>
+<branch_id>...</branch_id>
+<is_revision>...</is_revision>
+<needs_more_thoughts>...</needs_more_thoughts>
+<next_thought_needed>...</next_thought_needed>
+<revises_thought>...</revises_thought>
+<solution_confidence>...</solution_confidence>
+<thought>...</thought>
+<thought_number>...</thought_number>
+<total_thoughts>...</total_thoughts>
+</think>
+
+## fs_file_info
+Request to retrieve detailed metadata about a file or directory at the
+ specified path. Returns comprehensive information including size, creation
+ time, last modified time, permissions, and type. Use this when you need to
+ understand file characteristics without reading the actual content.
+
+Parameters:
+- path (required): The path of the file or directory to inspect (relative to the current working directory /Users/test)
+
+Usage:
+<fs_file_info>
+<path>...</path>
+</fs_file_info>
+
+## fs_write
+Request to write content to a file at the specified path. If the file
+ exists, it will be overwritten with the provided content. If the file
+ doesn\'t exist, it will be created. This tool will automatically create any
+ directories needed to write the file.
+
+Parameters:
+- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
+- path (required): The path of the file to write to (relative to the current working directory /Users/test)
+
+Usage:
+<fs_write>
+<content>...</content>
+<path>...</path>
+</fs_write>
+
+## outline
+List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.
+
+Parameters:
+- path (required): The path to the directory containing the source code files to analyze.
+
+Usage:
+<outline>
+<path>...</path>
+</outline>

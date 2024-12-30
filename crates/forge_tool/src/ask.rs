@@ -6,6 +6,8 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct AskFollowUpQuestionInput {
+    /// The question to ask the user. This should be a clear, specific question
+    /// that addresses the information you need.
     pub question: String,
 }
 

@@ -10,6 +10,7 @@ use crate::{Description, ToolTrait};
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ShellInput {
+    /// The shell command to execute.
     pub command: String,
 }
 

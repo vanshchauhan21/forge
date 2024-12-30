@@ -76,6 +76,7 @@ fn parse_file(_file: &Path, content: &str, parser: &mut Parser, query: &Query) -
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OutlineInput {
+    /// The path to the directory containing the source code files to analyze.
     pub path: String,
 }
 

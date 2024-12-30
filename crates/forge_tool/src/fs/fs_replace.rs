@@ -43,7 +43,9 @@ fn persist_changes<P: AsRef<Path>>(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReplaceInput {
+    /// File path relative to {{cwd}}
     pub path: String,
+    /// SEARCH/REPLACE blocks defining changes
     pub diff: String,
 }
 

@@ -16,9 +16,6 @@ pub struct FSFileInfoInput {
 /// specified path. Returns comprehensive information including size, creation
 /// time, last modified time, permissions, and type. Use this when you need to
 /// understand file characteristics without reading the actual content.
-/// Parameters:
-/// - path: (required) The path of the file or directory to inspect (relative to
-///   the current working directory {{cwd}})
 #[derive(DescriptionDerive)]
 pub struct FSFileInfo;
 

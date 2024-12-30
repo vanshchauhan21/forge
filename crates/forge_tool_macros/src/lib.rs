@@ -42,7 +42,7 @@ pub fn derive_description(input: TokenStream) -> TokenStream {
     if doc_lines.is_empty() {
         panic!("No doc comment found for {}", name);
     }
-    let doc_string = doc_lines.join("").trim().to_string();
+    let doc_string = doc_lines.join("\n").trim().to_string();
 
     // Generate an implementation of `Description` that returns the doc string
     let expanded = quote! {

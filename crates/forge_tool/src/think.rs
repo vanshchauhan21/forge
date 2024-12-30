@@ -36,27 +36,39 @@ use crate::{Description, ToolTrait};
 /// - `solution_reached`: Final solution.
 #[derive(Clone, Default, Description)]
 pub struct Think {
-    thought_history: Vec<ThoughtData>,
-    branches: HashMap<String, Vec<ThoughtData>>,
+    thought_history: Vec<ThoughtInput>,
+    branches: HashMap<String, Vec<ThoughtInput>>,
     solution_reached: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct ThoughtData {
+pub struct ThoughtInput {
+    /// The description of the current thought or reasoning step.
     pub thought: String,
+    /// Whether another thought is needed to reach a solution.
     pub next_thought_needed: bool,
+    /// The number of the current thought or reasoning step.
     pub thought_number: i32,
+    /// The total number of thoughts or reasoning steps expected to reach a
+    /// solution.
     pub total_thoughts: i32,
+    /// Whether this thought is a revision of a previous thought.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_revision: Option<bool>,
+    /// The number of the thought being revised, if this is a revision.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub revises_thought: Option<i32>,
+    /// The number of the thought from which this thought branches, if this is a
+    /// branch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch_from_thought: Option<i32>,
+    /// A unique identifier for the branch, if this is a branch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch_id: Option<String>,
+    /// Whether additional thoughts are needed to reach a solution.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub needs_more_thoughts: Option<bool>,
+    /// The current confidence in the solution, ranging from 0.0 to 1.0.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub solution_confidence: Option<f32>,
 }
@@ -73,7 +85,7 @@ pub struct ThoughtResult {
 }
 
 impl Think {
-    fn validate_thought_data(&self, mut input: ThoughtData) -> Result<ThoughtData> {
+    fn validate_thought_data(&self, mut input: ThoughtInput) -> Result<ThoughtInput> {
         if input.thought_number <= 0 {
             return Err(anyhow::anyhow!("Invalid thoughtNumber: must be positive"));
         }
@@ -90,7 +102,7 @@ impl Think {
         Ok(input)
     }
 
-    fn format_thought(&self, thought_data: &ThoughtData) -> String {
+    fn format_thought(&self, thought_data: &ThoughtInput) -> String {
         let (prefix, context) = match (thought_data.is_revision, &thought_data.branch_from_thought)
         {
             (Some(true), _) => (
@@ -130,7 +142,7 @@ impl Think {
         )
     }
 
-    fn process_thought(&mut self, input: ThoughtData) -> Result<ThoughtResult> {
+    fn process_thought(&mut self, input: ThoughtInput) -> Result<ThoughtResult> {
         let mut thought_data = self.validate_thought_data(input)?;
 
         // Adjust total thoughts if needed
@@ -184,7 +196,7 @@ impl Think {
 
 #[async_trait::async_trait]
 impl ToolTrait for Think {
-    type Input = ThoughtData;
+    type Input = ThoughtInput;
     type Output = ThoughtResult;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {

@@ -56,6 +56,9 @@ pub struct UsagePrompt {
 
 impl Display for UsagePrompt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("\n## ")?;
+        f.write_str(&self.tool_name)?;
+        f.write_str("\n")?;
         f.write_str(&self.description)?;
 
         f.write_str("\n\nUsage:\n")?;
@@ -71,7 +74,7 @@ impl Display for UsagePrompt {
         f.write_str("\n")?;
         f.write_str("</")?;
         f.write_str(&self.tool_name)?;
-        f.write_str(">")?;
+        f.write_str(">\n")?;
 
         Ok(())
     }
@@ -215,7 +218,7 @@ impl ToolBuilder {
             )
         });
 
-        description.push_str("\n\nParameters:\n");
+        description.push_str("\n\nParameters:");
 
         let required = input
             .schema
@@ -243,7 +246,7 @@ impl ToolBuilder {
                     .map(move |desc| (name.clone(), desc))
             })
         {
-            description.push_str("- ");
+            description.push_str("\n- ");
             description.push_str(&name);
 
             if required.contains(&name) {
@@ -253,13 +256,6 @@ impl ToolBuilder {
             description.push_str(": ");
             description.push_str(&desc);
         }
-
-        assert!(
-            description.len() < 1024,
-            "Description for tool '{}' is {} which greater than the max limit of 1024",
-            description.len(),
-            name
-        );
 
         let tool = ToolDefinition {
             name: ToolName(name.clone()),
@@ -295,6 +291,15 @@ impl ToolEngine {
 
         Self { tools }
     }
+
+    pub fn usage_prompt(&self) -> String {
+        self.tools
+            .iter()
+            .fold("".to_string(), |mut acc, (_, tool)| {
+                acc.push_str(tool.definition.usage_prompt().to_string().as_str());
+                acc
+            })
+    }
 }
 
 #[cfg(test)]
@@ -305,14 +310,18 @@ mod test {
     use super::*;
     use crate::{FSFileInfo, FSSearch};
 
-    fn builder() -> ToolBuilder {
-        ToolBuilder::new(Environment {
+    fn test_env() -> Environment {
+        Environment {
             cwd: "/Users/test".into(),
             os: "TestOS".into(),
             shell: "ZSH".into(),
             home: Some("/Users".into()),
             files: vec!["test.txt".into()],
-        })
+        }
+    }
+
+    fn builder() -> ToolBuilder {
+        ToolBuilder::new(test_env())
     }
 
     #[test]
@@ -342,28 +351,9 @@ mod test {
     }
 
     #[test]
-    fn test_description() {
-        let tool_engine = ToolEngine::new(Environment {
-            cwd: "/Users/test".into(),
-            os: "TestOS".into(),
-            shell: "ZSH".into(),
-            home: Some("/Users".into()),
-            files: vec!["test.txt".into()],
-        });
+    fn test_usage_prompt() {
+        let docs = ToolEngine::new(test_env()).usage_prompt();
 
-        for tool in tool_engine.list() {
-            let tool_str = serde_json::to_string_pretty(&tool).unwrap();
-            insta::assert_snapshot!(tool.name.as_str(), tool_str);
-        }
-    }
-
-    #[test]
-    fn test_to_prompt() {
-        let description = builder()
-            .build(FSRead)
-            .definition
-            .usage_prompt()
-            .to_string();
-        assert_snapshot!(description);
+        assert_snapshot!(docs);
     }
 }
