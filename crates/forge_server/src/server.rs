@@ -69,7 +69,7 @@ impl Server {
         let (tx, rx) = mpsc::channel::<ChatResponse>(100);
         let executor = ChatCommandExecutor::new(self.env.clone(), self.api_key.clone(), tx);
         let runtime = self.runtime.clone();
-        let message = format!("##Task\n{}", chat.content);
+        let message = format!("<task>{}</task>", chat.content);
 
         tokio::spawn(async move {
             runtime
