@@ -30,4 +30,5 @@ futures = "0.3.31"
 pulldown-cmark = { version = "0.9.3" }
 
 [dev-dependencies]
+insta = "1.41.1"
 pretty_assertions = "1.4.1"

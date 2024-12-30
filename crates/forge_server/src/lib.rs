@@ -7,6 +7,7 @@ mod executor;
 mod log;
 mod runtime;
 mod server;
+mod system_prompt;
 mod template;
 
 pub use api::API;

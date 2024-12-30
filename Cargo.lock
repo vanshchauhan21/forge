@@ -712,6 +712,7 @@ dependencies = [
  "forge_walker",
  "futures",
  "inquire",
+ "insta",
  "pretty_assertions",
  "pulldown-cmark",
  "serde",
