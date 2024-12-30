@@ -106,7 +106,9 @@ impl ToolDefinition {
             .clone()
             .map(|object| {
                 object
-                    .properties.keys().map(|name| UsageParameterPrompt {
+                    .properties
+                    .keys()
+                    .map(|name| UsageParameterPrompt {
                         parameter_name: name.to_string(),
                         parameter_type: "...".to_string(),
                     })
