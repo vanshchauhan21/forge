@@ -7,6 +7,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::think::Think;
 use crate::{
     Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell,
     ToolTrait,
@@ -134,7 +135,8 @@ impl ToolImporter {
 
         assert!(
             description.len() < 1024,
-            "Description for tool {} is longer than 1024",
+            "Description for tool '{}' is {} which greater than the max limit of 1024",
+            description.len(),
             name
         );
 
@@ -163,7 +165,7 @@ impl ToolEngine {
             importer.import(Outline),
             importer.import(Shell::default()),
             // TODO: uncomment them later on, as of now we only need the above tools.
-            // importer.import(Think::default()),
+            importer.import(Think::default()),
             // importer::import(AskFollowUpQuestion),
         ]);
 
