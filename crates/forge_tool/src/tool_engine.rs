@@ -31,13 +31,8 @@ where
     }
 }
 
-struct Executor {
-    executable: Box<dyn ToolTrait<Input = Value, Output = Value> + Send + Sync + 'static>,
-    tool: ToolDefinition,
-}
-
 pub struct ToolEngine {
-    tools: HashMap<ToolName, Executor>,
+    tools: HashMap<ToolName, Tool>,
 }
 
 ///
@@ -82,20 +77,29 @@ impl ToolEngine {
     }
 
     pub fn list(&self) -> Vec<ToolDefinition> {
-        self.tools.values().map(|tool| tool.tool.clone()).collect()
+        self.tools
+            .values()
+            .map(|tool| tool.definition.clone())
+            .collect()
     }
 }
 
-struct ToolImporter {
+struct Tool {
+    name: ToolName,
+    executable: Box<dyn ToolTrait<Input = Value, Output = Value> + Send + Sync + 'static>,
+    definition: ToolDefinition,
+}
+
+struct ToolBuilder {
     env: Environment,
 }
 
-impl ToolImporter {
+impl ToolBuilder {
     fn new(env: Environment) -> Self {
         Self { env }
     }
 
-    fn import<T>(&self, tool: T) -> (ToolName, Executor)
+    fn build<T>(&self, tool: T) -> Tool
     where
         T: ToolTrait + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
@@ -147,27 +151,30 @@ impl ToolImporter {
             output_schema: Some(output),
         };
 
-        (ToolName(name), Executor { executable, tool })
+        Tool { executable, definition: tool, name: ToolName(name) }
     }
 }
 
 impl ToolEngine {
     pub fn new(env: Environment) -> Self {
-        let importer = ToolImporter::new(env);
+        let builder = ToolBuilder::new(env);
 
-        let tools: HashMap<ToolName, Executor> = HashMap::from([
-            importer.import(FSRead),
-            importer.import(FSWrite),
-            importer.import(FSList),
-            importer.import(FSSearch),
-            importer.import(FSFileInfo),
-            importer.import(FSReplace),
-            importer.import(Outline),
-            importer.import(Shell::default()),
+        let tools: HashMap<ToolName, Tool> = [
+            builder.build(FSRead),
+            builder.build(FSWrite),
+            builder.build(FSList),
+            builder.build(FSSearch),
+            builder.build(FSFileInfo),
+            builder.build(FSReplace),
+            builder.build(Outline),
+            builder.build(Shell::default()),
             // TODO: uncomment them later on, as of now we only need the above tools.
-            importer.import(Think::default()),
+            builder.build(Think::default()),
             // importer::import(AskFollowUpQuestion),
-        ]);
+        ]
+        .into_iter()
+        .map(|tool| (tool.name.clone(), tool))
+        .collect::<HashMap<_, _>>();
 
         Self { tools }
     }
@@ -179,41 +186,51 @@ mod test {
     use super::*;
     use crate::{FSFileInfo, FSSearch};
 
-    fn test_importer() -> ToolImporter {
-        ToolImporter::new(test_env())
-    }
-
-    fn test_env() -> Environment {
-        Environment {
+    fn builder() -> ToolBuilder {
+        ToolBuilder::new(Environment {
             cwd: "/Users/test".into(),
             os: "TestOS".into(),
             shell: "ZSH".into(),
             home: Some("/Users".into()),
             files: vec!["test.txt".into()],
-        }
+        })
     }
 
     #[test]
     fn test_id() {
-        let importer = test_importer();
+        let importer = builder();
 
-        assert!(importer.import(FSRead).0.into_string().ends_with("fs_read"));
         assert!(importer
-            .import(FSSearch)
-            .0
+            .build(FSRead)
+            .name
+            .into_string()
+            .ends_with("fs_read"));
+        assert!(importer
+            .build(FSSearch)
+            .name
             .into_string()
             .ends_with("fs_search"));
-        assert!(importer.import(FSList).0.into_string().ends_with("fs_list"));
         assert!(importer
-            .import(FSFileInfo)
-            .0
+            .build(FSList)
+            .name
+            .into_string()
+            .ends_with("fs_list"));
+        assert!(importer
+            .build(FSFileInfo)
+            .name
             .into_string()
             .ends_with("file_info"));
     }
 
     #[test]
     fn test_description() {
-        let tool_engine = ToolEngine::new(test_env());
+        let tool_engine = ToolEngine::new(Environment {
+            cwd: "/Users/test".into(),
+            os: "TestOS".into(),
+            shell: "ZSH".into(),
+            home: Some("/Users".into()),
+            files: vec!["test.txt".into()],
+        });
 
         for tool in tool_engine.list() {
             let tool_str = serde_json::to_string_pretty(&tool).unwrap();

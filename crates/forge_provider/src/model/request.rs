@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use super::CompletionMessage;
 
-/// Represents a request being made to the LLM provider
+/// Represents a request being made to the LLM provider. By default the request
+/// is created with assuming the model supports use of external tools.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Setters)]
 pub struct Request {
     pub messages: Vec<CompletionMessage>,
