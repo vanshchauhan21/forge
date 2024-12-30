@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use forge_env::Environment;
 use inflector::Inflector;
@@ -44,6 +45,83 @@ pub struct ToolDefinition {
     pub description: String,
     pub input_schema: RootSchema,
     pub output_schema: Option<RootSchema>,
+}
+
+#[derive(Debug)]
+pub struct UsagePrompt {
+    tool_name: String,
+    input_parameters: Vec<UsageParameterPrompt>,
+    description: String,
+}
+
+impl Display for UsagePrompt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.description)?;
+
+        f.write_str("\n\nUsage:\n")?;
+        f.write_str("<")?;
+        f.write_str(&self.tool_name)?;
+        f.write_str(">")?;
+
+        for parameter in self.input_parameters.iter() {
+            f.write_str("\n")?;
+            parameter.fmt(f)?;
+        }
+
+        f.write_str("\n")?;
+        f.write_str("</")?;
+        f.write_str(&self.tool_name)?;
+        f.write_str(">")?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct UsageParameterPrompt {
+    pub parameter_name: String,
+    pub parameter_type: String,
+}
+
+impl Display for UsageParameterPrompt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<")?;
+        f.write_str(&self.parameter_name)?;
+        f.write_str(">")?;
+        f.write_str(&self.parameter_type)?;
+        f.write_str("</")?;
+        f.write_str(&self.parameter_name)?;
+        f.write_str(">")?;
+
+        Ok(())
+    }
+}
+
+impl ToolDefinition {
+    pub fn usage_prompt(&self) -> UsagePrompt {
+        let input_parameters = self
+            .input_schema
+            .schema
+            .object
+            .clone()
+            .map(|object| {
+                object
+                    .properties
+                    .iter()
+                    .map(|(name, _)| UsageParameterPrompt {
+                        parameter_name: name.to_string(),
+                        parameter_type: "...".to_string(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        UsagePrompt {
+            tool_name: self.name.clone().into_string(),
+            input_parameters,
+            description: self.description.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -130,12 +208,39 @@ impl ToolBuilder {
         )
         .unwrap();
 
-        let description = self.env.render(T::description()).unwrap_or_else(|err| {
+        let mut description = self.env.render(T::description()).unwrap_or_else(|err| {
             panic!(
                 "Unable to render description for tool {}, err: {:?}",
                 name, err
             )
         });
+
+        description.push_str("\n\nParameters:\n");
+
+        for (name, desc) in input
+            .schema
+            .object
+            .clone()
+            .into_iter()
+            .flat_map(|object| object.properties.into_iter())
+            .flat_map(|(name, props)| {
+                props
+                    .into_object()
+                    .metadata
+                    .into_iter()
+                    .map(move |meta| (name.clone(), meta))
+            })
+            .flat_map(|(name, meta)| {
+                meta.description
+                    .into_iter()
+                    .map(move |desc| (name.clone(), desc))
+            })
+        {
+            description.push_str("- ");
+            description.push_str(&name);
+            description.push_str(": ");
+            description.push_str(&desc);
+        }
 
         assert!(
             description.len() < 1024,
@@ -182,6 +287,8 @@ impl ToolEngine {
 
 #[cfg(test)]
 mod test {
+
+    use insta::assert_snapshot;
 
     use super::*;
     use crate::{FSFileInfo, FSSearch};
@@ -236,5 +343,15 @@ mod test {
             let tool_str = serde_json::to_string_pretty(&tool).unwrap();
             insta::assert_snapshot!(tool.name.as_str(), tool_str);
         }
+    }
+
+    #[test]
+    fn test_to_prompt() {
+        let description = builder()
+            .build(FSRead)
+            .definition
+            .usage_prompt()
+            .to_string();
+        assert_snapshot!(description);
     }
 }
