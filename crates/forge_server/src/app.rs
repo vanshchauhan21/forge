@@ -26,7 +26,7 @@ pub struct FileResponse {
     pub content: String,
 }
 
-#[derive(Default, Debug, serde::Deserialize, Clone, Setters)]
+#[derive(Debug, serde::Deserialize, Clone, Setters)]
 #[setters(into)]
 pub struct ChatRequest {
     pub content: String,
@@ -179,6 +179,12 @@ mod tests {
     use super::*;
     use crate::template::Tag;
 
+    impl ChatRequest {
+        fn new(content: impl ToString) -> ChatRequest {
+            ChatRequest { content: content.to_string(), model: ModelId::default() }
+        }
+    }
+
     trait Has: Sized {
         type Item;
         fn has(&self, other: impl Into<Self::Item>) -> bool;
@@ -196,7 +202,7 @@ mod tests {
     fn test_user_message_action() {
         let app = App::default();
 
-        let chat_request = ChatRequest::default().content("Hello, world!");
+        let chat_request = ChatRequest::new("Hello, world!");
 
         let (app, command) = app.run(chat_request.clone()).unwrap();
 
@@ -282,8 +288,8 @@ mod tests {
     #[test]
     fn test_should_set_user_objective_only_once() {
         let app = App::default();
-        let request_0 = ChatRequest::default().content("Hello");
-        let request_1 = ChatRequest::default().content("World");
+        let request_0 = ChatRequest::new("Hello");
+        let request_1 = ChatRequest::new("World");
 
         let (app, _) = app.run(request_0).unwrap();
         let (app, _) = app.run(request_1).unwrap();
@@ -294,7 +300,7 @@ mod tests {
     #[test]
     fn test_should_not_set_user_objective_if_already_set() {
         let app = App::default().user_objective(MessageTemplate::task("Initial Objective"));
-        let request = ChatRequest::default().content("New Objective");
+        let request = ChatRequest::new("New Objective");
 
         let (app, _) = app.run(request).unwrap();
 
@@ -495,5 +501,12 @@ mod tests {
                 .map(CompletionMessage::from)
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn test_context_initial_message() {
+        let app = App::default();
+
+        assert_eq!(app.request.messages.len(), 0);
     }
 }

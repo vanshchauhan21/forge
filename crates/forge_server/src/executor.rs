@@ -30,7 +30,6 @@ impl ChatCommandExecutor {
             provider: Arc::new(Provider::open_router(api_key.into(), None)),
             tools: tools.clone(),
             tx,
-
             system_prompt: SystemPrompt::new(env, tools),
         }
     }
@@ -62,9 +61,8 @@ impl Executor for ChatCommandExecutor {
                 } else {
                     self.system_prompt.clone()
                 };
-                let system_message = tool.render().unwrap();
 
-                let request = request.clone().set_system_message(system_message);
+                let request = request.clone().set_system_message(tool.render()?);
 
                 let actions =
                     self.provider.chat(request).await?.map(|response| {

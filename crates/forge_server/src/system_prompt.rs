@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use derive_setters::Setters;
 use forge_env::Environment;
 use forge_tool::ToolEngine;
 use handlebars::Handlebars;
@@ -15,7 +14,7 @@ struct Context {
     use_tool: bool,
 }
 
-#[derive(Clone, Setters)]
+#[derive(Clone)]
 pub struct SystemPrompt {
     ctx: Context,
 }

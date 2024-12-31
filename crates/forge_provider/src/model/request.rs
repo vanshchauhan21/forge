@@ -43,16 +43,22 @@ impl Request {
 
     /// Updates the set system message
     pub fn set_system_message(mut self, content: impl Into<String>) -> Self {
-        for message in self.messages.iter_mut() {
-            if let CompletionMessage::ContentMessage(content_message) = message {
+        if self.messages.is_empty() {
+            self.add_message(CompletionMessage::system(content.into()))
+        } else {
+            if let Some(CompletionMessage::ContentMessage(content_message)) =
+                self.messages.get_mut(0)
+            {
                 if content_message.role == Role::System {
                     content_message.content = content.into();
-                    break;
+                } else {
+                    self.messages
+                        .insert(0, CompletionMessage::system(content.into()));
                 }
             }
-        }
 
-        self
+            self
+        }
     }
 }
 
@@ -108,7 +114,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_set_system_message() {
+    fn test_override_system_message() {
         let request = Request::new(ModelId::default())
             .add_message(CompletionMessage::system("Initial system message"))
             .set_system_message("Updated system message");
@@ -117,5 +123,34 @@ mod tests {
             request.messages[0],
             CompletionMessage::system("Updated system message")
         );
+    }
+
+    #[test]
+    fn test_set_system_message() {
+        let request = Request::new(ModelId::default()).set_system_message("A system message");
+
+        assert_eq!(
+            request.messages[0],
+            CompletionMessage::system("A system message")
+        );
+    }
+
+    #[test]
+    fn test_insert_system_message() {
+        let request = Request::new(ModelId::default())
+            .add_message(CompletionMessage::user("Do something"))
+            .set_system_message("A system message");
+
+        assert_eq!(
+            request.messages[0],
+            CompletionMessage::system("A system message")
+        );
+    }
+
+    #[test]
+    fn test_tool_supported_model() {
+        let model = ModelId("meta-llama/llama-3.3-70b-instruct".to_string());
+
+        assert!(model.tool_supported())
     }
 }
