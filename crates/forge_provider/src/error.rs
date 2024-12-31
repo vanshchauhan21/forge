@@ -1,4 +1,5 @@
 use std::pin::Pin;
+use std::sync::Arc;
 
 use derive_more::derive::Display;
 use serde_json::Value;
@@ -15,6 +16,7 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     EventSource(#[from] reqwest_eventsource::Error),
     ToolUseMissingName,
+    Arc(Arc<Error>),
 }
 
 impl Error {

@@ -15,3 +15,4 @@ derive_more = { version = "1.0.0", features = ["from", "display"] }
 derive_setters = "0.1.6"
 forge_tool = { path = "../forge_tool" }
 reqwest-eventsource = "0.6.0"
+moka2 = "0.13.0"

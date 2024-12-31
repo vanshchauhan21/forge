@@ -69,37 +69,13 @@ pub struct Model {
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Hash, Eq)]
 #[serde(transparent)]
 pub struct ModelId(String);
 
 impl ModelId {
-    pub fn tool_supported(&self) -> bool {
-        // This list is created by querying
-        // [open router](https://openrouter.ai/api/v1/models?supported_parameters=tools)
-        [
-            "ai21/jamba",
-            "amazon/nova",
-            "anthropic/claude",
-            "cohere/command-r",
-            "deepseek/deepseek-chat",
-            "google/gemini",
-            "meta-llama/llama",
-            "microsoft/phi",
-            "mistralai/codestral-mamba",
-            "mistralai/ministral",
-            "mistralai/mistral",
-            "mistralai/mixtral",
-            "mistralai/pixtral",
-            "nousresearch/hermes",
-            "nvidia/llama",
-            "openai/gpt",
-            "openai/o1",
-            "qwen/qwen",
-            "x-ai/grok",
-        ]
-        .iter()
-        .any(|prefix| self.0.starts_with(prefix))
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -145,12 +121,5 @@ mod tests {
             request.messages[0],
             CompletionMessage::system("A system message")
         );
-    }
-
-    #[test]
-    fn test_tool_supported_model() {
-        let model = ModelId("meta-llama/llama-3.3-70b-instruct".to_string());
-
-        assert!(model.tool_supported())
     }
 }

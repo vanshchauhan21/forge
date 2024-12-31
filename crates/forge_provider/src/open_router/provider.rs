@@ -6,9 +6,10 @@ use tokio_stream::StreamExt;
 use super::model::{ListModelResponse, Model};
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
+use super::ParameterResponse;
 use crate::error::Result;
 use crate::provider::{InnerProvider, Provider};
-use crate::{Error, ProviderError, Request, Response, ResultStream};
+use crate::{Error, ModelId, Parameters, ProviderError, Request, Response, ResultStream};
 
 const PROVIDER_NAME: &str = "Open Router";
 
@@ -132,6 +133,30 @@ impl InnerProvider for OpenRouter {
             .iter()
             .map(|r| r.clone().into())
             .collect::<Vec<crate::Model>>())
+    }
+
+    async fn parameters(&self, model: ModelId) -> Result<Parameters> {
+        // https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
+        let path = format!("/parameters/{}", model.as_str());
+        let text = self
+            .client
+            .get(self.config.url(&path))
+            .headers(self.config.headers())
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let response: ParameterResponse = serde_json::from_str(&text)?;
+
+        Ok(Parameters {
+            tools: response
+                .data
+                .supported_parameters
+                .iter()
+                .flat_map(|parameter| parameter.iter())
+                .any(|parameter| parameter == "tools"),
+        })
     }
 }
 
