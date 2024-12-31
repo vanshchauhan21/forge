@@ -82,7 +82,7 @@ impl Executor for ChatCommandExecutor {
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)
             }
-            Command::ToolUse(tool_call) => {
+            Command::ToolCall(tool_call) => {
                 let tool_result = self
                     .tools
                     .call(&tool_call.name, tool_call.arguments.clone())

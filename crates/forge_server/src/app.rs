@@ -39,7 +39,7 @@ pub enum Command {
     FileRead(Vec<String>),
     AssistantMessage(#[from] Request),
     UserMessage(#[from] ChatResponse),
-    ToolUse(#[from] ToolCall),
+    ToolCall(#[from] ToolCall),
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -90,8 +90,21 @@ impl App {
 
             // since tools is used, clear the tool_raw_arguments.
             self.tool_call_part.clear();
-            commands.push(Command::ToolUse(tool_call.clone()));
+            commands.push(Command::ToolCall(tool_call.clone()));
+
+            // LLM supports tool calls, so we need to send the tool call back in the
+            // assistant response
             message = message.tool_call(tool_call);
+        }
+
+        if finish_reason == FinishReason::Stop {
+            if let Ok(mut tool_calls) = ToolCall::try_from_xml(&self.assistant_buffer) {
+                if let Some(tool_call) = tool_calls.pop() {
+                    // LLM has no-clue that it made a tool call so we simply dispatch the tool_call
+                    // for execution.
+                    commands.push(Command::ToolCall(tool_call.clone()));
+                }
+            }
         }
 
         self.request = self.request.clone().add_message(message);
@@ -546,5 +559,25 @@ mod tests {
             .iter()
             .all(|cmd| !matches!(cmd, Command::UserMessage(_)));
         assert!(no_user_message);
+    }
+
+    #[test]
+    fn test_tool_call_xml() {
+        let app = App::default();
+
+        let message_1 = Action::AssistantResponse(Response::new("<tool_1><arg_1"));
+        let message_2 = Action::AssistantResponse(Response::new(">a.txt</arg_1><ar"));
+        let message_3 = Action::AssistantResponse(
+            Response::new("g_2>b.txt</arg_2></tool_1>").finish_reason(FinishReason::Stop),
+        );
+
+        let (_, cmd) = app.run_seq(vec![message_1, message_2, message_3]).unwrap();
+
+        assert!(cmd.has(Command::ToolCall(
+            ToolCall::new(ToolName::new("tool_1")).arguments(json!({
+                "arg_1": "a.txt",
+                "arg_2": "b.txt"
+            }))
+        )));
     }
 }
