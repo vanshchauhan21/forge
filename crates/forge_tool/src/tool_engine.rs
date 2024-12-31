@@ -56,7 +56,6 @@ pub struct UsagePrompt {
 
 impl Display for UsagePrompt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("\n## ")?;
         f.write_str(&self.tool_name)?;
         f.write_str("\n")?;
         f.write_str(&self.description)?;
@@ -293,9 +292,16 @@ impl ToolEngine {
     }
 
     pub fn usage_prompt(&self) -> String {
-        self.tools
+        let mut tools: Vec<_> = self.tools.values().collect();
+        tools.sort_by(|a, b| a.definition.name.as_str().cmp(b.definition.name.as_str()));
+
+        tools
             .iter()
-            .fold("".to_string(), |mut acc, (_, tool)| {
+            .enumerate()
+            .fold("".to_string(), |mut acc, (i, tool)| {
+                acc.push_str("\n");
+                acc.push_str((i + 1).to_string().as_str());
+                acc.push_str(". ");
                 acc.push_str(tool.definition.usage_prompt().to_string().as_str());
                 acc
             })
