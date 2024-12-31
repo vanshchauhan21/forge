@@ -2,7 +2,7 @@ use derive_setters::Setters;
 use forge_tool::ToolDefinition;
 use serde::{Deserialize, Serialize};
 
-use super::CompletionMessage;
+use super::{CompletionMessage, Role};
 
 /// Represents a request being made to the LLM provider. By default the request
 /// is created with assuming the model supports use of external tools.
@@ -40,6 +40,20 @@ impl Request {
         self.messages.extend(messages.into_iter().map(Into::into));
         self
     }
+
+    /// Updates the set system message
+    pub fn set_system_message(mut self, content: impl Into<String>) -> Self {
+        for message in self.messages.iter_mut() {
+            if let CompletionMessage::ContentMessage(content_message) = message {
+                if content_message.role == Role::System {
+                    content_message.content = content.into();
+                    break;
+                }
+            }
+        }
+
+        self
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Setters)]
@@ -56,5 +70,22 @@ pub struct ModelId(String);
 impl Default for ModelId {
     fn default() -> Self {
         ModelId("openai/gpt-3.5-turbo".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_system_message() {
+        let request = Request::new(ModelId::default())
+            .add_message(CompletionMessage::system("Initial system message"))
+            .set_system_message("Updated system message");
+
+        assert_eq!(
+            request.messages[0],
+            CompletionMessage::system("Updated system message")
+        );
     }
 }
