@@ -10,7 +10,7 @@ use crate::{Description, ToolTrait};
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {
     #[schemars(
-        description = "The path of the directory to search in (relative to the current working directory {{cwd}}). This directory will be recursively searched."
+        description = "The path of the directory to search in (relative to the current working directory). This directory will be recursively searched."
     )]
     pub path: String,
     #[schemars(

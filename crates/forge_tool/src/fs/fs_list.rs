@@ -10,7 +10,7 @@ use crate::{Description, ToolTrait};
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
     #[schemars(
-        description = "The path of the directory to list contents for (relative to the current working directory {{cwd}})"
+        description = "The path of the directory to list contents for (relative to the current working directory)"
     )]
     pub path: String,
     #[schemars(

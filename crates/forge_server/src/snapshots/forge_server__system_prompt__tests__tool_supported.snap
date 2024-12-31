@@ -38,7 +38,7 @@ Request to retrieve detailed metadata about a file or directory at the
  understand file characteristics without reading the actual content.
 
 Parameters:
-- path (required): The path of the file or directory to inspect (relative to the current working directory /home/user/project)
+- path (required): The path of the file or directory to inspect (relative to the current working directory)
 
 Usage:
 <fs_file_info>
@@ -54,7 +54,7 @@ Request to list files and directories within the specified directory. If
  successfully or not.
 
 Parameters:
-- path (required): The path of the directory to list contents for (relative to the current working directory /home/user/project)
+- path (required): The path of the directory to list contents for (relative to the current working directory)
 - recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
 
 Usage:
@@ -72,7 +72,7 @@ Request to read the contents of a file at the specified path. Use this when
  it returns the raw content as a string.
 
 Parameters:
-- path (required): The path of the file to read (relative to the current working directory /home/user/project)
+- path (required): The path of the file to read (relative to the current working directory)
 
 Usage:
 <fs_read>
@@ -105,7 +105,7 @@ Replace sections in a file using SEARCH/REPLACE blocks for precise
 
 Parameters:
 - diff (required): SEARCH/REPLACE blocks defining changes
-- path (required): File path relative to /home/user/project
+- path (required): File path relative to the current working directory
 
 Usage:
 <fs_replace>
@@ -121,7 +121,7 @@ Request to perform a regex search across files in a specified directory,
 
 Parameters:
 - file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).
-- path (required): The path of the directory to search in (relative to the current working directory /home/user/project). This directory will be recursively searched.
+- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
 - regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
 
 Usage:
@@ -139,7 +139,7 @@ Request to write content to a file at the specified path. If the file
 
 Parameters:
 - content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
-- path (required): The path of the file to write to (relative to the current working directory /home/user/project)
+- path (required): The path of the file to write to (relative to the current working directory)
 
 Usage:
 <fs_write>

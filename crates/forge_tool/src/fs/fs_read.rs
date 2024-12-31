@@ -7,7 +7,7 @@ use crate::{Description, ToolTrait};
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReadInput {
     #[schemars(
-        description = "The path of the file to read (relative to the current working directory {{cwd}})"
+        description = "The path of the file to read (relative to the current working directory)"
     )]
     pub path: String,
 }
