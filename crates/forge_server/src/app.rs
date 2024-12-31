@@ -179,6 +179,19 @@ mod tests {
     use super::*;
     use crate::template::Tag;
 
+    trait Has: Sized {
+        type Item;
+        fn has(&self, other: impl Into<Self::Item>) -> bool;
+    }
+
+    impl Has for Vec<Command> {
+        type Item = Command;
+        fn has(&self, other: impl Into<Self::Item>) -> bool {
+            let other: Self::Item = other.into();
+            self.contains(&other)
+        }
+    }
+
     #[test]
     fn test_user_message_action() {
         let app = App::default();
@@ -408,19 +421,6 @@ mod tests {
                 CompletionMessage::from(tool_result)
             ],
         );
-    }
-
-    trait Has: Sized {
-        type Item;
-        fn has(&self, other: impl Into<Self::Item>) -> bool;
-    }
-
-    impl Has for Vec<Command> {
-        type Item = Command;
-        fn has(&self, other: impl Into<Self::Item>) -> bool {
-            let other: Self::Item = other.into();
-            self.contains(&other)
-        }
     }
 
     #[test]
