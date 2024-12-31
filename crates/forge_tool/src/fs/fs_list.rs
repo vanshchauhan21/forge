@@ -9,13 +9,9 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
-    #[schemars(
-        description = "The path of the directory to list contents for (relative to the current working directory)"
-    )]
+    /// The path of the directory to list contents for (relative to the current working directory)
     pub path: String,
-    #[schemars(
-        description = "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only."
-    )]
+    /// Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
     pub recursive: Option<bool>,
 }
 
