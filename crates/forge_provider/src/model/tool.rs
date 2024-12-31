@@ -74,7 +74,8 @@ impl ToolCall {
         }
     }
 
-    pub fn parse_xml(input: &str) -> std::result::Result<Self, String> {
+    /// Parse multiple tool calls from XML format.
+    pub fn try_from_xml(input: &str) -> std::result::Result<Vec<Self>, String> {
         parse(input)
     }
 }

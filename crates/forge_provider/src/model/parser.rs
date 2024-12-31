@@ -49,8 +49,6 @@ fn parse_args(input: &str) -> IResult<&str, HashMap<String, String>> {
 }
 
 fn parse_tool_call(input: &str) -> IResult<&str, ToolCallParsed> {
-    // Skip any leading text/whitespace until we find a tool tag
-    let (input, _) = take_until("<")(input)?;
     let (input, _) = tag("<")(input)?;
     let (input, name) = parse_identifier(input)?;
     let (input, _) = tag(">")(input)?;
@@ -62,10 +60,14 @@ fn parse_tool_call(input: &str) -> IResult<&str, ToolCallParsed> {
     Ok((input, ToolCallParsed { name: name.to_string(), args }))
 }
 
-pub fn parse(input: &str) -> Result<ToolCall, String> {
-    let (_, parsed) = parse_tool_call(input).map_err(|e| format!("Parsing Error: {}", e))?;
+fn find_next_tool_call(input: &str) -> IResult<&str, &str> {
+    // Find the next occurrence of a tool call opening tag
+    let (remaining, _) = take_until("<")(input)?;
+    Ok((remaining, ""))
+}
 
-    Ok(ToolCall {
+fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCall {
+    ToolCall {
         name: ToolName::new(parsed.name),
         call_id: None,
         arguments: Value::Object(parsed.args.into_iter().fold(
@@ -75,7 +77,41 @@ pub fn parse(input: &str) -> Result<ToolCall, String> {
                 map
             },
         )),
-    })
+    }
+}
+
+pub fn parse(input: &str) -> Result<Vec<ToolCall>, String> {
+    let mut tool_calls = Vec::new();
+    let mut current_input = input;
+
+    while !current_input.is_empty() {
+        // Try to find the next tool call
+        match find_next_tool_call(current_input) {
+            Ok((remaining, _)) => {
+                // Try to parse a tool call at the current position
+                match parse_tool_call(remaining) {
+                    Ok((new_remaining, parsed)) => {
+                        tool_calls.push(tool_call_to_struct(parsed));
+                        current_input = new_remaining;
+                    }
+                    Err(e) => {
+                        if tool_calls.is_empty() {
+                            return Err(format!("Failed to parse tool call: {}", e));
+                        }
+                        // If we've already found some tool calls, we can stop here
+                        break;
+                    }
+                }
+            }
+            Err(_) => break, // No more tool calls found
+        }
+    }
+
+    if tool_calls.is_empty() {
+        Err("No valid tool calls found in input".to_string())
+    } else {
+        Ok(tool_calls)
+    }
 }
 
 #[cfg(test)]
@@ -100,10 +136,14 @@ mod tests {
 
         fn build_xml(&self) -> String {
             let mut xml = format!("<{}>", self.name);
-            for (key, value) in &self.args {
-                xml.push_str(&format!("<{}>{}</{}>", key, value, key));
+            let args: Vec<_> = self.args.iter().collect();
+            for (idx, (key, value)) in args.iter().enumerate() {
+                xml.push_str(&format!("<{}>{}</{}>{}", 
+                    key, value, key,
+                    if idx < args.len() - 1 { " " } else { "" }
+                ));
             }
-            xml.push_str(&format!("</{}>", self.name));
+            xml.push_str(&format!("</{}>\n", self.name));
             xml
         }
 
@@ -161,7 +201,7 @@ mod tests {
             .arg("arg2", "value2");
 
         let action = parse(&tool.build_xml()).unwrap();
-        let expected = tool.build_expected();
+        let expected = vec![tool.build_expected()];
         assert_eq!(action, expected);
     }
 
@@ -171,7 +211,7 @@ mod tests {
         let input = format!("Some text {} more text", tool.build_xml());
 
         let action = parse(&input).unwrap();
-        let expected = tool.build_expected();
+        let expected = vec![tool.build_expected()];
         assert_eq!(action, expected);
     }
 
@@ -182,13 +222,8 @@ mod tests {
         let input = format!("{} Some text {}", tool1.build_xml(), tool2.build_xml());
 
         let action = parse(&input).unwrap();
-        let expected = tool1.build_expected();
+        let expected = vec![tool1.build_expected(), tool2.build_expected()];
         assert_eq!(action, expected);
-
-        let second_tool_input = &input[input.find("<tool2>").unwrap()..];
-        let action2 = parse(second_tool_input).unwrap();
-        let expected2 = tool2.build_expected();
-        assert_eq!(action2, expected2);
     }
 
     #[test]
@@ -196,7 +231,7 @@ mod tests {
         let tool = ToolCallBuilder::new("tool_name");
 
         let action = parse(&tool.build_xml()).unwrap();
-        let expected = tool.build_expected();
+        let expected = vec![tool.build_expected()];
         assert_eq!(action, expected);
     }
 
@@ -207,7 +242,21 @@ mod tests {
             .arg("arg2", "value&with#special@chars");
 
         let action = parse(&tool.build_xml()).unwrap();
-        let expected = tool.build_expected();
+        let expected = vec![tool.build_expected()];
+        assert_eq!(action, expected);
+    }
+
+    #[test]
+    fn test_parse_with_large_text_between() {
+        let tool1 = ToolCallBuilder::new("tool1").arg("arg1", "value1");
+        let tool2 = ToolCallBuilder::new("tool2").arg("arg2", "value2");
+        let input = format!("{}\nLots of text here...\nMore text...\nEven more text...\n{}", 
+            tool1.build_xml(), 
+            tool2.build_xml()
+        );
+
+        let action = parse(&input).unwrap();
+        let expected = vec![tool1.build_expected(), tool2.build_expected()];
         assert_eq!(action, expected);
     }
 }
