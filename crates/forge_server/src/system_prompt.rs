@@ -1,34 +1,44 @@
-use crate::Result;
 use derive_setters::Setters;
 use forge_env::Environment;
+use forge_tool::ToolEngine;
+use handlebars::Handlebars;
+use serde::Serialize;
 
-pub struct SystemPrompt {
-    template: String,
-    config: Config,
+use crate::Result;
+
+#[derive(Serialize)]
+struct Context {
+    env: Environment,
+    tool_information: String,
+    use_tool: bool,
 }
 
 #[derive(Setters)]
-pub struct Config {
-    pub use_tool: bool,
-    pub env: Environment,
-}
-
-impl Config {
-    pub fn new(env: Environment) -> Self {
-        Self { use_tool: true, env }
-    }
+pub struct SystemPrompt {
+    ctx: Context,
 }
 
 impl SystemPrompt {
-    pub fn new(config: Config) -> Self {
-        let template = include_str!("./prompts/system.md").to_string();
-        Self { template, config }
+    pub fn new(env: Environment, tools: ToolEngine) -> Self {
+        let tool_information = tools.usage_prompt();
+
+        Self { ctx: Context { env, tool_information, use_tool: true } }
+    }
+    pub fn use_tool(mut self, use_tool: bool) -> Self {
+        self.ctx.use_tool = use_tool;
+        self
     }
 }
 
 impl SystemPrompt {
     pub fn render(&self) -> Result<String> {
-        Ok(self.config.env.render(&self.template)?)
+        let template = include_str!("./prompts/system.md").to_string();
+
+        let mut hb = Handlebars::new();
+        hb.set_strict_mode(true);
+        hb.register_escape_fn(|str| str.to_string());
+
+        Ok(hb.render_template(template.as_str(), &self.ctx)?)
     }
 }
 
@@ -50,8 +60,20 @@ mod tests {
 
     #[test]
     fn test_tool_supported() {
-        let config = Config::new(test_env());
-        let prompt = SystemPrompt::new(config).render().unwrap();
+        let env = test_env();
+        let tools = ToolEngine::new(env.clone());
+        let prompt = SystemPrompt::new(env, tools).render().unwrap();
+        assert_snapshot!(prompt);
+    }
+
+    #[test]
+    fn test_tool_unsupported() {
+        let env = test_env();
+        let tools = ToolEngine::new(env.clone());
+        let prompt = SystemPrompt::new(env, tools)
+            .use_tool(true)
+            .render()
+            .unwrap();
         assert_snapshot!(prompt);
     }
 }

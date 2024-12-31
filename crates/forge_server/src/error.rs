@@ -18,6 +18,7 @@ pub enum Error {
     Walk(forge_walker::Error),
     Env(forge_env::Error),
     ToolCallMissingName,
+    Handlebars(handlebars::RenderError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

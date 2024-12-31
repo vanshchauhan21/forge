@@ -299,7 +299,7 @@ impl ToolEngine {
             .iter()
             .enumerate()
             .fold("".to_string(), |mut acc, (i, tool)| {
-                acc.push_str("\n");
+                acc.push('\n');
                 acc.push_str((i + 1).to_string().as_str());
                 acc.push_str(". ");
                 acc.push_str(tool.definition.usage_prompt().to_string().as_str());
