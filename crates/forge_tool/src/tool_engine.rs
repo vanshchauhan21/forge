@@ -1,7 +1,6 @@
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::Display;
 
-use forge_env::Environment;
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
@@ -146,6 +145,12 @@ impl ToolName {
     }
 }
 
+impl Default for ToolEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ToolEngine {
     pub async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
         let output = match self.tools.get(name) {
@@ -162,6 +167,43 @@ impl ToolEngine {
             .map(|tool| tool.definition.clone())
             .collect()
     }
+
+    pub fn new() -> Self {
+        let tools: HashMap<ToolName, Tool> = [
+            Tool::new(FSRead),
+            Tool::new(FSWrite),
+            Tool::new(FSList),
+            Tool::new(FSSearch),
+            Tool::new(FSFileInfo),
+            Tool::new(FSReplace),
+            Tool::new(Outline),
+            Tool::new(Shell::default()),
+            // TODO: uncomment them later on, as of now we only need the above tools.
+            Tool::new(Think::default()),
+            // importer::import(AskFollowUpQuestion),
+        ]
+        .into_iter()
+        .map(|tool| (tool.name.clone(), tool))
+        .collect::<HashMap<_, _>>();
+
+        Self { tools }
+    }
+
+    pub fn usage_prompt(&self) -> String {
+        let mut tools: Vec<_> = self.tools.values().collect();
+        tools.sort_by(|a, b| a.definition.name.as_str().cmp(b.definition.name.as_str()));
+
+        tools
+            .iter()
+            .enumerate()
+            .fold("".to_string(), |mut acc, (i, tool)| {
+                acc.push('\n');
+                acc.push_str((i + 1).to_string().as_str());
+                acc.push_str(". ");
+                acc.push_str(tool.definition.usage_prompt().to_string().as_str());
+                acc
+            })
+    }
 }
 
 struct Tool {
@@ -170,16 +212,8 @@ struct Tool {
     definition: ToolDefinition,
 }
 
-struct ToolBuilder {
-    env: Environment,
-}
-
-impl ToolBuilder {
-    fn new(env: Environment) -> Self {
-        Self { env }
-    }
-
-    fn build<T>(&self, tool: T) -> Tool
+impl Tool {
+    fn new<T>(tool: T) -> Tool
     where
         T: ToolTrait + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
@@ -193,29 +227,8 @@ impl ToolBuilder {
         let executable = Box::new(JsonTool(tool));
 
         let input: RootSchema = schema_for!(T::Input);
-        let input: RootSchema = serde_json::from_str(
-            &self
-                .env
-                .render(&serde_json::to_string(&input).unwrap())
-                .unwrap(),
-        )
-        .unwrap();
-
         let output: RootSchema = schema_for!(T::Output);
-        let output: RootSchema = serde_json::from_str(
-            &self
-                .env
-                .render(&serde_json::to_string(&output).unwrap())
-                .unwrap(),
-        )
-        .unwrap();
-
-        let mut description = self.env.render(T::description()).unwrap_or_else(|err| {
-            panic!(
-                "Unable to render description for tool {}, err: {:?}",
-                name, err
-            )
-        });
+        let mut description = T::description().to_string();
 
         description.push_str("\n\nParameters:");
 
@@ -267,47 +280,6 @@ impl ToolBuilder {
     }
 }
 
-impl ToolEngine {
-    pub fn new(env: Environment) -> Self {
-        let builder = ToolBuilder::new(env);
-
-        let tools: HashMap<ToolName, Tool> = [
-            builder.build(FSRead),
-            builder.build(FSWrite),
-            builder.build(FSList),
-            builder.build(FSSearch),
-            builder.build(FSFileInfo),
-            builder.build(FSReplace),
-            builder.build(Outline),
-            builder.build(Shell::default()),
-            // TODO: uncomment them later on, as of now we only need the above tools.
-            builder.build(Think::default()),
-            // importer::import(AskFollowUpQuestion),
-        ]
-        .into_iter()
-        .map(|tool| (tool.name.clone(), tool))
-        .collect::<HashMap<_, _>>();
-
-        Self { tools }
-    }
-
-    pub fn usage_prompt(&self) -> String {
-        let mut tools: Vec<_> = self.tools.values().collect();
-        tools.sort_by(|a, b| a.definition.name.as_str().cmp(b.definition.name.as_str()));
-
-        tools
-            .iter()
-            .enumerate()
-            .fold("".to_string(), |mut acc, (i, tool)| {
-                acc.push('\n');
-                acc.push_str((i + 1).to_string().as_str());
-                acc.push_str(". ");
-                acc.push_str(tool.definition.usage_prompt().to_string().as_str());
-                acc
-            })
-    }
-}
-
 #[cfg(test)]
 mod test {
 
@@ -316,41 +288,15 @@ mod test {
     use super::*;
     use crate::{FSFileInfo, FSSearch};
 
-    fn test_env() -> Environment {
-        Environment {
-            cwd: "/Users/test".into(),
-            os: "TestOS".into(),
-            shell: "ZSH".into(),
-            home: Some("/Users".into()),
-            files: vec!["test.txt".into()],
-        }
-    }
-
-    fn builder() -> ToolBuilder {
-        ToolBuilder::new(test_env())
-    }
-
     #[test]
     fn test_id() {
-        let importer = builder();
-
-        assert!(importer
-            .build(FSRead)
-            .name
-            .into_string()
-            .ends_with("fs_read"));
-        assert!(importer
-            .build(FSSearch)
+        assert!(Tool::new(FSRead).name.into_string().ends_with("fs_read"));
+        assert!(Tool::new(FSSearch)
             .name
             .into_string()
             .ends_with("fs_search"));
-        assert!(importer
-            .build(FSList)
-            .name
-            .into_string()
-            .ends_with("fs_list"));
-        assert!(importer
-            .build(FSFileInfo)
+        assert!(Tool::new(FSList).name.into_string().ends_with("fs_list"));
+        assert!(Tool::new(FSFileInfo)
             .name
             .into_string()
             .ends_with("file_info"));
@@ -358,7 +304,7 @@ mod test {
 
     #[test]
     fn test_usage_prompt() {
-        let docs = ToolEngine::new(test_env()).usage_prompt();
+        let docs = ToolEngine::new().usage_prompt();
 
         assert_snapshot!(docs);
     }
