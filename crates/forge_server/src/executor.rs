@@ -8,12 +8,14 @@ use tokio_stream::StreamExt;
 
 use crate::app::{Action, ChatResponse, Command, FileResponse};
 use crate::runtime::Executor;
+use crate::system_prompt::SystemPrompt;
 use crate::Error;
 
 pub struct ChatCommandExecutor {
     provider: Arc<Provider<Request, Response, forge_provider::Error>>,
     tools: Arc<ToolEngine>,
     tx: mpsc::Sender<ChatResponse>,
+    system_prompt: SystemPrompt,
 }
 
 impl ChatCommandExecutor {
@@ -22,12 +24,14 @@ impl ChatCommandExecutor {
         api_key: impl Into<String>,
         tx: mpsc::Sender<ChatResponse>,
     ) -> Self {
-        let tools = ToolEngine::new(env);
+        let tools = Arc::new(ToolEngine::new());
 
         Self {
             provider: Arc::new(Provider::open_router(api_key.into(), None)),
-            tools: Arc::new(tools),
+            tools: tools.clone(),
             tx,
+
+            system_prompt: SystemPrompt::new(env, tools),
         }
     }
 }
@@ -51,9 +55,19 @@ impl Executor for ChatCommandExecutor {
 
                 Ok(stream)
             }
-            Command::AssistantMessage(a) => {
+            Command::AssistantMessage(request) => {
+                // Set system prompt based on the model type
+                let tool = if request.model.tool_supported() {
+                    self.system_prompt.clone().use_tool(true)
+                } else {
+                    self.system_prompt.clone()
+                };
+                let system_message = tool.render().unwrap();
+
+                let request = request.clone().set_system_message(system_message);
+
                 let actions =
-                    self.provider.chat(a.clone()).await?.map(|response| {
+                    self.provider.chat(request).await?.map(|response| {
                         response.map(Action::AssistantResponse).map_err(Error::from)
                     });
 

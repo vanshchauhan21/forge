@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_env::Environment;
-use forge_provider::{CompletionMessage, Model, ModelId, Provider, Request, Response};
+use forge_provider::{Model, ModelId, Provider, Request, Response};
 use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -25,16 +25,9 @@ pub struct Server {
 
 impl Server {
     pub fn new(env: Environment, api_key: impl Into<String>) -> Server {
-        let tools = ToolEngine::new(env.clone());
+        let tools = ToolEngine::new();
 
-        let system_prompt = env
-            .clone()
-            .render(include_str!("./prompts/system.md"))
-            .expect("Failed to render system prompt");
-
-        let request = Request::new(ModelId::default())
-            .add_message(CompletionMessage::system(system_prompt))
-            .tools(tools.list());
+        let request = Request::new(ModelId::default()).tools(tools.list());
 
         let cwd: String = env.cwd.clone();
         let api_key: String = api_key.into();

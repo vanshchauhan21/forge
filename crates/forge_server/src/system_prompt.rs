@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use derive_setters::Setters;
 use forge_env::Environment;
 use forge_tool::ToolEngine;
@@ -6,20 +8,20 @@ use serde::Serialize;
 
 use crate::Result;
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Context {
     env: Environment,
     tool_information: String,
     use_tool: bool,
 }
 
-#[derive(Setters)]
+#[derive(Clone, Setters)]
 pub struct SystemPrompt {
     ctx: Context,
 }
 
 impl SystemPrompt {
-    pub fn new(env: Environment, tools: ToolEngine) -> Self {
+    pub fn new(env: Environment, tools: Arc<ToolEngine>) -> Self {
         let tool_information = tools.usage_prompt();
 
         Self { ctx: Context { env, tool_information, use_tool: true } }
@@ -61,7 +63,7 @@ mod tests {
     #[test]
     fn test_tool_supported() {
         let env = test_env();
-        let tools = ToolEngine::new(env.clone());
+        let tools = Arc::new(ToolEngine::new());
         let prompt = SystemPrompt::new(env, tools).render().unwrap();
         assert_snapshot!(prompt);
     }
@@ -69,7 +71,7 @@ mod tests {
     #[test]
     fn test_tool_unsupported() {
         let env = test_env();
-        let tools = ToolEngine::new(env.clone());
+        let tools = Arc::new(ToolEngine::new());
         let prompt = SystemPrompt::new(env, tools)
             .use_tool(true)
             .render()

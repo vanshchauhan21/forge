@@ -657,7 +657,6 @@ dependencies = [
  "derive_setters",
  "dirs",
  "forge_walker",
- "handlebars",
  "serde",
 ]
 
@@ -735,10 +734,10 @@ dependencies = [
  "async-trait",
  "colorize",
  "dissimilar",
- "forge_env",
  "forge_tool_macros",
  "forge_walker",
  "glob",
+ "handlebars",
  "insta",
  "nom 8.0.0-beta.1",
  "regex",
