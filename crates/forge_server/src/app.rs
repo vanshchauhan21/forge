@@ -154,9 +154,11 @@ impl Application for App {
                     self.assistant_buffer.clear();
                 }
 
-                commands.push(Command::UserMessage(ChatResponse::Text(
-                    response.content.to_string(),
-                )));
+                if !response.content.is_empty() {
+                    let message =
+                        Command::UserMessage(ChatResponse::Text(response.content.to_string()));
+                    commands.push(message);
+                }
             }
             Action::ToolResponse(tool_result) => {
                 self.request = self.request.add_message(tool_result.clone());
@@ -508,5 +510,17 @@ mod tests {
         let app = App::default();
 
         assert_eq!(app.request.messages.len(), 0);
+    }
+
+    #[test]
+    fn test_empty_assistant_response_message() {
+        let app = App::default();
+        let message = Action::AssistantResponse(Response::assistant(""));
+        let (_, commands) = app.run(message).unwrap();
+
+        let no_user_message = commands
+            .iter()
+            .all(|cmd| !matches!(cmd, Command::UserMessage(_)));
+        assert!(no_user_message);
     }
 }
