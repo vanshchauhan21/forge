@@ -9,11 +9,13 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {
-    /// The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
+    /// The path of the directory to search in (relative to the current working
+    /// directory). This directory will be recursively searched.
     pub path: String,
     /// The regular expression pattern to search for. Uses Rust regex syntax.
     pub regex: String,
-    /// Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).
+    /// Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not
+    /// provided, it will search all files (*).
     pub file_pattern: Option<String>,
 }
 

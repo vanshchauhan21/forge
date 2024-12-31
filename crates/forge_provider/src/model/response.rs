@@ -19,10 +19,12 @@ pub struct Response {
 /// Read more: https://platform.openai.com/docs/guides/function-calling#edge-cases
 #[derive(Clone, Debug, Deserialize, Serialize, EnumString, PartialEq, Eq)]
 pub enum FinishReason {
-    /// The model stopped generating output because it reached the maximum allowed length.
+    /// The model stopped generating output because it reached the maximum
+    /// allowed length.
     #[strum(serialize = "length")]
     Length,
-    /// The model stopped generating output because it encountered content that violated filters.
+    /// The model stopped generating output because it encountered content that
+    /// violated filters.
     #[strum(serialize = "content_filter")]
     ContentFilter,
     /// The model stopped generating output because it made a tool call.
@@ -82,7 +84,7 @@ mod tests {
             FinishReason::from_str("tool_calls").unwrap(),
             FinishReason::ToolCalls
         );
-        assert_eq!(FinishReason::from_str("stop").unwrap(), FinishReason::Stop);        
+        assert_eq!(FinishReason::from_str("stop").unwrap(), FinishReason::Stop);
         assert_eq!(
             FinishReason::from_str("end_turn").unwrap(),
             FinishReason::Stop

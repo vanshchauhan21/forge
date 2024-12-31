@@ -6,7 +6,8 @@ use crate::{Description, ToolTrait};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFileInfoInput {
-    /// The path of the file or directory to inspect (relative to the current working directory)
+    /// The path of the file or directory to inspect (relative to the current
+    /// working directory)
     pub path: String,
 }
 
