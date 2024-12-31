@@ -81,34 +81,20 @@ impl App {
 }
 
 impl App {
-    fn handle_finish_reason(
-        mut self,
-        finish_reason: FinishReason,
-        too_call_message: Option<ToolCall>,
-    ) -> Result<(Self, Vec<Command>)> {
+    fn on_finish_reason(mut self, finish_reason: FinishReason) -> Result<(Self, Vec<Command>)> {
         let mut commands = Vec::new();
+        let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
 
-        match finish_reason {
-            FinishReason::ToolCalls => {
-                let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
+        if finish_reason == FinishReason::ToolCalls {
+            let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
 
-                // since tools is used, clear the tool_raw_arguments.
-                self.tool_call_part.clear();
-
-                commands.push(Command::ToolUse(tool_call.clone()));
-                let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
-                message = message.tool_call(tool_call);
-                self.request = self.request.clone().add_message(message);
-            }
-            _ => {
-                let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
-                if let Some(tool_call) = too_call_message {
-                    message = message.tool_call(tool_call);
-                }
-                self.request = self.request.clone().add_message(message);
-            }
+            // since tools is used, clear the tool_raw_arguments.
+            self.tool_call_part.clear();
+            commands.push(Command::ToolUse(tool_call.clone()));
+            message = message.tool_call(tool_call);
         }
 
+        self.request = self.request.clone().add_message(message);
         self.assistant_buffer.clear();
         Ok((self, commands))
     }
@@ -167,9 +153,7 @@ impl App {
 
     fn on_assistant_response(mut self, response: Response) -> Result<(Self, Vec<Command>)> {
         let mut commands = Vec::new();
-        let too_call_message: Option<ToolCall> = None;
         self.assistant_buffer.push_str(response.content.as_str());
-
         if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
             if let Some(too_call_part) = response.tool_call.first() {
                 let too_call_start =
@@ -181,8 +165,7 @@ impl App {
         self.tool_call_part.extend(response.tool_call);
 
         if let Some(finish_reason) = response.finish_reason {
-            let (app, finish_commands) =
-                self.handle_finish_reason(finish_reason, too_call_message)?;
+            let (app, finish_commands) = self.on_finish_reason(finish_reason)?;
             self = app;
             commands.extend(finish_commands);
         }
