@@ -135,7 +135,7 @@ impl Application for App {
 
                 self.tool_call_part.extend(response.tool_call);
 
-                if let Some(FinishReason::ToolCall) = response.finish_reason {
+                if let Some(FinishReason::ToolCalls) = response.finish_reason {
                     let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
 
                     // since tools is used, clear the tool_raw_arguments.
@@ -241,7 +241,7 @@ mod tests {
             .tool_call(vec![ToolCallPart::default()
                 .name(ToolName::new("test_tool"))
                 .arguments_part(r#"{"key": "value"}"#)])
-            .finish_reason(FinishReason::ToolCall);
+            .finish_reason(FinishReason::ToolCalls);
 
         let (_, command) = app.run(response).unwrap();
 
@@ -259,7 +259,7 @@ mod tests {
                 .call_id(ToolCallId::new("test_call_id"))
                 .name(ToolName::new("fs_list"))
                 .arguments_part(r#"{"path": "."}"#)])
-            .finish_reason(FinishReason::ToolCall);
+            .finish_reason(FinishReason::ToolCalls);
 
         let (app, command) = app.run(response).unwrap();
 
@@ -348,7 +348,7 @@ mod tests {
 
         let response = Response::new("Assistant response")
             .tool_call(vec![])
-            .finish_reason(FinishReason::EndTurn);
+            .finish_reason(FinishReason::Stop);
 
         let (app, command) = app.run(response).unwrap();
 
@@ -373,7 +373,7 @@ mod tests {
         let message_2 = Action::AssistantResponse(
             Response::new("")
                 .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
-                .finish_reason(FinishReason::ToolCall),
+                .finish_reason(FinishReason::ToolCalls),
         );
 
         let message_3 = Action::ToolResponse(
@@ -407,7 +407,7 @@ mod tests {
                         .arguments_part(r#"{"foo": 1, "bar": 2}"#)
                         .call_id(ToolCallId::new("too_call_001")),
                 )
-                .finish_reason(FinishReason::ToolCall),
+                .finish_reason(FinishReason::ToolCalls),
         );
 
         let tool_result =

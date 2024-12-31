@@ -1,5 +1,6 @@
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 use super::ToolCallPart;
 
@@ -14,21 +15,22 @@ pub struct Response {
     pub finish_reason: Option<FinishReason>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// The reason why the model stopped generating output.
+/// Read more: https://platform.openai.com/docs/guides/function-calling#edge-cases
+#[derive(Clone, Debug, Deserialize, Serialize, EnumString, PartialEq, Eq)]
 pub enum FinishReason {
-    ToolCall,
-    EndTurn,
-}
-
-impl FinishReason {
-    pub fn parse(reason: String) -> Option<Self> {
-        match reason.as_str() {
-            "tool_use" => Some(FinishReason::ToolCall),
-            "tool_calls" => Some(FinishReason::ToolCall),
-            "end_turn" => Some(FinishReason::EndTurn),
-            _ => None,
-        }
-    }
+    /// The model stopped generating output because it reached the maximum allowed length.
+    #[strum(serialize = "length")]
+    Length,
+    /// The model stopped generating output because it encountered content that violated filters.
+    #[strum(serialize = "content_filter")]
+    ContentFilter,
+    /// The model stopped generating output because it made a tool call.
+    #[strum(serialize = "tool_calls")]
+    ToolCalls,
+    /// The model stopped generating output normally.
+    #[strum(serialize = "stop", serialize = "end_turn")]
+    Stop,
 }
 
 impl Response {
@@ -57,5 +59,33 @@ impl Response {
     pub fn finish_reason_opt(mut self, reason: Option<FinishReason>) -> Self {
         self.finish_reason = reason;
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn test_finish_reason_from_str() {
+        assert_eq!(
+            FinishReason::from_str("length").unwrap(),
+            FinishReason::Length
+        );
+        assert_eq!(
+            FinishReason::from_str("content_filter").unwrap(),
+            FinishReason::ContentFilter
+        );
+        assert_eq!(
+            FinishReason::from_str("tool_calls").unwrap(),
+            FinishReason::ToolCalls
+        );
+        assert_eq!(FinishReason::from_str("stop").unwrap(), FinishReason::Stop);        
+        assert_eq!(
+            FinishReason::from_str("end_turn").unwrap(),
+            FinishReason::Stop
+        );
     }
 }

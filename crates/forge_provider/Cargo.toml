@@ -16,3 +16,5 @@ derive_setters = "0.1.6"
 forge_tool = { path = "../forge_tool" }
 reqwest-eventsource = "0.6.0"
 moka2 = "0.13.0"
+strum = "0.26.3"
+strum_macros = "0.26.4"

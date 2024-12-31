@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use forge_tool::ToolName;
 use serde::{Deserialize, Serialize};
@@ -83,13 +84,20 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
         if let Some(choice) = res.choices.first() {
             let response = match choice {
                 Choice::NonChat { text, finish_reason, .. } => {
-                    ModelResponse::assistant(text.clone())
-                        .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse))
+                    ModelResponse::assistant(text.clone()).finish_reason_opt(
+                        finish_reason
+                            .clone()
+                            .and_then(|s| FinishReason::from_str(&s).ok()),
+                    )
                 }
                 Choice::NonStreaming { message, finish_reason, .. } => {
                     let mut resp =
                         ModelResponse::assistant(message.content.clone().unwrap_or_default())
-                            .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
+                            .finish_reason_opt(
+                                finish_reason
+                                    .clone()
+                                    .and_then(|s| FinishReason::from_str(&s).ok()),
+                            );
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallPart {
@@ -106,7 +114,11 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                 Choice::Streaming { delta, finish_reason, .. } => {
                     let mut resp =
                         ModelResponse::assistant(delta.content.clone().unwrap_or_default())
-                            .finish_reason_opt(finish_reason.clone().and_then(FinishReason::parse));
+                            .finish_reason_opt(
+                                finish_reason
+                                    .clone()
+                                    .and_then(|s| FinishReason::from_str(&s).ok()),
+                            );
                     if let Some(tool_calls) = &delta.tool_calls {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallPart {
