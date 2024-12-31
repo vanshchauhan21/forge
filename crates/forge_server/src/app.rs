@@ -1,17 +1,17 @@
-use derive_more::derive::From;
 use derive_setters::Setters;
 use forge_prompt::Prompt;
 use forge_provider::{
     CompletionMessage, ContentMessage, FinishReason, ModelId, Request, Response, ToolCall,
     ToolCallPart, ToolResult,
 };
+use forge_tool::ToolName;
 use serde::Serialize;
 
 use crate::runtime::Application;
 use crate::template::MessageTemplate;
 use crate::Result;
 
-#[derive(Clone, Debug, From)]
+#[derive(Clone, Debug, derive_more::From)]
 pub enum Action {
     UserMessage(ChatRequest),
     FileReadResponse(Vec<FileResponse>),
@@ -42,14 +42,35 @@ pub enum Command {
     ToolCall(#[from] ToolCall),
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, derive_more::From)]
 #[serde(rename_all = "camelCase")]
 pub enum ChatResponse {
+    #[from(ignore)]
     Text(String),
-    ToolUseStart(ToolCallPart),
+    ToolUseStart(ToolUseStart),
     ToolUseEnd(ToolResult),
     Complete,
+    #[from(ignore)]
     Fail(String),
+}
+
+#[derive(Default, Debug, Clone, Serialize, PartialEq, Eq, Setters)]
+#[serde(rename_all = "camelCase")]
+#[setters(strip_option)]
+pub struct ToolUseStart {
+    pub tool_name: Option<ToolName>,
+}
+
+impl From<ToolCallPart> for ToolUseStart {
+    fn from(value: ToolCallPart) -> Self {
+        Self { tool_name: value.name }
+    }
+}
+
+impl From<ToolName> for ToolUseStart {
+    fn from(value: ToolName) -> Self {
+        Self { tool_name: Some(value) }
+    }
 }
 
 #[derive(Default, Debug, Clone, Serialize, Setters)]
@@ -103,6 +124,9 @@ impl App {
                     // LLM has no-clue that it made a tool call so we simply dispatch the tool_call
                     // for execution.
                     commands.push(Command::ToolCall(tool_call.clone()));
+                    commands.push(Command::UserMessage(
+                        ToolUseStart::from(tool_call.name).into(),
+                    ))
                 }
             }
         }
@@ -170,7 +194,7 @@ impl App {
         if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
             if let Some(too_call_part) = response.tool_call.first() {
                 let too_call_start =
-                    Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone()));
+                    Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone().into()));
                 commands.push(too_call_start)
             }
         }
@@ -579,5 +603,9 @@ mod tests {
                 "arg_2": "b.txt"
             }))
         )));
+
+        assert!(cmd.has(Command::UserMessage(ChatResponse::ToolUseStart(
+            ToolUseStart::default().tool_name(ToolName::new("tool_1"))
+        ))));
     }
 }
