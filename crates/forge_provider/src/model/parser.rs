@@ -138,8 +138,11 @@ mod tests {
             let mut xml = format!("<{}>", self.name);
             let args: Vec<_> = self.args.iter().collect();
             for (idx, (key, value)) in args.iter().enumerate() {
-                xml.push_str(&format!("<{}>{}</{}>{}", 
-                    key, value, key,
+                xml.push_str(&format!(
+                    "<{}>{}</{}>{}",
+                    key,
+                    value,
+                    key,
                     if idx < args.len() - 1 { " " } else { "" }
                 ));
             }
@@ -250,8 +253,9 @@ mod tests {
     fn test_parse_with_large_text_between() {
         let tool1 = ToolCallBuilder::new("tool1").arg("arg1", "value1");
         let tool2 = ToolCallBuilder::new("tool2").arg("arg2", "value2");
-        let input = format!("{}\nLots of text here...\nMore text...\nEven more text...\n{}", 
-            tool1.build_xml(), 
+        let input = format!(
+            "{}\nLots of text here...\nMore text...\nEven more text...\n{}",
+            tool1.build_xml(),
             tool2.build_xml()
         );
 
