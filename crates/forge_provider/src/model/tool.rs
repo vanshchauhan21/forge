@@ -3,9 +3,8 @@ use forge_tool::ToolName;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{Error, Result};
-
 use super::parser::parse;
+use crate::{Error, Result};
 
 /// Unique identifier for a using a tool
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
