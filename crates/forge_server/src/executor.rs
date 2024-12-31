@@ -55,23 +55,26 @@ impl Executor for ChatCommandExecutor {
                 Ok(stream)
             }
             Command::AssistantMessage(request) => {
-                // Set system prompt based on the model type
-                let tool = if request.model.tool_supported() {
-                    self.system_prompt.clone().use_tool(true)
+                // TODO: To use or not to use tools should be decided by the app and not the
+                // executor. Set system prompt based on the model type
+                let parameters = self.provider.parameters(request.model.clone()).await?;
+                let request = if parameters.tools {
+                    request
+                        .clone()
+                        .set_system_message(self.system_prompt.clone().use_tool(true).render()?)
+                        .tools(self.tools.list())
                 } else {
-                    self.system_prompt.clone()
+                    request
+                        .clone()
+                        .set_system_message(self.system_prompt.clone().render()?)
                 };
-
-                let request = request.clone().set_system_message(tool.render()?);
 
                 let actions =
                     self.provider.chat(request).await?.map(|response| {
                         response.map(Action::AssistantResponse).map_err(Error::from)
                     });
 
-                let msg: BoxStream<Action, Error> = Box::pin(actions);
-
-                Ok(msg)
+                Ok(Box::pin(actions))
             }
             Command::UserMessage(message) => {
                 self.tx.send(message.clone()).await?;

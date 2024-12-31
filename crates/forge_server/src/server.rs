@@ -27,7 +27,7 @@ impl Server {
     pub fn new(env: Environment, api_key: impl Into<String>) -> Server {
         let tools = ToolEngine::new();
 
-        let request = Request::new(ModelId::default()).tools(tools.list());
+        let request = Request::new(ModelId::default());
 
         let cwd: String = env.cwd.clone();
         let api_key: String = api_key.into();
