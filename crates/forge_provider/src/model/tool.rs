@@ -5,6 +5,8 @@ use serde_json::Value;
 
 use crate::{Error, Result};
 
+use super::parser::parse;
+
 /// Unique identifier for a using a tool
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(transparent)]
@@ -71,6 +73,10 @@ impl ToolCall {
         } else {
             Err(Error::ToolUseMissingName)
         }
+    }
+
+    pub fn parse_xml(input: &str) -> std::result::Result<Self, String> {
+        parse(input)
     }
 }
 
