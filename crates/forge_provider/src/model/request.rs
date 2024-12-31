@@ -19,40 +19,26 @@ impl Request {
     }
 
     pub fn add_tool(mut self, tool: impl Into<ToolDefinition>) -> Self {
-        self.add_tool_mut(tool);
+        let tool = tool;
+        let tool: ToolDefinition = tool.into();
+        self.tools.push(tool);
+
         self
     }
 
     pub fn add_message(mut self, content: impl Into<CompletionMessage>) -> Self {
-        self.add_message_mut(content);
+        self.messages.push(content.into());
         self
     }
 
     pub fn extend_tools(mut self, tools: Vec<impl Into<ToolDefinition>>) -> Self {
-        self.extend_tools_mut(tools);
+        self.tools.extend(tools.into_iter().map(Into::into));
         self
     }
 
     pub fn extend_messages(mut self, messages: Vec<impl Into<CompletionMessage>>) -> Self {
-        self.extend_messages_mut(messages);
-        self
-    }
-
-    pub fn add_tool_mut(&mut self, tool: impl Into<ToolDefinition>) {
-        let tool: ToolDefinition = tool.into();
-        self.tools.push(tool);
-    }
-
-    pub fn add_message_mut(&mut self, content: impl Into<CompletionMessage>) {
-        self.messages.push(content.into());
-    }
-
-    pub fn extend_tools_mut(&mut self, tools: Vec<impl Into<ToolDefinition>>) {
-        self.tools.extend(tools.into_iter().map(Into::into));
-    }
-
-    pub fn extend_messages_mut(&mut self, messages: Vec<impl Into<CompletionMessage>>) {
         self.messages.extend(messages.into_iter().map(Into::into));
+        self
     }
 }
 
