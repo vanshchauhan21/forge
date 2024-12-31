@@ -68,8 +68,32 @@ pub struct Model {
 pub struct ModelId(String);
 
 impl ModelId {
-    pub fn starts_with(&self, prefix: &str) -> bool {
-        self.0.starts_with(prefix)
+    pub fn tool_supported(&self) -> bool {
+        // This list is created by querying
+        // [open router](https://openrouter.ai/api/v1/models?supported_parameters=tools)
+        [
+            "ai21/jamba",
+            "amazon/nova",
+            "anthropic/claude",
+            "cohere/command-r",
+            "deepseek/deepseek-chat",
+            "google/gemini",
+            "meta-llama/llama",
+            "microsoft/phi",
+            "mistralai/codestral-mamba",
+            "mistralai/ministral",
+            "mistralai/mistral",
+            "mistralai/mixtral",
+            "mistralai/pixtral",
+            "nousresearch/hermes",
+            "nvidia/llama",
+            "openai/gpt",
+            "openai/o1",
+            "qwen/qwen",
+            "x-ai/grok",
+        ]
+        .iter()
+        .any(|prefix| self.0.starts_with(prefix))
     }
 }
 
