@@ -81,6 +81,38 @@ impl App {
 }
 
 impl App {
+    fn handle_finish_reason(
+        mut self,
+        finish_reason: FinishReason,
+        too_call_message: Option<ToolCall>,
+    ) -> Result<(Self, Vec<Command>)> {
+        let mut commands = Vec::new();
+
+        match finish_reason {
+            FinishReason::ToolCalls => {
+                let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
+
+                // since tools is used, clear the tool_raw_arguments.
+                self.tool_call_part.clear();
+
+                commands.push(Command::ToolUse(tool_call.clone()));
+                let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
+                message = message.tool_call(tool_call);
+                self.request = self.request.clone().add_message(message);
+            }
+            _ => {
+                let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
+                if let Some(tool_call) = too_call_message {
+                    message = message.tool_call(tool_call);
+                }
+                self.request = self.request.clone().add_message(message);
+            }
+        }
+
+        self.assistant_buffer.clear();
+        Ok((self, commands))
+    }
+
     fn on_tool_response(mut self, tool_result: ToolResult) -> Result<(Self, Vec<Command>)> {
         let mut commands = Vec::new();
 
@@ -135,7 +167,7 @@ impl App {
 
     fn on_assistant_response(mut self, response: Response) -> Result<(Self, Vec<Command>)> {
         let mut commands = Vec::new();
-        let mut too_call_message: Option<ToolCall> = None;
+        let too_call_message: Option<ToolCall> = None;
         self.assistant_buffer.push_str(response.content.as_str());
 
         if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
@@ -148,23 +180,11 @@ impl App {
 
         self.tool_call_part.extend(response.tool_call);
 
-        if let Some(FinishReason::ToolCalls) = response.finish_reason {
-            let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
-
-            // since tools is used, clear the tool_raw_arguments.
-            self.tool_call_part.clear();
-
-            too_call_message = Some(tool_call.clone());
-            commands.push(Command::ToolUse(tool_call));
-        }
-
-        if response.finish_reason.is_some() {
-            let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
-            if let Some(tool_call) = too_call_message {
-                message = message.tool_call(tool_call);
-            }
-            self.request = self.request.add_message(message);
-            self.assistant_buffer.clear();
+        if let Some(finish_reason) = response.finish_reason {
+            let (app, finish_commands) =
+                self.handle_finish_reason(finish_reason, too_call_message)?;
+            self = app;
+            commands.extend(finish_commands);
         }
 
         if !response.content.is_empty() {
@@ -378,7 +398,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_too_call_seq() {
         let app = App::default();
 
@@ -487,6 +506,7 @@ mod tests {
             think_result_end
         ))));
     }
+
     #[test]
     fn test_think_tool_state() {
         let app = App::default();
