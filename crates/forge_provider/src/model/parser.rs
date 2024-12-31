@@ -1,12 +1,11 @@
-use forge_tool::ToolName;
-use nom::{
-    bytes::complete::{tag, take_until, take_while1},
-    character::complete::multispace0,
-    multi::many0,
-    IResult, Parser,
-};
-use serde_json::Value;
 use std::collections::HashMap;
+
+use forge_tool::ToolName;
+use nom::bytes::complete::{tag, take_until, take_while1};
+use nom::character::complete::multispace0;
+use nom::multi::many0;
+use nom::{IResult, Parser};
+use serde_json::Value;
 
 use super::ToolCall;
 
@@ -65,17 +64,17 @@ fn parse_tool_call(input: &str) -> IResult<&str, ToolCallParsed> {
 
 pub fn parse(input: &str) -> Result<ToolCall, String> {
     let (_, parsed) = parse_tool_call(input).map_err(|e| format!("Parsing Error: {}", e))?;
-    let mut args = Value::Object(Default::default());
-    for (key, value) in parsed.args {
-        args.as_object_mut()
-            .cloned()
-            .unwrap_or_default()
-            .insert(key, Value::String(value));
-    }
+
     Ok(ToolCall {
         name: ToolName::new(parsed.name),
         call_id: None,
-        arguments: args,
+        arguments: Value::Object(parsed.args.into_iter().fold(
+            serde_json::Map::new(),
+            |mut map, (key, value)| {
+                map.insert(key, Value::String(value));
+                map
+            },
+        )),
     })
 }
 
@@ -91,10 +90,7 @@ mod tests {
 
     impl ToolCallBuilder {
         fn new(name: &str) -> Self {
-            Self {
-                name: name.to_string(),
-                args: HashMap::new(),
-            }
+            Self { name: name.to_string(), args: HashMap::new() }
         }
 
         fn arg(mut self, key: &str, value: &str) -> Self {
@@ -135,7 +131,9 @@ mod tests {
 
     #[test]
     fn test_parse_args() {
-        let action = parse_args("<key1>value1</key1> <key2>value2</key2>").unwrap().1;
+        let action = parse_args("<key1>value1</key1> <key2>value2</key2>")
+            .unwrap()
+            .1;
         let expected = {
             let mut map = HashMap::new();
             map.insert("key1".to_string(), "value1".to_string());
@@ -152,10 +150,7 @@ mod tests {
             .arg("arg2", "value2");
 
         let action = parse_tool_call(&tool.build_xml()).unwrap().1;
-        let expected = ToolCallParsed {
-            name: "tool_name".to_string(),
-            args: tool.args,
-        };
+        let expected = ToolCallParsed { name: "tool_name".to_string(), args: tool.args };
         assert_eq!(action, expected);
     }
 
@@ -172,8 +167,7 @@ mod tests {
 
     #[test]
     fn test_parse_with_surrounding_text() {
-        let tool = ToolCallBuilder::new("tool_name")
-            .arg("arg1", "value1");
+        let tool = ToolCallBuilder::new("tool_name").arg("arg1", "value1");
         let input = format!("Some text {} more text", tool.build_xml());
 
         let action = parse(&input).unwrap();
