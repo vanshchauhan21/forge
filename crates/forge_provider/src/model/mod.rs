@@ -2,6 +2,7 @@
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
 mod message;
+mod parser;
 mod request;
 mod response;
 mod tool;
