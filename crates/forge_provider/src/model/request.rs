@@ -67,6 +67,12 @@ pub struct Model {
 #[serde(transparent)]
 pub struct ModelId(String);
 
+impl ModelId {
+    pub fn starts_with(&self, prefix: &str) -> bool {
+        self.0.starts_with(prefix)
+    }
+}
+
 impl Default for ModelId {
     fn default() -> Self {
         ModelId("openai/gpt-3.5-turbo".to_string())
