@@ -80,94 +80,115 @@ impl App {
     }
 }
 
+impl App {
+    fn on_tool_response(mut self, tool_result: ToolResult) -> Result<(Self, Vec<Command>)> {
+        let mut commands = Vec::new();
+
+        self.request = self.request.add_message(tool_result.clone());
+
+        commands.push(Command::AssistantMessage(self.request.clone()));
+        commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(tool_result)));
+
+        Ok((self, commands))
+    }
+
+    fn on_user_message(mut self, chat: ChatRequest) -> Result<(Self, Vec<Command>)> {
+        let mut commands = Vec::new();
+        let prompt =
+            Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
+
+        self.request = self.request.model(chat.model.clone());
+
+        if self.user_objective.is_none() {
+            self.user_objective = Some(MessageTemplate::task(prompt.clone()));
+        }
+
+        if prompt.files().is_empty() {
+            self.request = self
+                .request
+                .add_message(CompletionMessage::user(chat.content));
+            commands.push(Command::AssistantMessage(self.request.clone()))
+        } else {
+            commands.push(Command::FileRead(prompt.files()))
+        }
+
+        Ok((self, commands))
+    }
+
+    fn on_file_read_response(mut self, files: Vec<FileResponse>) -> Result<(Self, Vec<Command>)> {
+        let mut commands = Vec::new();
+
+        if let Some(message) = self.user_objective.clone() {
+            for fr in files.into_iter() {
+                self.request = self.request.add_message(
+                    message
+                        .clone()
+                        .append(MessageTemplate::file(fr.path, fr.content)),
+                );
+            }
+
+            commands.push(Command::AssistantMessage(self.request.clone()))
+        }
+
+        Ok((self, commands))
+    }
+
+    fn on_assistant_response(mut self, response: Response) -> Result<(Self, Vec<Command>)> {
+        let mut commands = Vec::new();
+        let mut too_call_message: Option<ToolCall> = None;
+        self.assistant_buffer.push_str(response.content.as_str());
+
+        if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
+            if let Some(too_call_part) = response.tool_call.first() {
+                let too_call_start =
+                    Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone()));
+                commands.push(too_call_start)
+            }
+        }
+
+        self.tool_call_part.extend(response.tool_call);
+
+        if let Some(FinishReason::ToolCalls) = response.finish_reason {
+            let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
+
+            // since tools is used, clear the tool_raw_arguments.
+            self.tool_call_part.clear();
+
+            too_call_message = Some(tool_call.clone());
+            commands.push(Command::ToolUse(tool_call));
+        }
+
+        if response.finish_reason.is_some() {
+            let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
+            if let Some(tool_call) = too_call_message {
+                message = message.tool_call(tool_call);
+            }
+            self.request = self.request.add_message(message);
+            self.assistant_buffer.clear();
+        }
+
+        if !response.content.is_empty() {
+            let message = Command::UserMessage(ChatResponse::Text(response.content.to_string()));
+            commands.push(message);
+        }
+
+        Ok((self, commands))
+    }
+}
+
 impl Application for App {
     type Action = Action;
     type Error = crate::Error;
     type Command = Command;
 
-    fn run(mut self, action: impl Into<Action>) -> Result<(Self, Vec<Command>)> {
+    fn run(self, action: impl Into<Action>) -> Result<(Self, Vec<Command>)> {
         let action = action.into();
-        let mut commands = Vec::new();
         match action {
-            Action::UserMessage(chat) => {
-                let prompt = Prompt::parse(chat.content.clone())
-                    .unwrap_or(Prompt::new(chat.content.clone()));
-
-                self.request = self.request.model(chat.model.clone());
-
-                if self.user_objective.is_none() {
-                    self.user_objective = Some(MessageTemplate::task(prompt.clone()));
-                }
-
-                if prompt.files().is_empty() {
-                    self.request = self
-                        .request
-                        .add_message(CompletionMessage::user(chat.content));
-                    commands.push(Command::AssistantMessage(self.request.clone()))
-                } else {
-                    commands.push(Command::FileRead(prompt.files()))
-                }
-            }
-            Action::FileReadResponse(files) => {
-                if let Some(message) = self.user_objective.clone() {
-                    for fr in files.into_iter() {
-                        self.request = self.request.add_message(
-                            message
-                                .clone()
-                                .append(MessageTemplate::file(fr.path, fr.content)),
-                        );
-                    }
-
-                    commands.push(Command::AssistantMessage(self.request.clone()))
-                }
-            }
-            Action::AssistantResponse(response) => {
-                let mut too_call_message: Option<ToolCall> = None;
-                self.assistant_buffer.push_str(response.content.as_str());
-
-                if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
-                    if let Some(too_call_part) = response.tool_call.first() {
-                        let too_call_start =
-                            Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone()));
-                        commands.push(too_call_start)
-                    }
-                }
-
-                self.tool_call_part.extend(response.tool_call);
-
-                if let Some(FinishReason::ToolCalls) = response.finish_reason {
-                    let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
-
-                    // since tools is used, clear the tool_raw_arguments.
-                    self.tool_call_part.clear();
-
-                    too_call_message = Some(tool_call.clone());
-                    commands.push(Command::ToolUse(tool_call));
-                }
-
-                if response.finish_reason.is_some() {
-                    let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
-                    if let Some(tool_call) = too_call_message {
-                        message = message.tool_call(tool_call);
-                    }
-                    self.request = self.request.add_message(message);
-                    self.assistant_buffer.clear();
-                }
-
-                if !response.content.is_empty() {
-                    let message =
-                        Command::UserMessage(ChatResponse::Text(response.content.to_string()));
-                    commands.push(message);
-                }
-            }
-            Action::ToolResponse(tool_result) => {
-                self.request = self.request.add_message(tool_result.clone());
-
-                commands.push(Command::AssistantMessage(self.request.clone()));
-                commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(tool_result)));
-            }
-        };
-        Ok((self, commands))
+            Action::UserMessage(message) => self.on_user_message(message),
+            Action::FileReadResponse(message) => self.on_file_read_response(message),
+            Action::AssistantResponse(message) => self.on_assistant_response(message),
+            Action::ToolResponse(message) => self.on_tool_response(message),
+        }
     }
 }
 
