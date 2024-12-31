@@ -1,6 +1,5 @@
 use derive_setters::Setters;
 use forge_walker::Walker;
-use handlebars::Handlebars;
 use serde::Serialize;
 
 use crate::Result;
@@ -39,34 +38,5 @@ impl Environment {
             home: dirs::home_dir().map(|a| a.display().to_string()),
             files,
         })
-    }
-
-    pub fn render(&self, template: &str) -> Result<String> {
-        let mut hb = Handlebars::new();
-        hb.set_strict_mode(true);
-        Ok(hb.render_template(template, &self)?)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // use crate::default_ctx for unit test in the project.
-
-    fn test_env() -> Environment {
-        Environment {
-            cwd: "/Users/test".into(),
-            os: "TestOS".into(),
-            shell: "ZSH".into(),
-            home: Some("/Users".into()),
-            files: vec!["test.txt".into()],
-        }
-    }
-
-    #[test]
-    fn test_render_with_custom_context() {
-        let result = test_env().render("OS: {{os}}, CWD: {{cwd}}").unwrap();
-        assert_eq!(result, "OS: TestOS, CWD: /Users/test");
     }
 }

@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 derive_more = { version = "1.0.0", features = ["from"] }
-handlebars = "6.2.0"
 serde = "1.0.216"
 dirs = "5.0.1"
 forge_walker = { path = "../forge_walker" }
