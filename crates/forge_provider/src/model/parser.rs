@@ -66,6 +66,34 @@ fn find_next_tool_call(input: &str) -> IResult<&str, &str> {
     Ok((remaining, ""))
 }
 
+fn convert_string_to_value(value: &str) -> Value {
+    // Try to parse as boolean first
+    match value.trim().to_lowercase().as_str() {
+        "true" => return Value::Bool(true),
+        "false" => return Value::Bool(false),
+        _ => {}
+    }
+
+    // Try to parse as number
+    if let Ok(int_val) = value.parse::<i64>() {
+        return Value::Number(int_val.into());
+    }
+
+    if let Ok(float_val) = value.parse::<f64>() {
+        // Create number from float, handling special case where float is actually an integer
+        return if float_val.fract() == 0.0 {
+            Value::Number(serde_json::Number::from(float_val as i64))
+        } else if let Some(num) = serde_json::Number::from_f64(float_val) {
+            Value::Number(num)
+        } else {
+            Value::String(value.to_string())
+        };
+    }
+
+    // Default to string if no other type matches
+    Value::String(value.to_string())
+}
+
 fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCall {
     ToolCall {
         name: ToolName::new(parsed.name),
@@ -73,7 +101,7 @@ fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCall {
         arguments: Value::Object(parsed.args.into_iter().fold(
             serde_json::Map::new(),
             |mut map, (key, value)| {
-                map.insert(key, Value::String(value));
+                map.insert(key, convert_string_to_value(&value));
                 map
             },
         )),
@@ -139,9 +167,9 @@ mod tests {
             let args: Vec<_> = self.args.iter().collect();
             for (idx, (key, value)) in args.iter().enumerate() {
                 xml.push_str(&format!(
-                    "<{}>{}</{}>{}",
-                    key,
-                    value,
+                    "<{}>{}</{}>{}", 
+                    key, 
+                    value, 
                     key,
                     if idx < args.len() - 1 { " " } else { "" }
                 ));
@@ -155,7 +183,7 @@ mod tests {
             for (key, value) in &self.args {
                 args.as_object_mut()
                     .unwrap()
-                    .insert(key.clone(), Value::String(value.clone()));
+                    .insert(key.clone(), convert_string_to_value(value));
             }
             ToolCall {
                 name: ToolName::new(&self.name),
@@ -227,6 +255,70 @@ mod tests {
         let action = parse(&input).unwrap();
         let expected = vec![tool1.build_expected(), tool2.build_expected()];
         assert_eq!(action, expected);
+    }
+
+    #[test]
+    fn test_parse_with_numeric_values() {
+        let tool = ToolCallBuilder::new("tool_name")
+            .arg("int_value", "42")
+            .arg("float_value", "3.14")
+            .arg("large_int", "9223372036854775807")
+            .arg("zero", "0")
+            .arg("negative", "-123");
+
+        let action = parse(&tool.build_xml()).unwrap();
+        let expected = vec![tool.build_expected()];
+        assert_eq!(action, expected);
+
+        if let Value::Object(map) = &action[0].arguments {
+            assert!(matches!(map["int_value"], Value::Number(_)));
+            assert!(matches!(map["float_value"], Value::Number(_)));
+            assert!(matches!(map["large_int"], Value::Number(_)));
+            assert!(matches!(map["zero"], Value::Number(_)));
+            assert!(matches!(map["negative"], Value::Number(_)));
+        }
+    }
+
+    #[test]
+    fn test_parse_with_boolean_values() {
+        let tool = ToolCallBuilder::new("tool_name")
+            .arg("bool1", "true")
+            .arg("bool2", "false")
+            .arg("bool3", "True")
+            .arg("bool4", "FALSE");
+
+        let action = parse(&tool.build_xml()).unwrap();
+        let expected = vec![tool.build_expected()];
+        assert_eq!(action, expected);
+
+        if let Value::Object(map) = &action[0].arguments {
+            assert_eq!(map["bool1"], Value::Bool(true));
+            assert_eq!(map["bool2"], Value::Bool(false));
+            assert_eq!(map["bool3"], Value::Bool(true));
+            assert_eq!(map["bool4"], Value::Bool(false));
+        }
+    }
+
+    #[test]
+    fn test_parse_with_mixed_types() {
+        let tool = ToolCallBuilder::new("tool_name")
+            .arg("text", "hello")
+            .arg("number", "42")
+            .arg("float", "3.14")
+            .arg("bool", "true")
+            .arg("complex", "not_a_number");
+
+        let action = parse(&tool.build_xml()).unwrap();
+        let expected = vec![tool.build_expected()];
+        assert_eq!(action, expected);
+
+        if let Value::Object(map) = &action[0].arguments {
+            assert!(matches!(map["text"], Value::String(_)));
+            assert!(matches!(map["number"], Value::Number(_)));
+            assert!(matches!(map["float"], Value::Number(_)));
+            assert!(matches!(map["bool"], Value::Bool(_)));
+            assert!(matches!(map["complex"], Value::String(_)));
+        }
     }
 
     #[test]
