@@ -10,24 +10,21 @@ pub trait Application: Send + Sync + Sized + Clone {
     type Error: Send;
     type Command: Send;
     fn run(
-        self,
+        &mut self,
         action: impl Into<Self::Action>,
-    ) -> std::result::Result<(Self, Vec<Self::Command>), Self::Error>;
+    ) -> std::result::Result<Vec<Self::Command>, Self::Error>;
 
     #[allow(unused)]
-    fn run_seq(self, actions: Vec<Self::Action>) -> Result<(Self, Vec<Self::Command>), Self::Error>
+    fn run_seq(&mut self, actions: Vec<Self::Action>) -> Result<Vec<Self::Command>, Self::Error>
     where
         Self::Action: Clone,
     {
-        let mut this = self;
         let mut commands = Vec::new();
         for action in actions {
-            let (s, c) = this.run(action.clone())?;
-            this = s;
-            commands.extend(c)
+            commands.extend(self.run(action.clone())?)
         }
 
-        Ok((this, commands))
+        Ok(commands)
     }
 }
 
@@ -56,9 +53,7 @@ impl<A: Application + 'static> ApplicationRuntime<A> {
         >,
     ) -> std::result::Result<(), A::Error> {
         let mut guard = self.state.lock().await;
-        let app = guard.clone();
-        let (app, commands) = app.run(action)?;
-        *guard = app;
+        let commands = guard.run(action)?;
         drop(guard);
 
         join_all(commands.into_iter().map(|command| {

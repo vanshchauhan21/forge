@@ -232,15 +232,14 @@ impl Application for App {
     type Error = crate::Error;
     type Command = Command;
 
-    fn run(mut self, action: impl Into<Action>) -> Result<(Self, Vec<Command>)> {
+    fn run(&mut self, action: impl Into<Action>) -> Result<Vec<Command>> {
         let action = action.into();
-        let commands = match action {
-            Action::UserMessage(message) => self.state.on_user_message(message)?,
-            Action::FileReadResponse(message) => self.state.on_file_read_response(message)?,
-            Action::AssistantResponse(message) => self.state.on_assistant_response(message)?,
-            Action::ToolResponse(message) => self.state.on_tool_response(message)?,
-        };
-        Ok((self, commands))
+        match action {
+            Action::UserMessage(message) => self.state.on_user_message(message),
+            Action::FileReadResponse(message) => self.state.on_file_read_response(message),
+            Action::AssistantResponse(message) => self.state.on_assistant_response(message),
+            Action::ToolResponse(message) => self.state.on_tool_response(message),
+        }
     }
 }
 
@@ -275,11 +274,10 @@ mod tests {
 
     #[test]
     fn test_user_message_action() {
-        let app = App::default();
-
+        let mut app = App::default();
         let chat_request = ChatRequest::new("Hello, world!");
 
-        let (app, command) = app.run(chat_request.clone()).unwrap();
+        let command = app.run(chat_request.clone()).unwrap();
 
         assert_eq!(&app.state.request.model, &ModelId::default());
         assert!(command.has(app.state.request.clone()));
@@ -287,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_file_load_response_action() {
-        let app = App {
+        let mut app = App {
             state: State {
                 user_objective: Some(MessageTemplate::new(
                     Tag::default().name("test"),
@@ -301,7 +299,7 @@ mod tests {
             .path("test_path.txt")
             .content("Test content")];
 
-        let (app, command) = app.run(files.clone()).unwrap();
+        let command = app.run(files.clone()).unwrap();
 
         assert!(app.state.request.messages[0]
             .content()
@@ -315,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_assistant_response_action_with_tool_call() {
-        let app = App::default();
+        let mut app = App::default();
 
         let response = Response::new("Tool response")
             .tool_call(vec![ToolCallPart::default()
@@ -323,17 +321,16 @@ mod tests {
                 .arguments_part(r#"{"key": "value"}"#)])
             .finish_reason(FinishReason::ToolCalls);
 
-        let (_, command) = app.run(response).unwrap();
+        let command = app.run(response).unwrap();
 
         assert!(command.has(ChatResponse::Text("Tool response".to_string())));
-
         assert!(command
             .has(ToolCall::new(ToolName::new("test_tool")).arguments(json!({"key": "value"}))));
     }
 
     #[test]
     fn test_use_tool_when_finish_reason_present() {
-        let app = App::default();
+        let mut app = App::default();
         let response = Response::new("Tool response")
             .tool_call(vec![ToolCallPart::default()
                 .call_id(ToolCallId::new("test_call_id"))
@@ -341,7 +338,7 @@ mod tests {
                 .arguments_part(r#"{"path": "."}"#)])
             .finish_reason(FinishReason::ToolCalls);
 
-        let (app, command) = app.run(response).unwrap();
+        let command = app.run(response).unwrap();
 
         assert!(app.state.tool_call_part.is_empty());
 
@@ -356,12 +353,12 @@ mod tests {
 
     #[test]
     fn test_should_not_use_tool_when_finish_reason_not_present() {
-        let app = App::default();
+        let mut app = App::default();
         let resp = Response::new("Tool response").tool_call(vec![ToolCallPart::default()
             .name(ToolName::new("fs_list"))
             .arguments_part(r#"{"path": "."}"#)]);
 
-        let (app, command) = app.run(resp).unwrap();
+        let command = app.run(resp).unwrap();
 
         assert!(!app.state.tool_call_part.is_empty());
         assert!(command.has(ChatResponse::Text("Tool response".to_string())));
@@ -369,12 +366,12 @@ mod tests {
 
     #[test]
     fn test_should_set_user_objective_only_once() {
-        let app = App::default();
+        let mut app = App::default();
         let request_0 = ChatRequest::new("Hello");
         let request_1 = ChatRequest::new("World");
 
-        let (app, _) = app.run(request_0).unwrap();
-        let (app, _) = app.run(request_1).unwrap();
+        app.run(request_0).unwrap();
+        app.run(request_1).unwrap();
 
         assert_eq!(
             app.state.user_objective,
@@ -384,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_should_not_set_user_objective_if_already_set() {
-        let app = App {
+        let mut app = App {
             state: State {
                 user_objective: Some(MessageTemplate::task("Initial Objective")),
                 ..Default::default()
@@ -392,7 +389,7 @@ mod tests {
         };
         let request = ChatRequest::new("New Objective");
 
-        let (app, _) = app.run(request).unwrap();
+        app.run(request).unwrap();
 
         assert_eq!(
             app.state.user_objective,
@@ -402,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_should_handle_file_read_response_with_multiple_files() {
-        let app = App {
+        let mut app = App {
             state: State {
                 user_objective: Some(MessageTemplate::new(
                     Tag::default().name("test"),
@@ -421,7 +418,7 @@ mod tests {
                 .content("Content 2"),
         ];
 
-        let (app, command) = app.run(files.clone()).unwrap();
+        let command = app.run(files.clone()).unwrap();
 
         assert!(app.state.request.messages[0]
             .content()
@@ -441,13 +438,13 @@ mod tests {
 
     #[test]
     fn test_should_handle_assistant_response_with_no_tool_call() {
-        let app = App::default();
+        let mut app = App::default();
 
         let response = Response::new("Assistant response")
             .tool_call(vec![])
             .finish_reason(FinishReason::Stop);
 
-        let (app, command) = app.run(response).unwrap();
+        let command = app.run(response).unwrap();
 
         assert!(app.state.tool_call_part.is_empty());
         assert!(command.has(ChatResponse::Text("Assistant response".to_string())));
@@ -455,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_too_call_seq() {
-        let app = App::default();
+        let mut app = App::default();
 
         let message_1 = Action::AssistantResponse(
             Response::new("Let's use foo tool").add_tool_call(
@@ -472,12 +469,14 @@ mod tests {
                 .finish_reason(FinishReason::ToolCalls),
         );
 
-        let message_3 = Action::ToolResponse(
-            ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200})),
-        );
+        let message_3 =
+            Action::ToolResponse(ToolResult::new(ToolName::new("foo")).content(json!({
+                "a": 100,
+                "b": 200
+            })));
 
         // LLM made a tool_call request
-        let (app, _) = app.run_seq(vec![message_1, message_2, message_3]).unwrap();
+        app.run_seq(vec![message_1, message_2, message_3]).unwrap();
 
         assert_eq!(
             app.state.request.messages[0],
@@ -493,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_tool_result_seq() {
-        let app = App::default();
+        let mut app = App::default();
 
         let message_1 = Action::AssistantResponse(
             Response::new("Let's use foo tool")
@@ -510,7 +509,7 @@ mod tests {
             ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200}));
         let message_2 = Action::ToolResponse(tool_result.clone());
 
-        let (app, _) = app.run_seq(vec![message_1, message_2]).unwrap();
+        app.run_seq(vec![message_1, message_2]).unwrap();
 
         assert_eq!(
             app.state.request.messages,
@@ -529,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_think_tool_command() {
-        let app = App::default();
+        let mut app = App::default();
 
         // Test when next thought is needed
         let think_result_continue = ToolResult::new(ToolName::new("think")).content(json!({
@@ -541,7 +540,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_continue);
-        let (app, commands) = app.run(action).unwrap();
+        let commands = app.run(action).unwrap();
 
         assert!(commands.has(Command::AssistantMessage(app.state.request.clone())));
 
@@ -555,7 +554,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_end.clone());
-        let (app, commands) = app.run(action).unwrap();
+        let commands = app.run(action).unwrap();
 
         assert!(commands.has(Command::AssistantMessage(app.state.request.clone())));
         assert!(commands.has(Command::UserMessage(ChatResponse::ToolUseEnd(
@@ -565,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_think_tool_state() {
-        let app = App::default();
+        let mut app = App::default();
 
         // Test when next thought is needed
         let think_result_continue = ToolResult::new(ToolName::new("think")).content(json!({
@@ -577,9 +576,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_continue.clone());
-        let (app, _) = app.run(action).unwrap();
-
-        // Should only push AssistantMessage to continue conversation
+        app.run(action).unwrap();
 
         // Test when thinking is complete
         let think_result_end = ToolResult::new(ToolName::new("think")).content(json!({
@@ -591,7 +588,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_end.clone());
-        let (app, _) = app.run(action).unwrap();
+        app.run(action).unwrap();
 
         assert_eq!(
             app.state.request.messages,
@@ -605,15 +602,14 @@ mod tests {
     #[test]
     fn test_context_initial_message() {
         let app = App::default();
-
         assert_eq!(app.state.request.messages.len(), 0);
     }
 
     #[test]
     fn test_empty_assistant_response_message() {
-        let app = App::default();
+        let mut app = App::default();
         let message = Action::AssistantResponse(Response::assistant(""));
-        let (_, commands) = app.run(message).unwrap();
+        let commands = app.run(message).unwrap();
 
         let no_user_message = commands
             .iter()
@@ -623,7 +619,7 @@ mod tests {
 
     #[test]
     fn test_tool_call_xml() {
-        let app = App::default();
+        let mut app = App::default();
 
         let message_1 = Action::AssistantResponse(Response::new("<tool_1><arg_1"));
         let message_2 = Action::AssistantResponse(Response::new(">a.txt</arg_1><ar"));
@@ -631,13 +627,11 @@ mod tests {
             Response::new("g_2>b.txt</arg_2></tool_1>").finish_reason(FinishReason::Stop),
         );
 
-        let (_, cmd) = app.run_seq(vec![message_1, message_2, message_3]).unwrap();
+        let cmd = app.run_seq(vec![message_1, message_2, message_3]).unwrap();
 
         assert!(cmd.has(Command::ToolCall(
-            ToolCall::new(ToolName::new("tool_1")).arguments(json!({
-                "arg_1": "a.txt",
-                "arg_2": "b.txt"
-            }))
+            ToolCall::new(ToolName::new("tool_1"))
+                .arguments(json!({"arg_1": "a.txt", "arg_2": "b.txt"}))
         )));
 
         assert!(cmd.has(Command::UserMessage(ChatResponse::ToolUseStart(
