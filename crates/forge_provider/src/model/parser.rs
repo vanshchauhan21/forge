@@ -80,7 +80,8 @@ fn convert_string_to_value(value: &str) -> Value {
     }
 
     if let Ok(float_val) = value.parse::<f64>() {
-        // Create number from float, handling special case where float is actually an integer
+        // Create number from float, handling special case where float is actually an
+        // integer
         return if float_val.fract() == 0.0 {
             Value::Number(serde_json::Number::from(float_val as i64))
         } else if let Some(num) = serde_json::Number::from_f64(float_val) {
@@ -167,9 +168,9 @@ mod tests {
             let args: Vec<_> = self.args.iter().collect();
             for (idx, (key, value)) in args.iter().enumerate() {
                 xml.push_str(&format!(
-                    "<{}>{}</{}>{}", 
-                    key, 
-                    value, 
+                    "<{}>{}</{}>{}",
+                    key,
+                    value,
                     key,
                     if idx < args.len() - 1 { " " } else { "" }
                 ));
