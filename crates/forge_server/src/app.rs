@@ -96,121 +96,120 @@ impl State {
             assistant_buffer: "".to_string(),
         }
     }
+}
 
-    fn on_finish_reason(&mut self, finish_reason: FinishReason) -> Result<Vec<Command>> {
-        let mut commands = Vec::new();
-        let mut message = ContentMessage::assistant(self.assistant_buffer.clone());
+fn handle_finish_reason(state: &mut State, finish_reason: FinishReason) -> Result<Vec<Command>> {
+    let mut commands = Vec::new();
+    let mut message = ContentMessage::assistant(state.assistant_buffer.clone());
 
-        if finish_reason == FinishReason::ToolCalls {
-            let tool_call = ToolCall::try_from_parts(self.tool_call_part.clone())?;
+    if finish_reason == FinishReason::ToolCalls {
+        let tool_call = ToolCall::try_from_parts(state.tool_call_part.clone())?;
 
-            // since tools is used, clear the tool_raw_arguments.
-            self.tool_call_part.clear();
-            commands.push(Command::ToolCall(tool_call.clone()));
+        // since tools is used, clear the tool_raw_arguments.
+        state.tool_call_part.clear();
+        commands.push(Command::ToolCall(tool_call.clone()));
 
-            // LLM supports tool calls, so we need to send the tool call back in the
-            // assistant response
-            message = message.tool_call(tool_call);
-        }
+        // LLM supports tool calls, so we need to send the tool call back in the
+        // assistant response
+        message = message.tool_call(tool_call);
+    }
 
-        if finish_reason == FinishReason::Stop {
-            if let Ok(mut tool_calls) = ToolCall::try_from_xml(&self.assistant_buffer) {
-                if let Some(tool_call) = tool_calls.pop() {
-                    // LLM has no-clue that it made a tool call so we simply dispatch the tool_call
-                    // for execution.
-                    commands.push(Command::ToolCall(tool_call.clone()));
-                    commands.push(Command::UserMessage(
-                        ToolUseStart::from(tool_call.name).into(),
-                    ))
-                }
+    if finish_reason == FinishReason::Stop {
+        if let Ok(mut tool_calls) = ToolCall::try_from_xml(&state.assistant_buffer) {
+            if let Some(tool_call) = tool_calls.pop() {
+                // LLM has no-clue that it made a tool call so we simply dispatch the tool_call
+                // for execution.
+                commands.push(Command::ToolCall(tool_call.clone()));
+                commands.push(Command::UserMessage(
+                    ToolUseStart::from(tool_call.name).into(),
+                ))
             }
         }
-
-        self.request = self.request.clone().add_message(message);
-        self.assistant_buffer.clear();
-        Ok(commands)
     }
 
-    fn on_tool_response(&mut self, tool_result: &ToolResult) -> Result<Vec<Command>> {
-        let mut commands = Vec::new();
+    state.request = state.request.clone().add_message(message);
+    state.assistant_buffer.clear();
+    Ok(commands)
+}
 
-        self.request = self.request.clone().add_message(tool_result.clone());
+fn handle_tool_response(state: &mut State, tool_result: &ToolResult) -> Result<Vec<Command>> {
+    let mut commands = Vec::new();
 
-        commands.push(Command::AssistantMessage(self.request.clone()));
-        commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(
-            tool_result.clone(),
-        )));
+    state.request = state.request.clone().add_message(tool_result.clone());
 
-        Ok(commands)
+    commands.push(Command::AssistantMessage(state.request.clone()));
+    commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(
+        tool_result.clone(),
+    )));
+
+    Ok(commands)
+}
+
+fn handle_user_message(state: &mut State, chat: &ChatRequest) -> Result<Vec<Command>> {
+    let mut commands = Vec::new();
+    let prompt = Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
+
+    state.request = state.request.clone().model(chat.model.clone());
+
+    if state.user_objective.is_none() {
+        state.user_objective = Some(MessageTemplate::task(prompt.clone()));
     }
 
-    fn on_user_message(&mut self, chat: &ChatRequest) -> Result<Vec<Command>> {
-        let mut commands = Vec::new();
-        let prompt =
-            Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
-
-        self.request = self.request.clone().model(chat.model.clone());
-
-        if self.user_objective.is_none() {
-            self.user_objective = Some(MessageTemplate::task(prompt.clone()));
-        }
-
-        if prompt.files().is_empty() {
-            self.request = self
-                .request
-                .clone()
-                .add_message(CompletionMessage::user(chat.content.clone()));
-            commands.push(Command::AssistantMessage(self.request.clone()))
-        } else {
-            commands.push(Command::FileRead(prompt.files()))
-        }
-
-        Ok(commands)
+    if prompt.files().is_empty() {
+        state.request = state
+            .request
+            .clone()
+            .add_message(CompletionMessage::user(chat.content.clone()));
+        commands.push(Command::AssistantMessage(state.request.clone()))
+    } else {
+        commands.push(Command::FileRead(prompt.files()))
     }
 
-    fn on_file_read_response(&mut self, files: &[FileResponse]) -> Result<Vec<Command>> {
-        let mut commands = Vec::new();
+    Ok(commands)
+}
 
-        if let Some(message) = self.user_objective.clone() {
-            for fr in files.iter() {
-                self.request = self.request.clone().add_message(
-                    message
-                        .clone()
-                        .append(MessageTemplate::file(fr.path.clone(), fr.content.clone())),
-                );
-            }
+fn handle_file_read_response(state: &mut State, files: &[FileResponse]) -> Result<Vec<Command>> {
+    let mut commands = Vec::new();
 
-            commands.push(Command::AssistantMessage(self.request.clone()))
+    if let Some(message) = state.user_objective.clone() {
+        for fr in files.iter() {
+            state.request = state.request.clone().add_message(
+                message
+                    .clone()
+                    .append(MessageTemplate::file(fr.path.clone(), fr.content.clone())),
+            );
         }
 
-        Ok(commands)
+        commands.push(Command::AssistantMessage(state.request.clone()))
     }
 
-    fn on_assistant_response(&mut self, response: &Response) -> Result<Vec<Command>> {
-        let mut commands = Vec::new();
-        self.assistant_buffer.push_str(response.content.as_str());
-        if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
-            if let Some(too_call_part) = response.tool_call.first() {
-                let too_call_start =
-                    Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone().into()));
-                commands.push(too_call_start)
-            }
+    Ok(commands)
+}
+
+fn handle_assistant_response(state: &mut State, response: &Response) -> Result<Vec<Command>> {
+    let mut commands = Vec::new();
+    state.assistant_buffer.push_str(response.content.as_str());
+    if !response.tool_call.is_empty() && state.tool_call_part.is_empty() {
+        if let Some(too_call_part) = response.tool_call.first() {
+            let too_call_start =
+                Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone().into()));
+            commands.push(too_call_start)
         }
-
-        self.tool_call_part.extend(response.tool_call.clone());
-
-        if let Some(ref finish_reason) = response.finish_reason {
-            let finish_commands = self.on_finish_reason(finish_reason.clone())?;
-            commands.extend(finish_commands);
-        }
-
-        if !response.content.is_empty() {
-            let message = Command::UserMessage(ChatResponse::Text(response.content.to_string()));
-            commands.push(message);
-        }
-
-        Ok(commands)
     }
+
+    state.tool_call_part.extend(response.tool_call.clone());
+
+    if let Some(ref finish_reason) = response.finish_reason {
+        let finish_commands = handle_finish_reason(state, finish_reason.clone())?;
+        commands.extend(finish_commands);
+    }
+
+    if !response.content.is_empty() {
+        let message = Command::UserMessage(ChatResponse::Text(response.content.to_string()));
+        commands.push(message);
+    }
+
+    Ok(commands)
 }
 
 #[derive(Default, Debug, Clone, Serialize)]
@@ -236,10 +235,14 @@ impl Application for App {
 
     fn run(&mut self, action: &Self::Action) -> Result<Vec<Self::Command>> {
         match action {
-            Action::UserMessage(message) => self.state.on_user_message(message),
-            Action::FileReadResponse(message) => self.state.on_file_read_response(message),
-            Action::AssistantResponse(message) => self.state.on_assistant_response(message),
-            Action::ToolResponse(message) => self.state.on_tool_response(message),
+            Action::UserMessage(message) => handle_user_message(&mut self.state, message),
+            Action::FileReadResponse(message) => {
+                handle_file_read_response(&mut self.state, message)
+            }
+            Action::AssistantResponse(message) => {
+                handle_assistant_response(&mut self.state, message)
+            }
+            Action::ToolResponse(message) => handle_tool_response(&mut self.state, message),
         }
     }
 }
