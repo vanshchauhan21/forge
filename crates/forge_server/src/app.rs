@@ -180,32 +180,6 @@ fn handle_file_read_response(app: &mut App, files: &Vec<FileResponse>) -> Result
     Ok(commands)
 }
 
-fn handle_assistant_response(app: &mut App, response: &Response) -> Result<Vec<Command>> {
-    let mut commands = Vec::new();
-    app.assistant_buffer.push_str(response.content.as_str());
-    if !response.tool_call.is_empty() && app.tool_call_part.is_empty() {
-        if let Some(too_call_part) = response.tool_call.first() {
-            let too_call_start =
-                Command::UserMessage(ChatResponse::ToolUseStart(too_call_part.clone().into()));
-            commands.push(too_call_start)
-        }
-    }
-
-    app.tool_call_part.extend(response.tool_call.clone());
-
-    if let Some(ref finish_reason) = response.finish_reason {
-        let finish_commands = handle_finish_reason(app, finish_reason.clone())?;
-        commands.extend(finish_commands);
-    }
-
-    if !response.content.is_empty() {
-        let message = Command::UserMessage(ChatResponse::Text(response.content.to_string()));
-        commands.push(message);
-    }
-
-    Ok(commands)
-}
-
 impl Action {
     fn file_read() -> AppChannel<Action, Vec<FileResponse>> {
         AppChannel::new(|_, action| match action {
@@ -245,19 +219,48 @@ impl Application for App {
         Channel::default()
             .zip(Action::user_message().and_then(handle_user_message))
             .zip(Action::file_read().and_then(handle_file_read_response))
-            .zip(Action::assistant_response().and_then(handle_assistant_response))
-            .zip(
-                Action::tool_result()
-                    .update(|state, tool_result| {
-                        state.request = state.request.clone().add_message(tool_result.clone());
-                    })
-                    .and_then(|state, tool_result| {
-                        Ok(vec![
-                            Command::AssistantMessage(state.request.clone()),
-                            Command::UserMessage(ChatResponse::ToolUseEnd(tool_result.clone())),
-                        ])
-                    }),
-            )
+            .zip(Action::assistant_response().and_then(|state, response| {
+                state.assistant_buffer.push_str(response.content.as_str());
+                state.tool_call_part.extend(response.tool_call.clone());
+                Ok(Default::default())
+            }))
+            .zip(Action::assistant_response().and_then(|_, response| {
+                if !response.content.is_empty() {
+                    Ok(vec![Command::UserMessage(ChatResponse::Text(
+                        response.content.to_string(),
+                    ))])
+                } else {
+                    Ok(Default::default())
+                }
+            }))
+            .zip(Action::assistant_response().and_then(|state, response| {
+                if let Some(ref finish_reason) = response.finish_reason {
+                    handle_finish_reason(state, finish_reason.clone())
+                } else {
+                    Ok(Default::default())
+                }
+            }))
+            .zip(Action::assistant_response().and_then(|state, response| {
+                if !response.tool_call.is_empty() && state.tool_call_part.is_empty() {
+                    if let Some(too_call_part) = response.tool_call.first() {
+                        let too_call_start = Command::UserMessage(ChatResponse::ToolUseStart(
+                            too_call_part.clone().into(),
+                        ));
+                        return Ok(vec![too_call_start]);
+                    }
+                }
+                return Ok(Default::default());
+            }))
+            .zip(Action::tool_result().and_then(|state, tool_result| {
+                state.request = state.request.clone().add_message(tool_result.clone());
+                Ok(Default::default())
+            }))
+            .zip(Action::tool_result().and_then(|state, tool_result| {
+                Ok(vec![
+                    Command::AssistantMessage(state.request.clone()),
+                    Command::UserMessage(ChatResponse::ToolUseEnd(tool_result.clone())),
+                ])
+            }))
     }
 }
 

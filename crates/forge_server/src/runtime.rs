@@ -116,44 +116,25 @@ impl<State: 'static, In: 'static, Out: 'static, Error: 'static> Channel<State, I
         })
     }
 
-    pub fn pipe<Outer: 'static>(
-        self,
-        other: Channel<State, Out, Outer, Error>,
-    ) -> Channel<State, In, Outer, Error> {
-        Channel::new(move |state: &mut State, action: &In| {
-            let mut out0: Vec<Outer> = Vec::new();
-            for out in self.0(state, action)?.into_iter() {
-                out0.extend(other.0(state, &out)?);
-            }
-
-            Ok(out0)
-        })
-    }
-
-    pub fn and_then<F, Out0: 'static>(self, f: F) -> Channel<State, In, Out0, Error>
+    pub fn and_then<F, Outer: 'static>(self, f: F) -> Channel<State, In, Outer, Error>
     where
-        F: Fn(&mut State, &Out) -> Result<Vec<Out0>, Error> + 'static,
+        F: Fn(&mut State, &Out) -> Result<Vec<Outer>, Error> + 'static,
     {
-        self.pipe(Channel::new(f))
+        {
+            let other = Channel::new(f);
+            Channel::new(move |state: &mut State, action: &In| {
+                let mut out0: Vec<Outer> = Vec::new();
+                for out in self.0(state, action)?.into_iter() {
+                    out0.extend(other.0(state, &out)?);
+                }
+
+                Ok(out0)
+            })
+        }
     }
 
     pub fn run(&self, state: &mut State, action: &In) -> Result<Vec<Out>, Error> {
         (self.0)(state, action)
-    }
-
-    pub fn update<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut State, &Out) + 'static,
-    {
-        Self::new(move |state, action| {
-            let mut out0 = Vec::new();
-            for out in self.0(state, action)?.into_iter() {
-                f(state, &out);
-                out0.push(out);
-            }
-
-            Ok(out0)
-        })
     }
 }
 
