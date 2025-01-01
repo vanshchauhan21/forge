@@ -232,13 +232,12 @@ impl Application for App {
     type Error = crate::Error;
     type Command = Command;
 
-    fn run(&mut self, action: impl Into<Action>) -> Result<Vec<Command>> {
-        let action = action.into();
+    fn run(&mut self, action: &Self::Action) -> Result<Vec<Self::Command>> {
         match action {
-            Action::UserMessage(message) => self.state.on_user_message(message),
-            Action::FileReadResponse(message) => self.state.on_file_read_response(message),
-            Action::AssistantResponse(message) => self.state.on_assistant_response(message),
-            Action::ToolResponse(message) => self.state.on_tool_response(message),
+            Action::UserMessage(message) => self.state.on_user_message(message.clone()),
+            Action::FileReadResponse(message) => self.state.on_file_read_response(message.clone()),
+            Action::AssistantResponse(message) => self.state.on_assistant_response(message.clone()),
+            Action::ToolResponse(message) => self.state.on_tool_response(message.clone()),
         }
     }
 }
@@ -277,7 +276,8 @@ mod tests {
         let mut app = App::default();
         let chat_request = ChatRequest::new("Hello, world!");
 
-        let command = app.run(chat_request.clone()).unwrap();
+        let action = Action::UserMessage(chat_request.clone());
+        let command = app.run(&action).unwrap();
 
         assert_eq!(&app.state.request.model, &ModelId::default());
         assert!(command.has(app.state.request.clone()));
@@ -299,7 +299,7 @@ mod tests {
             .path("test_path.txt")
             .content("Test content")];
 
-        let command = app.run(files.clone()).unwrap();
+        let command = app.run(&Action::FileReadResponse(files.clone())).unwrap();
 
         assert!(app.state.request.messages[0]
             .content()
@@ -321,7 +321,7 @@ mod tests {
                 .arguments_part(r#"{"key": "value"}"#)])
             .finish_reason(FinishReason::ToolCalls);
 
-        let command = app.run(response).unwrap();
+        let command = app.run(&Action::AssistantResponse(response)).unwrap();
 
         assert!(command.has(ChatResponse::Text("Tool response".to_string())));
         assert!(command
@@ -338,7 +338,7 @@ mod tests {
                 .arguments_part(r#"{"path": "."}"#)])
             .finish_reason(FinishReason::ToolCalls);
 
-        let command = app.run(response).unwrap();
+        let command = app.run(&Action::AssistantResponse(response)).unwrap();
 
         assert!(app.state.tool_call_part.is_empty());
 
@@ -358,7 +358,7 @@ mod tests {
             .name(ToolName::new("fs_list"))
             .arguments_part(r#"{"path": "."}"#)]);
 
-        let command = app.run(resp).unwrap();
+        let command = app.run(&Action::AssistantResponse(resp)).unwrap();
 
         assert!(!app.state.tool_call_part.is_empty());
         assert!(command.has(ChatResponse::Text("Tool response".to_string())));
@@ -370,8 +370,8 @@ mod tests {
         let request_0 = ChatRequest::new("Hello");
         let request_1 = ChatRequest::new("World");
 
-        app.run(request_0).unwrap();
-        app.run(request_1).unwrap();
+        app.run(&Action::UserMessage(request_0)).unwrap();
+        app.run(&Action::UserMessage(request_1)).unwrap();
 
         assert_eq!(
             app.state.user_objective,
@@ -389,7 +389,7 @@ mod tests {
         };
         let request = ChatRequest::new("New Objective");
 
-        app.run(request).unwrap();
+        app.run(&Action::UserMessage(request)).unwrap();
 
         assert_eq!(
             app.state.user_objective,
@@ -418,7 +418,7 @@ mod tests {
                 .content("Content 2"),
         ];
 
-        let command = app.run(files.clone()).unwrap();
+        let command = app.run(&Action::FileReadResponse(files.clone())).unwrap();
 
         assert!(app.state.request.messages[0]
             .content()
@@ -444,7 +444,7 @@ mod tests {
             .tool_call(vec![])
             .finish_reason(FinishReason::Stop);
 
-        let command = app.run(response).unwrap();
+        let command = app.run(&Action::AssistantResponse(response)).unwrap();
 
         assert!(app.state.tool_call_part.is_empty());
         assert!(command.has(ChatResponse::Text("Assistant response".to_string())));
@@ -476,7 +476,7 @@ mod tests {
             })));
 
         // LLM made a tool_call request
-        app.run_seq(vec![message_1, message_2, message_3]).unwrap();
+        app.run_seq([message_1, message_2, message_3]).unwrap();
 
         assert_eq!(
             app.state.request.messages[0],
@@ -509,7 +509,7 @@ mod tests {
             ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200}));
         let message_2 = Action::ToolResponse(tool_result.clone());
 
-        app.run_seq(vec![message_1, message_2]).unwrap();
+        app.run_seq([message_1, message_2]).unwrap();
 
         assert_eq!(
             app.state.request.messages,
@@ -540,7 +540,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_continue);
-        let commands = app.run(action).unwrap();
+        let commands = app.run(&action).unwrap();
 
         assert!(commands.has(Command::AssistantMessage(app.state.request.clone())));
 
@@ -554,7 +554,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_end.clone());
-        let commands = app.run(action).unwrap();
+        let commands = app.run(&action).unwrap();
 
         assert!(commands.has(Command::AssistantMessage(app.state.request.clone())));
         assert!(commands.has(Command::UserMessage(ChatResponse::ToolUseEnd(
@@ -576,7 +576,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_continue.clone());
-        app.run(action).unwrap();
+        app.run(&action).unwrap();
 
         // Test when thinking is complete
         let think_result_end = ToolResult::new(ToolName::new("think")).content(json!({
@@ -588,7 +588,7 @@ mod tests {
         }));
 
         let action = Action::ToolResponse(think_result_end.clone());
-        app.run(action).unwrap();
+        app.run(&action).unwrap();
 
         assert_eq!(
             app.state.request.messages,
@@ -609,7 +609,7 @@ mod tests {
     fn test_empty_assistant_response_message() {
         let mut app = App::default();
         let message = Action::AssistantResponse(Response::assistant(""));
-        let commands = app.run(message).unwrap();
+        let commands = app.run(&message).unwrap();
 
         let no_user_message = commands
             .iter()
@@ -627,7 +627,7 @@ mod tests {
             Response::new("g_2>b.txt</arg_2></tool_1>").finish_reason(FinishReason::Stop),
         );
 
-        let cmd = app.run_seq(vec![message_1, message_2, message_3]).unwrap();
+        let cmd = app.run_seq([message_1, message_2, message_3]).unwrap();
 
         assert!(cmd.has(Command::ToolCall(
             ToolCall::new(ToolName::new("tool_1"))
