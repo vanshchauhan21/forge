@@ -7,9 +7,11 @@ use forge_provider::{
 use forge_tool::ToolName;
 use serde::Serialize;
 
-use crate::runtime::{Application, Dispatch};
+use crate::runtime::{Application, Channel};
 use crate::template::MessageTemplate;
-use crate::Result;
+use crate::{Error, Result};
+
+type AppChannel<Action, Command> = Channel<App, Action, Command, Error>;
 
 #[derive(Clone, Debug, derive_more::From)]
 pub enum Action {
@@ -137,19 +139,6 @@ fn handle_finish_reason(app: &mut App, finish_reason: FinishReason) -> Result<Ve
     Ok(commands)
 }
 
-fn handle_tool_response(app: &mut App, tool_result: &ToolResult) -> Result<Vec<Command>> {
-    let mut commands = Vec::new();
-
-    app.request = app.request.clone().add_message(tool_result.clone());
-
-    commands.push(Command::AssistantMessage(app.request.clone()));
-    commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(
-        tool_result.clone(),
-    )));
-
-    Ok(commands)
-}
-
 fn handle_user_message(app: &mut App, chat: &ChatRequest) -> Result<Vec<Command>> {
     let mut commands = Vec::new();
     let prompt = Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
@@ -218,32 +207,32 @@ fn handle_assistant_response(app: &mut App, response: &Response) -> Result<Vec<C
 }
 
 impl Action {
-    fn select_file_read(&self) -> Option<&Vec<FileResponse>> {
-        match self {
-            Action::FileReadResponse(message) => Some(message),
-            _ => None,
-        }
+    fn file_read() -> AppChannel<Action, Vec<FileResponse>> {
+        AppChannel::new(|_, action| match action {
+            Action::FileReadResponse(message) => Ok(vec![message.clone()]),
+            _ => Ok(Default::default()),
+        })
     }
 
-    fn select_user_message(&self) -> Option<&ChatRequest> {
-        match self {
-            Action::UserMessage(message) => Some(message),
-            _ => None,
-        }
+    fn user_message() -> AppChannel<Action, ChatRequest> {
+        AppChannel::new(|_, action| match action {
+            Action::UserMessage(message) => Ok(vec![message.clone()]),
+            _ => Ok(Default::default()),
+        })
     }
 
-    fn select_assistant_response(&self) -> Option<&Response> {
-        match self {
-            Action::AssistantResponse(message) => Some(message),
-            _ => None,
-        }
+    fn assistant_response() -> AppChannel<Action, Response> {
+        AppChannel::new(|_, action| match action {
+            Action::AssistantResponse(message) => Ok(vec![message.clone()]),
+            _ => Ok(Default::default()),
+        })
     }
 
-    fn select_tool_response(&self) -> Option<&ToolResult> {
-        match self {
-            Action::ToolResponse(message) => Some(message),
-            _ => None,
-        }
+    fn tool_result() -> AppChannel<Action, ToolResult> {
+        AppChannel::new(|_, action| match action {
+            Action::ToolResponse(message) => Ok(vec![message.clone()]),
+            _ => Ok(Default::default()),
+        })
     }
 }
 
@@ -252,23 +241,18 @@ impl Application for App {
     type Error = crate::Error;
     type Command = Command;
 
-    fn dispatch(&self) -> Dispatch<Self, Action, Command, crate::Error> {
-        Dispatch::select(
-            Action::select_user_message,
-            Dispatch::new(handle_user_message),
-        )
-        .and(Dispatch::select(
-            Action::select_file_read,
-            Dispatch::new(handle_file_read_response),
-        ))
-        .and(Dispatch::select(
-            Action::select_assistant_response,
-            Dispatch::new(handle_assistant_response),
-        ))
-        .and(Dispatch::select(
-            Action::select_tool_response,
-            Dispatch::new(handle_tool_response),
-        ))
+    fn dispatch(&self) -> Channel<Self, Action, Command, crate::Error> {
+        Channel::default()
+            .zip(Action::user_message().and_then(handle_user_message))
+            .zip(Action::file_read().and_then(handle_file_read_response))
+            .zip(Action::assistant_response().and_then(handle_assistant_response))
+            .zip(Action::tool_result().and_then(|state, tool_result| {
+                state.request = state.request.clone().add_message(tool_result.clone());
+                Ok(vec![
+                    Command::AssistantMessage(state.request.clone()),
+                    Command::UserMessage(ChatResponse::ToolUseEnd(tool_result.clone())),
+                ])
+            }))
     }
 }
 

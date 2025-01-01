@@ -17,7 +17,7 @@ pub trait Application: Send + Sync + Sized + 'static {
         self.dispatch().run(self, action)
     }
 
-    fn dispatch(&self) -> Dispatch<Self, Self::Action, Self::Command, Self::Error>;
+    fn dispatch(&self) -> Channel<Self, Self::Action, Self::Command, Self::Error>;
 
     #[allow(unused)]
     fn run_seq(
@@ -96,34 +96,20 @@ pub trait Executor: Send + Sync {
     async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
 }
 
-type Type<State, Action, Command, Error> =
-    Box<dyn Fn(&mut State, &Action) -> Result<Vec<Command>, Error>>;
+type Type<State, In, Out, Error> = Box<dyn Fn(&mut State, &In) -> Result<Vec<Out>, Error>>;
 
-pub struct Dispatch<State, Action, Command, Error>(Type<State, Action, Command, Error>);
+pub struct Channel<State, In, Out, Error>(Type<State, In, Out, Error>);
 
-#[allow(unused)]
-impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
-    Dispatch<State, Action, Command, Error>
-{
+impl<State: 'static, In: 'static, Out: 'static, Error: 'static> Channel<State, In, Out, Error> {
     pub fn new<F>(f: F) -> Self
     where
-        F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
+        F: Fn(&mut State, &In) -> Result<Vec<Out>, Error> + 'static,
     {
         Self(Box::new(f))
     }
 
-    pub fn select<F, Action0: 'static>(s: F, f: Dispatch<State, Action0, Command, Error>) -> Self
-    where
-        F: Fn(&Action) -> Option<&Action0> + 'static,
-    {
-        Self(Box::new(move |state, action| match s(action) {
-            None => Ok(vec![]),
-            Some(action) => f.run(state, &action),
-        }))
-    }
-
-    pub fn and(self, other: Self) -> Self {
-        let f = move |state: &mut State, action: &Action| {
+    pub fn zip(self, other: Channel<State, In, Out, Error>) -> Self {
+        let f = move |state: &mut State, action: &In| {
             let mut commands = self.0(state, action)?;
             commands.extend(other.0(state, action)?);
             Ok(commands)
@@ -131,64 +117,33 @@ impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
         Self(Box::new(f))
     }
 
-    pub fn try_command<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
-    {
-        self.and(Dispatch::new(f))
-    }
-
-    pub fn command<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut State, &Action) -> Vec<Command> + 'static,
-    {
-        self.try_command(move |state, action| Ok(f(state, action)))
-    }
-
-    pub fn try_update<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut State, &Action) -> Result<(), Error> + 'static,
-    {
-        self.try_command(move |state, action| {
-            f(state, action)?;
-            Ok(Vec::new())
-        })
-    }
-
-    pub fn update<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut State, &Action) + 'static,
-    {
-        self.try_update(move |state, action| {
-            f(state, action);
-            Ok(())
-        })
-    }
-
-    pub fn run(&self, state: &mut State, action: &Action) -> Result<Vec<Command>, Error> {
-        (self.0)(state, action)
-    }
-
-    pub fn when<F>(self, f: F) -> Self
-    where
-        F: Fn(&State, &Action) -> bool + 'static,
-    {
-        let f = move |state: &mut State, action: &Action| {
-            if f(state, action) {
-                self.run(state, action)
-            } else {
-                Ok(Vec::new())
+    pub fn pipe<Outer: 'static>(
+        self,
+        other: Channel<State, Out, Outer, Error>,
+    ) -> Channel<State, In, Outer, Error> {
+        Channel(Box::new(move |state: &mut State, action: &In| {
+            let mut out0: Vec<Outer> = Vec::new();
+            for out in self.0(state, action)?.into_iter() {
+                out0.extend(other.0(state, &out)?);
             }
-        };
-        Self(Box::new(f))
+
+            Ok(out0)
+        }))
     }
 
-    pub fn pipe(state: &mut State, action: &Action) -> Self {
-        todo!()
+    pub fn and_then<F, Out0: 'static>(self, f: F) -> Channel<State, In, Out0, Error>
+    where
+        F: Fn(&mut State, &Out) -> Result<Vec<Out0>, Error> + 'static,
+    {
+        self.pipe(Channel::new(f))
+    }
+
+    pub fn run(&self, state: &mut State, action: &In) -> Result<Vec<Out>, Error> {
+        (self.0)(state, action)
     }
 }
 
-impl<State, Action, Command, Error> Default for Dispatch<State, Action, Command, Error> {
+impl<State, Action, Command, Error> Default for Channel<State, Action, Command, Error> {
     fn default() -> Self {
         Self(Box::new(|_, _| Ok(Vec::new())))
     }
