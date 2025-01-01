@@ -139,29 +139,6 @@ fn handle_finish_reason(app: &mut App, finish_reason: FinishReason) -> Result<Ve
     Ok(commands)
 }
 
-fn handle_user_message(app: &mut App, chat: &ChatRequest) -> Result<Vec<Command>> {
-    let mut commands = Vec::new();
-    let prompt = Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
-
-    app.request = app.request.clone().model(chat.model.clone());
-
-    if app.user_objective.is_none() {
-        app.user_objective = Some(MessageTemplate::task(prompt.clone()));
-    }
-
-    if prompt.files().is_empty() {
-        app.request = app
-            .request
-            .clone()
-            .add_message(CompletionMessage::user(chat.content.clone()));
-        commands.push(Command::AssistantMessage(app.request.clone()))
-    } else {
-        commands.push(Command::FileRead(prompt.files()))
-    }
-
-    Ok(commands)
-}
-
 impl Action {
     fn file_read() -> AppChannel<Action, Vec<FileResponse>> {
         AppChannel::new(|_, action| match action {
@@ -199,7 +176,42 @@ impl Application for App {
 
     fn dispatch(&self) -> Channel<Self, Action, Command, crate::Error> {
         Channel::default()
-            .zip(Action::user_message().and_then(handle_user_message))
+            .zip(Action::user_message().and_then(|state, chat| {
+                state.request = state.request.clone().model(chat.model.clone());
+
+                Ok(Default::default())
+            }))
+            .zip(Action::user_message().and_then(|state, chat| {
+                let prompt = Prompt::parse(chat.content.clone())
+                    .unwrap_or(Prompt::new(chat.content.clone()));
+
+                if prompt.files().is_empty() {
+                    state.request = state
+                        .request
+                        .clone()
+                        .add_message(CompletionMessage::user(chat.content.clone()));
+                }
+
+                if state.user_objective.is_none() {
+                    state.user_objective = Some(MessageTemplate::task(prompt.clone()));
+                }
+
+                Ok(Default::default())
+            }))
+            .zip(Action::user_message().and_then(|state, chat| {
+                let prompt = Prompt::parse(chat.content.clone())
+                    .unwrap_or(Prompt::new(chat.content.clone()));
+
+                if prompt.files().is_empty() {
+                    state.request = state
+                        .request
+                        .clone()
+                        .add_message(CompletionMessage::user(chat.content.clone()));
+                    Ok(vec![Command::AssistantMessage(state.request.clone())])
+                } else {
+                    Ok(vec![Command::FileRead(prompt.files())])
+                }
+            }))
             .zip(Action::file_read().and_then(|state, files| {
                 if let Some(message) = state.user_objective.clone() {
                     for fr in files.iter() {
