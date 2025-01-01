@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_env::Environment;
-use forge_provider::{Model, ModelId, Provider, Request, Response};
+use forge_provider::{Model, ModelId, Provider, Request};
 use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -15,7 +15,7 @@ use crate::Result;
 
 #[derive(Clone)]
 pub struct Server {
-    provider: Arc<Provider<Request, Response, forge_provider::Error>>,
+    provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
     completions: Arc<Completion>,
     runtime: Arc<ApplicationRuntime<App>>,

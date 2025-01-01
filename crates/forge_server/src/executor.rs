@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_env::Environment;
-use forge_provider::{BoxStream, Provider, Request, Response, ResultStream, ToolResult};
+use forge_provider::{BoxStream, Provider, ResultStream, ToolResult};
 use forge_tool::ToolEngine;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -12,7 +12,7 @@ use crate::system_prompt::SystemPrompt;
 use crate::Error;
 
 pub struct ChatCommandExecutor {
-    provider: Arc<Provider<Request, Response, forge_provider::Error>>,
+    provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
     tx: mpsc::Sender<ChatResponse>,
     system_prompt: SystemPrompt,

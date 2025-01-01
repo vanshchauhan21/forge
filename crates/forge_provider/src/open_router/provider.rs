@@ -59,11 +59,7 @@ impl OpenRouter {
 
 #[async_trait::async_trait]
 impl InnerProvider for OpenRouter {
-    type Request = crate::model::Request;
-    type Response = crate::model::Response;
-    type Error = Error;
-
-    async fn chat(&self, request: Self::Request) -> ResultStream<Self::Response, Self::Error> {
+    async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
         let mut request = OpenRouterRequest::from(request);
         request.stream = Some(true);
         let request = serde_json::to_string_pretty(&request)?;
@@ -160,7 +156,7 @@ impl InnerProvider for OpenRouter {
     }
 }
 
-impl Provider<Request, Response, Error> {
+impl Provider {
     pub fn open_router(api_key: String, base_url: Option<String>) -> Self {
         Provider::new(OpenRouter::new(api_key, base_url))
     }
