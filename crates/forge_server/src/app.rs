@@ -131,18 +131,20 @@ impl State {
         Ok(commands)
     }
 
-    fn on_tool_response(&mut self, tool_result: ToolResult) -> Result<Vec<Command>> {
+    fn on_tool_response(&mut self, tool_result: &ToolResult) -> Result<Vec<Command>> {
         let mut commands = Vec::new();
 
         self.request = self.request.clone().add_message(tool_result.clone());
 
         commands.push(Command::AssistantMessage(self.request.clone()));
-        commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(tool_result)));
+        commands.push(Command::UserMessage(ChatResponse::ToolUseEnd(
+            tool_result.clone(),
+        )));
 
         Ok(commands)
     }
 
-    fn on_user_message(&mut self, chat: ChatRequest) -> Result<Vec<Command>> {
+    fn on_user_message(&mut self, chat: &ChatRequest) -> Result<Vec<Command>> {
         let mut commands = Vec::new();
         let prompt =
             Prompt::parse(chat.content.clone()).unwrap_or(Prompt::new(chat.content.clone()));
@@ -157,7 +159,7 @@ impl State {
             self.request = self
                 .request
                 .clone()
-                .add_message(CompletionMessage::user(chat.content));
+                .add_message(CompletionMessage::user(chat.content.clone()));
             commands.push(Command::AssistantMessage(self.request.clone()))
         } else {
             commands.push(Command::FileRead(prompt.files()))
@@ -166,15 +168,15 @@ impl State {
         Ok(commands)
     }
 
-    fn on_file_read_response(&mut self, files: Vec<FileResponse>) -> Result<Vec<Command>> {
+    fn on_file_read_response(&mut self, files: &[FileResponse]) -> Result<Vec<Command>> {
         let mut commands = Vec::new();
 
         if let Some(message) = self.user_objective.clone() {
-            for fr in files.into_iter() {
+            for fr in files.iter() {
                 self.request = self.request.clone().add_message(
                     message
                         .clone()
-                        .append(MessageTemplate::file(fr.path, fr.content)),
+                        .append(MessageTemplate::file(fr.path.clone(), fr.content.clone())),
                 );
             }
 
@@ -184,7 +186,7 @@ impl State {
         Ok(commands)
     }
 
-    fn on_assistant_response(&mut self, response: Response) -> Result<Vec<Command>> {
+    fn on_assistant_response(&mut self, response: &Response) -> Result<Vec<Command>> {
         let mut commands = Vec::new();
         self.assistant_buffer.push_str(response.content.as_str());
         if !response.tool_call.is_empty() && self.tool_call_part.is_empty() {
@@ -195,10 +197,10 @@ impl State {
             }
         }
 
-        self.tool_call_part.extend(response.tool_call);
+        self.tool_call_part.extend(response.tool_call.clone());
 
-        if let Some(finish_reason) = response.finish_reason {
-            let finish_commands = self.on_finish_reason(finish_reason)?;
+        if let Some(ref finish_reason) = response.finish_reason {
+            let finish_commands = self.on_finish_reason(finish_reason.clone())?;
             commands.extend(finish_commands);
         }
 
@@ -234,10 +236,10 @@ impl Application for App {
 
     fn run(&mut self, action: &Self::Action) -> Result<Vec<Self::Command>> {
         match action {
-            Action::UserMessage(message) => self.state.on_user_message(message.clone()),
-            Action::FileReadResponse(message) => self.state.on_file_read_response(message.clone()),
-            Action::AssistantResponse(message) => self.state.on_assistant_response(message.clone()),
-            Action::ToolResponse(message) => self.state.on_tool_response(message.clone()),
+            Action::UserMessage(message) => self.state.on_user_message(message),
+            Action::FileReadResponse(message) => self.state.on_file_read_response(message),
+            Action::AssistantResponse(message) => self.state.on_assistant_response(message),
+            Action::ToolResponse(message) => self.state.on_tool_response(message),
         }
     }
 }

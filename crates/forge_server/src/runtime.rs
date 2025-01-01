@@ -5,7 +5,7 @@ use futures::future::join_all;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
-pub trait Application: Send + Sync + Sized + Clone {
+pub trait Application: Send + Sync + Sized {
     type Action: Send;
     type Error: Send;
     type Command: Send;
@@ -18,10 +18,7 @@ pub trait Application: Send + Sync + Sized + Clone {
     fn run_seq(
         &mut self,
         actions: impl IntoIterator<Item = Self::Action>,
-    ) -> Result<Vec<Self::Command>, Self::Error>
-    where
-        Self::Action: Clone,
-    {
+    ) -> Result<Vec<Self::Command>, Self::Error> {
         let mut commands = Vec::new();
         for action in actions.into_iter() {
             commands.extend(self.run(&action)?);
@@ -41,7 +38,10 @@ impl<A: Application> ApplicationRuntime<A> {
         Self { state: Arc::new(Mutex::new(app)) }
     }
 
-    pub async fn state(&self) -> A {
+    pub async fn state(&self) -> A
+    where
+        A: Clone,
+    {
         self.state.lock().await.clone()
     }
 }
@@ -66,12 +66,10 @@ impl<A: Application + 'static> ApplicationRuntime<A> {
                 let _: Result<(), A::Error> = async move {
                     let mut stream = executor.clone().execute(&command).await?;
                     while let Some(action) = stream.next().await {
-                        let this = self.clone();
-                        let executor = executor.clone();
                         // NOTE: The `execute` call needs to run sequentially. Executing it
                         // asynchronously would disrupt the order of `toolUse` content, leading to
                         // mixed-up.
-                        this.execute(action?, executor).await?;
+                        self.execute(action?, executor.clone()).await?;
                     }
 
                     Ok(())
