@@ -105,40 +105,6 @@ impl App {
     }
 }
 
-fn handle_finish_reason(app: &mut App, finish_reason: FinishReason) -> Result<Vec<Command>> {
-    let mut commands = Vec::new();
-    let mut message = ContentMessage::assistant(app.assistant_buffer.clone());
-
-    if finish_reason == FinishReason::ToolCalls {
-        let tool_call = ToolCall::try_from_parts(app.tool_call_part.clone())?;
-
-        // since tools is used, clear the tool_raw_arguments.
-        app.tool_call_part.clear();
-        commands.push(Command::ToolCall(tool_call.clone()));
-
-        // LLM supports tool calls, so we need to send the tool call back in the
-        // assistant response
-        message = message.tool_call(tool_call);
-    }
-
-    if finish_reason == FinishReason::Stop {
-        if let Ok(mut tool_calls) = ToolCall::try_from_xml(&app.assistant_buffer) {
-            if let Some(tool_call) = tool_calls.pop() {
-                // LLM has no-clue that it made a tool call so we simply dispatch the tool_call
-                // for execution.
-                commands.push(Command::ToolCall(tool_call.clone()));
-                commands.push(Command::UserMessage(
-                    ToolUseStart::from(tool_call.name).into(),
-                ))
-            }
-        }
-    }
-
-    app.request = app.request.clone().add_message(message);
-    app.assistant_buffer.clear();
-    Ok(commands)
-}
-
 impl Action {
     fn file_read() -> AppChannel<Action, Vec<FileResponse>> {
         AppChannel::new(|_, action| match action {
@@ -178,7 +144,6 @@ impl Application for App {
         Channel::default()
             .zip(Action::user_message().and_then(|state, chat| {
                 state.request = state.request.clone().model(chat.model.clone());
-
                 Ok(Default::default())
             }))
             .zip(Action::user_message().and_then(|state, chat| {
@@ -243,11 +208,33 @@ impl Application for App {
                 }
             }))
             .zip(Action::assistant_response().and_then(|state, response| {
+                let mut commands = Vec::new();
                 if let Some(ref finish_reason) = response.finish_reason {
-                    handle_finish_reason(state, finish_reason.clone())
-                } else {
-                    Ok(Default::default())
+                    let mut message = ContentMessage::assistant(state.assistant_buffer.clone());
+
+                    if *finish_reason == FinishReason::ToolCalls {
+                        let tool_call = ToolCall::try_from_parts(state.tool_call_part.clone())?;
+                        state.tool_call_part.clear();
+                        commands.push(Command::ToolCall(tool_call.clone()));
+                        message = message.tool_call(tool_call);
+                    }
+
+                    if *finish_reason == FinishReason::Stop {
+                        if let Ok(mut tool_calls) = ToolCall::try_from_xml(&state.assistant_buffer)
+                        {
+                            if let Some(tool_call) = tool_calls.pop() {
+                                commands.push(Command::ToolCall(tool_call.clone()));
+                                commands.push(Command::UserMessage(
+                                    ToolUseStart::from(tool_call.name).into(),
+                                ))
+                            }
+                        }
+                    }
+
+                    state.request = state.request.clone().add_message(message);
+                    state.assistant_buffer.clear();
                 }
+                Ok(commands)
             }))
             .zip(Action::assistant_response().and_then(|state, response| {
                 if !response.tool_call.is_empty() && state.tool_call_part.is_empty() {
