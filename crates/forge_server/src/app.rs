@@ -173,7 +173,7 @@ fn handle_user_message(app: &mut App, chat: &ChatRequest) -> Result<Vec<Command>
     Ok(commands)
 }
 
-fn handle_file_read_response(app: &mut App, files: &[FileResponse]) -> Result<Vec<Command>> {
+fn handle_file_read_response(app: &mut App, files: &Vec<FileResponse>) -> Result<Vec<Command>> {
     let mut commands = Vec::new();
 
     if let Some(message) = app.user_objective.clone() {
@@ -253,20 +253,21 @@ impl Application for App {
     type Command = Command;
 
     fn dispatch(&self) -> Dispatch<Self, Action, Command, crate::Error> {
-        Dispatch::select(Action::select_user_message, |state, message| {
-            handle_user_message(state, message)
-        })
+        Dispatch::select(
+            Action::select_user_message,
+            Dispatch::new(handle_user_message),
+        )
         .and(Dispatch::select(
             Action::select_file_read,
-            |state, message| handle_file_read_response(state, message),
+            Dispatch::new(handle_file_read_response),
         ))
         .and(Dispatch::select(
             Action::select_assistant_response,
-            |state, message| handle_assistant_response(state, message),
+            Dispatch::new(handle_assistant_response),
         ))
         .and(Dispatch::select(
             Action::select_tool_response,
-            |state, message| handle_tool_response(state, message),
+            Dispatch::new(handle_tool_response),
         ))
     }
 }

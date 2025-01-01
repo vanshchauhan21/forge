@@ -112,14 +112,13 @@ impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
         Self(Box::new(f))
     }
 
-    pub fn select<F, S, Action0>(s: S, f: F) -> Self
+    pub fn select<F, Action0: 'static>(s: F, f: Dispatch<State, Action0, Command, Error>) -> Self
     where
-        S: Fn(&Action) -> Option<&Action0> + 'static,
-        F: Fn(&mut State, &Action0) -> Result<Vec<Command>, Error> + 'static,
+        F: Fn(&Action) -> Option<&Action0> + 'static,
     {
         Self(Box::new(move |state, action| match s(action) {
             None => Ok(vec![]),
-            Some(action) => f(state, &action),
+            Some(action) => f.run(state, &action),
         }))
     }
 
