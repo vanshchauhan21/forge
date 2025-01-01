@@ -109,26 +109,25 @@ impl<State: 'static, In: 'static, Out: 'static, Error: 'static> Channel<State, I
     }
 
     pub fn zip(self, other: Channel<State, In, Out, Error>) -> Self {
-        let f = move |state: &mut State, action: &In| {
+        Self::new(move |state: &mut State, action: &In| {
             let mut commands = self.0(state, action)?;
             commands.extend(other.0(state, action)?);
             Ok(commands)
-        };
-        Self(Box::new(f))
+        })
     }
 
     pub fn pipe<Outer: 'static>(
         self,
         other: Channel<State, Out, Outer, Error>,
     ) -> Channel<State, In, Outer, Error> {
-        Channel(Box::new(move |state: &mut State, action: &In| {
+        Channel::new(move |state: &mut State, action: &In| {
             let mut out0: Vec<Outer> = Vec::new();
             for out in self.0(state, action)?.into_iter() {
                 out0.extend(other.0(state, &out)?);
             }
 
             Ok(out0)
-        }))
+        })
     }
 
     pub fn and_then<F, Out0: 'static>(self, f: F) -> Channel<State, In, Out0, Error>
@@ -140,6 +139,21 @@ impl<State: 'static, In: 'static, Out: 'static, Error: 'static> Channel<State, I
 
     pub fn run(&self, state: &mut State, action: &In) -> Result<Vec<Out>, Error> {
         (self.0)(state, action)
+    }
+
+    pub fn update<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut State, &Out) + 'static,
+    {
+        Self::new(move |state, action| {
+            let mut out0 = Vec::new();
+            for out in self.0(state, action)?.into_iter() {
+                f(state, &out);
+                out0.push(out);
+            }
+
+            Ok(out0)
+        })
     }
 }
 

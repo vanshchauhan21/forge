@@ -246,13 +246,18 @@ impl Application for App {
             .zip(Action::user_message().and_then(handle_user_message))
             .zip(Action::file_read().and_then(handle_file_read_response))
             .zip(Action::assistant_response().and_then(handle_assistant_response))
-            .zip(Action::tool_result().and_then(|state, tool_result| {
-                state.request = state.request.clone().add_message(tool_result.clone());
-                Ok(vec![
-                    Command::AssistantMessage(state.request.clone()),
-                    Command::UserMessage(ChatResponse::ToolUseEnd(tool_result.clone())),
-                ])
-            }))
+            .zip(
+                Action::tool_result()
+                    .update(|state, tool_result| {
+                        state.request = state.request.clone().add_message(tool_result.clone());
+                    })
+                    .and_then(|state, tool_result| {
+                        Ok(vec![
+                            Command::AssistantMessage(state.request.clone()),
+                            Command::UserMessage(ChatResponse::ToolUseEnd(tool_result.clone())),
+                        ])
+                    }),
+            )
     }
 }
 
