@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::runtime::{Application, Channel};
 use crate::template::MessageTemplate;
-use crate::{Error, Result};
+use crate::Error;
 
 type AppChannel<Action, Command> = Channel<App, Action, Command, Error>;
 
@@ -245,7 +245,7 @@ impl Application for App {
                         return Ok(vec![too_call_start]);
                     }
                 }
-                return Ok(Default::default());
+                Ok(Default::default())
             }))
             .zip(Action::tool_result().and_then(|state, tool_result| {
                 state.request = state.request.clone().add_message(tool_result.clone());
