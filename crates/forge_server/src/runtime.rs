@@ -90,3 +90,85 @@ pub trait Executor: Send + Sync {
     type Error;
     async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
 }
+
+pub struct Dispatch<State, Action, Command, Error>(
+    Box<dyn Fn(&mut State, &Action) -> Result<Vec<Command>, Error>>,
+);
+
+impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
+    Dispatch<State, Action, Command, Error>
+{
+    fn new<F>(f: F) -> Self
+    where
+        F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
+    {
+        Self(Box::new(f))
+    }
+
+    pub fn combine(self, other: Self) -> Self {
+        let f = move |state: &mut State, action: &Action| {
+            let mut commands = self.0(state, action)?;
+            commands.extend(other.0(state, action)?);
+            Ok(commands)
+        };
+        Self(Box::new(f))
+    }
+
+    pub fn try_command<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
+    {
+        self.combine(Dispatch::new(f))
+    }
+
+    pub fn command<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut State, &Action) -> Vec<Command> + 'static,
+    {
+        self.try_command(move |state, action| Ok(f(state, action)))
+    }
+
+    pub fn try_update<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut State, &Action) -> Result<(), Error> + 'static,
+    {
+        self.try_command(move |state, action| {
+            f(state, action)?;
+            Ok(Vec::new())
+        })
+    }
+
+    pub fn update<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut State, &Action) -> () + 'static,
+    {
+        self.try_update(move |state, action| {
+            f(state, action);
+            Ok(())
+        })
+    }
+
+    pub fn run(&self, state: &mut State, action: &Action) -> Result<Vec<Command>, Error> {
+        (self.0)(state, action)
+    }
+
+    pub fn when<F>(self, f: F) -> Self
+    where
+        F: Fn(&State, &Action) -> bool + 'static,
+    {
+        let f = move |state: &mut State, action: &Action| {
+            if f(state, action) {
+                self.run(state, action)
+            } else {
+                Ok(Vec::new())
+            }
+        };
+        Self(Box::new(f))
+    }
+}
+
+impl<State, Action, Command, Error> Default for Dispatch<State, Action, Command, Error> {
+    fn default() -> Self {
+        Self(Box::new(|_, _| Ok(Vec::new())))
+    }
+}
