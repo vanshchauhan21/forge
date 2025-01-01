@@ -162,24 +162,6 @@ fn handle_user_message(app: &mut App, chat: &ChatRequest) -> Result<Vec<Command>
     Ok(commands)
 }
 
-fn handle_file_read_response(app: &mut App, files: &Vec<FileResponse>) -> Result<Vec<Command>> {
-    let mut commands = Vec::new();
-
-    if let Some(message) = app.user_objective.clone() {
-        for fr in files.iter() {
-            app.request = app.request.clone().add_message(
-                message
-                    .clone()
-                    .append(MessageTemplate::file(fr.path.clone(), fr.content.clone())),
-            );
-        }
-
-        commands.push(Command::AssistantMessage(app.request.clone()))
-    }
-
-    Ok(commands)
-}
-
 impl Action {
     fn file_read() -> AppChannel<Action, Vec<FileResponse>> {
         AppChannel::new(|_, action| match action {
@@ -218,7 +200,22 @@ impl Application for App {
     fn dispatch(&self) -> Channel<Self, Action, Command, crate::Error> {
         Channel::default()
             .zip(Action::user_message().and_then(handle_user_message))
-            .zip(Action::file_read().and_then(handle_file_read_response))
+            .zip(Action::file_read().and_then(|state, files| {
+                if let Some(message) = state.user_objective.clone() {
+                    for fr in files.iter() {
+                        state.request =
+                            state.request.clone().add_message(message.clone().append(
+                                MessageTemplate::file(fr.path.clone(), fr.content.clone()),
+                            ));
+                    }
+                }
+                Ok(Default::default())
+            }))
+            .zip(
+                Action::file_read().and_then(|state, _| {
+                    Ok(vec![Command::AssistantMessage(state.request.clone())])
+                }),
+            )
             .zip(Action::assistant_response().and_then(|state, response| {
                 state.assistant_buffer.push_str(response.content.as_str());
                 state.tool_call_part.extend(response.tool_call.clone());
