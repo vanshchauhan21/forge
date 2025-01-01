@@ -7,7 +7,7 @@ use forge_provider::{
 use forge_tool::ToolName;
 use serde::Serialize;
 
-use crate::runtime::Application;
+use crate::runtime::{Application, Dispatch};
 use crate::template::MessageTemplate;
 use crate::Result;
 
@@ -222,13 +222,13 @@ impl Application for App {
     type Error = crate::Error;
     type Command = Command;
 
-    fn run(&mut self, action: &Self::Action) -> Result<Vec<Self::Command>> {
-        match action {
-            Action::UserMessage(message) => handle_user_message(self, message),
-            Action::FileReadResponse(message) => handle_file_read_response(self, message),
-            Action::AssistantResponse(message) => handle_assistant_response(self, message),
-            Action::ToolResponse(message) => handle_tool_response(self, message),
-        }
+    fn dispatch(&self) -> Dispatch<Self, Action, Command, crate::Error> {
+        Dispatch::default().try_command(|state, action| match action {
+            Action::UserMessage(message) => handle_user_message(state, message),
+            Action::FileReadResponse(message) => handle_file_read_response(state, message),
+            Action::AssistantResponse(message) => handle_assistant_response(state, message),
+            Action::ToolResponse(message) => handle_tool_response(state, message),
+        })
     }
 }
 

@@ -5,14 +5,19 @@ use futures::future::join_all;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
-pub trait Application: Send + Sync + Sized {
+pub trait Application: Send + Sync + Sized + 'static {
     type Action: Send;
     type Error: Send;
     type Command: Send;
+
     fn run(
         &mut self,
         action: &Self::Action,
-    ) -> std::result::Result<Vec<Self::Command>, Self::Error>;
+    ) -> std::result::Result<Vec<Self::Command>, Self::Error> {
+        self.dispatch().run(self, action)
+    }
+
+    fn dispatch(&self) -> Dispatch<Self, Self::Action, Self::Command, Self::Error>;
 
     #[allow(unused)]
     fn run_seq(
@@ -91,10 +96,12 @@ pub trait Executor: Send + Sync {
     async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
 }
 
-pub struct Dispatch<State, Action, Command, Error>(
-    Box<dyn Fn(&mut State, &Action) -> Result<Vec<Command>, Error>>,
-);
+type Type<State, Action, Command, Error> =
+    Box<dyn Fn(&mut State, &Action) -> Result<Vec<Command>, Error>>;
 
+pub struct Dispatch<State, Action, Command, Error>(Type<State, Action, Command, Error>);
+
+#[allow(unused)]
 impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
     Dispatch<State, Action, Command, Error>
 {
@@ -140,7 +147,7 @@ impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
 
     pub fn update<F>(self, f: F) -> Self
     where
-        F: Fn(&mut State, &Action) -> () + 'static,
+        F: Fn(&mut State, &Action) + 'static,
     {
         self.try_update(move |state, action| {
             f(state, action);
