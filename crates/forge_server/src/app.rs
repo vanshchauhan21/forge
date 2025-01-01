@@ -217,18 +217,57 @@ fn handle_assistant_response(app: &mut App, response: &Response) -> Result<Vec<C
     Ok(commands)
 }
 
+impl Action {
+    fn select_file_read(&self) -> Option<&Vec<FileResponse>> {
+        match self {
+            Action::FileReadResponse(message) => Some(message),
+            _ => None,
+        }
+    }
+
+    fn select_user_message(&self) -> Option<&ChatRequest> {
+        match self {
+            Action::UserMessage(message) => Some(message),
+            _ => None,
+        }
+    }
+
+    fn select_assistant_response(&self) -> Option<&Response> {
+        match self {
+            Action::AssistantResponse(message) => Some(message),
+            _ => None,
+        }
+    }
+
+    fn select_tool_response(&self) -> Option<&ToolResult> {
+        match self {
+            Action::ToolResponse(message) => Some(message),
+            _ => None,
+        }
+    }
+}
+
 impl Application for App {
     type Action = Action;
     type Error = crate::Error;
     type Command = Command;
 
     fn dispatch(&self) -> Dispatch<Self, Action, Command, crate::Error> {
-        Dispatch::default().try_command(|state, action| match action {
-            Action::UserMessage(message) => handle_user_message(state, message),
-            Action::FileReadResponse(message) => handle_file_read_response(state, message),
-            Action::AssistantResponse(message) => handle_assistant_response(state, message),
-            Action::ToolResponse(message) => handle_tool_response(state, message),
+        Dispatch::select(Action::select_user_message, |state, message| {
+            handle_user_message(state, message)
         })
+        .and(Dispatch::select(
+            Action::select_file_read,
+            |state, message| handle_file_read_response(state, message),
+        ))
+        .and(Dispatch::select(
+            Action::select_assistant_response,
+            |state, message| handle_assistant_response(state, message),
+        ))
+        .and(Dispatch::select(
+            Action::select_tool_response,
+            |state, message| handle_tool_response(state, message),
+        ))
     }
 }
 

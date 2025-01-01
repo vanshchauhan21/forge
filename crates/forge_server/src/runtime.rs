@@ -105,14 +105,25 @@ pub struct Dispatch<State, Action, Command, Error>(Type<State, Action, Command, 
 impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
     Dispatch<State, Action, Command, Error>
 {
-    fn new<F>(f: F) -> Self
+    pub fn new<F>(f: F) -> Self
     where
         F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
     {
         Self(Box::new(f))
     }
 
-    pub fn combine(self, other: Self) -> Self {
+    pub fn select<F, S, Action0>(s: S, f: F) -> Self
+    where
+        S: Fn(&Action) -> Option<&Action0> + 'static,
+        F: Fn(&mut State, &Action0) -> Result<Vec<Command>, Error> + 'static,
+    {
+        Self(Box::new(move |state, action| match s(action) {
+            None => Ok(vec![]),
+            Some(action) => f(state, &action),
+        }))
+    }
+
+    pub fn and(self, other: Self) -> Self {
         let f = move |state: &mut State, action: &Action| {
             let mut commands = self.0(state, action)?;
             commands.extend(other.0(state, action)?);
@@ -125,7 +136,7 @@ impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
     where
         F: Fn(&mut State, &Action) -> Result<Vec<Command>, Error> + 'static,
     {
-        self.combine(Dispatch::new(f))
+        self.and(Dispatch::new(f))
     }
 
     pub fn command<F>(self, f: F) -> Self
@@ -171,6 +182,10 @@ impl<State: 'static, Action: 'static, Command: 'static, Error: 'static>
             }
         };
         Self(Box::new(f))
+    }
+
+    pub fn pipe(state: &mut State, action: &Action) -> Self {
+        todo!()
     }
 }
 
