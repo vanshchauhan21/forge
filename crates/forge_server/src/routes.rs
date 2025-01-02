@@ -17,7 +17,7 @@ use tracing::info;
 
 use crate::app::{ChatRequest, ChatResponse};
 use crate::context::ContextEngine;
-use crate::{RootAPIService, Errata, File, Result, Service};
+use crate::{Errata, File, Result, RootAPIService, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -88,7 +88,9 @@ impl API {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<dyn RootAPIService>>) -> axum::Json<Vec<File>> {
+async fn completions_handler(
+    State(state): State<Arc<dyn RootAPIService>>,
+) -> axum::Json<Vec<File>> {
     let files = state
         .completions()
         .await
