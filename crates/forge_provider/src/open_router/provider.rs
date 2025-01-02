@@ -70,6 +70,7 @@ impl ProviderService for OpenRouter {
         let rb = self
             .client
             .post(self.config.url("/chat/completions"))
+            
             .headers(self.config.headers())
             .body(request);
 
@@ -121,6 +122,7 @@ impl ProviderService for OpenRouter {
             .headers(self.config.headers())
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
 
@@ -142,6 +144,7 @@ impl ProviderService for OpenRouter {
             .headers(self.config.headers())
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
 
