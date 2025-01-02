@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ShellInput {
@@ -105,7 +105,7 @@ impl Shell {
 }
 
 #[async_trait::async_trait]
-impl ToolTrait for Shell {
+impl ToolService for Shell {
     type Input = ShellInput;
     type Output = ShellOutput;
 

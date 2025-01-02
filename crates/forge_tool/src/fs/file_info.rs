@@ -2,7 +2,7 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFileInfoInput {
@@ -19,7 +19,7 @@ pub struct FSFileInfoInput {
 pub struct FSFileInfo;
 
 #[async_trait::async_trait]
-impl ToolTrait for FSFileInfo {
+impl ToolService for FSFileInfo {
     type Input = FSFileInfoInput;
     type Output = String;
 

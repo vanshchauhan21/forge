@@ -2,7 +2,7 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct AskFollowUpQuestionInput {
@@ -19,7 +19,7 @@ pub struct AskFollowUpQuestionInput {
 pub struct AskFollowUpQuestion;
 
 #[async_trait::async_trait]
-impl ToolTrait for AskFollowUpQuestion {
+impl ToolService for AskFollowUpQuestion {
     type Input = AskFollowUpQuestionInput;
     type Output = String;
 

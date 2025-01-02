@@ -146,6 +146,7 @@ impl InnerProvider for OpenRouter {
         let response: ParameterResponse = serde_json::from_str(&text)?;
 
         Ok(Parameters {
+            model,
             tools: response
                 .data
                 .supported_parameters

@@ -1,4 +1,5 @@
 use moka2::future::Cache;
+use serde::{Deserialize, Serialize};
 
 use super::error::Result;
 use crate::{Error, Model, ModelId, Request, Response, ResultStream};
@@ -38,7 +39,8 @@ impl Provider {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Parameters {
     pub tools: bool,
+    pub model: ModelId,
 }

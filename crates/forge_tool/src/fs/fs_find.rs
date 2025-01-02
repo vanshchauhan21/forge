@@ -5,7 +5,7 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {
@@ -27,7 +27,7 @@ pub struct FSSearchInput {
 pub struct FSSearch;
 
 #[async_trait::async_trait]
-impl ToolTrait for FSSearch {
+impl ToolService for FSSearch {
     type Input = FSSearchInput;
     type Output = Vec<String>;
 

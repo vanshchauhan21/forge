@@ -2,7 +2,7 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
@@ -23,7 +23,7 @@ pub struct FSWriteInput {
 pub struct FSWrite;
 
 #[async_trait::async_trait]
-impl ToolTrait for FSWrite {
+impl ToolService for FSWrite {
     type Input = FSWriteInput;
     type Output = FSWriteOutput;
 

@@ -5,7 +5,7 @@ use forge_walker::Walker;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
@@ -27,7 +27,7 @@ pub struct FSListInput {
 pub struct FSList;
 
 #[async_trait::async_trait]
-impl ToolTrait for FSList {
+impl ToolService for FSList {
     type Input = FSListInput;
     type Output = Vec<String>;
 

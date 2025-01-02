@@ -2,7 +2,7 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReadInput {
@@ -20,7 +20,7 @@ pub struct FSReadInput {
 pub struct FSRead;
 
 #[async_trait::async_trait]
-impl ToolTrait for FSRead {
+impl ToolService for FSRead {
     type Input = FSReadInput;
     type Output = String;
 

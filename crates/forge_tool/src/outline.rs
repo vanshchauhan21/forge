@@ -7,7 +7,7 @@ use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
-use crate::{Description, ToolTrait};
+use crate::{Description, ToolService};
 
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");
@@ -92,7 +92,7 @@ impl Description for Outline {
 }
 
 #[async_trait::async_trait]
-impl ToolTrait for Outline {
+impl ToolService for Outline {
     type Input = OutlineInput;
     type Output = String;
 

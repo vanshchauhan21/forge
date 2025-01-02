@@ -12,7 +12,7 @@ pub use shell::*;
 pub use tool_engine::*;
 
 #[async_trait::async_trait]
-pub trait ToolTrait {
+pub trait ToolService {
     type Input;
     type Output;
 

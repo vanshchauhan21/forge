@@ -10,13 +10,13 @@ use serde_json::Value;
 use crate::think::Think;
 use crate::{
     Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell,
-    ToolTrait,
+    ToolService,
 };
 
 struct JsonTool<T>(T);
 
 #[async_trait::async_trait]
-impl<T: ToolTrait + Sync> ToolTrait for JsonTool<T>
+impl<T: ToolService + Sync> ToolService for JsonTool<T>
 where
     T::Input: serde::de::DeserializeOwned + JsonSchema,
     T::Output: serde::Serialize + JsonSchema,
@@ -208,14 +208,14 @@ impl ToolEngine {
 
 struct Tool {
     name: ToolName,
-    executable: Box<dyn ToolTrait<Input = Value, Output = Value> + Send + Sync + 'static>,
+    executable: Box<dyn ToolService<Input = Value, Output = Value> + Send + Sync + 'static>,
     definition: ToolDefinition,
 }
 
 impl Tool {
     fn new<T>(tool: T) -> Tool
     where
-        T: ToolTrait + Description + Send + Sync + 'static,
+        T: ToolService + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
