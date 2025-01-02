@@ -29,26 +29,26 @@ impl std::fmt::Debug for Error {
 
 #[derive(Clone, Setters, Serialize, PartialEq, Eq)]
 pub struct Errata {
-    pub title: String,
+    pub message: String,
     #[setters(strip_option, into)]
     pub description: Option<String>,
 }
 
 impl Errata {
     pub fn new(title: impl Into<String>) -> Self {
-        Self { title: title.into(), description: None }
+        Self { message: title.into(), description: None }
     }
 }
 
 impl Display for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.title)
+        write!(f, "{}", self.message)
     }
 }
 
 impl Debug for Errata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.title)?;
+        write!(f, "{}", self.message)?;
         if let Some(desc) = &self.description {
             if !desc.trim().is_empty() {
                 write!(f, "\n{}", desc)?;
