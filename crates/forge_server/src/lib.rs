@@ -1,4 +1,4 @@
-mod api;
+mod routes;
 mod app;
 mod completion;
 mod context;
@@ -10,5 +10,5 @@ mod server;
 mod system_prompt;
 mod template;
 
-pub use api::API;
+pub use routes::API;
 pub use error::*;
