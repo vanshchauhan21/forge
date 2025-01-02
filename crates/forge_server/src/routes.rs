@@ -17,7 +17,7 @@ use tracing::info;
 
 use crate::app::{ChatRequest, ChatResponse};
 use crate::context::ContextEngine;
-use crate::{ChatService, ChatServiceLive, Errata, File, Result};
+use crate::{ChatService, Errata, File, Result, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -32,7 +32,7 @@ impl Default for API {
     }
 }
 
-async fn context_html_handler(State(state): State<Arc<ChatServiceLive>>) -> Html<String> {
+async fn context_html_handler(State(state): State<Arc<dyn ChatService>>) -> Html<String> {
     let context = state.context().await;
     let engine = ContextEngine::new(context);
     Html(engine.render_html())
@@ -42,7 +42,7 @@ impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
         let env = Environment::from_env().await?;
-        let state = Arc::new(ChatServiceLive::new(env, self.api_key));
+        let state = Arc::new(Service::chat_service(env, self.api_key));
 
         if dotenv::dotenv().is_ok() {
             info!("Loaded .env file");
@@ -88,7 +88,7 @@ impl API {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<ChatServiceLive>>) -> axum::Json<Vec<File>> {
+async fn completions_handler(State(state): State<Arc<dyn ChatService>>) -> axum::Json<Vec<File>> {
     let files = state
         .completions()
         .await
@@ -98,7 +98,7 @@ async fn completions_handler(State(state): State<Arc<ChatServiceLive>>) -> axum:
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<ChatServiceLive>>,
+    State(state): State<Arc<dyn ChatService>>,
     Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
@@ -115,7 +115,7 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ToolResponse> {
+async fn tools_handler(State(state): State<Arc<dyn ChatService>>) -> Json<ToolResponse> {
     let tools = state.tools().await;
     Json(ToolResponse { tools })
 }
@@ -127,12 +127,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ModelResponse> {
+async fn models_handler(State(state): State<Arc<dyn ChatService>>) -> Json<ModelResponse> {
     let models = state.models().await.unwrap_or_default();
     Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ContextResponse> {
+async fn context_handler(State(state): State<Arc<dyn ChatService>>) -> Json<ContextResponse> {
     let context = state.context().await;
     Json(ContextResponse { context })
 }

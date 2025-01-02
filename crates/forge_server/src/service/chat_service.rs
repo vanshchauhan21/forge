@@ -6,14 +6,14 @@ use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
-use super::CompletionService;
+use super::{CompletionService, Service};
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
 use crate::{Error, File, LiveCompletionService, Result};
 
 #[async_trait::async_trait]
-pub trait ChatService {
+pub trait ChatService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self) -> Request;
@@ -22,7 +22,7 @@ pub trait ChatService {
 }
 
 #[derive(Clone)]
-pub struct ChatServiceLive {
+struct ChatServiceLive {
     provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
     completions: Arc<LiveCompletionService>,
@@ -86,5 +86,11 @@ impl ChatService for ChatServiceLive {
         });
 
         Ok(Box::pin(ReceiverStream::new(rx)))
+    }
+}
+
+impl Service {
+    pub fn chat_service(env: Environment, api_key: impl Into<String>) -> impl ChatService {
+        ChatServiceLive::new(env, api_key)
     }
 }
