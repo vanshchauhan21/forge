@@ -10,7 +10,7 @@ use super::{CompletionService, Service};
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
-use crate::{Error, File, LiveCompletionService, Result};
+use crate::{Error, File, Result};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
@@ -22,17 +22,17 @@ pub trait ChatService: Send + Sync {
 }
 
 #[derive(Clone)]
-struct ChatServiceLive {
+struct Live {
     provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
-    completions: Arc<LiveCompletionService>,
+    completions: Arc<dyn CompletionService>,
     runtime: Arc<ApplicationRuntime<App>>,
     env: Environment,
     api_key: String,
 }
 
-impl ChatServiceLive {
-    pub fn new(env: Environment, api_key: impl Into<String>) -> Self {
+impl Live {
+    fn new(env: Environment, api_key: impl Into<String>) -> Self {
         let tools = ToolEngine::new();
 
         let request = Request::new(ModelId::default());
@@ -44,7 +44,7 @@ impl ChatServiceLive {
             env,
             provider: Arc::new(Provider::open_router(api_key.clone(), None)),
             tools: Arc::new(tools),
-            completions: Arc::new(LiveCompletionService::new(cwd.clone())),
+            completions: Arc::new(Service::completion_service(cwd.clone())),
             runtime: Arc::new(ApplicationRuntime::new(App::new(request))),
             api_key,
         }
@@ -52,7 +52,7 @@ impl ChatServiceLive {
 }
 
 #[async_trait::async_trait]
-impl ChatService for ChatServiceLive {
+impl ChatService for Live {
     async fn completions(&self) -> Result<Vec<File>> {
         self.completions.list().await
     }
@@ -91,6 +91,6 @@ impl ChatService for ChatServiceLive {
 
 impl Service {
     pub fn chat_service(env: Environment, api_key: impl Into<String>) -> impl ChatService {
-        ChatServiceLive::new(env, api_key)
+        Live::new(env, api_key)
     }
 }
