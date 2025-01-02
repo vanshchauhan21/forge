@@ -11,25 +11,28 @@ pub trait ProviderService: Send + Sync + 'static {
     async fn parameters(&self, model: ModelId) -> Result<Parameters>;
 }
 
-pub struct Provider {
+pub(crate) struct Live {
     provider: Box<dyn ProviderService>,
     cache: Cache<ModelId, Parameters>,
 }
 
-impl Provider {
-    pub async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
-        self.provider.chat(request).await
-    }
-
-    pub async fn models(&self) -> Result<Vec<Model>> {
-        self.provider.models().await
-    }
-
+impl Live {
     pub(crate) fn new(provider: impl ProviderService + 'static) -> Self {
         Self { provider: Box::new(provider), cache: Cache::new(1024) }
     }
+}
 
-    pub async fn parameters(&self, model: ModelId) -> Result<Parameters> {
+#[async_trait::async_trait]
+impl ProviderService for Live {
+    async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
+        self.provider.chat(request).await
+    }
+
+    async fn models(&self) -> Result<Vec<Model>> {
+        self.provider.models().await
+    }
+
+    async fn parameters(&self, model: ModelId) -> Result<Parameters> {
         let parameters = self
             .cache
             .try_get_with_by_ref(&model, self.provider.parameters(model.clone()))

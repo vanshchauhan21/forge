@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_env::Environment;
-use forge_provider::{Model, ModelId, Provider, Request, ResultStream};
+use forge_provider::{Model, ModelId, ProviderService, Request, ResultStream};
 use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -29,7 +29,7 @@ impl Service {
 
 #[derive(Clone)]
 struct Live {
-    provider: Arc<Provider>,
+    provider: Arc<dyn ProviderService>,
     tools: Arc<ToolEngine>,
     completions: Arc<dyn CompletionService>,
     runtime: Arc<ApplicationRuntime<App>>,
@@ -48,7 +48,7 @@ impl Live {
 
         Self {
             env,
-            provider: Arc::new(Provider::open_router(api_key.clone(), None)),
+            provider: Arc::new(forge_provider::Service::open_router(api_key.clone(), None)),
             tools: Arc::new(tools),
             completions: Arc::new(Service::completion_service(cwd.clone())),
             runtime: Arc::new(ApplicationRuntime::new(App::new(request))),

@@ -8,8 +8,10 @@ use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use super::ParameterResponse;
 use crate::error::Result;
-use crate::provider::{ProviderService, Provider};
-use crate::{Error, ModelId, Parameters, ProviderError, Request, Response, ResultStream};
+use crate::provider::ProviderService;
+use crate::{
+    Error, Live, ModelId, Parameters, ProviderError, Request, Response, ResultStream, Service,
+};
 
 const PROVIDER_NAME: &str = "Open Router";
 
@@ -157,9 +159,9 @@ impl ProviderService for OpenRouter {
     }
 }
 
-impl Provider {
-    pub fn open_router(api_key: String, base_url: Option<String>) -> Self {
-        Provider::new(OpenRouter::new(api_key, base_url))
+impl Service {
+    pub fn open_router(api_key: String, base_url: Option<String>) -> impl ProviderService {
+        Live::new(OpenRouter::new(api_key, base_url))
     }
 }
 
