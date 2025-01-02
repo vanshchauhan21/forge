@@ -42,7 +42,7 @@ impl ProviderService for Live {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Parameters {
     pub tools: bool,
     pub model: ModelId,

@@ -271,7 +271,7 @@ mod tests {
     use crate::template::Tag;
 
     impl ChatRequest {
-        fn new(content: impl ToString) -> ChatRequest {
+        pub fn new(content: impl ToString) -> ChatRequest {
             ChatRequest { content: content.to_string(), model: ModelId::default() }
         }
     }
