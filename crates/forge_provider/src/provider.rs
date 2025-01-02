@@ -9,7 +9,7 @@ use crate::{Error, Model, ModelId, Request, Response, ResultStream};
 pub trait ProviderService: Send + Sync + 'static {
     async fn chat(&self, request: Request) -> ResultStream<Response, Error>;
     async fn models(&self) -> Result<Vec<Model>>;
-    async fn parameters(&self, model: ModelId) -> Result<Parameters>;
+    async fn parameters(&self, model: &ModelId) -> Result<Parameters>;
 }
 
 pub(crate) struct Live {
@@ -33,10 +33,10 @@ impl ProviderService for Live {
         self.provider.models().await
     }
 
-    async fn parameters(&self, model: ModelId) -> Result<Parameters> {
+    async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
         let parameters = self
             .cache
-            .try_get_with_by_ref(&model, self.provider.parameters(model.clone()))
+            .try_get_with_by_ref(model, self.provider.parameters(model))
             .await;
 
         Ok(parameters?)

@@ -133,7 +133,7 @@ impl ProviderService for OpenRouter {
             .collect::<Vec<crate::Model>>())
     }
 
-    async fn parameters(&self, model: ModelId) -> Result<Parameters> {
+    async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
         // https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
         let path = format!("/parameters/{}", model.as_str());
         let text = self
@@ -148,7 +148,7 @@ impl ProviderService for OpenRouter {
         let response: ParameterResponse = serde_json::from_str(&text)?;
 
         Ok(Parameters {
-            model,
+            model: model.clone(),
             tool_supported: response
                 .data
                 .supported_parameters

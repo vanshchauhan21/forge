@@ -75,11 +75,8 @@ impl ChatService for Live {
             Command::AssistantMessage(request) => {
                 // TODO: To use or not to use tools should be decided by the app and not the
                 // executor. Set system prompt based on the model type
-                let parameters = self.provider.parameters(request.model.clone()).await?;
-                let system_prompt = self
-                    .system_prompt
-                    .get_system_prompt(request.model.clone())
-                    .await?;
+                let parameters = self.provider.parameters(&request.model).await?;
+                let system_prompt = self.system_prompt.get_system_prompt(&request.model).await?;
                 let mut request = request.clone().set_system_message(system_prompt);
                 if parameters.tool_supported {
                     request = request.tools(self.tools.list());

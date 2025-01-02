@@ -3,7 +3,7 @@ use std::sync::Arc;
 use forge_provider::{CompletionMessage, ProviderService, Request, ResultStream};
 use tokio_stream::StreamExt;
 
-use super::Service;
+use super::{Service, SystemPromptService};
 use crate::app::{ChatRequest, ChatResponse};
 use crate::Error;
 
@@ -13,25 +13,35 @@ pub trait NeoChatService {
 }
 
 impl Service {
-    pub fn neo_chat_service(provider: Arc<dyn ProviderService>) -> impl NeoChatService {
-        Live::new(provider)
+    pub fn neo_chat_service(
+        provider: Arc<dyn ProviderService>,
+        system_prompt: Arc<dyn SystemPromptService>,
+    ) -> impl NeoChatService {
+        Live::new(provider, system_prompt)
     }
 }
 
 struct Live {
     provider: Arc<dyn ProviderService>,
+    system_prompt: Arc<dyn SystemPromptService>,
 }
 
 impl Live {
-    fn new(provider: Arc<dyn ProviderService>) -> Self {
-        Self { provider }
+    fn new(
+        provider: Arc<dyn ProviderService>,
+        system_prompt: Arc<dyn SystemPromptService>,
+    ) -> Self {
+        Self { provider, system_prompt }
     }
 }
 
 #[async_trait::async_trait]
 impl NeoChatService for Live {
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
+        let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
+
         let request = Request::default()
+            .set_system_message(system_prompt)
             .add_message(CompletionMessage::user(chat.content))
             .model(chat.model);
         let response = self.provider.chat(request).await?;
@@ -50,6 +60,7 @@ pub mod tests {
     use std::sync::{Arc, Mutex};
 
     use derive_setters::Setters;
+    use forge_env::Environment;
     use forge_provider::{
         Error, Model, ModelId, Parameters, ProviderError, ProviderService, Request, Response,
         Result, ResultStream,
@@ -61,6 +72,7 @@ pub mod tests {
     use super::Live;
     use crate::app::{ChatRequest, ChatResponse};
     use crate::service::neo_chat_service::NeoChatService;
+    use crate::Service;
 
     #[derive(Default, Setters)]
     pub struct TestProvider {
@@ -81,8 +93,8 @@ pub mod tests {
             Ok(self.models.clone())
         }
 
-        async fn parameters(&self, model: ModelId) -> Result<Parameters> {
-            match self.parameters.iter().find(|(id, _)| id == &model) {
+        async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
+            match self.parameters.iter().find(|(id, _)| id == model) {
                 None => Err(forge_provider::Error::Provider {
                     provider: "closed_ai".to_string(),
                     error: ProviderError::UpstreamError(json!({"error": "Model not found"})),
@@ -97,7 +109,10 @@ pub mod tests {
         let message = "Sure thing!".to_string();
         let provider =
             Arc::new(TestProvider::default().messages(vec![Response::assistant(message.clone())]));
-        let service = Live::new(provider.clone());
+        let tool = Arc::new(forge_tool::Service::live());
+        let env = Environment::default();
+        let system_prompt = Arc::new(Service::system_prompt(env, tool, provider.clone()));
+        let service = Live::new(provider.clone(), system_prompt);
 
         let chat_request = ChatRequest::new("Hello can you help me?");
 

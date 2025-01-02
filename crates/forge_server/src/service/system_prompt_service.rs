@@ -11,7 +11,7 @@ use crate::Result;
 
 #[async_trait::async_trait]
 pub trait SystemPromptService: Send + Sync {
-    async fn get_system_prompt(&self, model: ModelId) -> Result<String>;
+    async fn get_system_prompt(&self, model: &ModelId) -> Result<String>;
 }
 
 impl Service {
@@ -50,7 +50,7 @@ impl Live {
 
 #[async_trait::async_trait]
 impl SystemPromptService for Live {
-    async fn get_system_prompt(&self, model: ModelId) -> Result<String> {
+    async fn get_system_prompt(&self, model: &ModelId) -> Result<String> {
         let template = include_str!("../prompts/system.md").to_string();
 
         let mut hb = Handlebars::new();
@@ -92,10 +92,10 @@ mod tests {
         let tools = Arc::new(forge_tool::Service::live());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::default(),
-            Parameters::default().tools(true),
+            Parameters::default().tool_supported(true),
         )]));
         let prompt = Live::new(env, tools, provider)
-            .get_system_prompt(ModelId::default())
+            .get_system_prompt(&ModelId::default())
             .await
             .unwrap();
         assert_snapshot!(prompt);
@@ -107,10 +107,10 @@ mod tests {
         let tools = Arc::new(forge_tool::Service::live());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::default(),
-            Parameters::default().tools(false),
+            Parameters::default().tool_supported(false),
         )]));
         let prompt = Live::new(env, tools, provider)
-            .get_system_prompt(ModelId::default())
+            .get_system_prompt(&ModelId::default())
             .await
             .unwrap();
         assert_snapshot!(prompt);
