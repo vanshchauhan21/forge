@@ -182,9 +182,7 @@ pub mod tests {
             // TODO: don't remove this else tests stop working, but we need to understand
             // why so revisit this later on.
             tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
-            Ok(Box::pin(
-                tokio_stream::iter(self.messages.clone()).map(Ok),
-            ))
+            Ok(Box::pin(tokio_stream::iter(self.messages.clone()).map(Ok)))
         }
 
         async fn models(&self) -> Result<Vec<Model>> {
