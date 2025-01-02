@@ -13,12 +13,18 @@ use crate::runtime::ApplicationRuntime;
 use crate::{Error, File, Result};
 
 #[async_trait::async_trait]
-pub trait ChatService: Send + Sync {
+pub trait APIService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self) -> Request;
     async fn models(&self) -> Result<Vec<Model>>;
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error>;
+}
+
+impl Service {
+    pub fn api_service(env: Environment, api_key: impl Into<String>) -> impl APIService {
+        Live::new(env, api_key)
+    }
 }
 
 #[derive(Clone)]
@@ -52,7 +58,7 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl ChatService for Live {
+impl APIService for Live {
     async fn completions(&self) -> Result<Vec<File>> {
         self.completions.list().await
     }
@@ -86,11 +92,5 @@ impl ChatService for Live {
         });
 
         Ok(Box::pin(ReceiverStream::new(rx)))
-    }
-}
-
-impl Service {
-    pub fn chat_service(env: Environment, api_key: impl Into<String>) -> impl ChatService {
-        Live::new(env, api_key)
     }
 }
