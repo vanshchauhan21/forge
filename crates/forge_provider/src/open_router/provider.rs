@@ -70,7 +70,6 @@ impl ProviderService for OpenRouter {
         let rb = self
             .client
             .post(self.config.url("/chat/completions"))
-            
             .headers(self.config.headers())
             .body(request);
 
