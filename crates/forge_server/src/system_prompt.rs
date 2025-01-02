@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_env::Environment;
-use forge_tool::ToolEngine;
+use forge_tool::ToolService;
 use handlebars::Handlebars;
 use serde::Serialize;
 
@@ -20,7 +20,7 @@ pub struct SystemPrompt {
 }
 
 impl SystemPrompt {
-    pub fn new(env: Environment, tools: Arc<ToolEngine>) -> Self {
+    pub fn new(env: Environment, tools: Arc<dyn ToolService>) -> Self {
         let tool_information = tools.usage_prompt();
 
         Self { ctx: Context { env, tool_information, use_tool: true } }
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_tool_supported() {
         let env = test_env();
-        let tools = Arc::new(ToolEngine::new());
+        let tools = Arc::new(forge_tool::Service::live());
         let prompt = SystemPrompt::new(env, tools).render().unwrap();
         assert_snapshot!(prompt);
     }
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_tool_unsupported() {
         let env = test_env();
-        let tools = Arc::new(ToolEngine::new());
+        let tools = Arc::new(forge_tool::Service::live());
         let prompt = SystemPrompt::new(env, tools)
             .use_tool(true)
             .render()

@@ -3,9 +3,9 @@ mod fs;
 mod outline;
 mod shell;
 mod think;
-mod tool_engine;
+mod tool_service;
 
-pub use tool_engine::*;
+pub use tool_service::*;
 
 #[async_trait::async_trait]
 trait ToolCallService {
@@ -18,3 +18,5 @@ trait ToolCallService {
 trait Description {
     fn description() -> &'static str;
 }
+
+pub struct Service;

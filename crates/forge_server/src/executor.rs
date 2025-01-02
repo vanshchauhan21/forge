@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use forge_env::Environment;
 use forge_provider::{BoxStream, ProviderService, ResultStream, ToolResult};
-use forge_tool::ToolEngine;
+use forge_tool::ToolService;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
@@ -13,7 +13,7 @@ use crate::{Error, Result};
 
 pub struct ChatCommandExecutor {
     provider: Arc<dyn ProviderService>,
-    tools: Arc<ToolEngine>,
+    tools: Arc<dyn ToolService>,
     tx: mpsc::Sender<Result<ChatResponse>>,
     system_prompt: SystemPrompt,
 }
@@ -24,7 +24,7 @@ impl ChatCommandExecutor {
         api_key: impl Into<String>,
         tx: mpsc::Sender<Result<ChatResponse>>,
     ) -> Self {
-        let tools = Arc::new(ToolEngine::new());
+        let tools = Arc::new(forge_tool::Service::live());
 
         Self {
             provider: Arc::new(forge_provider::Service::open_router(api_key.into(), None)),

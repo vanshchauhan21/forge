@@ -11,7 +11,7 @@ use crate::fs::*;
 use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
-use crate::{Description, ToolCallService};
+use crate::{Description, Service, ToolCallService};
 
 struct JsonTool<T>(T);
 
@@ -31,7 +31,14 @@ where
     }
 }
 
-pub struct ToolEngine {
+#[async_trait::async_trait]
+pub trait ToolService: Send + Sync {
+    async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String>;
+    fn list(&self) -> Vec<ToolDefinition>;
+    fn usage_prompt(&self) -> String;
+}
+
+struct Live {
     tools: HashMap<ToolName, Tool>,
 }
 
@@ -145,30 +152,8 @@ impl ToolName {
     }
 }
 
-impl Default for ToolEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ToolEngine {
-    pub async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
-        let output = match self.tools.get(name) {
-            Some(tool) => tool.executable.call(input).await,
-            None => Err(format!("No such tool found: {}", name.as_str())),
-        };
-
-        output
-    }
-
-    pub fn list(&self) -> Vec<ToolDefinition> {
-        self.tools
-            .values()
-            .map(|tool| tool.definition.clone())
-            .collect()
-    }
-
-    pub fn new() -> Self {
+impl Live {
+    fn new() -> Self {
         let tools: HashMap<ToolName, Tool> = [
             Tool::new(FSRead),
             Tool::new(FSWrite),
@@ -188,8 +173,27 @@ impl ToolEngine {
 
         Self { tools }
     }
+}
 
-    pub fn usage_prompt(&self) -> String {
+#[async_trait::async_trait]
+impl ToolService for Live {
+    async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
+        let output = match self.tools.get(name) {
+            Some(tool) => tool.executable.call(input).await,
+            None => Err(format!("No such tool found: {}", name.as_str())),
+        };
+
+        output
+    }
+
+    fn list(&self) -> Vec<ToolDefinition> {
+        self.tools
+            .values()
+            .map(|tool| tool.definition.clone())
+            .collect()
+    }
+
+    fn usage_prompt(&self) -> String {
         let mut tools: Vec<_> = self.tools.values().collect();
         tools.sort_by(|a, b| a.definition.name.as_str().cmp(b.definition.name.as_str()));
 
@@ -280,6 +284,12 @@ impl Tool {
     }
 }
 
+impl Service {
+    pub fn live() -> impl ToolService {
+        Live::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -304,7 +314,7 @@ mod test {
 
     #[test]
     fn test_usage_prompt() {
-        let docs = ToolEngine::new().usage_prompt();
+        let docs = Live::new().usage_prompt();
 
         assert_snapshot!(docs);
     }
