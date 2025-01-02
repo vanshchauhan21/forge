@@ -64,8 +64,15 @@ impl Live {
                         .await
                         .expect("Failed to send message");
                 } else {
-                    // we start the folding process.
                     if let Some(tool_part) = message.tool_call.first() {
+                        if current_tool.is_empty() {
+                            // very first instance where we found a tool call.
+                            tx.send(Ok(ChatResponse::ToolUseStart(ToolUseStart {
+                                tool_name: tool_part.name.clone(),
+                            })))
+                            .await
+                            .expect("Failed to send message");
+                        }
                         current_tool.push(tool_part.clone());
                     }
 
@@ -84,8 +91,12 @@ impl Live {
             let assitant_message = "".to_string();
             request = request.add_message(CompletionMessage::assistant(assitant_message));
             if let Some(Ok(tool_result)) = tool_result {
-                let tool_result = serde_json::from_value(tool_result).unwrap();
-                request = request.add_message(CompletionMessage::ToolMessage(tool_result));
+                let tool_result: ToolResult = serde_json::from_value(tool_result).unwrap();
+                request = request.add_message(CompletionMessage::ToolMessage(tool_result.clone()));
+                // send the tool use end message.
+                tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
+                    .await
+                    .expect("Failed to send message");
             } else {
                 break Ok(());
             }
@@ -146,13 +157,15 @@ mod tests {
     use std::sync::Arc;
     use std::vec;
 
-    use forge_provider::{CompletionMessage, ModelId, Response};
+    use forge_provider::{
+        CompletionMessage, FinishReason, ModelId, Response, ToolCallId, ToolCallPart, ToolResult,
+    };
     use forge_tool::{ToolDefinition, ToolName, ToolService};
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;
 
-    use super::{ChatRequest, Live};
+    use super::{ChatRequest, Live, ToolUseStart};
     use crate::service::neo_chat_service::NeoChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::ChatResponse;
@@ -190,53 +203,124 @@ mod tests {
         }
     }
 
+    const ASSISTANT_RESPONSE: &str = "Sure thing!";
+    const SYSTEM_PROMPT: &str = "Do everything that the user says";
+
+    struct Fixture {
+        provider: Arc<TestProvider>,
+        system_prompt: Arc<TestSystemPrompt>,
+        tool: Arc<TestToolService>,
+        service: Live,
+    }
+
+    impl Fixture {
+        pub fn with_provider(self, provider: TestProvider) -> Self {
+            let provider = Arc::new(provider);
+            Self {
+                provider: provider.clone(),
+                service: Live::new(provider, self.system_prompt.clone(), self.tool.clone()),
+                system_prompt: self.system_prompt,
+                tool: self.tool,
+            }
+        }
+
+        pub fn with_tool(self, tool_result: ToolResult) -> Self {
+            let tool = Arc::new(TestToolService::new(
+                serde_json::to_value(tool_result).unwrap(),
+            ));
+            Self {
+                provider: self.provider.clone(),
+                service: Live::new(self.provider, self.system_prompt.clone(), tool.clone()),
+                system_prompt: self.system_prompt,
+                tool,
+            }
+        }
+
+        pub async fn chat(&self, request: ChatRequest) -> Vec<ChatResponse> {
+            self.service
+                .chat(request)
+                .await
+                .unwrap()
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .map(|value| value.unwrap())
+                .collect::<Vec<_>>()
+        }
+    }
+
+    impl Default for Fixture {
+        fn default() -> Self {
+            let provider =
+                Arc::new(
+                    TestProvider::default().with_messages(vec![vec![Response::assistant(
+                        ASSISTANT_RESPONSE.to_string(),
+                    )]]),
+                );
+            let system_prompt = Arc::new(TestSystemPrompt::new(SYSTEM_PROMPT));
+            let tool = Arc::new(TestToolService::new(json!({"result": "fs success."})));
+            let service = Live::new(provider.clone(), system_prompt.clone(), tool.clone());
+            Self { provider, system_prompt, tool, service }
+        }
+    }
+
     #[tokio::test]
     async fn test_chat_response() {
-        let message = "Sure thing!".to_string();
-        let provider =
-            Arc::new(TestProvider::default().messages(vec![Response::assistant(message.clone())]));
-        let system_prompt = Arc::new(TestSystemPrompt::new("Do everything that the user says"));
-        let tool = Arc::new(TestToolService::new(json!({"result": "fs success."})));
-        let service = Live::new(provider.clone(), system_prompt, tool);
-
         let chat_request = ChatRequest::new("Hello can you help me?");
 
-        let actual = service
-            .chat(chat_request)
-            .await
-            .unwrap()
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .map(|value| value.unwrap())
-            .collect::<Vec<_>>();
-
-        let expected = vec![ChatResponse::Text(message)];
-
+        let actual = Fixture::default().chat(chat_request).await;
+        let expected = vec![ChatResponse::Text(ASSISTANT_RESPONSE.to_string())];
         assert_eq!(actual, expected)
     }
 
     #[tokio::test]
     async fn test_chat_system_prompt() {
-        let message = "Sure thing!".to_string();
-        let provider =
-            Arc::new(TestProvider::default().messages(vec![Response::assistant(message.clone())]));
-        let system_message = "Do everything that the user says";
-        let system_prompt = Arc::new(TestSystemPrompt::new(system_message));
-        let tool = Arc::new(TestToolService::new(json!({"result": "fs success."})));
-        let service = Live::new(provider.clone(), system_prompt, tool);
-
+        let tester = Fixture::default();
         let chat_request = ChatRequest::new("Hello can you help me?");
 
         // TODO: don't remove this else tests stop working, but we need to understand
         // why so revisit this later on.
         tokio::time::pause();
-        let _ = service.chat(chat_request).await.unwrap();
+        let _ = tester.service.chat(chat_request).await.unwrap();
         tokio::time::advance(tokio::time::Duration::from_millis(5)).await;
 
-        let actual = provider.get_last_call().unwrap().messages[0].clone();
-        let expected = CompletionMessage::system(system_message);
+        let actual = tester.provider.get_last_call().unwrap().messages[0].clone();
+        let expected = CompletionMessage::system(SYSTEM_PROMPT.to_string());
 
         assert_eq!(actual, expected)
+    }
+
+    #[tokio::test]
+    async fn test_chat_tool_result() {
+        let message_1 = Response::new("Let's use foo tool").add_tool_call(
+            ToolCallPart::default()
+                .name(ToolName::new("foo"))
+                .arguments_part(r#"{"foo": 1,"#)
+                .call_id(ToolCallId::new("too_call_001")),
+        );
+        let message_2 = Response::new("")
+            .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
+            .finish_reason(FinishReason::ToolCalls);
+        let message_3 = Response::new("Task is complete, let me know how can i help you!");
+
+        let tool_result = ToolResult::new(ToolName::new("foo")).content(json!({
+            "a": 100,
+            "b": 200
+        }));
+        let request = ChatRequest::new("Hello can you help me?");
+        let result = Fixture::default()
+            .with_provider(
+                TestProvider::default()
+                    .with_messages(vec![vec![message_1, message_2], vec![message_3.clone()]]),
+            )
+            .with_tool(tool_result.clone())
+            .chat(request)
+            .await;
+
+        assert!(result.contains(&ChatResponse::ToolUseStart(ToolUseStart {
+            tool_name: Some(ToolName::new("foo"))
+        })));
+        assert!(result.contains(&ChatResponse::ToolUseEnd(tool_result)));
+        assert!(result.contains(&ChatResponse::Text(message_3.content)));
     }
 }
