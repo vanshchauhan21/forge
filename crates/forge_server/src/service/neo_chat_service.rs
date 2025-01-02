@@ -46,8 +46,7 @@ impl NeoChatService for Live {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
+pub mod tests {
     use std::sync::{Arc, Mutex};
 
     use derive_setters::Setters;
@@ -57,7 +56,6 @@ mod tests {
     };
     use pretty_assertions::assert_eq;
     use serde_json::json;
-    
     use tokio_stream::StreamExt;
 
     use super::Live;
@@ -65,11 +63,11 @@ mod tests {
     use crate::service::neo_chat_service::NeoChatService;
 
     #[derive(Default, Setters)]
-    struct TestProvider {
+    pub struct TestProvider {
         messages: Vec<Response>,
         request: Mutex<Option<Request>>,
         models: Vec<Model>,
-        parameters: HashMap<ModelId, Parameters>,
+        parameters: Vec<(ModelId, Parameters)>,
     }
 
     #[async_trait::async_trait]
@@ -84,12 +82,12 @@ mod tests {
         }
 
         async fn parameters(&self, model: ModelId) -> Result<Parameters> {
-            match self.parameters.get(&model) {
+            match self.parameters.iter().find(|(id, _)| id == &model) {
                 None => Err(forge_provider::Error::Provider {
                     provider: "closed_ai".to_string(),
                     error: ProviderError::UpstreamError(json!({"error": "Model not found"})),
                 }),
-                Some(parameter) => Ok(parameter.clone()),
+                Some((_, parameter)) => Ok(parameter.clone()),
             }
         }
     }

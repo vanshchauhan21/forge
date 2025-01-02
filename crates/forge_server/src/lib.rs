@@ -5,7 +5,6 @@ mod log;
 mod routes;
 mod runtime;
 mod service;
-mod system_prompt;
 mod template;
 
 pub use error::*;

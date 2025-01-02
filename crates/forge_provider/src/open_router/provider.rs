@@ -149,7 +149,7 @@ impl ProviderService for OpenRouter {
 
         Ok(Parameters {
             model,
-            tools: response
+            tool_supported: response
                 .data
                 .supported_parameters
                 .iter()

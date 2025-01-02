@@ -8,8 +8,7 @@ use tokio_stream::StreamExt;
 
 use super::Service;
 use crate::app::{Action, ChatResponse, Command, FileResponse};
-use crate::system_prompt::SystemPrompt;
-use crate::{Error, Result};
+use crate::{Error, Result, SystemPromptService};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
@@ -33,7 +32,7 @@ struct Live {
     provider: Arc<dyn ProviderService>,
     tools: Arc<dyn ToolService>,
     tx: mpsc::Sender<Result<ChatResponse>>,
-    system_prompt: SystemPrompt,
+    system_prompt: Arc<dyn SystemPromptService>,
 }
 
 impl Live {
@@ -42,13 +41,14 @@ impl Live {
         api_key: impl Into<String>,
         tx: mpsc::Sender<Result<ChatResponse>>,
     ) -> Self {
-        let tools = Arc::new(forge_tool::Service::live());
+        let tool = Arc::new(forge_tool::Service::live());
+        let provider = Arc::new(forge_provider::Service::open_router(api_key.into(), None));
 
         Self {
-            provider: Arc::new(forge_provider::Service::open_router(api_key.into(), None)),
-            tools: tools.clone(),
+            provider: provider.clone(),
+            tools: tool.clone(),
             tx,
-            system_prompt: SystemPrompt::new(env, tools),
+            system_prompt: Arc::new(Service::system_prompt(env, tool, provider)),
         }
     }
 }
@@ -76,16 +76,14 @@ impl ChatService for Live {
                 // TODO: To use or not to use tools should be decided by the app and not the
                 // executor. Set system prompt based on the model type
                 let parameters = self.provider.parameters(request.model.clone()).await?;
-                let request = if parameters.tools {
-                    request
-                        .clone()
-                        .set_system_message(self.system_prompt.clone().use_tool(true).render()?)
-                        .tools(self.tools.list())
-                } else {
-                    request
-                        .clone()
-                        .set_system_message(self.system_prompt.clone().render()?)
-                };
+                let system_prompt = self
+                    .system_prompt
+                    .get_system_prompt(request.model.clone())
+                    .await?;
+                let mut request = request.clone().set_system_message(system_prompt);
+                if parameters.tool_supported {
+                    request = request.tools(self.tools.list());
+                }
 
                 let actions =
                     self.provider.chat(request).await?.map(|response| {

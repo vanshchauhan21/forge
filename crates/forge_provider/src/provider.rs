@@ -1,3 +1,4 @@
+use derive_setters::Setters;
 use moka2::future::Cache;
 use serde::{Deserialize, Serialize};
 
@@ -42,8 +43,8 @@ impl ProviderService for Live {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Setters)]
 pub struct Parameters {
-    pub tools: bool,
+    pub tool_supported: bool,
     pub model: ModelId,
 }
