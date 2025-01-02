@@ -1,6 +1,7 @@
 ---
 source: crates/forge_server/src/service/neo_chat_service.rs
 expression: last_request
+snapshot_kind: text
 ---
 Request {
     messages: [
