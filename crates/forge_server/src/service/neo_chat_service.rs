@@ -1,18 +1,20 @@
 use std::sync::Arc;
 
+use derive_setters::Setters;
 use forge_provider::{
-    CompletionMessage, FinishReason, ProviderService, Request, ResultStream, ToolCall,
+    CompletionMessage, FinishReason, ModelId, ProviderService, Request, ResultStream, ToolCall,
+    ToolResult,
 };
-use forge_tool::ToolService;
+use forge_tool::{ToolName, ToolService};
+use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::{Service, SystemPromptService};
-use crate::app::{ChatRequest, ChatResponse};
-use crate::{Error, Result};
+use crate::{Errata, Error, Result};
 
 #[async_trait::async_trait]
-pub trait NeoChatService {
+pub trait NeoChatService: Send + Sync {
     async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, Error>;
 }
 
@@ -114,37 +116,50 @@ impl NeoChatService for Live {
     }
 }
 
+#[derive(Debug, serde::Deserialize, Clone, Setters)]
+#[setters(into)]
+pub struct ChatRequest {
+    pub content: String,
+    pub model: ModelId,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, derive_more::From)]
+#[serde(rename_all = "camelCase")]
+pub enum ChatResponse {
+    #[from(ignore)]
+    Text(String),
+    ToolUseStart(ToolUseStart),
+    ToolUseEnd(ToolResult),
+    Complete,
+    #[from(ignore)]
+    Fail(Errata),
+}
+
+#[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolUseStart {
+    pub tool_name: Option<ToolName>,
+}
+
 #[cfg(test)]
-pub mod tests {
-    use std::sync::{Arc, Mutex};
+mod tests {
+    use std::sync::Arc;
     use std::vec;
 
-    use derive_setters::Setters;
-    use forge_provider::{
-        CompletionMessage, Error, Model, ModelId, Parameters, ProviderError, ProviderService,
-        Request, Response, Result, ResultStream,
-    };
+    use forge_provider::{CompletionMessage, ModelId, Response};
     use forge_tool::{ToolDefinition, ToolName, ToolService};
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;
 
-    use super::Live;
-    use crate::app::{ChatRequest, ChatResponse};
+    use super::{ChatRequest, Live};
     use crate::service::neo_chat_service::NeoChatService;
-    use crate::tests::TestSystemPrompt;
+    use crate::service::tests::{TestProvider, TestSystemPrompt};
+    use crate::ChatResponse;
 
-    #[derive(Default, Setters)]
-    pub struct TestProvider {
-        messages: Vec<Response>,
-        request: Mutex<Option<Request>>,
-        models: Vec<Model>,
-        parameters: Vec<(ModelId, Parameters)>,
-    }
-
-    impl TestProvider {
-        pub fn get_last_call(&self) -> Option<Request> {
-            self.request.lock().unwrap().clone()
+    impl ChatRequest {
+        pub fn new(content: impl ToString) -> ChatRequest {
+            ChatRequest { content: content.to_string(), model: ModelId::default() }
         }
     }
 
@@ -172,31 +187,6 @@ pub mod tests {
         }
         fn usage_prompt(&self) -> String {
             "".to_string()
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl ProviderService for TestProvider {
-        async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
-            self.request.lock().unwrap().replace(request);
-            // TODO: don't remove this else tests stop working, but we need to understand
-            // why so revisit this later on.
-            tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
-            Ok(Box::pin(tokio_stream::iter(self.messages.clone()).map(Ok)))
-        }
-
-        async fn models(&self) -> Result<Vec<Model>> {
-            Ok(self.models.clone())
-        }
-
-        async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
-            match self.parameters.iter().find(|(id, _)| id == model) {
-                None => Err(forge_provider::Error::Provider {
-                    provider: "closed_ai".to_string(),
-                    error: ProviderError::UpstreamError(json!({"error": "Model not found"})),
-                }),
-                Some((_, parameter)) => Ok(parameter.clone()),
-            }
         }
     }
 

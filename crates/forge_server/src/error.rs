@@ -4,8 +4,6 @@ use derive_more::derive::{Display, From};
 use derive_setters::Setters;
 use serde::Serialize;
 
-use crate::app::ChatResponse;
-
 #[derive(Display, From)]
 pub enum Error {
     // TODO: drop `Custom` because its too generic
@@ -13,7 +11,6 @@ pub enum Error {
     Provider(forge_provider::Error),
     IO(std::io::Error),
     Var(std::env::VarError),
-    SendError(tokio::sync::mpsc::error::SendError<ChatResponse>),
     Serde(serde_json::Error),
     EmptyResponse,
     Walk(forge_walker::Error),

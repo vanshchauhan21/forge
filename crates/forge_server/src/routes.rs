@@ -15,9 +15,8 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
-use crate::app::{ChatRequest, ChatResponse};
 use crate::context::ContextEngine;
-use crate::{Errata, File, Result, RootAPIService, Service};
+use crate::{ChatRequest, ChatResponse, Errata, File, Result, RootAPIService, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -42,7 +41,7 @@ impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
         let env = Environment::from_env().await?;
-        let state = Arc::new(Service::api_service(env, self.api_key));
+        let state = Arc::new(Service::root_api_service(env, self.api_key));
 
         if dotenv::dotenv().is_ok() {
             info!("Loaded .env file");
