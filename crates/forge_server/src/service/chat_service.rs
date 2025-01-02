@@ -6,19 +6,37 @@ use forge_tool::ToolService;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
+use super::Service;
 use crate::app::{Action, ChatResponse, Command, FileResponse};
-use crate::runtime::Executor;
 use crate::system_prompt::SystemPrompt;
 use crate::{Error, Result};
 
-pub struct ChatCommandExecutor {
+#[async_trait::async_trait]
+pub trait ChatService: Send + Sync {
+    type Command;
+    type Action;
+    type Error;
+    async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
+}
+
+impl Service {
+    pub fn chat_service(
+        env: Environment,
+        api_key: impl Into<String>,
+        tx: mpsc::Sender<Result<ChatResponse>>,
+    ) -> impl ChatService<Command = Command, Action = Action, Error = Error> {
+        Live::new(env, api_key, tx)
+    }
+}
+
+struct Live {
     provider: Arc<dyn ProviderService>,
     tools: Arc<dyn ToolService>,
     tx: mpsc::Sender<Result<ChatResponse>>,
     system_prompt: SystemPrompt,
 }
 
-impl ChatCommandExecutor {
+impl Live {
     pub fn new(
         env: Environment,
         api_key: impl Into<String>,
@@ -36,7 +54,7 @@ impl ChatCommandExecutor {
 }
 
 #[async_trait::async_trait]
-impl Executor for ChatCommandExecutor {
+impl ChatService for Live {
     type Command = Command;
     type Action = Action;
     type Error = Error;

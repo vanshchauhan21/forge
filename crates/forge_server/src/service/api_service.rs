@@ -8,7 +8,6 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use super::{CompletionService, Service};
 use crate::app::{Action, App, ChatRequest, ChatResponse};
-use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
 use crate::{Error, File, Result};
 
@@ -77,7 +76,7 @@ impl APIService for Live {
 
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         let (tx, rx) = mpsc::channel::<Result<ChatResponse>>(100);
-        let executor = ChatCommandExecutor::new(self.env.clone(), self.api_key.clone(), tx);
+        let chat_service = Service::chat_service(self.env.clone(), self.api_key.clone(), tx);
         let runtime = self.runtime.clone();
         let message = format!("<task>{}</task>", chat.content);
 
@@ -86,7 +85,7 @@ impl APIService for Live {
                 .clone()
                 .execute(
                     Action::UserMessage(chat.content(message)),
-                    Arc::new(executor),
+                    Arc::new(chat_service),
                 )
                 .await
         });

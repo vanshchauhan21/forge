@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use forge_provider::ResultStream;
 use futures::future::join_all;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
+
+use crate::ChatService;
 
 pub trait Application: Send + Sync + Sized + 'static {
     type Action: Send;
@@ -57,7 +58,7 @@ impl<A: Application + 'static> ApplicationRuntime<A> {
         &'a self,
         action: A::Action,
         executor: Arc<
-            impl Executor<Command = A::Command, Action = A::Action, Error = A::Error> + 'static,
+            dyn ChatService<Command = A::Command, Action = A::Action, Error = A::Error> + 'static,
         >,
     ) -> std::result::Result<(), A::Error> {
         let mut guard = self.state.lock().await;
@@ -86,14 +87,6 @@ impl<A: Application + 'static> ApplicationRuntime<A> {
 
         Ok(())
     }
-}
-
-#[async_trait::async_trait]
-pub trait Executor: Send + Sync {
-    type Command;
-    type Action;
-    type Error;
-    async fn execute(&self, command: &Self::Command) -> ResultStream<Self::Action, Self::Error>;
 }
 
 type Type<State, In, Out, Error> = Box<dyn Fn(&mut State, &In) -> Result<Vec<Out>, Error>>;

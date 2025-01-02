@@ -1,7 +1,6 @@
 mod app;
 mod context;
 mod error;
-mod executor;
 mod log;
 mod routes;
 mod runtime;
