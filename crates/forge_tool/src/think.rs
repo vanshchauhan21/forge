@@ -6,7 +6,7 @@ use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Description, ToolService};
+use crate::{Description, ToolCallService};
 
 /// A framework for iterative reasoning in problem-solving.
 ///
@@ -195,7 +195,7 @@ impl Think {
 }
 
 #[async_trait::async_trait]
-impl ToolService for Think {
+impl ToolCallService for Think {
     type Input = ThoughtInput;
     type Output = ThoughtResult;
 

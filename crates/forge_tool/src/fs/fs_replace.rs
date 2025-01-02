@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tracing::{debug, error};
 
-use crate::{Description, ToolService};
+use crate::{Description, ToolCallService};
 
 fn persist_changes<P: AsRef<Path>>(
     temp_file: NamedTempFile,
@@ -251,7 +251,7 @@ pub struct FSReplaceOutput {
 }
 
 #[async_trait::async_trait]
-impl ToolService for FSReplace {
+impl ToolCallService for FSReplace {
     type Input = FSReplaceInput;
     type Output = FSReplaceOutput;
 

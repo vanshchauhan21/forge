@@ -7,16 +7,16 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::fs::*;
+use crate::outline::Outline;
+use crate::shell::Shell;
 use crate::think::Think;
-use crate::{
-    Description, FSFileInfo, FSList, FSRead, FSReplace, FSSearch, FSWrite, Outline, Shell,
-    ToolService,
-};
+use crate::{Description, ToolCallService};
 
 struct JsonTool<T>(T);
 
 #[async_trait::async_trait]
-impl<T: ToolService + Sync> ToolService for JsonTool<T>
+impl<T: ToolCallService + Sync> ToolCallService for JsonTool<T>
 where
     T::Input: serde::de::DeserializeOwned + JsonSchema,
     T::Output: serde::Serialize + JsonSchema,
@@ -208,14 +208,14 @@ impl ToolEngine {
 
 struct Tool {
     name: ToolName,
-    executable: Box<dyn ToolService<Input = Value, Output = Value> + Send + Sync + 'static>,
+    executable: Box<dyn ToolCallService<Input = Value, Output = Value> + Send + Sync + 'static>,
     definition: ToolDefinition,
 }
 
 impl Tool {
     fn new<T>(tool: T) -> Tool
     where
-        T: ToolService + Description + Send + Sync + 'static,
+        T: ToolCallService + Description + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
@@ -286,7 +286,7 @@ mod test {
     use insta::assert_snapshot;
 
     use super::*;
-    use crate::{FSFileInfo, FSSearch};
+    use crate::fs::{FSFileInfo, FSSearch};
 
     #[test]
     fn test_id() {
