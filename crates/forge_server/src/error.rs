@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::{Display, From};
 use derive_setters::Setters;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Display, From)]
 pub enum Error {
@@ -19,6 +19,18 @@ pub enum Error {
     Handlebars(handlebars::RenderError),
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorResponse {
+    pub error: InnerErrorResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InnerErrorResponse {
+    pub code: u32,
+    pub message: String,
+    pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl std::fmt::Debug for Error {
@@ -30,13 +42,16 @@ impl std::fmt::Debug for Error {
 #[derive(Clone, Setters, Serialize, PartialEq, Eq)]
 pub struct Errata {
     pub message: String,
+    #[setters(strip_option)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<u32>,
     #[setters(strip_option, into)]
     pub description: Option<String>,
 }
 
 impl Errata {
     pub fn new(title: impl Into<String>) -> Self {
-        Self { message: title.into(), description: None }
+        Self { message: title.into(), description: None, code: None }
     }
 }
 
@@ -60,7 +75,18 @@ impl Debug for Errata {
 
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
-        Errata::new(error.to_string())
+        match error {
+            Error::Provider(forge_provider::Error::Provider { provider, error: forge_provider::ProviderError::UpstreamError(value) }) => {
+                let value: ErrorResponse = serde_json::from_value(value.clone()).unwrap();
+                Self{
+                    message: format!("{}: {}", provider, value.error.message),
+                    code: Some(value.error.code),
+                    description: value.error.metadata.map(|m| serde_json::to_string(&m).unwrap())
+                }
+            }
+           _ => Errata::new(error.to_string()) 
+        }
+        
     }
 }
 
