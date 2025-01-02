@@ -8,16 +8,15 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::Stream;
 
 use crate::app::{Action, App, ChatRequest, ChatResponse};
-use crate::completion::{Completion, File};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
-use crate::Result;
+use crate::{CompletionService, File, Result};
 
 #[derive(Clone)]
 pub struct Server {
     provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
-    completions: Arc<Completion>,
+    completions: Arc<CompletionService>,
     runtime: Arc<ApplicationRuntime<App>>,
     env: Environment,
     api_key: String,
@@ -36,7 +35,7 @@ impl Server {
             env,
             provider: Arc::new(Provider::open_router(api_key.clone(), None)),
             tools: Arc::new(tools),
-            completions: Arc::new(Completion::new(cwd.clone())),
+            completions: Arc::new(CompletionService::new(cwd.clone())),
             runtime: Arc::new(ApplicationRuntime::new(App::new(request))),
             api_key,
         }

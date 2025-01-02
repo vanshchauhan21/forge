@@ -11,11 +11,11 @@ pub struct File {
     pub is_dir: bool,
 }
 
-pub struct Completion {
+pub struct CompletionService {
     path: String,
 }
 
-impl Completion {
+impl CompletionService {
     pub fn new(path: impl Into<String>) -> Self {
         Self { path: path.into() }
     }

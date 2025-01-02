@@ -15,11 +15,10 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
+use crate::api::Server;
 use crate::app::ChatRequest;
-use crate::completion::File;
 use crate::context::ContextEngine;
-use crate::server::Server;
-use crate::Result;
+use crate::{File, Result};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server

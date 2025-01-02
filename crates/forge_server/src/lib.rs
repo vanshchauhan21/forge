@@ -1,14 +1,15 @@
-mod routes;
+mod api;
 mod app;
-mod completion;
 mod context;
 mod error;
 mod executor;
 mod log;
+mod routes;
 mod runtime;
-mod server;
+mod service;
 mod system_prompt;
 mod template;
 
-pub use routes::API;
 pub use error::*;
+pub use routes::API;
+pub use service::*;
