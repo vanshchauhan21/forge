@@ -12,7 +12,7 @@ use crate::runtime::ApplicationRuntime;
 use crate::{Error, File, Result};
 
 #[async_trait::async_trait]
-pub trait APIService: Send + Sync {
+pub trait RootAPIService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self) -> Request;
@@ -21,7 +21,7 @@ pub trait APIService: Send + Sync {
 }
 
 impl Service {
-    pub fn api_service(env: Environment, api_key: impl Into<String>) -> impl APIService {
+    pub fn api_service(env: Environment, api_key: impl Into<String>) -> impl RootAPIService {
         Live::new(env, api_key)
     }
 }
@@ -57,7 +57,7 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl APIService for Live {
+impl RootAPIService for Live {
     async fn completions(&self) -> Result<Vec<File>> {
         self.completions.list().await
     }

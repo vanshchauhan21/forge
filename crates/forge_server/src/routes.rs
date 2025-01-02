@@ -17,7 +17,7 @@ use tracing::info;
 
 use crate::app::{ChatRequest, ChatResponse};
 use crate::context::ContextEngine;
-use crate::{APIService, Errata, File, Result, Service};
+use crate::{RootAPIService, Errata, File, Result, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -32,7 +32,7 @@ impl Default for API {
     }
 }
 
-async fn context_html_handler(State(state): State<Arc<dyn APIService>>) -> Html<String> {
+async fn context_html_handler(State(state): State<Arc<dyn RootAPIService>>) -> Html<String> {
     let context = state.context().await;
     let engine = ContextEngine::new(context);
     Html(engine.render_html())
@@ -88,7 +88,7 @@ impl API {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<dyn APIService>>) -> axum::Json<Vec<File>> {
+async fn completions_handler(State(state): State<Arc<dyn RootAPIService>>) -> axum::Json<Vec<File>> {
     let files = state
         .completions()
         .await
@@ -98,7 +98,7 @@ async fn completions_handler(State(state): State<Arc<dyn APIService>>) -> axum::
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<dyn APIService>>,
+    State(state): State<Arc<dyn RootAPIService>>,
     Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
@@ -115,7 +115,7 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<dyn APIService>>) -> Json<ToolResponse> {
+async fn tools_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ToolResponse> {
     let tools = state.tools().await;
     Json(ToolResponse { tools })
 }
@@ -127,12 +127,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<dyn APIService>>) -> Json<ModelResponse> {
+async fn models_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ModelResponse> {
     let models = state.models().await.unwrap_or_default();
     Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<dyn APIService>>) -> Json<ContextResponse> {
+async fn context_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ContextResponse> {
     let context = state.context().await;
     Json(ContextResponse { context })
 }
