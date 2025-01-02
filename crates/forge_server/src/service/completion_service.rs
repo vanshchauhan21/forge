@@ -11,16 +11,24 @@ pub struct File {
     pub is_dir: bool,
 }
 
-pub struct CompletionService {
+#[async_trait::async_trait]
+pub trait CompletionService: Send + Sync {
+    async fn list(&self) -> Result<Vec<File>>;
+}
+
+pub struct LiveCompletionService {
     path: String,
 }
 
-impl CompletionService {
+impl LiveCompletionService {
     pub fn new(path: impl Into<String>) -> Self {
         Self { path: path.into() }
     }
+}
 
-    pub async fn list(&self) -> Result<Vec<File>> {
+#[async_trait::async_trait]
+impl CompletionService for LiveCompletionService {
+    async fn list(&self) -> Result<Vec<File>> {
         let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
         let walker = Walker::new(cwd);
 

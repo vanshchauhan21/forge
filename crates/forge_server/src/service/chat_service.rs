@@ -6,10 +6,11 @@ use forge_tool::{ToolDefinition, ToolEngine};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::CompletionService;
 use crate::app::{Action, App, ChatRequest, ChatResponse};
 use crate::executor::ChatCommandExecutor;
 use crate::runtime::ApplicationRuntime;
-use crate::{CompletionService, Error, File, Result};
+use crate::{Error, File, LiveCompletionService, Result};
 
 #[async_trait::async_trait]
 pub trait ChatService {
@@ -24,7 +25,7 @@ pub trait ChatService {
 pub struct ChatServiceLive {
     provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
-    completions: Arc<CompletionService>,
+    completions: Arc<LiveCompletionService>,
     runtime: Arc<ApplicationRuntime<App>>,
     env: Environment,
     api_key: String,
@@ -43,7 +44,7 @@ impl ChatServiceLive {
             env,
             provider: Arc::new(Provider::open_router(api_key.clone(), None)),
             tools: Arc::new(tools),
-            completions: Arc::new(CompletionService::new(cwd.clone())),
+            completions: Arc::new(LiveCompletionService::new(cwd.clone())),
             runtime: Arc::new(ApplicationRuntime::new(App::new(request))),
             api_key,
         }

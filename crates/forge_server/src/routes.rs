@@ -15,10 +15,9 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
-use crate::api::Server;
-use crate::app::ChatRequest;
+use crate::app::{ChatRequest, ChatResponse};
 use crate::context::ContextEngine;
-use crate::{File, Result};
+use crate::{ChatService, ChatServiceLive, Errata, File, Result};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -33,7 +32,7 @@ impl Default for API {
     }
 }
 
-async fn context_html_handler(State(state): State<Arc<Server>>) -> Html<String> {
+async fn context_html_handler(State(state): State<Arc<ChatServiceLive>>) -> Html<String> {
     let context = state.context().await;
     let engine = ContextEngine::new(context);
     Html(engine.render_html())
@@ -43,7 +42,7 @@ impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
         let env = Environment::from_env().await?;
-        let state = Arc::new(Server::new(env, self.api_key));
+        let state = Arc::new(ChatServiceLive::new(env, self.api_key));
 
         if dotenv::dotenv().is_ok() {
             info!("Loaded .env file");
@@ -89,7 +88,7 @@ impl API {
     }
 }
 
-async fn completions_handler(State(state): State<Arc<Server>>) -> axum::Json<Vec<File>> {
+async fn completions_handler(State(state): State<Arc<ChatServiceLive>>) -> axum::Json<Vec<File>> {
     let files = state
         .completions()
         .await
@@ -99,22 +98,25 @@ async fn completions_handler(State(state): State<Arc<Server>>) -> axum::Json<Vec
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<Server>>,
+    State(state): State<Arc<ChatServiceLive>>,
     Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
         .chat(request)
         .await
         .expect("Engine failed to respond with a chat message");
-    Sse::new(stream.map(|action| {
-        let data = serde_json::to_string(&action).expect("Failed to serialize action");
+    Sse::new(stream.map(|message| {
+        let data = serde_json::to_string(
+            &message.unwrap_or_else(|error| ChatResponse::Fail(Errata::from(&error))),
+        )
+        .expect("Failed to serialize message");
         Ok(Event::default().data(data))
     }))
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<Server>>) -> Json<ToolResponse> {
-    let tools = state.tools();
+async fn tools_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ToolResponse> {
+    let tools = state.tools().await;
     Json(ToolResponse { tools })
 }
 
@@ -125,12 +127,12 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<Server>>) -> Json<ModelResponse> {
+async fn models_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ModelResponse> {
     let models = state.models().await.unwrap_or_default();
     Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<Server>>) -> Json<ContextResponse> {
+async fn context_handler(State(state): State<Arc<ChatServiceLive>>) -> Json<ContextResponse> {
     let context = state.context().await;
     Json(ContextResponse { context })
 }

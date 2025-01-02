@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::runtime::{Application, Channel};
 use crate::template::MessageTemplate;
-use crate::Error;
+use crate::{Errata, Error};
 
 type AppChannel<Action, Command> = Channel<App, Action, Command, Error>;
 
@@ -53,7 +53,7 @@ pub enum ChatResponse {
     ToolUseEnd(ToolResult),
     Complete,
     #[from(ignore)]
-    Fail(String),
+    Fail(Errata),
 }
 
 #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]

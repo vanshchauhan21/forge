@@ -2,6 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use derive_more::derive::{Display, From};
 use derive_setters::Setters;
+use serde::Serialize;
 
 use crate::app::ChatResponse;
 
@@ -29,7 +30,7 @@ impl std::fmt::Debug for Error {
     }
 }
 
-#[derive(Clone, Setters)]
+#[derive(Clone, Setters, Serialize, PartialEq, Eq)]
 pub struct Errata {
     pub title: String,
     #[setters(strip_option, into)]

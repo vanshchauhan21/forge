@@ -9,12 +9,12 @@ use tokio_stream::StreamExt;
 use crate::app::{Action, ChatResponse, Command, FileResponse};
 use crate::runtime::Executor;
 use crate::system_prompt::SystemPrompt;
-use crate::Error;
+use crate::{Error, Result};
 
 pub struct ChatCommandExecutor {
     provider: Arc<Provider>,
     tools: Arc<ToolEngine>,
-    tx: mpsc::Sender<ChatResponse>,
+    tx: mpsc::Sender<Result<ChatResponse>>,
     system_prompt: SystemPrompt,
 }
 
@@ -22,7 +22,7 @@ impl ChatCommandExecutor {
     pub fn new(
         env: Environment,
         api_key: impl Into<String>,
-        tx: mpsc::Sender<ChatResponse>,
+        tx: mpsc::Sender<Result<ChatResponse>>,
     ) -> Self {
         let tools = Arc::new(ToolEngine::new());
 
@@ -77,7 +77,12 @@ impl Executor for ChatCommandExecutor {
                 Ok(Box::pin(actions))
             }
             Command::UserMessage(message) => {
-                self.tx.send(message.clone()).await?;
+                match self.tx.send(Ok(message.clone())).await {
+                    Ok(_) => {}
+                    Err(error) => {
+                        error.0?;
+                    }
+                };
 
                 let stream: BoxStream<Action, Error> = Box::pin(tokio_stream::empty());
                 Ok(stream)

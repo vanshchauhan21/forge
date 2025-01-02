@@ -1,4 +1,3 @@
-mod api;
 mod app;
 mod context;
 mod error;
