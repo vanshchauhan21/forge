@@ -8,7 +8,7 @@ use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use super::ParameterResponse;
 use crate::error::Result;
-use crate::provider::{InnerProvider, Provider};
+use crate::provider::{ProviderService, Provider};
 use crate::{Error, ModelId, Parameters, ProviderError, Request, Response, ResultStream};
 
 const PROVIDER_NAME: &str = "Open Router";
@@ -58,7 +58,7 @@ impl OpenRouter {
 }
 
 #[async_trait::async_trait]
-impl InnerProvider for OpenRouter {
+impl ProviderService for OpenRouter {
     async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
         let mut request = OpenRouterRequest::from(request);
         request.stream = Some(true);
