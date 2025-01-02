@@ -41,6 +41,15 @@ impl CompletionMessage {
         .into()
     }
 
+    pub fn assistant_with_tool(content: impl ToString, tool_call: Option<ToolCall>) -> Self {
+        ContentMessage {
+            role: Role::Assistant,
+            content: content.to_string(),
+            tool_call,
+        }
+        .into()
+    }
+
     pub fn content(&self) -> String {
         match self {
             CompletionMessage::ContentMessage(message) => message.content.to_string(),

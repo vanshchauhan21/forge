@@ -81,6 +81,7 @@ impl ToolCall {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
+#[setters(strip_option)]
 pub struct ToolResult {
     pub name: ToolName,
     pub use_id: Option<ToolCallId>,

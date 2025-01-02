@@ -52,18 +52,20 @@ impl Live {
         loop {
             let mut response = self.provider.chat(request.clone()).await?;
             let mut current_tool = Vec::new();
-            let mut assistant_buffer = Vec::new();
+            let mut assistant_buffer = String::new();
             let mut tool_result = None;
+            let mut tool_call_req = None;
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
                 if message.tool_call.is_empty() {
                     // TODO: drop unwrap from here.
-                    assistant_buffer.push(message.clone());
+                    assistant_buffer.push_str(&message.content);
                     tx.send(Ok(ChatResponse::Text(message.content)))
                         .await
                         .expect("Failed to send message");
                 } else {
+                    assistant_buffer.push_str(&message.content);
                     if let Some(tool_part) = message.tool_call.first() {
                         if current_tool.is_empty() {
                             // very first instance where we found a tool call.
@@ -79,6 +81,7 @@ impl Live {
                     if let Some(FinishReason::ToolCalls) = message.finish_reason {
                         // TODO: drop clone from here.
                         let actual_tool_call = ToolCall::try_from_parts(current_tool.clone())?;
+                        tool_call_req = Some(actual_tool_call.clone());
                         tool_result = Some(
                             self.tool
                                 .call(&actual_tool_call.name, actual_tool_call.arguments)
@@ -88,8 +91,10 @@ impl Live {
                 }
             }
 
-            let assitant_message = "".to_string();
-            request = request.add_message(CompletionMessage::assistant(assitant_message));
+            request = request.add_message(CompletionMessage::assistant_with_tool(
+                assistant_buffer,
+                tool_call_req,
+            ));
             if let Some(Ok(tool_result)) = tool_result {
                 let tool_result: ToolResult = serde_json::from_value(tool_result).unwrap();
                 request = request.add_message(CompletionMessage::ToolMessage(tool_result.clone()));
@@ -303,10 +308,12 @@ mod tests {
             .finish_reason(FinishReason::ToolCalls);
         let message_3 = Response::new("Task is complete, let me know how can i help you!");
 
-        let tool_result = ToolResult::new(ToolName::new("foo")).content(json!({
-            "a": 100,
-            "b": 200
-        }));
+        let tool_result = ToolResult::new(ToolName::new("foo"))
+            .content(json!({
+                "a": 100,
+                "b": 200
+            }))
+            .use_id(ToolCallId::new("too_call_001"));
         let request = ChatRequest::new("Hello can you help me?");
         let result = Fixture::default()
             .with_provider(
@@ -322,5 +329,37 @@ mod tests {
         })));
         assert!(result.contains(&ChatResponse::ToolUseEnd(tool_result)));
         assert!(result.contains(&ChatResponse::Text(message_3.content)));
+    }
+
+    #[tokio::test]
+    async fn test_chat_context() {
+        let message_1 = Response::new("Let's use foo tool").add_tool_call(
+            ToolCallPart::default()
+                .name(ToolName::new("foo"))
+                .arguments_part(r#"{"foo": 1,"#)
+                .call_id(ToolCallId::new("too_call_001")),
+        );
+        let message_2 = Response::new("")
+            .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
+            .finish_reason(FinishReason::ToolCalls);
+        let message_3 = Response::new("Task is complete, let me know how can i help you!");
+
+        let tool_result = ToolResult::new(ToolName::new("foo"))
+            .content(json!({
+                "a": 100,
+                "b": 200
+            }))
+            .use_id(ToolCallId::new("too_call_001"));
+        let request = ChatRequest::new("Hello can you help me?");
+        let tester = Fixture::default()
+            .with_provider(
+                TestProvider::default()
+                    .with_messages(vec![vec![message_1, message_2], vec![message_3.clone()]]),
+            )
+            .with_tool(tool_result.clone());
+
+        let _ = tester.chat(request).await;
+        let last_request = tester.provider.get_last_call().unwrap();
+        insta::assert_debug_snapshot!(last_request);
     }
 }
