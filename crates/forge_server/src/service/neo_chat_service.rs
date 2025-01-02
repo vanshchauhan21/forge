@@ -132,7 +132,7 @@ pub enum ChatResponse {
     ToolUseEnd(ToolResult),
     Complete,
     #[from(ignore)]
-    Fail(Errata),
+    Error(Errata),
 }
 
 #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]

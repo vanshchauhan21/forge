@@ -108,7 +108,7 @@ async fn conversation_handler(
         .expect("Engine failed to respond with a chat message");
     Sse::new(stream.map(|message| {
         let data = serde_json::to_string(
-            &message.unwrap_or_else(|error| ChatResponse::Fail(Errata::from(&error))),
+            &message.unwrap_or_else(|error| ChatResponse::Error(Errata::from(&error))),
         )
         .expect("Failed to serialize message");
         Ok(Event::default().data(data))
