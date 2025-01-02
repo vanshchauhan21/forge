@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use forge_provider::{CompletionMessage, ProviderService, Request, ResultStream};
+use forge_provider::{
+    CompletionMessage, FinishReason, ProviderService, Request, ResultStream, ToolCallPart,
+};
+use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::{Service, SystemPromptService};
@@ -44,14 +47,37 @@ impl NeoChatService for Live {
             .set_system_message(system_prompt)
             .add_message(CompletionMessage::user(chat.content))
             .model(chat.model);
-        let response = self.provider.chat(request).await?;
+        let mut response = self.provider.chat(request).await?;
 
-        let stream = response.map(|message| match message {
-            Ok(message) => Ok(ChatResponse::Text(message.content)),
-            Err(error) => Ok(ChatResponse::Fail((&Error::from(error)).into())),
-        });
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        let mut current_tool = ToolCallPart::default();
 
-        Ok(Box::pin(stream))
+        while let Some(chunk) = response.next().await {
+            let message = chunk?;
+            if message.tool_call.is_empty() {
+                // TODO: drop unwrap from here.
+                tx.send(Ok(ChatResponse::Text(message.content)))
+                    .await
+                    .expect("Failed to send message");
+            } else {
+                // we start the folding process.
+                let tool = message.tool_call[0].clone();
+                current_tool.arguments_part.push_str(&tool.arguments_part);
+                if let Some(t_name) = tool.name {
+                    current_tool.name = Some(t_name);
+                }
+                if let Some(t_call_id) = tool.call_id {
+                    current_tool.call_id = Some(t_call_id);
+                }
+
+                if let Some(FinishReason::ToolCalls) = message.finish_reason {
+                    // dispatch tool call.
+                    // finish the folding.
+                }
+            }
+        }
+
+        Ok(Box::pin(ReceiverStream::new(rx)))
     }
 }
 
