@@ -69,12 +69,29 @@ impl SystemPromptService for Live {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use forge_provider::Parameters;
     use insta::assert_snapshot;
 
     use super::*;
     use crate::service::neo_chat_service::tests::TestProvider;
+
+    pub struct TestSystemPrompt {
+        prompt: String,
+    }
+
+    impl TestSystemPrompt {
+        pub fn new(s: impl ToString) -> Self {
+            Self { prompt: s.to_string() }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl SystemPromptService for TestSystemPrompt {
+        async fn get_system_prompt(&self, _: &ModelId) -> Result<String> {
+            Ok(self.prompt.to_string())
+        }
+    }
 
     fn test_env() -> Environment {
         Environment {

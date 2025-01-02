@@ -60,10 +60,9 @@ pub mod tests {
     use std::sync::{Arc, Mutex};
 
     use derive_setters::Setters;
-    use forge_env::Environment;
     use forge_provider::{
-        Error, Model, ModelId, Parameters, ProviderError, ProviderService, Request, Response,
-        Result, ResultStream,
+        CompletionMessage, Error, Model, ModelId, Parameters, ProviderError, ProviderService,
+        Request, Response, Result, ResultStream,
     };
     use pretty_assertions::assert_eq;
     use serde_json::json;
@@ -72,7 +71,7 @@ pub mod tests {
     use super::Live;
     use crate::app::{ChatRequest, ChatResponse};
     use crate::service::neo_chat_service::NeoChatService;
-    use crate::Service;
+    use crate::tests::TestSystemPrompt;
 
     #[derive(Default, Setters)]
     pub struct TestProvider {
@@ -80,6 +79,12 @@ pub mod tests {
         request: Mutex<Option<Request>>,
         models: Vec<Model>,
         parameters: Vec<(ModelId, Parameters)>,
+    }
+
+    impl TestProvider {
+        pub fn get_last_call(&self) -> Option<Request> {
+            self.request.lock().unwrap().clone()
+        }
     }
 
     #[async_trait::async_trait]
@@ -105,13 +110,11 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_chat_request() {
+    async fn test_chat_response() {
         let message = "Sure thing!".to_string();
         let provider =
             Arc::new(TestProvider::default().messages(vec![Response::assistant(message.clone())]));
-        let tool = Arc::new(forge_tool::Service::live());
-        let env = Environment::default();
-        let system_prompt = Arc::new(Service::system_prompt(env, tool, provider.clone()));
+        let system_prompt = Arc::new(TestSystemPrompt::new("Do everything that the user says"));
         let service = Live::new(provider.clone(), system_prompt);
 
         let chat_request = ChatRequest::new("Hello can you help me?");
@@ -127,6 +130,25 @@ pub mod tests {
             .collect::<Vec<_>>();
 
         let expected = vec![ChatResponse::Text(message)];
+
+        assert_eq!(actual, expected)
+    }
+
+    #[tokio::test]
+    async fn test_chat_system_prompt() {
+        let message = "Sure thing!".to_string();
+        let provider =
+            Arc::new(TestProvider::default().messages(vec![Response::assistant(message.clone())]));
+        let system_message = "Do everything that the user says";
+        let system_prompt = Arc::new(TestSystemPrompt::new(system_message));
+        let service = Live::new(provider.clone(), system_prompt);
+
+        let chat_request = ChatRequest::new("Hello can you help me?");
+
+        let _ = service.chat(chat_request).await.unwrap();
+
+        let actual = provider.get_last_call().unwrap().messages[0].clone();
+        let expected = CompletionMessage::system(system_message);
 
         assert_eq!(actual, expected)
     }
