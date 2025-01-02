@@ -76,17 +76,22 @@ impl Debug for Errata {
 impl From<&Error> for Errata {
     fn from(error: &Error) -> Self {
         match error {
-            Error::Provider(forge_provider::Error::Provider { provider, error: forge_provider::ProviderError::UpstreamError(value) }) => {
+            Error::Provider(forge_provider::Error::Provider {
+                provider,
+                error: forge_provider::ProviderError::UpstreamError(value),
+            }) => {
                 let value: ErrorResponse = serde_json::from_value(value.clone()).unwrap();
-                Self{
+                Self {
                     message: format!("{}: {}", provider, value.error.message),
                     code: Some(value.error.code),
-                    description: value.error.metadata.map(|m| serde_json::to_string(&m).unwrap())
+                    description: value
+                        .error
+                        .metadata
+                        .map(|m| serde_json::to_string(&m).unwrap()),
                 }
             }
-           _ => Errata::new(error.to_string()) 
+            _ => Errata::new(error.to_string()),
         }
-        
     }
 }
 
