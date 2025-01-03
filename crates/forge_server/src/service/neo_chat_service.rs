@@ -70,17 +70,17 @@ impl Live {
                     assistant_message_content.push_str(&message.content);
                     tx.send(Ok(ChatResponse::Text(message.content)))
                         .await
-                        .expect("Failed to send message");
+                        .unwrap();
                 } else {
                     assistant_message_content.push_str(&message.content);
                     if let Some(tool_part) = message.tool_call.first() {
                         if tool_call_parts.is_empty() {
                             // very first instance where we found a tool call.
-                            tx.send(Ok(ChatResponse::ToolUseStart(ToolUseStart {
-                                tool_name: tool_part.name.clone(),
-                            })))
-                            .await
-                            .expect("Failed to send message");
+                            if let Some(tool_name) = &tool_part.name {
+                                tx.send(Ok(ChatResponse::ToolUseDetected(tool_name.clone())))
+                                    .await
+                                    .unwrap();
+                            }
                         }
                         tool_call_parts.push(tool_part.clone());
                     }
@@ -88,6 +88,10 @@ impl Live {
                     if let Some(FinishReason::ToolCalls) = message.finish_reason {
                         // TODO: drop clone from here.
                         let actual_tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+
+                        tx.send(Ok(ChatResponse::ToolCallStart(actual_tool_call.clone())))
+                            .await
+                            .unwrap();
                         tool_call = Some(actual_tool_call.clone());
                         tool_result = Some(
                             self.tool
@@ -108,7 +112,7 @@ impl Live {
                 // send the tool use end message.
                 tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
                     .await
-                    .expect("Failed to send message");
+                    .unwrap();
             } else {
                 break Ok(());
             }
@@ -154,16 +158,11 @@ pub struct ChatRequest {
 pub enum ChatResponse {
     #[from(ignore)]
     Text(String),
-    ToolUseStart(ToolUseStart),
+    ToolUseDetected(ToolName),
+    ToolCallStart(ToolCall),
     ToolUseEnd(ToolResult),
     Complete,
     Error(Errata),
-}
-
-#[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ToolUseStart {
-    pub tool_name: Option<ToolName>,
 }
 
 #[cfg(test)]
@@ -175,11 +174,12 @@ mod tests {
         CompletionMessage, FinishReason, ModelId, Response, ToolCallId, ToolCallPart, ToolResult,
     };
     use forge_tool::{ToolDefinition, ToolName, ToolService};
+    use insta::assert_debug_snapshot;
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;
 
-    use super::{ChatRequest, Live, ToolUseStart};
+    use super::{ChatRequest, Live};
     use crate::service::neo_chat_service::NeoChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::service::user_prompt_service::tests::TestUserPrompt;
@@ -335,19 +335,20 @@ mod tests {
                 .arguments_part(r#"{"foo": 1,"#)
                 .call_id(ToolCallId::new("too_call_001")),
         );
+
         let message_2 = Response::new("")
             .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
             .finish_reason(FinishReason::ToolCalls);
-        let message_3 = Response::new("Task is complete, let me know how can i help you!");
+
+        let message_3 = Response::new("Task is complete, let me know if you need anything else.");
 
         let tool_result = ToolResult::new(ToolName::new("foo"))
-            .content(json!({
-                "a": 100,
-                "b": 200
-            }))
+            .content(json!({"a": 100, "b": 200}))
             .use_id(ToolCallId::new("too_call_001"));
+
         let request = ChatRequest::new("Hello can you help me?");
-        let result = Fixture::default()
+
+        let actual = Fixture::default()
             .with_provider(
                 TestProvider::default()
                     .with_messages(vec![vec![message_1, message_2], vec![message_3.clone()]]),
@@ -356,11 +357,7 @@ mod tests {
             .chat(request)
             .await;
 
-        assert!(result.contains(&ChatResponse::ToolUseStart(ToolUseStart {
-            tool_name: Some(ToolName::new("foo"))
-        })));
-        assert!(result.contains(&ChatResponse::ToolUseEnd(tool_result)));
-        assert!(result.contains(&ChatResponse::Text(message_3.content)));
+        assert_debug_snapshot!(actual);
     }
 
     #[tokio::test]

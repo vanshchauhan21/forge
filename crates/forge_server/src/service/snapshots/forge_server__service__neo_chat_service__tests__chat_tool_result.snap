@@ -1,0 +1,49 @@
+---
+source: crates/forge_server/src/service/neo_chat_service.rs
+expression: actual
+snapshot_kind: text
+---
+[
+    ToolUseDetected(
+        ToolName(
+            "foo",
+        ),
+    ),
+    ToolCallStart(
+        ToolCall {
+            name: ToolName(
+                "foo",
+            ),
+            call_id: Some(
+                ToolCallId(
+                    "too_call_001",
+                ),
+            ),
+            arguments: Object {
+                "bar": Number(2),
+                "foo": Number(1),
+            },
+        },
+    ),
+    ToolUseEnd(
+        ToolResult {
+            name: ToolName(
+                "foo",
+            ),
+            use_id: Some(
+                ToolCallId(
+                    "too_call_001",
+                ),
+            ),
+            content: Object {
+                "a": Number(100),
+                "b": Number(200),
+            },
+            is_error: false,
+        },
+    ),
+    Text(
+        "Task is complete, let me know if you need anything else.",
+    ),
+    Complete,
+]
