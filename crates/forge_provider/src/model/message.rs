@@ -32,16 +32,7 @@ impl CompletionMessage {
         .into()
     }
 
-    pub fn assistant(content: impl ToString) -> Self {
-        ContentMessage {
-            role: Role::Assistant,
-            content: content.to_string(),
-            tool_call: None,
-        }
-        .into()
-    }
-
-    pub fn assistant_with_tool(content: impl ToString, tool_call: Option<ToolCall>) -> Self {
+    pub fn assistant(content: impl ToString, tool_call: Option<ToolCall>) -> Self {
         ContentMessage {
             role: Role::Assistant,
             content: content.to_string(),

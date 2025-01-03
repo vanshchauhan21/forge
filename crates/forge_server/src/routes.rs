@@ -16,7 +16,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::context::ContextEngine;
-use crate::{ChatRequest, ChatResponse, Errata, File, Result, RootAPIService, Service};
+use crate::{ChatRequest, Errata, File, Result, RootAPIService, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -107,10 +107,9 @@ async fn conversation_handler(
         .await
         .expect("Engine failed to respond with a chat message");
     Sse::new(stream.map(|message| {
-        let data = serde_json::to_string(
-            &message.unwrap_or_else(|error| ChatResponse::Error(Errata::from(&error))),
-        )
-        .expect("Failed to serialize message");
+        let data =
+            serde_json::to_string(&message.unwrap_or_else(|error| Errata::from(&error).into()))
+                .expect("Failed to serialize message");
         Ok(Event::default().data(data))
     }))
 }

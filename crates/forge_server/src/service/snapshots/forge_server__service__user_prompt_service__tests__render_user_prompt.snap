@@ -1,0 +1,13 @@
+---
+source: crates/forge_server/src/service/user_prompt_service.rs
+expression: rendered_prompt
+---
+<task>read this file content from @foo.txt and @bar.txt</task>
+
+<file_content path="foo.txt">
+Hello World
+</file_content>
+
+<file_content path="bar.txt">
+Hello World
+</file_content>

@@ -10,7 +10,9 @@ use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
-use super::{Service, SystemPromptService};
+use super::system_prompt_service::SystemPromptService;
+use super::user_prompt_service::UserPromptService;
+use super::Service;
 use crate::{Errata, Error, Result};
 
 #[async_trait::async_trait]
@@ -23,8 +25,9 @@ impl Service {
         provider: Arc<dyn ProviderService>,
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
+        user_prompt: Arc<dyn UserPromptService>,
     ) -> impl NeoChatService {
-        Live::new(provider, system_prompt, tool)
+        Live::new(provider, system_prompt, tool, user_prompt)
     }
 }
 
@@ -33,6 +36,7 @@ struct Live {
     provider: Arc<dyn ProviderService>,
     system_prompt: Arc<dyn SystemPromptService>,
     tool: Arc<dyn ToolService>,
+    user_prompt: Arc<dyn UserPromptService>,
 }
 
 impl Live {
@@ -40,34 +44,37 @@ impl Live {
         provider: Arc<dyn ProviderService>,
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
+        user_prompt: Arc<dyn UserPromptService>,
     ) -> Self {
-        Self { provider, system_prompt, tool }
+        Self { provider, system_prompt, tool, user_prompt }
     }
 
-    async fn loop_until(
+    /// Executes the chat workflow until the task is complete.
+    async fn chat_workflow(
         &self,
         mut request: Request,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
     ) -> Result<()> {
         loop {
-            let mut response = self.provider.chat(request.clone()).await?;
-            let mut current_tool = Vec::new();
-            let mut assistant_buffer = String::new();
+            let mut tool_call = None;
+            let mut tool_call_parts = Vec::new();
             let mut tool_result = None;
-            let mut tool_call_req = None;
+            let mut assistant_message_content = String::new();
+
+            let mut response = self.provider.chat(request.clone()).await?;
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
                 if message.tool_call.is_empty() {
                     // TODO: drop unwrap from here.
-                    assistant_buffer.push_str(&message.content);
+                    assistant_message_content.push_str(&message.content);
                     tx.send(Ok(ChatResponse::Text(message.content)))
                         .await
                         .expect("Failed to send message");
                 } else {
-                    assistant_buffer.push_str(&message.content);
+                    assistant_message_content.push_str(&message.content);
                     if let Some(tool_part) = message.tool_call.first() {
-                        if current_tool.is_empty() {
+                        if tool_call_parts.is_empty() {
                             // very first instance where we found a tool call.
                             tx.send(Ok(ChatResponse::ToolUseStart(ToolUseStart {
                                 tool_name: tool_part.name.clone(),
@@ -75,13 +82,13 @@ impl Live {
                             .await
                             .expect("Failed to send message");
                         }
-                        current_tool.push(tool_part.clone());
+                        tool_call_parts.push(tool_part.clone());
                     }
 
                     if let Some(FinishReason::ToolCalls) = message.finish_reason {
                         // TODO: drop clone from here.
-                        let actual_tool_call = ToolCall::try_from_parts(current_tool.clone())?;
-                        tool_call_req = Some(actual_tool_call.clone());
+                        let actual_tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+                        tool_call = Some(actual_tool_call.clone());
                         tool_result = Some(
                             self.tool
                                 .call(&actual_tool_call.name, actual_tool_call.arguments)
@@ -91,9 +98,9 @@ impl Live {
                 }
             }
 
-            request = request.add_message(CompletionMessage::assistant_with_tool(
-                assistant_buffer,
-                tool_call_req,
+            request = request.add_message(CompletionMessage::assistant(
+                assistant_message_content,
+                tool_call,
             ));
             if let Some(Ok(tool_result)) = tool_result {
                 let tool_result: ToolResult = serde_json::from_value(tool_result).unwrap();
@@ -113,19 +120,22 @@ impl Live {
 impl NeoChatService for Live {
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
+        let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
         let (tx, rx) = tokio::sync::mpsc::channel(1);
+
         let request = Request::default()
             .set_system_message(system_prompt)
-            .add_message(CompletionMessage::user(chat.content))
+            .add_message(CompletionMessage::user(user_prompt))
             .model(chat.model);
 
         let that = self.clone();
         tokio::spawn(async move {
             // TODO: simplify this match.
-            match that.loop_until(request, tx.clone()).await {
+            match that.chat_workflow(request, tx.clone()).await {
                 Ok(_) => {}
                 Err(e) => tx.send(Err(e)).await.unwrap(),
             };
+            tx.send(Ok(ChatResponse::Complete)).await.unwrap();
         });
 
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -147,7 +157,6 @@ pub enum ChatResponse {
     ToolUseStart(ToolUseStart),
     ToolUseEnd(ToolResult),
     Complete,
-    #[from(ignore)]
     Error(Errata),
 }
 
@@ -173,6 +182,7 @@ mod tests {
     use super::{ChatRequest, Live, ToolUseStart};
     use crate::service::neo_chat_service::NeoChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
+    use crate::service::user_prompt_service::tests::TestUserPrompt;
     use crate::ChatResponse;
 
     impl ChatRequest {
@@ -215,6 +225,7 @@ mod tests {
         provider: Arc<TestProvider>,
         system_prompt: Arc<TestSystemPrompt>,
         tool: Arc<TestToolService>,
+        user_prompt: Arc<TestUserPrompt>,
         service: Live,
     }
 
@@ -223,9 +234,15 @@ mod tests {
             let provider = Arc::new(provider);
             Self {
                 provider: provider.clone(),
-                service: Live::new(provider, self.system_prompt.clone(), self.tool.clone()),
+                service: Live::new(
+                    provider,
+                    self.system_prompt.clone(),
+                    self.tool.clone(),
+                    self.user_prompt.clone(),
+                ),
                 system_prompt: self.system_prompt,
                 tool: self.tool,
+                user_prompt: self.user_prompt,
             }
         }
 
@@ -235,9 +252,15 @@ mod tests {
             ));
             Self {
                 provider: self.provider.clone(),
-                service: Live::new(self.provider, self.system_prompt.clone(), tool.clone()),
+                service: Live::new(
+                    self.provider,
+                    self.system_prompt.clone(),
+                    tool.clone(),
+                    self.user_prompt.clone(),
+                ),
                 system_prompt: self.system_prompt,
                 tool,
+                user_prompt: self.user_prompt,
             }
         }
 
@@ -264,8 +287,14 @@ mod tests {
                 );
             let system_prompt = Arc::new(TestSystemPrompt::new(SYSTEM_PROMPT));
             let tool = Arc::new(TestToolService::new(json!({"result": "fs success."})));
-            let service = Live::new(provider.clone(), system_prompt.clone(), tool.clone());
-            Self { provider, system_prompt, tool, service }
+            let user_prompt = Arc::new(TestUserPrompt);
+            let service = Live::new(
+                provider.clone(),
+                system_prompt.clone(),
+                tool.clone(),
+                user_prompt.clone(),
+            );
+            Self { provider, system_prompt, tool, service, user_prompt }
         }
     }
 
@@ -274,7 +303,10 @@ mod tests {
         let chat_request = ChatRequest::new("Hello can you help me?");
 
         let actual = Fixture::default().chat(chat_request).await;
-        let expected = vec![ChatResponse::Text(ASSISTANT_RESPONSE.to_string())];
+        let expected = vec![
+            ChatResponse::Text(ASSISTANT_RESPONSE.to_string()),
+            ChatResponse::Complete,
+        ];
         assert_eq!(actual, expected)
     }
 

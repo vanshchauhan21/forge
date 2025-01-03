@@ -14,7 +14,7 @@ Request {
         ContentMessage(
             ContentMessage {
                 role: User,
-                content: "Hello can you help me?",
+                content: "<task>Hello can you help me?</task>",
                 tool_call: None,
             },
         ),

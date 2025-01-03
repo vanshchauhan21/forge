@@ -4,8 +4,9 @@ use forge_env::Environment;
 use forge_provider::{Model, ProviderService, Request, ResultStream};
 use forge_tool::{ToolDefinition, ToolService};
 
+use super::completion_service::CompletionService;
 use super::neo_chat_service::NeoChatService;
-use super::{CompletionService, Service};
+use super::Service;
 use crate::{ChatRequest, ChatResponse, Error, File, Result};
 
 #[async_trait::async_trait]
@@ -43,11 +44,14 @@ impl Live {
             tool.clone(),
             provider.clone(),
         ));
+        let file_read = Arc::new(Service::file_read_service());
+        let user_prompt = Arc::new(Service::user_prompt_service(file_read));
 
         let chat_service = Arc::new(Service::neo_chat_service(
             provider.clone(),
             system_prompt.clone(),
             tool.clone(),
+            user_prompt,
         ));
 
         let completions = Arc::new(Service::completion_service(cwd.clone()));
