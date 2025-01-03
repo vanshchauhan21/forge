@@ -6,6 +6,7 @@ use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::info;
 
 use crate::fs::*;
 use crate::outline::Outline;
@@ -178,6 +179,7 @@ impl Live {
 #[async_trait::async_trait]
 impl ToolService for Live {
     async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
+        info!("Calling tool: {}", name.as_str());
         let output = match self.tools.get(name) {
             Some(tool) => tool.executable.call(input).await,
             None => Err(format!("No such tool found: {}", name.as_str())),
