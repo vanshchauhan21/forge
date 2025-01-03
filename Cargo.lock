@@ -768,6 +768,7 @@ dependencies = [
  "insta",
  "pretty_assertions",
  "pulldown-cmark",
+ "schemars",
  "serde",
  "serde_json",
  "tailcall-valid",
