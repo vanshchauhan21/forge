@@ -5,6 +5,7 @@ use forge_provider::{ModelId, ProviderService};
 use forge_tool::ToolService;
 use handlebars::Handlebars;
 use serde::Serialize;
+use tracing::info;
 
 use super::Service;
 use crate::Result;
@@ -58,6 +59,7 @@ impl SystemPromptService for Live {
         hb.register_escape_fn(|str| str.to_string());
 
         let tool_supported = self.provider.parameters(model).await?.tool_supported;
+        info!("Tool support for {}: {}", model.as_str(), tool_supported);
         let ctx = Context {
             env: self.env.clone(),
             tool_information: self.tool.usage_prompt(),
