@@ -3,6 +3,7 @@ use std::path::Path;
 
 use schemars::JsonSchema;
 use serde::Deserialize;
+use streaming_iterator::{IntoStreamingIterator, StreamingIterator};
 use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
@@ -15,9 +16,9 @@ const RUST: &str = include_str!("queries/rust.rkt");
 
 fn load_language_parser(language_name: &str) -> Result<Language, String> {
     match language_name {
-        "rust" => Ok(tree_sitter_rust::language()),
-        "javascript" => Ok(tree_sitter_javascript::language()),
-        "python" => Ok(tree_sitter_python::language()),
+        "rust" => Ok(tree_sitter_rust::LANGUAGE.into()),
+        "javascript" => Ok(tree_sitter_javascript::LANGUAGE.into()),
+        "python" => Ok(tree_sitter_python::LANGUAGE.into()),
         x => Err(format!("Unsupported language: {}", x)),
     }
 }
@@ -34,12 +35,12 @@ fn parse_file(_file: &Path, content: &str, parser: &mut Parser, query: &Query) -
     let tree = parser.parse(content, None)?;
     let mut cursor = QueryCursor::new();
     let mut formatted_output = String::new();
-    let mut last_line = -1;
+    let mut last_line: i64 = -1;
     let mut seen_lines = HashSet::new();
 
     let mut captures: Vec<_> = cursor
         .matches(query, tree.root_node(), content.as_bytes())
-        .flat_map(|m| m.captures)
+        .flat_map(|m| m.captures.into_streaming_iter())
         .filter_map(|capture| {
             let node = capture.node;
             let start_line = node.start_position().row;
@@ -50,21 +51,25 @@ fn parse_file(_file: &Path, content: &str, parser: &mut Parser, query: &Query) -
             let first_line = text.lines().next()?.trim().to_string();
             Some((start_line, first_line))
         })
-        .collect();
+        .fold(Vec::default(), |mut acc, x| {
+            acc.push(x.to_owned());
+            acc
+        });
 
     captures.sort_by_key(|&(row, _)| row);
 
     for (start_line, text) in captures {
+        let start_line = start_line.to_owned() as i64;
         if !seen_lines.insert(start_line) {
             continue;
         }
 
-        if last_line != -1 && start_line as i32 > last_line + 1 {
+        if last_line != -1 && start_line > last_line + 1 {
             formatted_output.push_str("|----\n");
         }
 
         formatted_output.push_str(&format!("│{}\n", text.trim()));
-        last_line = start_line as i32;
+        last_line = start_line;
     }
 
     if formatted_output.is_empty() {
@@ -129,8 +134,8 @@ impl ToolCallService for Outline {
                         if !parsers.contains_key(lang_name) {
                             let language = load_language_parser(lang_name)?;
                             let mut parser = Parser::new();
-                            parser.set_language(language).map_err(|e| e.to_string())?;
-                            let query = Query::new(language, queries[lang_name])
+                            parser.set_language(&language).map_err(|e| e.to_string())?;
+                            let query = Query::new(&language, queries[lang_name])
                                 .map_err(|e| e.to_string())?;
                             parsers.insert(lang_name, (parser, query));
                         }

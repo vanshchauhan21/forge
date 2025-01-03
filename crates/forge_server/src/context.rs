@@ -29,7 +29,7 @@ impl ContextEngine {
         let parser = Parser::new_ext(&markdown, Options::all());
         let mut bytes = Vec::new();
 
-        html::write_html(Cursor::new(&mut bytes), parser).unwrap();
+        html::write_html_io(Cursor::new(&mut bytes), parser).unwrap();
         let html_output = String::from_utf8(bytes).unwrap();
         include_str!("./context.html").replace("<!-- CURRENT_CONTEXT_INFORMATION -->", &html_output)
     }
