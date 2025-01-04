@@ -66,9 +66,9 @@ impl Live {
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
 
-                if let Some(content) = message.content {
+                if let Some(ref content) = message.content {
                     if !content.is_empty() {
-                        assistant_message_content.push_str(&content);
+                        assistant_message_content.push_str(content);
                         tx.send(Ok(ChatResponse::Text(content.to_string())))
                             .await
                             .unwrap();
@@ -87,6 +87,7 @@ impl Live {
                         }
                         tool_call_parts.push(tool_part.clone());
                     }
+                    }
 
                     if let Some(FinishReason::ToolCalls) = message.finish_reason {
                         // TODO: drop clone from here.
@@ -102,14 +103,13 @@ impl Live {
                             .call(&tool_call.name, tool_call.arguments.clone())
                             .await?;
 
-                        let tool_result = ToolResult::new(tool_call.name.clone()).content(value);
+                    let tool_result = ToolResult::from(tool_call).content(value);
                         some_tool_result = Some(tool_result.clone());
 
                         // send the tool use end message.
                         tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
                             .await
                             .unwrap();
-                    }
                 }
             }
 
@@ -142,8 +142,6 @@ impl NeoChatService for Live {
 
         let that = self.clone();
         tokio::spawn(async move {
-            dbg!("async chat workflow");
-
             // TODO: simplify this match.
             match that.chat_workflow(request, tx.clone()).await {
                 Ok(_) => {}
