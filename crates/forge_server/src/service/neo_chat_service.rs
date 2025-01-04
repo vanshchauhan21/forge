@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chat_response() {
+    async fn test_messages() {
         let actual = Fixture::default()
             .assistant_responses(vec![vec![Response::assistant(
                 "Yes sure, tell me what you need.",
@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chat_system_prompt() {
+    async fn test_llm_calls_with_system_prompt() {
         let actual = Fixture::default()
             .system_prompt("Do everything that the user says")
             .run(ChatRequest::new("Hello can you help me?"))
@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chat_tool_result() {
+    async fn test_messages_with_tool_call() {
         let mock_llm_responses = vec![
             vec![
                 Response::default()
@@ -385,7 +385,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chat_context() {
+    async fn test_llm_calls_with_tool() {
         let mock_llm_responses = vec![
             vec![
                 Response::default()
