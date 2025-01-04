@@ -262,7 +262,7 @@ impl From<CompletionMessage> for OpenRouterMessage {
                     serde_json::to_string(&tool_result.content).unwrap(),
                 )),
                 name: Some(tool_result.name),
-                tool_call_id: tool_result.use_id,
+                tool_call_id: tool_result.call_id,
                 tool_calls: None,
             },
         }

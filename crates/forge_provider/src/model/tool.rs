@@ -84,7 +84,7 @@ impl ToolCall {
 #[setters(strip_option)]
 pub struct ToolResult {
     pub name: ToolName,
-    pub use_id: Option<ToolCallId>,
+    pub call_id: Option<ToolCallId>,
     pub content: Value,
     pub is_error: bool,
 }
@@ -93,7 +93,18 @@ impl ToolResult {
     pub fn new(name: ToolName) -> ToolResult {
         Self {
             name,
-            use_id: None,
+            call_id: None,
+            content: Value::default(),
+            is_error: false,
+        }
+    }
+}
+
+impl From<ToolCall> for ToolResult {
+    fn from(value: ToolCall) -> Self {
+        Self {
+            name: value.name,
+            call_id: value.call_id,
             content: Value::default(),
             is_error: false,
         }
