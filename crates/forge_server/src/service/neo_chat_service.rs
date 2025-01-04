@@ -164,7 +164,15 @@ impl NeoChatService for Live {
             .set_conversation(&request, chat.conversation_id)
             .await?
             .id;
-
+        /* TODO: We need to remove the dependency of ConversationService from
+         * here into a separate service. This is a temporary fix to send the
+         * conversation id back to the client.
+         */
+        if chat.conversation_id.is_none() {
+            tx.send(Ok(ChatResponse::ConversationStarted { conversation_id }))
+                .await
+                .unwrap();
+        }
         let that = self.clone();
         tokio::spawn(async move {
             // TODO: simplify this match.
@@ -200,6 +208,9 @@ pub enum ChatResponse {
     ToolUseDetected(ToolName),
     ToolCallStart(ToolCall),
     ToolUseEnd(ToolResult),
+    ConversationStarted {
+        conversation_id: ConversationId,
+    },
     Complete,
     Error(Errata),
 }
@@ -373,10 +384,13 @@ mod tests {
             .messages;
 
         let expected = vec![
+            ChatResponse::ConversationStarted {
+                conversation_id: crate::ConversationId::generate(),
+            },
             ChatResponse::Text("Yes sure, tell me what you need.".to_string()),
             ChatResponse::Complete,
         ];
-        assert_eq!(actual, expected)
+        assert_eq!(&actual[1..], &expected[1..]);
     }
 
     #[tokio::test]
@@ -449,7 +463,7 @@ mod tests {
             ChatResponse::Complete,
         ];
 
-        assert_eq!(actual, expected);
+        assert_eq!(&actual[1..], &expected);
     }
 
     #[tokio::test]
