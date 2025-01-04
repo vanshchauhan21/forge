@@ -348,8 +348,10 @@ mod tests {
                             .call_id(ToolCallId::new("too_call_001")),
                     ),
                 Response::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
+                // IMPORTANT: the last message has an empty string in content
+                Response::default()
                     .content("")
-                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
                     .finish_reason(FinishReason::ToolCalls),
             ],
             vec![Response::default()
@@ -371,7 +373,9 @@ mod tests {
                     .call_id(ToolCallId::new("too_call_001")),
             ),
             ChatResponse::ToolUseEnd(
-                ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200})),
+                ToolResult::new(ToolName::new("foo"))
+                    .content(json!({"a": 100, "b": 200}))
+                    .call_id(ToolCallId::new("too_call_001")),
             ),
             ChatResponse::Text(
                 "Task is complete, let me know if you need anything else.".to_string(),
@@ -396,7 +400,10 @@ mod tests {
                     ),
                 Response::default()
                     .content("")
-                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
+                // IMPORTANT: the last message has an empty string in content
+                Response::default()
+                    .content("")
                     .finish_reason(FinishReason::ToolCalls),
             ],
             vec![Response::default().content("Task is complete, let me know how can i help you!")],
@@ -427,7 +434,9 @@ mod tests {
                     ),
                 ))
                 .add_message(CompletionMessage::ToolMessage(
-                    ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200})),
+                    ToolResult::new(ToolName::new("foo"))
+                        .content(json!({"a": 100, "b": 200}))
+                        .call_id(ToolCallId::new("too_call_001")),
                 )),
         ];
         assert_eq!(actual, expected);
