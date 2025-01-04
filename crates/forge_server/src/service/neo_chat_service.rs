@@ -87,29 +87,29 @@ impl Live {
                         }
                         tool_call_parts.push(tool_part.clone());
                     }
-                    }
+                }
 
-                    if let Some(FinishReason::ToolCalls) = message.finish_reason {
-                        // TODO: drop clone from here.
-                        let tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
-                        some_tool_call = Some(tool_call.clone());
+                if let Some(FinishReason::ToolCalls) = message.finish_reason {
+                    // TODO: drop clone from here.
+                    let tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+                    some_tool_call = Some(tool_call.clone());
 
-                        tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
-                            .await
-                            .unwrap();
+                    tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
+                        .await
+                        .unwrap();
 
-                        let value = self
-                            .tool
-                            .call(&tool_call.name, tool_call.arguments.clone())
-                            .await?;
+                    let value = self
+                        .tool
+                        .call(&tool_call.name, tool_call.arguments.clone())
+                        .await?;
 
                     let tool_result = ToolResult::from(tool_call).content(value);
-                        some_tool_result = Some(tool_result.clone());
+                    some_tool_result = Some(tool_result.clone());
 
-                        // send the tool use end message.
-                        tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
-                            .await
-                            .unwrap();
+                    // send the tool use end message.
+                    tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
+                        .await
+                        .unwrap();
                 }
             }
 
