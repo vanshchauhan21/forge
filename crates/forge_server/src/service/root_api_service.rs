@@ -36,7 +36,7 @@ impl Live {
     fn new(env: Environment, api_key: impl Into<String>) -> Self {
         let cwd: String = env.cwd.clone();
         let api_key: String = api_key.into();
-        let provider = Arc::new(forge_provider::Service::open_router(api_key.clone(), None));
+        let provider = Arc::new(forge_provider::Service::open_router(api_key));
         let tool = Arc::new(forge_tool::Service::live());
 
         let system_prompt = Arc::new(Service::system_prompt(

@@ -18,14 +18,11 @@ const PROVIDER_NAME: &str = "Open Router";
 #[derive(Debug, Clone)]
 struct Config {
     api_key: String,
-    base_url: Option<String>,
 }
 
 impl Config {
     fn api_base(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://openrouter.ai/api/v1")
+        "https://openrouter.ai/api/v1"
     }
 
     fn headers(&self) -> HeaderMap {
@@ -50,8 +47,8 @@ struct OpenRouter {
 }
 
 impl OpenRouter {
-    fn new(api_key: String, base_url: Option<String>) -> Self {
-        let config = Config { api_key, base_url };
+    fn new(api_key: impl ToString) -> Self {
+        let config = Config { api_key: api_key.to_string() };
 
         let client = Client::builder().build().unwrap();
 
@@ -162,8 +159,8 @@ impl ProviderService for OpenRouter {
 }
 
 impl Service {
-    pub fn open_router(api_key: String, base_url: Option<String>) -> impl ProviderService {
-        Live::new(OpenRouter::new(api_key, base_url))
+    pub fn open_router(api_key: impl ToString) -> impl ProviderService {
+        Live::new(OpenRouter::new(api_key))
     }
 }
 
