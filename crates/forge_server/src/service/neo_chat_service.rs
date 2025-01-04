@@ -164,10 +164,9 @@ impl NeoChatService for Live {
             .set_conversation(&request, chat.conversation_id)
             .await?
             .id;
-        /* TODO: We need to remove the dependency of ConversationService from
-         * here into a separate service. This is a temporary fix to send the
-         * conversation id back to the client.
-         */
+        // TODO: We need to remove the dependency of ConversationService from here into
+        // a separate service. This is a temporary fix to send the conversation id back
+        // to the client.
         if chat.conversation_id.is_none() {
             tx.send(Ok(ChatResponse::ConversationStarted { conversation_id }))
                 .await
