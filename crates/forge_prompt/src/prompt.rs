@@ -61,13 +61,13 @@ pub enum Token {
 
 impl Prompt {
     // TODO: make `parse` pub(crate)
-    pub fn parse(message: String) -> Result<Prompt, String> {
+    pub fn parse(message: String) -> Prompt {
         let tokens = match Self::parse_tokens(&message) {
             Ok((_, tokens)) => tokens,
             Err(_) => vec![Token::Literal(message)], // Fallback for unparsable input
         };
 
-        Ok(Prompt { tokens })
+        Prompt { tokens }
     }
 
     fn parse_tokens(input: &str) -> IResult<&str, Vec<Token>> {
@@ -103,63 +103,57 @@ mod tests {
 
     #[test]
     fn test_with_existing_file() {
-        let result =
+        let prompt =
             Prompt::parse("Please check this file: @src/test_file.txt for content".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
     }
 
     #[test]
     fn test_with_file_reference_at_end() {
-        let result = Prompt::parse("Check this file @src/test_file.txt".to_string());
+        let prompt = Prompt::parse("Check this file @src/test_file.txt".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
     }
 
     #[test]
     fn test_with_unicode_characters() {
-        let result = Prompt::parse("Check this Unicode path: @src/测试文件.txt".to_string());
+        let prompt = Prompt::parse("Check this Unicode path: @src/测试文件.txt".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/测试文件.txt"]);
     }
 
     #[test]
     fn test_with_consecutive_file_references() {
         // This should fail to parse as @ must be preceded by whitespace
-        let result = Prompt::parse("@src/a.txt@src/b.txt".to_string());
+        let prompt = Prompt::parse("@src/a.txt@src/b.txt".to_string());
 
         // Should treat the entire string as text since the second @ is not properly
         // separated
-        let prompt = result.unwrap();
+
         assert_eq!(prompt.files(), vec!["src/a.txt", "src/b.txt"]);
     }
 
     #[test]
     fn test_with_duplicate_file_references() {
-        let result =
+        let prompt =
             Prompt::parse("Check this file: @src/test_file.txt @src/test_file.txt".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
     }
 
     #[test]
     fn test_with_file_reference_at_start() {
-        let result = Prompt::parse("@src/test_file.txt contains some content".to_string());
+        let prompt = Prompt::parse("@src/test_file.txt contains some content".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), vec!["src/test_file.txt"]);
     }
 
     #[test]
     fn test_with_multiple_files() {
-        let result =
+        let prompt =
             Prompt::parse("Compare @src/test_file.txt with @src/test_file2.txt".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(
             prompt.files(),
             vec!["src/test_file.txt", "src/test_file2.txt"]
@@ -168,18 +162,16 @@ mod tests {
 
     #[test]
     fn test_with_no_files() {
-        let result = Prompt::parse("Just a regular message".to_string());
+        let prompt = Prompt::parse("Just a regular message".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), Vec::<String>::new());
         assert_eq!(prompt.to_string(), "Just a regular message");
     }
 
     #[test]
     fn test_with_empty_input() {
-        let result = Prompt::parse("".to_string());
+        let prompt = Prompt::parse("".to_string());
 
-        let prompt = result.unwrap();
         assert_eq!(prompt.files(), Vec::<String>::new());
         assert_eq!(prompt.to_string(), "");
     }

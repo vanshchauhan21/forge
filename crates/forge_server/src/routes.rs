@@ -16,7 +16,10 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::context::ContextEngine;
-use crate::{ChatRequest, Errata, File, Result, RootAPIService, Service};
+use crate::{
+    ChatRequest, Conversation, ConversationHistory, ConversationId, Errata, File, Result,
+    RootAPIService, Service,
+};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server
@@ -31,8 +34,11 @@ impl Default for API {
     }
 }
 
-async fn context_html_handler(State(state): State<Arc<dyn RootAPIService>>) -> Html<String> {
-    let context = state.context().await;
+async fn context_html_handler(
+    State(state): State<Arc<dyn RootAPIService>>,
+    axum::extract::Path(id): axum::extract::Path<ConversationId>,
+) -> Html<String> {
+    let context = state.context(id).await.unwrap();
     let engine = ContextEngine::new(context);
     Html(engine.render_html())
 }
@@ -54,8 +60,10 @@ impl API {
             .route("/health", get(health_handler))
             .route("/tools", get(tools_handler))
             .route("/models", get(models_handler))
-            .route("/context", get(context_handler))
-            .route("/context/html", get(context_html_handler))
+            .route("/context/{id}", get(context_handler))
+            .route("/context/{id}/html", get(context_html_handler))
+            .route("/conversations", get(conversations_handler))
+            .route("/conversation/{id}", get(history_handler))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
@@ -132,8 +140,26 @@ async fn models_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<Mo
     Json(ModelResponse { models })
 }
 
-async fn context_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ContextResponse> {
-    let context = state.context().await;
+async fn conversations_handler(
+    State(state): State<Arc<dyn RootAPIService>>,
+) -> Json<ConversationsResponse> {
+    let conversations = state.conversations().await.unwrap_or_default();
+    Json(ConversationsResponse { conversations })
+}
+
+async fn history_handler(
+    State(state): State<Arc<dyn RootAPIService>>,
+    axum::extract::Path(id): axum::extract::Path<ConversationId>,
+) -> Json<ConversationHistory> {
+    Json(state.conversation(id).await.unwrap_or_default())
+}
+
+#[axum::debug_handler]
+async fn context_handler(
+    State(state): State<Arc<dyn RootAPIService>>,
+    axum::extract::Path(id): axum::extract::Path<ConversationId>,
+) -> Json<ContextResponse> {
+    let context = state.context(id).await.unwrap();
     Json(ContextResponse { context })
 }
 
@@ -150,4 +176,9 @@ pub struct ModelResponse {
 #[derive(Serialize)]
 pub struct ToolResponse {
     tools: Vec<ToolDefinition>,
+}
+
+#[derive(Serialize)]
+pub struct ConversationsResponse {
+    conversations: Vec<Conversation>,
 }

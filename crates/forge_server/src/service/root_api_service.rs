@@ -5,17 +5,19 @@ use forge_provider::{Model, ProviderService, Request, ResultStream};
 use forge_tool::{ToolDefinition, ToolService};
 
 use super::completion_service::CompletionService;
-use super::neo_chat_service::NeoChatService;
-use super::Service;
-use crate::{ChatRequest, ChatResponse, Error, File, Result};
+use super::neo_chat_service::{ConversationHistory, NeoChatService};
+use super::{ConversationId, Service, StorageService};
+use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
-    async fn context(&self) -> Request;
+    async fn context(&self, conversation_id: ConversationId) -> Result<Request>;
     async fn models(&self) -> Result<Vec<Model>>;
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error>;
+    async fn conversations(&self) -> Result<Vec<Conversation>>;
+    async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory>;
 }
 
 impl Service {
@@ -30,6 +32,7 @@ struct Live {
     tool: Arc<dyn ToolService>,
     completions: Arc<dyn CompletionService>,
     chat_service: Arc<dyn NeoChatService>,
+    storage: Arc<dyn StorageService>,
 }
 
 impl Live {
@@ -47,15 +50,23 @@ impl Live {
         let file_read = Arc::new(Service::file_read_service());
         let user_prompt = Arc::new(Service::user_prompt_service(file_read));
 
+        let storage =
+            Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
+
         let chat_service = Arc::new(Service::neo_chat_service(
             provider.clone(),
             system_prompt.clone(),
             tool.clone(),
             user_prompt,
+            storage.clone(),
         ));
 
         let completions = Arc::new(Service::completion_service(cwd.clone()));
-        Self { provider, tool, completions, chat_service }
+
+        let storage =
+            Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
+
+        Self { provider, tool, completions, chat_service, storage }
     }
 }
 
@@ -69,8 +80,12 @@ impl RootAPIService for Live {
         self.tool.list()
     }
 
-    async fn context(&self) -> Request {
-        todo!("Implement it via the storage API");
+    async fn context(&self, conversation_id: ConversationId) -> Result<Request> {
+        Ok(self
+            .storage
+            .get_conversation(conversation_id)
+            .await?
+            .context)
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
@@ -79,5 +94,18 @@ impl RootAPIService for Live {
 
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         Ok(self.chat_service.chat(chat).await?)
+    }
+
+    async fn conversations(&self) -> Result<Vec<Conversation>> {
+        self.storage.list_conversations().await
+    }
+
+    async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory> {
+        Ok(self
+            .storage
+            .get_conversation(conversation_id)
+            .await?
+            .context
+            .into())
     }
 }

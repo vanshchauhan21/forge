@@ -7,12 +7,13 @@ use forge_provider::{
 };
 use forge_tool::{ToolName, ToolService};
 use serde::Serialize;
+use serde_json::Value;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::system_prompt_service::SystemPromptService;
 use super::user_prompt_service::UserPromptService;
-use super::Service;
+use super::{ConversationId, Service, StorageService};
 use crate::{Errata, Error, Result};
 
 #[async_trait::async_trait]
@@ -26,8 +27,9 @@ impl Service {
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
         user_prompt: Arc<dyn UserPromptService>,
+        storage: Arc<dyn StorageService>,
     ) -> impl NeoChatService {
-        Live::new(provider, system_prompt, tool, user_prompt)
+        Live::new(provider, system_prompt, tool, user_prompt, storage)
     }
 }
 
@@ -37,6 +39,7 @@ struct Live {
     system_prompt: Arc<dyn SystemPromptService>,
     tool: Arc<dyn ToolService>,
     user_prompt: Arc<dyn UserPromptService>,
+    storage: Arc<dyn StorageService>,
 }
 
 impl Live {
@@ -45,8 +48,9 @@ impl Live {
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
         user_prompt: Arc<dyn UserPromptService>,
+        storage: Arc<dyn StorageService>,
     ) -> Self {
-        Self { provider, system_prompt, tool, user_prompt }
+        Self { provider, system_prompt, tool, user_prompt, storage }
     }
 
     /// Executes the chat workflow until the task is complete.
@@ -54,8 +58,12 @@ impl Live {
         &self,
         mut request: Request,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
+        conversation_id: ConversationId,
     ) -> Result<()> {
         loop {
+            self.storage
+                .set_conversation(&request, Some(conversation_id))
+                .await?;
             let mut tool_call_parts = Vec::new();
             let mut some_tool_call = None;
             let mut some_tool_result = None;
@@ -101,7 +109,8 @@ impl Live {
                     let value = self
                         .tool
                         .call(&tool_call.name, tool_call.arguments.clone())
-                        .await?;
+                        .await
+                        .unwrap_or_else(|error| Value::from(format!("<error>{}</error>", error)));
 
                     let tool_result = ToolResult::from(tool_call).content(value);
                     some_tool_result = Some(tool_result.clone());
@@ -123,6 +132,9 @@ impl Live {
             } else {
                 break Ok(());
             }
+            self.storage
+                .set_conversation(&request, Some(conversation_id))
+                .await?;
         }
     }
 }
@@ -134,16 +146,32 @@ impl NeoChatService for Live {
         let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
         let (tx, rx) = tokio::sync::mpsc::channel(1);
 
-        let request = Request::default()
+        let req = if let Some(conversation_id) = &chat.conversation_id {
+            let conversation = self.storage.get_conversation(*conversation_id).await?;
+            conversation.context
+        } else {
+            Request::default()
+        };
+
+        let request = req
             .set_system_message(system_prompt)
             .add_message(CompletionMessage::user(user_prompt))
             .tools(self.tool.list())
             .model(chat.model);
 
+        let conversation_id = self
+            .storage
+            .set_conversation(&request, chat.conversation_id)
+            .await?
+            .id;
+
         let that = self.clone();
         tokio::spawn(async move {
             // TODO: simplify this match.
-            match that.chat_workflow(request, tx.clone()).await {
+            match that
+                .chat_workflow(request, tx.clone(), conversation_id)
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => tx.send(Err(e)).await.unwrap(),
             };
@@ -161,6 +189,7 @@ impl NeoChatService for Live {
 pub struct ChatRequest {
     pub content: String,
     pub model: ModelId,
+    pub conversation_id: Option<ConversationId>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, derive_more::From)]
@@ -173,6 +202,39 @@ pub enum ChatResponse {
     ToolUseEnd(ToolResult),
     Complete,
     Error(Errata),
+}
+
+#[derive(Default, Debug, Clone, Serialize)]
+pub struct ConversationHistory {
+    pub messages: Vec<ChatResponse>,
+}
+
+impl From<Request> for ConversationHistory {
+    fn from(request: Request) -> Self {
+        let messages = request
+            .messages
+            .iter()
+            .filter(|message| match message {
+                CompletionMessage::ContentMessage(content) => {
+                    content.role != forge_provider::Role::System
+                }
+                CompletionMessage::ToolMessage(_) => true,
+            })
+            .flat_map(|message| match message {
+                CompletionMessage::ContentMessage(content) => {
+                    let mut messages = vec![ChatResponse::Text(content.content.clone())];
+                    if let Some(tool_call) = &content.tool_call {
+                        messages.push(ChatResponse::ToolCallStart(tool_call.clone()));
+                    }
+                    messages
+                }
+                CompletionMessage::ToolMessage(result) => {
+                    vec![ChatResponse::ToolUseEnd(result.clone())]
+                }
+            })
+            .collect();
+        Self { messages }
+    }
 }
 
 #[cfg(test)]
@@ -194,11 +256,16 @@ mod tests {
     use crate::service::neo_chat_service::NeoChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::service::user_prompt_service::tests::TestUserPrompt;
+    use crate::storage_service::tests::TestStorage;
     use crate::ChatResponse;
 
     impl ChatRequest {
         pub fn new(content: impl ToString) -> ChatRequest {
-            ChatRequest { content: content.to_string(), model: ModelId::default() }
+            ChatRequest {
+                content: content.to_string(),
+                model: ModelId::default(),
+                conversation_id: None,
+            }
         }
     }
 
@@ -265,11 +332,13 @@ mod tests {
             let system_prompt = Arc::new(TestSystemPrompt::new(system_prompt_message));
             let tool = Arc::new(TestToolService::new(self.tools.clone()));
             let user_prompt = Arc::new(TestUserPrompt);
+            let storage = Arc::new(TestStorage::in_memory().unwrap());
             let chat = Live::new(
                 provider.clone(),
                 system_prompt.clone(),
                 tool.clone(),
                 user_prompt.clone(),
+                storage,
             );
 
             let messages = chat

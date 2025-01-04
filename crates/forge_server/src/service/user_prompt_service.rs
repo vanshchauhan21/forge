@@ -40,7 +40,7 @@ impl UserPromptService for Live {
     async fn get_user_prompt(&self, task: &str) -> Result<String> {
         let template = include_str!("../prompts/user_task.md").to_string();
 
-        let parsed_task = Prompt::parse(task.to_string())?;
+        let parsed_task = Prompt::parse(task.to_string());
 
         let mut file_contents = vec![];
         for file in parsed_task.files() {
