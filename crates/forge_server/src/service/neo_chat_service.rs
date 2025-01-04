@@ -56,23 +56,26 @@ impl Live {
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
     ) -> Result<()> {
         loop {
-            let mut tool_call = None;
             let mut tool_call_parts = Vec::new();
-            let mut tool_result = None;
+            let mut some_tool_call = None;
+            let mut some_tool_result = None;
             let mut assistant_message_content = String::new();
 
             let mut response = self.provider.chat(request.clone()).await?;
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
-                if message.tool_call.is_empty() {
-                    // TODO: drop unwrap from here.
-                    assistant_message_content.push_str(&message.content);
-                    tx.send(Ok(ChatResponse::Text(message.content)))
-                        .await
-                        .unwrap();
-                } else {
-                    assistant_message_content.push_str(&message.content);
+
+                if let Some(content) = message.content {
+                    if !content.is_empty() {
+                        assistant_message_content.push_str(&content);
+                        tx.send(Ok(ChatResponse::Text(content.to_string())))
+                            .await
+                            .unwrap();
+                    }
+                }
+
+                if !message.tool_call.is_empty() {
                     if let Some(tool_part) = message.tool_call.first() {
                         if tool_call_parts.is_empty() {
                             // very first instance where we found a tool call.
@@ -87,32 +90,36 @@ impl Live {
 
                     if let Some(FinishReason::ToolCalls) = message.finish_reason {
                         // TODO: drop clone from here.
-                        let actual_tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+                        let tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+                        some_tool_call = Some(tool_call.clone());
 
-                        tx.send(Ok(ChatResponse::ToolCallStart(actual_tool_call.clone())))
+                        tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
                             .await
                             .unwrap();
-                        tool_call = Some(actual_tool_call.clone());
-                        tool_result = Some(
-                            self.tool
-                                .call(&actual_tool_call.name, actual_tool_call.arguments)
-                                .await,
-                        );
+
+                        let value = self
+                            .tool
+                            .call(&tool_call.name, tool_call.arguments.clone())
+                            .await?;
+
+                        let tool_result = ToolResult::new(tool_call.name.clone()).content(value);
+                        some_tool_result = Some(tool_result.clone());
+
+                        // send the tool use end message.
+                        tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
+                            .await
+                            .unwrap();
                     }
                 }
             }
 
             request = request.add_message(CompletionMessage::assistant(
-                assistant_message_content,
-                tool_call,
+                assistant_message_content.clone(),
+                some_tool_call,
             ));
-            if let Some(Ok(tool_result)) = tool_result {
-                let tool_result: ToolResult = serde_json::from_value(tool_result).unwrap();
-                request = request.add_message(CompletionMessage::ToolMessage(tool_result.clone()));
-                // send the tool use end message.
-                tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
-                    .await
-                    .unwrap();
+
+            if let Some(tool_result) = some_tool_result {
+                request = request.add_message(CompletionMessage::ToolMessage(tool_result));
             } else {
                 break Ok(());
             }
@@ -135,12 +142,16 @@ impl NeoChatService for Live {
 
         let that = self.clone();
         tokio::spawn(async move {
+            dbg!("async chat workflow");
+
             // TODO: simplify this match.
             match that.chat_workflow(request, tx.clone()).await {
                 Ok(_) => {}
                 Err(e) => tx.send(Err(e)).await.unwrap(),
             };
             tx.send(Ok(ChatResponse::Complete)).await.unwrap();
+
+            drop(tx);
         });
 
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -168,16 +179,16 @@ pub enum ChatResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
     use std::vec;
 
+    use derive_setters::Setters;
     use forge_provider::{
-        CompletionMessage, FinishReason, ModelId, Response, ToolCallId, ToolCallPart, ToolResult,
+        CompletionMessage, FinishReason, ModelId, Request, Response, ToolCall, ToolCallId,
+        ToolCallPart, ToolResult,
     };
     use forge_tool::{ToolDefinition, ToolName, ToolService};
-    use insta::assert_debug_snapshot;
     use pretty_assertions::assert_eq;
-    use schemars::schema::RootSchema;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;
 
@@ -194,12 +205,20 @@ mod tests {
     }
 
     struct TestToolService {
-        result: Value,
+        result: Mutex<Vec<Value>>,
+        tool_definitions: Vec<ToolDefinition>,
+        usage_prompt: String,
     }
 
     impl TestToolService {
-        pub fn new(result: Value) -> Self {
-            Self { result }
+        pub fn new(mut result: Vec<Value>) -> Self {
+            // Reversing so that we can pop the values in the order they were added.
+            result.reverse();
+            Self {
+                result: Mutex::new(result),
+                tool_definitions: vec![],
+                usage_prompt: "".to_string(),
+            }
         }
     }
 
@@ -210,73 +229,55 @@ mod tests {
             _name: &ToolName,
             _input: Value,
         ) -> std::result::Result<Value, String> {
-            Ok(self.result.clone())
+            let mut result = self.result.lock().unwrap();
+
+            if let Some(value) = result.pop() {
+                Ok(value)
+            } else {
+                Err("No tool call is available".to_string())
+            }
         }
+
         fn list(&self) -> Vec<ToolDefinition> {
-            vec![ToolDefinition {
-                name: ToolName::new("foo"),
-                description: "foo tool".to_string(),
-                input_schema: RootSchema {
-                    meta_schema: None,
-                    schema: Default::default(),
-                    definitions: Default::default(),
-                },
-                output_schema: None,
-            }]
+            self.tool_definitions.clone()
         }
+
         fn usage_prompt(&self) -> String {
-            "".to_string()
+            self.usage_prompt.clone()
         }
     }
 
-    const ASSISTANT_RESPONSE: &str = "Sure thing!";
-    const SYSTEM_PROMPT: &str = "Do everything that the user says";
+    // const ASSISTANT_RESPONSE: &str = "Sure thing!";
+    // const SYSTEM_PROMPT: &str = "Do everything that the user says";
 
+    #[derive(Default, Setters)]
+    #[setters(into, strip_option)]
     struct Fixture {
-        provider: Arc<TestProvider>,
-        system_prompt: Arc<TestSystemPrompt>,
-        tool: Arc<TestToolService>,
-        user_prompt: Arc<TestUserPrompt>,
-        service: Live,
+        tools: Vec<Value>,
+        assistant_responses: Vec<Vec<Response>>,
+        system_prompt: String,
     }
 
     impl Fixture {
-        pub fn with_provider(self, provider: TestProvider) -> Self {
-            let provider = Arc::new(provider);
-            Self {
-                provider: provider.clone(),
-                service: Live::new(
-                    provider,
-                    self.system_prompt.clone(),
-                    self.tool.clone(),
-                    self.user_prompt.clone(),
-                ),
-                system_prompt: self.system_prompt,
-                tool: self.tool,
-                user_prompt: self.user_prompt,
-            }
-        }
+        pub async fn run(&self, request: ChatRequest) -> TestResult {
+            let provider =
+                Arc::new(TestProvider::default().with_messages(self.assistant_responses.clone()));
+            let system_prompt_message = if self.system_prompt.is_empty() {
+                "Do everything that the user says"
+            } else {
+                self.system_prompt.as_str()
+            };
+            let system_prompt = Arc::new(TestSystemPrompt::new(system_prompt_message));
+            let tool = Arc::new(TestToolService::new(self.tools.clone()));
+            let user_prompt = Arc::new(TestUserPrompt);
+            let chat = Live::new(
+                provider.clone(),
+                system_prompt.clone(),
+                tool.clone(),
+                user_prompt.clone(),
+            );
 
-        pub fn with_tool(self, tool_result: ToolResult) -> Self {
-            let tool = Arc::new(TestToolService::new(
-                serde_json::to_value(tool_result).unwrap(),
-            ));
-            Self {
-                provider: self.provider.clone(),
-                service: Live::new(
-                    self.provider,
-                    self.system_prompt.clone(),
-                    tool.clone(),
-                    self.user_prompt.clone(),
-                ),
-                system_prompt: self.system_prompt,
-                tool,
-                user_prompt: self.user_prompt,
-            }
-        }
-
-        pub async fn chat(&self, request: ChatRequest) -> Vec<ChatResponse> {
-            self.service
+            let messages = chat
                 .chat(request)
                 .await
                 .unwrap()
@@ -284,38 +285,31 @@ mod tests {
                 .await
                 .into_iter()
                 .map(|value| value.unwrap())
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+
+            let llm_calls = provider.get_calls();
+
+            TestResult { messages, llm_calls }
         }
     }
 
-    impl Default for Fixture {
-        fn default() -> Self {
-            let provider =
-                Arc::new(
-                    TestProvider::default().with_messages(vec![vec![Response::assistant(
-                        ASSISTANT_RESPONSE.to_string(),
-                    )]]),
-                );
-            let system_prompt = Arc::new(TestSystemPrompt::new(SYSTEM_PROMPT));
-            let tool = Arc::new(TestToolService::new(json!({"result": "fs success."})));
-            let user_prompt = Arc::new(TestUserPrompt);
-            let service = Live::new(
-                provider.clone(),
-                system_prompt.clone(),
-                tool.clone(),
-                user_prompt.clone(),
-            );
-            Self { provider, system_prompt, tool, service, user_prompt }
-        }
+    struct TestResult {
+        messages: Vec<ChatResponse>,
+        llm_calls: Vec<Request>,
     }
 
     #[tokio::test]
     async fn test_chat_response() {
-        let chat_request = ChatRequest::new("Hello can you help me?");
+        let actual = Fixture::default()
+            .assistant_responses(vec![vec![Response::assistant(
+                "Yes sure, tell me what you need.",
+            )]])
+            .run(ChatRequest::new("Hello can you help me?"))
+            .await
+            .messages;
 
-        let actual = Fixture::default().chat(chat_request).await;
         let expected = vec![
-            ChatResponse::Text(ASSISTANT_RESPONSE.to_string()),
+            ChatResponse::Text("Yes sure, tell me what you need.".to_string()),
             ChatResponse::Complete,
         ];
         assert_eq!(actual, expected)
@@ -323,83 +317,121 @@ mod tests {
 
     #[tokio::test]
     async fn test_chat_system_prompt() {
-        let tester = Fixture::default();
-        let chat_request = ChatRequest::new("Hello can you help me?");
+        let actual = Fixture::default()
+            .system_prompt("Do everything that the user says")
+            .run(ChatRequest::new("Hello can you help me?"))
+            .await
+            .llm_calls;
 
-        // TODO: don't remove this else tests stop working, but we need to understand
-        // why so revisit this later on.
-        tokio::time::pause();
-        let _ = tester.service.chat(chat_request).await.unwrap();
-        tokio::time::advance(tokio::time::Duration::from_millis(5)).await;
-
-        let actual = tester.provider.get_last_call().unwrap().messages[0].clone();
-        let expected = CompletionMessage::system(SYSTEM_PROMPT.to_string());
+        let expected = vec![
+            //
+            Request::default()
+                .add_message(CompletionMessage::system(
+                    "Do everything that the user says",
+                ))
+                .add_message(CompletionMessage::user(
+                    "<task>Hello can you help me?</task>",
+                )),
+        ];
 
         assert_eq!(actual, expected)
     }
 
     #[tokio::test]
     async fn test_chat_tool_result() {
-        let message_1 = Response::new("Let's use foo tool").add_tool_call(
-            ToolCallPart::default()
-                .name(ToolName::new("foo"))
-                .arguments_part(r#"{"foo": 1,"#)
-                .call_id(ToolCallId::new("too_call_001")),
-        );
-
-        let message_2 = Response::new("")
-            .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
-            .finish_reason(FinishReason::ToolCalls);
-
-        let message_3 = Response::new("Task is complete, let me know if you need anything else.");
-
-        let tool_result = ToolResult::new(ToolName::new("foo"))
-            .content(json!({"a": 100, "b": 200}))
-            .use_id(ToolCallId::new("too_call_001"));
-
-        let request = ChatRequest::new("Hello can you help me?");
-
+        let mock_llm_responses = vec![
+            vec![
+                Response::default()
+                    .content("Let's use foo tool")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("foo"))
+                            .arguments_part(r#"{"foo": 1,"#)
+                            .call_id(ToolCallId::new("too_call_001")),
+                    ),
+                Response::default()
+                    .content("")
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
+                    .finish_reason(FinishReason::ToolCalls),
+            ],
+            vec![Response::default()
+                .content("Task is complete, let me know if you need anything else.")],
+        ];
         let actual = Fixture::default()
-            .with_provider(
-                TestProvider::default()
-                    .with_messages(vec![vec![message_1, message_2], vec![message_3.clone()]]),
-            )
-            .with_tool(tool_result.clone())
-            .chat(request)
-            .await;
+            .assistant_responses(mock_llm_responses)
+            .tools(vec![json!({"a": 100, "b": 200})])
+            .run(ChatRequest::new("Hello can you help me?"))
+            .await
+            .messages;
 
-        assert_debug_snapshot!(actual);
+        let expected = vec![
+            ChatResponse::Text("Let's use foo tool".to_string()),
+            ChatResponse::ToolUseDetected(ToolName::new("foo")),
+            ChatResponse::ToolCallStart(
+                ToolCall::new(ToolName::new("foo"))
+                    .arguments(json!({"foo": 1, "bar": 2}))
+                    .call_id(ToolCallId::new("too_call_001")),
+            ),
+            ChatResponse::ToolUseEnd(
+                ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200})),
+            ),
+            ChatResponse::Text(
+                "Task is complete, let me know if you need anything else.".to_string(),
+            ),
+            ChatResponse::Complete,
+        ];
+
+        assert_eq!(actual, expected);
     }
 
     #[tokio::test]
     async fn test_chat_context() {
-        let message_1 = Response::new("Let's use foo tool").add_tool_call(
-            ToolCallPart::default()
-                .name(ToolName::new("foo"))
-                .arguments_part(r#"{"foo": 1,"#)
-                .call_id(ToolCallId::new("too_call_001")),
-        );
-        let message_2 = Response::new("")
-            .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
-            .finish_reason(FinishReason::ToolCalls);
-        let message_3 = Response::new("Task is complete, let me know how can i help you!");
+        let mock_llm_responses = vec![
+            vec![
+                Response::default()
+                    .content("Let's use foo tool")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("foo"))
+                            .arguments_part(r#"{"foo": 1,"#)
+                            .call_id(ToolCallId::new("too_call_001")),
+                    ),
+                Response::default()
+                    .content("")
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#))
+                    .finish_reason(FinishReason::ToolCalls),
+            ],
+            vec![Response::default().content("Task is complete, let me know how can i help you!")],
+        ];
 
-        let tool_result = ToolResult::new(ToolName::new("foo"))
-            .content(json!({
-                "a": 100,
-                "b": 200
-            }))
-            .use_id(ToolCallId::new("too_call_001"));
-        let request = ChatRequest::new("Hello can you help me?");
-        let tester = Fixture::default()
-            .with_provider(
-                TestProvider::default()
-                    .with_messages(vec![vec![message_1, message_2], vec![message_3.clone()]]),
-            )
-            .with_tool(tool_result.clone());
+        let actual = Fixture::default()
+            .assistant_responses(mock_llm_responses)
+            .tools(vec![json!({"a": 100, "b": 200})])
+            .run(ChatRequest::new("Hello can you use foo tool?"))
+            .await
+            .llm_calls;
 
-        let _ = tester.chat(request).await;
-        let last_request = tester.provider.get_last_call().unwrap();
-        insta::assert_debug_snapshot!(last_request);
+        let expected_llm_request_1 = Request::default()
+            .set_system_message("Do everything that the user says")
+            .add_message(CompletionMessage::user(
+                "<task>Hello can you use foo tool?</task>",
+            ));
+
+        let expected = vec![
+            expected_llm_request_1.clone(),
+            expected_llm_request_1
+                .add_message(CompletionMessage::assistant(
+                    "Let's use foo tool",
+                    Some(
+                        ToolCall::new(ToolName::new("foo"))
+                            .arguments(json!({"foo": 1, "bar": 2}))
+                            .call_id(ToolCallId::new("too_call_001")),
+                    ),
+                ))
+                .add_message(CompletionMessage::ToolMessage(
+                    ToolResult::new(ToolName::new("foo")).content(json!({"a": 100, "b": 200})),
+                )),
+        ];
+        assert_eq!(actual, expected);
     }
 }

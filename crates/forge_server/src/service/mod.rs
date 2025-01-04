@@ -44,7 +44,7 @@ mod tests {
     #[derive(Default, Setters)]
     pub struct TestProvider {
         messages: Mutex<Vec<Vec<Response>>>,
-        request: Mutex<Option<Request>>,
+        calls: Mutex<Vec<Request>>,
         models: Vec<Model>,
         parameters: Vec<(ModelId, Parameters)>,
     }
@@ -54,23 +54,22 @@ mod tests {
             self.messages(Mutex::new(messages))
         }
 
-        pub fn get_last_call(&self) -> Option<Request> {
-            self.request.lock().unwrap().clone()
+        pub fn get_calls(&self) -> Vec<Request> {
+            self.calls.lock().unwrap().clone()
         }
     }
 
     #[async_trait::async_trait]
     impl ProviderService for TestProvider {
         async fn chat(&self, request: Request) -> ResultStream<Response, forge_provider::Error> {
-            self.request.lock().unwrap().replace(request);
-            // TODO: don't remove this else tests stop working, but we need to understand
-            // why so revisit this later on.
-            tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
-
-            // clear the messages as we send it to the stream.
+            self.calls.lock().unwrap().push(request);
             let mut guard = self.messages.lock().unwrap();
-            let response = guard.remove(0);
-            Ok(Box::pin(tokio_stream::iter(response).map(Ok)))
+            if guard.is_empty() {
+                Ok(Box::pin(tokio_stream::empty()))
+            } else {
+                let response = guard.remove(0);
+                Ok(Box::pin(tokio_stream::iter(response).map(Ok)))
+            }
         }
 
         async fn models(&self) -> forge_provider::Result<Vec<Model>> {

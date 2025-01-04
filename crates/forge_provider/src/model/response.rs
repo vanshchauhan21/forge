@@ -7,10 +7,10 @@ use super::ToolCallPart;
 /// Represents a message that was received from the LLM provider
 /// NOTE: ToolUse messages are part of the larger Response object and not part
 /// of the message.
-#[derive(Clone, Debug, Setters)]
+#[derive(Default, Clone, Debug, Setters)]
 #[setters(into, strip_option)]
 pub struct Response {
-    pub content: String,
+    pub content: Option<String>,
     pub tool_call: Vec<ToolCallPart>,
     pub finish_reason: Option<FinishReason>,
 }
@@ -37,15 +37,7 @@ pub enum FinishReason {
 
 impl Response {
     pub fn assistant(content: impl ToString) -> Response {
-        Response::new(content)
-    }
-
-    pub fn new(content: impl ToString) -> Response {
-        Response {
-            content: content.to_string(),
-            tool_call: vec![],
-            finish_reason: None,
-        }
+        Response::default().content(content.to_string())
     }
 
     pub fn add_tool_call(mut self, call_tool: impl Into<ToolCallPart>) -> Self {
