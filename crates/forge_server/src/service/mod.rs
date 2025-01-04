@@ -1,15 +1,15 @@
 mod completion_service;
-pub mod db_pool_service;
+pub mod conversation_service;
+pub mod db_service;
 mod file_read_service;
 mod neo_chat_service;
 mod root_api_service;
-pub mod storage_service;
 mod system_prompt_service;
 mod user_prompt_service;
 pub use completion_service::File;
+pub use conversation_service::{Conversation, ConversationId, ConversationService};
 pub use neo_chat_service::{ChatRequest, ChatResponse, ConversationHistory};
 pub use root_api_service::*;
-pub use storage_service::{Conversation, ConversationId, StorageService};
 
 pub struct Service;
 

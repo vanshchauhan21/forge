@@ -12,12 +12,12 @@ const DB_NAME: &str = "conversations.db";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[async_trait::async_trait]
-pub trait DbPoolService: Send + Sync {
+pub trait DBService: Send + Sync {
     async fn pool(&self) -> Result<SQLConnection>;
 }
 
 impl Service {
-    pub fn db_pool_service(db_path: &str) -> Result<impl DbPoolService> {
+    pub fn db_pool_service(db_path: &str) -> Result<impl DBService> {
         Live::new(db_path)
     }
 }
@@ -45,7 +45,7 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl DbPoolService for Live {
+impl DBService for Live {
     async fn pool(&self) -> Result<SQLConnection> {
         Ok(self.pool.clone())
     }
@@ -73,7 +73,7 @@ pub mod tests {
     }
 
     #[async_trait::async_trait]
-    impl DbPoolService for TestDbPool {
+    impl DBService for TestDbPool {
         async fn pool(&self) -> Result<SQLConnection> {
             Ok(self.live.pool.clone())
         }

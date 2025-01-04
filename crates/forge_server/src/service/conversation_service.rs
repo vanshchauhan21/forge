@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::Service;
 use crate::schema::conversations;
-use crate::service::db_pool_service::DbPoolService;
+use crate::service::db_service::DBService;
 use crate::Result;
 
 #[derive(Debug, Setters, Serialize, Deserialize)]
@@ -79,7 +79,7 @@ impl TryFrom<RawConversation> for Conversation {
 }
 
 #[async_trait::async_trait]
-pub trait StorageService: Send + Sync {
+pub trait ConversationService: Send + Sync {
     async fn set_conversation(
         &self,
         request: &ProviderRequest,
@@ -90,18 +90,18 @@ pub trait StorageService: Send + Sync {
     async fn archive_conversation(&self, id: ConversationId) -> Result<Conversation>;
 }
 
-pub struct Live<P: DbPoolService> {
+pub struct Live<P: DBService> {
     pool_service: P,
 }
 
-impl<P: DbPoolService> Live<P> {
+impl<P: DBService> Live<P> {
     pub fn new(pool_service: P) -> Self {
         Self { pool_service }
     }
 }
 
 #[async_trait::async_trait]
-impl<P: DbPoolService + Send + Sync> StorageService for Live<P> {
+impl<P: DBService + Send + Sync> ConversationService for Live<P> {
     async fn set_conversation(
         &self,
         request: &ProviderRequest,
@@ -173,7 +173,7 @@ impl<P: DbPoolService + Send + Sync> StorageService for Live<P> {
 }
 
 impl Service {
-    pub fn storage_service(database_url: &str) -> Result<impl StorageService> {
+    pub fn storage_service(database_url: &str) -> Result<impl ConversationService> {
         let pool_service = Service::db_pool_service(database_url)?;
         Ok(Live::new(pool_service))
     }
@@ -183,22 +183,22 @@ impl Service {
 pub mod tests {
     use forge_provider::ModelId;
 
-    use super::super::db_pool_service::tests::TestDbPool;
+    use super::super::db_service::tests::TestDbPool;
     use super::*;
     pub struct TestStorage;
     impl TestStorage {
-        pub fn in_memory() -> Result<impl StorageService> {
+        pub fn in_memory() -> Result<impl ConversationService> {
             let pool_service = TestDbPool::new()?;
             Ok(Live::new(pool_service))
         }
     }
 
-    async fn setup_storage() -> Result<impl StorageService> {
+    async fn setup_storage() -> Result<impl ConversationService> {
         TestStorage::in_memory()
     }
 
     async fn create_conversation(
-        storage: &impl StorageService,
+        storage: &impl ConversationService,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
         let request = ProviderRequest::new(ModelId::default());

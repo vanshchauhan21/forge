@@ -6,7 +6,7 @@ use forge_tool::{ToolDefinition, ToolService};
 
 use super::completion_service::CompletionService;
 use super::neo_chat_service::{ConversationHistory, NeoChatService};
-use super::{ConversationId, Service, StorageService};
+use super::{ConversationId, ConversationService, Service};
 use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
 
 #[async_trait::async_trait]
@@ -32,7 +32,7 @@ struct Live {
     tool: Arc<dyn ToolService>,
     completions: Arc<dyn CompletionService>,
     chat_service: Arc<dyn NeoChatService>,
-    storage: Arc<dyn StorageService>,
+    storage: Arc<dyn ConversationService>,
 }
 
 impl Live {
