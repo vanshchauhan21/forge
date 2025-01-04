@@ -245,9 +245,6 @@ mod tests {
         }
     }
 
-    // const ASSISTANT_RESPONSE: &str = "Sure thing!";
-    // const SYSTEM_PROMPT: &str = "Do everything that the user says";
-
     #[derive(Default, Setters)]
     #[setters(into, strip_option)]
     struct Fixture {
