@@ -2,12 +2,10 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use colorize::AnsiColor;
+use forge_domain::{Description, ToolCallService};
 use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::tool_call_service::ToolCallService;
-use crate::Description;
 
 /// A framework for iterative reasoning in problem-solving.
 ///

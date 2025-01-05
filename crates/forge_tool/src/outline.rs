@@ -1,15 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+use forge_domain::{Description, ToolCallService};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use streaming_iterator::{IntoStreamingIterator, StreamingIterator};
 use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
-
-use crate::tool_call_service::ToolCallService;
-use crate::Description;
 
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");

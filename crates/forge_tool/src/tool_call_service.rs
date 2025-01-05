@@ -1,15 +1,6 @@
+use forge_domain::ToolCallService;
 use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use serde_json::Value;
-
-#[async_trait::async_trait]
-pub trait ToolCallService {
-    type Input: DeserializeOwned;
-    type Output: Serialize;
-
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
-}
 
 pub struct JsonTool<T>(T);
 

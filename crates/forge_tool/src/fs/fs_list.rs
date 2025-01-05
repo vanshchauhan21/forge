@@ -1,12 +1,10 @@
 use std::path::Path;
 
+use forge_domain::{Description, ToolCallService};
 use forge_tool_macros::Description as DescriptionDerive;
 use forge_walker::Walker;
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::tool_call_service::ToolCallService;
-use crate::Description;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {

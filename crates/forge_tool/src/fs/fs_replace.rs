@@ -3,14 +3,12 @@ use std::io::{BufReader, Read, Write};
 use std::path::Path;
 
 use dissimilar::Chunk;
+use forge_domain::{Description, ToolCallService};
 use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tracing::{debug, error};
-
-use crate::tool_call_service::ToolCallService;
-use crate::Description;
 
 fn persist_changes<P: AsRef<Path>>(
     temp_file: NamedTempFile,

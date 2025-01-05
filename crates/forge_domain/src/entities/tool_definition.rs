@@ -1,4 +1,9 @@
+use std::collections::BTreeSet;
+
+use inflector::Inflector;
 use schemars::schema::RootSchema;
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::{ToolName, UsageParameterPrompt, UsagePrompt};
@@ -15,6 +20,70 @@ pub struct ToolDefinition {
 }
 
 impl ToolDefinition {
+    pub fn new<T>(description: String) -> Self
+    where
+        T: ToolCallService + Description + Send + Sync + 'static,
+        T::Input: serde::de::DeserializeOwned + JsonSchema,
+        T::Output: serde::Serialize + JsonSchema,
+    {
+        let name = std::any::type_name::<T>()
+            .split("::")
+            .last()
+            .unwrap()
+            .to_snake_case();
+
+        let input: RootSchema = schemars::schema_for!(T::Input);
+        let output: RootSchema = schemars::schema_for!(T::Output);
+        let mut full_description = description;
+
+        full_description.push_str("\n\nParameters:");
+
+        let required = input
+            .schema
+            .clone()
+            .object
+            .iter()
+            .flat_map(|object| object.required.clone().into_iter())
+            .collect::<BTreeSet<_>>();
+
+        for (name, desc) in input
+            .schema
+            .object
+            .clone()
+            .into_iter()
+            .flat_map(|object| object.properties.into_iter())
+            .flat_map(|(name, props)| {
+                props
+                    .into_object()
+                    .metadata
+                    .into_iter()
+                    .map(move |meta| (name.clone(), meta))
+            })
+            .flat_map(|(name, meta)| {
+                meta.description
+                    .into_iter()
+                    .map(move |desc| (name.clone(), desc))
+            })
+        {
+            full_description.push_str("\n- ");
+            full_description.push_str(&name);
+
+            if required.contains(&name) {
+                full_description.push_str(" (required)");
+            }
+
+            full_description.push_str(": ");
+            full_description.push_str(&desc);
+        }
+
+        ToolDefinition {
+            name: ToolName::new(name),
+            description: full_description,
+            input_schema: input,
+            output_schema: Some(output),
+        }
+    }
+
     pub fn usage_prompt(&self) -> UsagePrompt {
         let input_parameters = self
             .input_schema
@@ -39,4 +108,16 @@ impl ToolDefinition {
             description: self.description.to_string(),
         }
     }
+}
+
+pub trait Description {
+    fn description() -> &'static str;
+}
+
+#[async_trait::async_trait]
+pub trait ToolCallService {
+    type Input: DeserializeOwned;
+    type Output: Serialize;
+
+    async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }

@@ -800,6 +800,8 @@ dependencies = [
 name = "forge_domain"
 version = "0.1.0"
 dependencies = [
+ "Inflector",
+ "async-trait",
  "derive_more",
  "derive_setters",
  "insta",
