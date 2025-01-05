@@ -73,7 +73,7 @@ impl SystemPromptService for Live {
 
 #[cfg(test)]
 mod tests {
-    use forge_provider::Parameters;
+    use forge_domain::Parameters;
     use insta::assert_snapshot;
 
     use super::*;

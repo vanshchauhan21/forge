@@ -1,7 +1,5 @@
-use derive_setters::Setters;
-use forge_domain::{Model, ModelId, Request, Response, ResultStream};
+use forge_domain::{Model, ModelId, Parameters, Request, Response, ResultStream};
 use moka2::future::Cache;
-use serde::{Deserialize, Serialize};
 
 use super::error::Result;
 use crate::Error;
@@ -42,10 +40,4 @@ impl ProviderService for Live {
 
         Ok(parameters?)
     }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Setters)]
-pub struct Parameters {
-    pub tool_supported: bool,
-    pub model: ModelId,
 }

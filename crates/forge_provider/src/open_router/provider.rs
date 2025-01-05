@@ -1,4 +1,4 @@
-use forge_domain::{Model, ModelId, Request, Response, ResultStream};
+use forge_domain::{Model, ModelId, Parameters, Request, Response, ResultStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
@@ -9,7 +9,7 @@ use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use super::ParameterResponse;
 use crate::error::Result;
-use crate::provider::{Parameters, ProviderService};
+use crate::provider::ProviderService;
 use crate::{Error, Live, ProviderError, Service};
 
 const PROVIDER_NAME: &str = "Open Router";
