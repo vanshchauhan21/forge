@@ -1,14 +1,23 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! The model is built on top of Open AI's API specification
+//! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+mod error;
+mod message;
+mod request;
+mod response;
+mod tool_call;
+mod tool_call_parser;
+mod tool_definition;
+mod tool_name;
+mod tool_result;
+mod tool_usage;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use error::*;
+pub use message::*;
+pub use request::*;
+pub use response::*;
+pub use tool_call::*;
+pub use tool_definition::*;
+pub use tool_name::*;
+pub use tool_result::*;
+pub use tool_usage::*;
