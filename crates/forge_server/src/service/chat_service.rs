@@ -17,7 +17,7 @@ use super::{ConversationId, ConversationService, Service};
 use crate::{Errata, Error, Result};
 
 #[async_trait::async_trait]
-pub trait NeoChatService: Send + Sync {
+pub trait ChatService: Send + Sync {
     async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, Error>;
 }
 
@@ -28,7 +28,7 @@ impl Service {
         tool: Arc<dyn ToolService>,
         user_prompt: Arc<dyn UserPromptService>,
         storage: Arc<dyn ConversationService>,
-    ) -> impl NeoChatService {
+    ) -> impl ChatService {
         Live::new(provider, system_prompt, tool, user_prompt, storage)
     }
 }
@@ -135,7 +135,7 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl NeoChatService for Live {
+impl ChatService for Live {
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
         let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
@@ -257,7 +257,7 @@ mod tests {
 
     use super::{ChatRequest, Live};
     use crate::conversation_service::tests::TestStorage;
-    use crate::service::neo_chat_service::NeoChatService;
+    use crate::service::chat_service::ChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::service::user_prompt_service::tests::TestUserPrompt;
     use crate::ChatResponse;

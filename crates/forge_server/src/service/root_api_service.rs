@@ -5,8 +5,8 @@ use forge_env::Environment;
 use forge_provider::ProviderService;
 use forge_tool::ToolService;
 
+use super::chat_service::{ChatService, ConversationHistory};
 use super::completion_service::CompletionService;
-use super::neo_chat_service::{ConversationHistory, NeoChatService};
 use super::{ConversationId, ConversationService, Service};
 use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
 
@@ -32,7 +32,7 @@ struct Live {
     provider: Arc<dyn ProviderService>,
     tool: Arc<dyn ToolService>,
     completions: Arc<dyn CompletionService>,
-    chat_service: Arc<dyn NeoChatService>,
+    chat_service: Arc<dyn ChatService>,
     storage: Arc<dyn ConversationService>,
 }
 
