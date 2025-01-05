@@ -3,10 +3,9 @@ use std::sync::Arc;
 use derive_setters::Setters;
 use forge_domain::{
     Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCall, ToolName,
-    ToolResult,
+    ToolResult, ToolService,
 };
 use forge_provider::ProviderService;
-use forge_tool::ToolService;
 use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
@@ -248,9 +247,8 @@ mod tests {
     use derive_setters::Setters;
     use forge_domain::{
         ChatCompletionMessage, Context, ContextMessage, FinishReason, ModelId, ToolCall,
-        ToolCallId, ToolCallPart, ToolDefinition, ToolName, ToolResult,
+        ToolCallId, ToolCallPart, ToolDefinition, ToolName, ToolResult, ToolService,
     };
-    use forge_tool::ToolService;
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;

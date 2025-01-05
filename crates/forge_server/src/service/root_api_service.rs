@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use forge_domain::{Context, Model, ResultStream, ToolDefinition};
+use forge_domain::{Context, Model, ResultStream, ToolDefinition, ToolService};
 use forge_env::Environment;
 use forge_provider::ProviderService;
-use forge_tool::ToolService;
 
 use super::chat_service::{ChatService, ConversationHistory};
 use super::completion_service::CompletionService;

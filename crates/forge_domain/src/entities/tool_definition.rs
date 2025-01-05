@@ -3,10 +3,9 @@ use std::collections::BTreeSet;
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::{ToolName, UsageParameterPrompt, UsagePrompt};
+use crate::{ToolCallService, ToolName, UsageParameterPrompt, UsagePrompt};
 
 ///
 /// Refer to the specification over here:
@@ -112,12 +111,4 @@ impl ToolDefinition {
 
 pub trait Description {
     fn description() -> &'static str;
-}
-
-#[async_trait::async_trait]
-pub trait ToolCallService {
-    type Input: DeserializeOwned;
-    type Output: Serialize;
-
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String>;
 }

@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 
-use forge_domain::{Tool, ToolCall, ToolDefinition, ToolName, ToolResult, ToolService};
 use serde_json::Value;
-use tracing::info;
 
-use crate::fs::*;
-use crate::outline::Outline;
-use crate::shell::Shell;
-use crate::think::Think;
-use crate::Service;
+use crate::{Tool, ToolCall, ToolDefinition, ToolName, ToolResult};
+
+#[async_trait::async_trait]
+pub trait ToolService: Send + Sync {
+    async fn call(&self, call: ToolCall) -> ToolResult;
+    fn list(&self) -> Vec<ToolDefinition>;
+    fn usage_prompt(&self) -> String;
+}
 
 struct Live {
     tools: HashMap<ToolName, Tool>,
@@ -30,7 +31,6 @@ impl ToolService for Live {
     async fn call(&self, call: ToolCall) -> ToolResult {
         let name = call.name.clone();
         let input = call.arguments.clone();
-        info!("Calling tool: {}", name.as_str());
         let available_tools = self
             .tools
             .keys()
@@ -81,68 +81,5 @@ impl ToolService for Live {
                 acc.push_str(tool.definition.usage_prompt().to_string().as_str());
                 acc
             })
-    }
-}
-
-impl Service {
-    pub fn tool_service() -> impl ToolService {
-        Live::from_iter([
-            Tool::new(FSRead),
-            Tool::new(FSWrite),
-            Tool::new(FSList),
-            Tool::new(FSSearch),
-            Tool::new(FSFileInfo),
-            Tool::new(FSReplace),
-            Tool::new(Outline),
-            Tool::new(Shell::default()),
-            Tool::new(Think::default()),
-        ])
-    }
-}
-
-#[cfg(test)]
-mod test {
-
-    use insta::assert_snapshot;
-
-    use super::*;
-    use crate::fs::{FSFileInfo, FSSearch};
-
-    #[test]
-    fn test_id() {
-        assert!(Tool::new(FSRead)
-            .definition
-            .name
-            .into_string()
-            .ends_with("fs_read"));
-        assert!(Tool::new(FSSearch)
-            .definition
-            .name
-            .into_string()
-            .ends_with("fs_search"));
-        assert!(Tool::new(FSList)
-            .definition
-            .name
-            .into_string()
-            .ends_with("fs_list"));
-        assert!(Tool::new(FSFileInfo)
-            .definition
-            .name
-            .into_string()
-            .ends_with("file_info"));
-    }
-
-    #[test]
-    fn test_usage_prompt() {
-        let docs = Service::tool_service().usage_prompt();
-
-        assert_snapshot!(docs);
-    }
-
-    #[test]
-    fn test_tool_definition() {
-        let tools = Service::tool_service().list();
-
-        assert_snapshot!(serde_json::to_string_pretty(&tools).unwrap());
     }
 }
