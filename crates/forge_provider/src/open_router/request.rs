@@ -325,6 +325,7 @@ mod tests {
             name: ToolName::new("test_tool"),
             arguments: json!({"key": "value"}),
         };
+
         let assistant_message = ContextMessage::ContentMessage(ContentMessage {
             role: Role::Assistant,
             content: "Using tool".to_string(),
