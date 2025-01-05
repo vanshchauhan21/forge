@@ -1,7 +1,5 @@
 use derive_more::derive::Display;
-use forge_domain::{
-    CompletionMessage, ModelId, Request, Role, ToolCallId, ToolDefinition, ToolName,
-};
+use forge_domain::{Context, ContextMessage, ModelId, Role, ToolCallId, ToolDefinition, ToolName};
 use serde::{Deserialize, Serialize};
 
 use super::response::{FunctionCall, OpenRouterToolCall};
@@ -186,8 +184,8 @@ impl From<ToolDefinition> for OpenRouterTool {
     }
 }
 
-impl From<Request> for OpenRouterRequest {
-    fn from(request: Request) -> Self {
+impl From<Context> for OpenRouterRequest {
+    fn from(request: Context) -> Self {
         OpenRouterRequest {
             messages: {
                 let messages = request
@@ -237,10 +235,10 @@ impl From<Request> for OpenRouterRequest {
     }
 }
 
-impl From<CompletionMessage> for OpenRouterMessage {
-    fn from(value: CompletionMessage) -> Self {
+impl From<ContextMessage> for OpenRouterMessage {
+    fn from(value: ContextMessage) -> Self {
         match value {
-            CompletionMessage::ContentMessage(chat_message) => OpenRouterMessage {
+            ContextMessage::ContentMessage(chat_message) => OpenRouterMessage {
                 role: chat_message.role.into(),
                 content: Some(MessageContent::Text(chat_message.content)),
                 name: None,
@@ -257,7 +255,7 @@ impl From<CompletionMessage> for OpenRouterMessage {
                     }]
                 }),
             },
-            CompletionMessage::ToolMessage(tool_result) => OpenRouterMessage {
+            ContextMessage::ToolMessage(tool_result) => OpenRouterMessage {
                 role: OpenRouterRole::Tool,
                 content: Some(MessageContent::Text(
                     serde_json::to_string(&tool_result.content).unwrap(),

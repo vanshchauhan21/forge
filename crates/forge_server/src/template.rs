@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use derive_setters::Setters;
-use forge_domain::CompletionMessage;
+use forge_domain::ContextMessage;
 use serde::Serialize;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Setters)]
@@ -82,8 +82,8 @@ impl Display for MessageTemplate {
     }
 }
 
-impl From<MessageTemplate> for CompletionMessage {
+impl From<MessageTemplate> for ContextMessage {
     fn from(value: MessageTemplate) -> Self {
-        CompletionMessage::user(value.to_string())
+        ContextMessage::user(value.to_string())
     }
 }

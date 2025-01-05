@@ -8,12 +8,12 @@ use super::{ToolCall, ToolResult};
 /// NOTE: ToolResults message are part of the larger Request object and not part
 /// of the message.
 #[derive(Clone, Debug, Deserialize, From, PartialEq, Serialize)]
-pub enum CompletionMessage {
+pub enum ContextMessage {
     ContentMessage(ContentMessage),
     ToolMessage(ToolResult),
 }
 
-impl CompletionMessage {
+impl ContextMessage {
     pub fn user(content: impl ToString) -> Self {
         ContentMessage {
             role: Role::User,
@@ -43,10 +43,8 @@ impl CompletionMessage {
 
     pub fn content(&self) -> String {
         match self {
-            CompletionMessage::ContentMessage(message) => message.content.to_string(),
-            CompletionMessage::ToolMessage(result) => {
-                serde_json::to_string(&result.content).unwrap()
-            }
+            ContextMessage::ContentMessage(message) => message.content.to_string(),
+            ContextMessage::ToolMessage(result) => serde_json::to_string(&result.content).unwrap(),
         }
     }
 }

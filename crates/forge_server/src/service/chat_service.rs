@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use derive_setters::Setters;
 use forge_domain::{
-    CompletionMessage, FinishReason, ModelId, Request, ResultStream, Role, ToolCall, ToolName,
+    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCall, ToolName,
     ToolResult,
 };
 use forge_provider::ProviderService;
@@ -56,7 +56,7 @@ impl Live {
     /// Executes the chat workflow until the task is complete.
     async fn chat_workflow(
         &self,
-        mut request: Request,
+        mut request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
         conversation_id: ConversationId,
     ) -> Result<()> {
@@ -117,13 +117,13 @@ impl Live {
                 }
             }
 
-            request = request.add_message(CompletionMessage::assistant(
+            request = request.add_message(ContextMessage::assistant(
                 assistant_message_content.clone(),
                 some_tool_call,
             ));
 
             if let Some(tool_result) = some_tool_result {
-                request = request.add_message(CompletionMessage::ToolMessage(tool_result));
+                request = request.add_message(ContextMessage::ToolMessage(tool_result));
             } else {
                 break Ok(());
             }
@@ -145,12 +145,12 @@ impl ChatService for Live {
             let conversation = self.storage.get_conversation(*conversation_id).await?;
             conversation.context
         } else {
-            Request::default()
+            Context::default()
         };
 
         let request = req
             .set_system_message(system_prompt)
-            .add_message(CompletionMessage::user(user_prompt))
+            .add_message(ContextMessage::user(user_prompt))
             .tools(self.tool.list())
             .model(chat.model);
 
@@ -214,24 +214,24 @@ pub struct ConversationHistory {
     pub messages: Vec<ChatResponse>,
 }
 
-impl From<Request> for ConversationHistory {
-    fn from(request: Request) -> Self {
+impl From<Context> for ConversationHistory {
+    fn from(request: Context) -> Self {
         let messages = request
             .messages
             .iter()
             .filter(|message| match message {
-                CompletionMessage::ContentMessage(content) => content.role != Role::System,
-                CompletionMessage::ToolMessage(_) => true,
+                ContextMessage::ContentMessage(content) => content.role != Role::System,
+                ContextMessage::ToolMessage(_) => true,
             })
             .flat_map(|message| match message {
-                CompletionMessage::ContentMessage(content) => {
+                ContextMessage::ContentMessage(content) => {
                     let mut messages = vec![ChatResponse::Text(content.content.clone())];
                     if let Some(tool_call) = &content.tool_call {
                         messages.push(ChatResponse::ToolCallStart(tool_call.clone()));
                     }
                     messages
                 }
-                CompletionMessage::ToolMessage(result) => {
+                ContextMessage::ToolMessage(result) => {
                     vec![ChatResponse::ToolUseEnd(result.clone())]
                 }
             })
@@ -247,7 +247,7 @@ mod tests {
 
     use derive_setters::Setters;
     use forge_domain::{
-        CompletionMessage, FinishReason, ModelId, Request, Response, ToolCall, ToolCallId,
+        Context, ContextMessage, FinishReason, ModelId, Response, ToolCall, ToolCallId,
         ToolCallPart, ToolDefinition, ToolName, ToolResult,
     };
     use forge_tool::ToolService;
@@ -358,7 +358,7 @@ mod tests {
 
     struct TestResult {
         messages: Vec<ChatResponse>,
-        llm_calls: Vec<Request>,
+        llm_calls: Vec<Context>,
     }
 
     #[tokio::test]
@@ -391,13 +391,9 @@ mod tests {
 
         let expected = vec![
             //
-            Request::default()
-                .add_message(CompletionMessage::system(
-                    "Do everything that the user says",
-                ))
-                .add_message(CompletionMessage::user(
-                    "<task>Hello can you help me?</task>",
-                )),
+            Context::default()
+                .add_message(ContextMessage::system("Do everything that the user says"))
+                .add_message(ContextMessage::user("<task>Hello can you help me?</task>")),
         ];
 
         assert_eq!(actual, expected)
@@ -484,16 +480,16 @@ mod tests {
             .await
             .llm_calls;
 
-        let expected_llm_request_1 = Request::default()
+        let expected_llm_request_1 = Context::default()
             .set_system_message("Do everything that the user says")
-            .add_message(CompletionMessage::user(
+            .add_message(ContextMessage::user(
                 "<task>Hello can you use foo tool?</task>",
             ));
 
         let expected = vec![
             expected_llm_request_1.clone(),
             expected_llm_request_1
-                .add_message(CompletionMessage::assistant(
+                .add_message(ContextMessage::assistant(
                     "Let's use foo tool",
                     Some(
                         ToolCall::new(ToolName::new("foo"))
@@ -501,7 +497,7 @@ mod tests {
                             .call_id(ToolCallId::new("too_call_001")),
                     ),
                 ))
-                .add_message(CompletionMessage::ToolMessage(
+                .add_message(ContextMessage::ToolMessage(
                     ToolResult::new(ToolName::new("foo"))
                         .content(json!({"a": 100, "b": 200}))
                         .call_id(ToolCallId::new("too_call_001")),

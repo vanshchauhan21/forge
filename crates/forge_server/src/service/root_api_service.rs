@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use forge_domain::{Model, Request, ResultStream, ToolDefinition};
+use forge_domain::{Context, Model, ResultStream, ToolDefinition};
 use forge_env::Environment;
 use forge_provider::ProviderService;
 use forge_tool::ToolService;
@@ -14,7 +14,7 @@ use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
 pub trait RootAPIService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
-    async fn context(&self, conversation_id: ConversationId) -> Result<Request>;
+    async fn context(&self, conversation_id: ConversationId) -> Result<Context>;
     async fn models(&self) -> Result<Vec<Model>>;
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error>;
     async fn conversations(&self) -> Result<Vec<Conversation>>;
@@ -81,7 +81,7 @@ impl RootAPIService for Live {
         self.tool.list()
     }
 
-    async fn context(&self, conversation_id: ConversationId) -> Result<Request> {
+    async fn context(&self, conversation_id: ConversationId) -> Result<Context> {
         Ok(self
             .storage
             .get_conversation(conversation_id)

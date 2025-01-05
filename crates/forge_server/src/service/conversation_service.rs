@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_setters::Setters;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Text, Timestamp};
-use forge_domain::Request;
+use forge_domain::Context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -16,12 +16,12 @@ pub struct Conversation {
     pub id: ConversationId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<ConversationMeta>,
-    pub context: Request,
+    pub context: Context,
     pub archived: bool,
 }
 
 impl Conversation {
-    pub fn new(context: Request) -> Self {
+    pub fn new(context: Context) -> Self {
         Self {
             id: ConversationId::generate(),
             meta: None,
@@ -82,7 +82,7 @@ impl TryFrom<RawConversation> for Conversation {
 pub trait ConversationService: Send + Sync {
     async fn set_conversation(
         &self,
-        request: &Request,
+        request: &Context,
         id: Option<ConversationId>,
     ) -> Result<Conversation>;
     async fn get_conversation(&self, id: ConversationId) -> Result<Conversation>;
@@ -104,7 +104,7 @@ impl<P: DBService> Live<P> {
 impl<P: DBService + Send + Sync> ConversationService for Live<P> {
     async fn set_conversation(
         &self,
-        request: &Request,
+        request: &Context,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
         let pool = self.pool_service.pool().await?;
@@ -201,7 +201,7 @@ pub mod tests {
         storage: &impl ConversationService,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
-        let request = Request::new(ModelId::default());
+        let request = Context::new(ModelId::default());
         storage.set_conversation(&request, id).await
     }
 

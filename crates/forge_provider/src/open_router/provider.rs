@@ -1,4 +1,4 @@
-use forge_domain::{Model, ModelId, Parameters, Request, Response, ResultStream};
+use forge_domain::{Context, Model, ModelId, Parameters, Response, ResultStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
@@ -57,7 +57,7 @@ impl OpenRouter {
 
 #[async_trait::async_trait]
 impl ProviderService for OpenRouter {
-    async fn chat(&self, request: Request) -> ResultStream<Response, Error> {
+    async fn chat(&self, request: Context) -> ResultStream<Response, Error> {
         let mut request = OpenRouterRequest::from(request);
         request.stream = Some(true);
         let request = serde_json::to_string_pretty(&request)?;
