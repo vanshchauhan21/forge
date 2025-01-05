@@ -1,7 +1,6 @@
 //! The model is built on top of Open AI's API specification
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
-mod error;
 mod message;
 mod request;
 mod response;
@@ -12,7 +11,6 @@ mod tool_name;
 mod tool_result;
 mod tool_usage;
 
-pub use error::*;
 pub use message::*;
 pub use request::*;
 pub use response::*;

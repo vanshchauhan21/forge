@@ -69,6 +69,12 @@ pub struct Model {
     pub description: Option<String>,
 }
 
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Setters)]
+pub struct Parameters {
+    pub tool_supported: bool,
+    pub model: ModelId,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Hash, Eq)]
 #[serde(transparent)]
 pub struct ModelId(String);
