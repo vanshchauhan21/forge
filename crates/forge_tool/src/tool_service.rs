@@ -9,6 +9,7 @@ use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
 use crate::tool::Tool;
+use crate::tool_call_service::ToolCallService;
 use crate::Service;
 
 #[async_trait::async_trait]
@@ -17,28 +18,17 @@ pub trait ToolService: Send + Sync {
     fn list(&self) -> Vec<ToolDefinition>;
     fn usage_prompt(&self) -> String;
 }
+
 struct Live {
     tools: HashMap<ToolName, Tool>,
 }
 
-impl Live {
-    fn new() -> Self {
-        let tools: HashMap<ToolName, Tool> = [
-            Tool::new(FSRead),
-            Tool::new(FSWrite),
-            Tool::new(FSList),
-            Tool::new(FSSearch),
-            Tool::new(FSFileInfo),
-            Tool::new(FSReplace),
-            Tool::new(Outline),
-            Tool::new(Shell::default()),
-            // TODO: uncomment them later on, as of now we only need the above tools.
-            Tool::new(Think::default()),
-            // importer::import(AskFollowUpQuestion),
-        ]
-        .into_iter()
-        .map(|tool| (tool.definition.name.clone(), tool))
-        .collect::<HashMap<_, _>>();
+impl FromIterator<Tool> for Live {
+    fn from_iter<T: IntoIterator<Item = Tool>>(iter: T) -> Self {
+        let tools: HashMap<ToolName, Tool> = iter
+            .into_iter()
+            .map(|tool| (tool.definition.name.clone(), tool))
+            .collect::<HashMap<_, _>>();
 
         Self { tools }
     }
@@ -81,8 +71,18 @@ impl ToolService for Live {
 }
 
 impl Service {
-    pub fn live() -> impl ToolService {
-        Live::new()
+    pub fn tool_service() -> impl ToolService {
+        Live::from_iter([
+            Tool::new(FSRead),
+            Tool::new(FSWrite),
+            Tool::new(FSList),
+            Tool::new(FSSearch),
+            Tool::new(FSFileInfo),
+            Tool::new(FSReplace),
+            Tool::new(Outline),
+            Tool::new(Shell::default()),
+            Tool::new(Think::default()),
+        ])
     }
 }
 
@@ -120,7 +120,7 @@ mod test {
 
     #[test]
     fn test_usage_prompt() {
-        let docs = Live::new().usage_prompt();
+        let docs = Service::tool_service().usage_prompt();
 
         assert_snapshot!(docs);
     }

@@ -92,7 +92,7 @@ mod tests {
     #[tokio::test]
     async fn test_tool_supported() {
         let env = test_env();
-        let tools = Arc::new(forge_tool::Service::live());
+        let tools = Arc::new(forge_tool::Service::tool_service());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::default(),
             Parameters::default().tool_supported(true),
@@ -107,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_tool_unsupported() {
         let env = test_env();
-        let tools = Arc::new(forge_tool::Service::live());
+        let tools = Arc::new(forge_tool::Service::tool_service());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::default(),
             Parameters::default().tool_supported(false),

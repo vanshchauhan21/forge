@@ -41,7 +41,7 @@ impl Live {
         let cwd: String = env.cwd.clone();
         let api_key: String = api_key.into();
         let provider = Arc::new(forge_provider::Service::open_router(api_key));
-        let tool = Arc::new(forge_tool::Service::live());
+        let tool = Arc::new(forge_tool::Service::tool_service());
 
         let system_prompt = Arc::new(Service::system_prompt(
             env.clone(),
