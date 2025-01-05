@@ -5,41 +5,58 @@ snapshot_kind: text
 ---
 [
   {
-    "name": "shell",
-    "description": "Execute shell commands with safety checks and validation. This tool provides\n controlled access to system shell commands while preventing dangerous\n operations through a comprehensive blacklist and validation system.\n\nParameters:\n- command (required): The shell command to execute.",
+    "name": "fs_file_info",
+    "description": "Request to retrieve detailed metadata about a file or directory at the\n specified path. Returns comprehensive information including size, creation\n time, last modified time, permissions, and type. Use this when you need to\n understand file characteristics without reading the actual content.\n\nParameters:\n- path (required): The path of the file or directory to inspect (relative to the current working directory)",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ShellInput",
+      "title": "FSFileInfoInput",
       "type": "object",
       "required": [
-        "command"
+        "path"
       ],
       "properties": {
-        "command": {
-          "description": "The shell command to execute.",
+        "path": {
+          "description": "The path of the file or directory to inspect (relative to the current working directory)",
           "type": "string"
         }
       }
     },
     "output_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ShellOutput",
+      "title": "String",
+      "type": "string"
+    }
+  },
+  {
+    "name": "fs_list",
+    "description": "Request to list files and directories within the specified directory. If\n recursive is true, it will list all files and directories recursively. If\n recursive is false or not provided, it will only list the top-level\n contents. Do not use this tool to confirm the existence of files you may\n have created, as the user will let you know if the files were created\n successfully or not.\n\nParameters:\n- path (required): The path of the directory to list contents for (relative to the current working directory)\n- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSListInput",
       "type": "object",
       "required": [
-        "stderr",
-        "stdout",
-        "success"
+        "path"
       ],
       "properties": {
-        "stderr": {
+        "path": {
+          "description": "The path of the directory to list contents for (relative to the current working directory)",
           "type": "string"
         },
-        "stdout": {
-          "type": "string"
-        },
-        "success": {
-          "type": "boolean"
+        "recursive": {
+          "description": "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_String",
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     }
   },
@@ -107,26 +124,41 @@ snapshot_kind: text
     }
   },
   {
-    "name": "fs_file_info",
-    "description": "Request to retrieve detailed metadata about a file or directory at the\n specified path. Returns comprehensive information including size, creation\n time, last modified time, permissions, and type. Use this when you need to\n understand file characteristics without reading the actual content.\n\nParameters:\n- path (required): The path of the file or directory to inspect (relative to the current working directory)",
+    "name": "fs_search",
+    "description": "Request to perform a regex search across files in a specified directory,\n providing context-rich results. This tool searches for patterns or specific\n content across multiple files, displaying each match with encapsulating\n context.\n\nParameters:\n- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).\n- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.\n- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FSFileInfoInput",
+      "title": "FSSearchInput",
       "type": "object",
       "required": [
-        "path"
+        "path",
+        "regex"
       ],
       "properties": {
+        "file_pattern": {
+          "description": "Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "path": {
-          "description": "The path of the file or directory to inspect (relative to the current working directory)",
+          "description": "The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.",
+          "type": "string"
+        },
+        "regex": {
+          "description": "The regular expression pattern to search for. Uses Rust regex syntax.",
           "type": "string"
         }
       }
     },
     "output_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "String",
-      "type": "string"
+      "title": "Array_of_String",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   {
@@ -170,35 +202,64 @@ snapshot_kind: text
     }
   },
   {
-    "name": "fs_list",
-    "description": "Request to list files and directories within the specified directory. If\n recursive is true, it will list all files and directories recursively. If\n recursive is false or not provided, it will only list the top-level\n contents. Do not use this tool to confirm the existence of files you may\n have created, as the user will let you know if the files were created\n successfully or not.\n\nParameters:\n- path (required): The path of the directory to list contents for (relative to the current working directory)\n- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+    "name": "outline",
+    "description": "List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.\n\nParameters:\n- path (required): The path to the directory containing the source code files to analyze.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FSListInput",
+      "title": "OutlineInput",
       "type": "object",
       "required": [
         "path"
       ],
       "properties": {
         "path": {
-          "description": "The path of the directory to list contents for (relative to the current working directory)",
+          "description": "The path to the directory containing the source code files to analyze.",
           "type": "string"
-        },
-        "recursive": {
-          "description": "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
-          "type": [
-            "boolean",
-            "null"
-          ]
         }
       }
     },
     "output_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_String",
-      "type": "array",
-      "items": {
-        "type": "string"
+      "title": "String",
+      "type": "string"
+    }
+  },
+  {
+    "name": "shell",
+    "description": "Execute shell commands with safety checks and validation. This tool provides\n controlled access to system shell commands while preventing dangerous\n operations through a comprehensive blacklist and validation system.\n\nParameters:\n- command (required): The shell command to execute.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShellInput",
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "The shell command to execute.",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShellOutput",
+      "type": "object",
+      "required": [
+        "stderr",
+        "stdout",
+        "success"
+      ],
+      "properties": {
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
       }
     }
   },
@@ -324,67 +385,6 @@ snapshot_kind: text
           "type": "integer",
           "format": "int32"
         }
-      }
-    }
-  },
-  {
-    "name": "outline",
-    "description": "List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.\n\nParameters:\n- path (required): The path to the directory containing the source code files to analyze.",
-    "input_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OutlineInput",
-      "type": "object",
-      "required": [
-        "path"
-      ],
-      "properties": {
-        "path": {
-          "description": "The path to the directory containing the source code files to analyze.",
-          "type": "string"
-        }
-      }
-    },
-    "output_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "String",
-      "type": "string"
-    }
-  },
-  {
-    "name": "fs_search",
-    "description": "Request to perform a regex search across files in a specified directory,\n providing context-rich results. This tool searches for patterns or specific\n content across multiple files, displaying each match with encapsulating\n context.\n\nParameters:\n- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).\n- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.\n- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.",
-    "input_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FSSearchInput",
-      "type": "object",
-      "required": [
-        "path",
-        "regex"
-      ],
-      "properties": {
-        "file_pattern": {
-          "description": "Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "path": {
-          "description": "The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.",
-          "type": "string"
-        },
-        "regex": {
-          "description": "The regular expression pattern to search for. Uses Rust regex syntax.",
-          "type": "string"
-        }
-      }
-    },
-    "output_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_String",
-      "type": "array",
-      "items": {
-        "type": "string"
       }
     }
   }

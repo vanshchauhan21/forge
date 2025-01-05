@@ -63,10 +63,16 @@ impl ToolService for Live {
     }
 
     fn list(&self) -> Vec<ToolDefinition> {
-        self.tools
+        let mut tools: Vec<_> = self
+            .tools
             .values()
             .map(|tool| tool.definition.clone())
-            .collect()
+            .collect();
+
+        // Sorting is required to ensure system prompts are exactly the same
+        tools.sort_by(|a, b| a.name.as_str().cmp(b.name.as_str()));
+
+        tools
     }
 
     fn usage_prompt(&self) -> String {
