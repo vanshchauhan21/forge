@@ -1,0 +1,6 @@
+---
+source: crates/forge_domain/src/entities/tool_result.rs
+expression: result
+snapshot_kind: text
+---
+<tool_result><tool_name>xml_tool</tool_name><success><nested><html>&lt;div&gt;Test&lt;/div&gt;</html></nested><text>Special chars: &lt; &gt; &amp; ' "</text></success></tool_result>
