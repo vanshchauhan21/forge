@@ -22,7 +22,7 @@ pub trait ChatService: Send + Sync {
 }
 
 impl Service {
-    pub fn neo_chat_service(
+    pub fn chat_service(
         provider: Arc<dyn ProviderService>,
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
