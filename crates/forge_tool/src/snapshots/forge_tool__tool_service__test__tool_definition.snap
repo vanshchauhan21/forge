@@ -1,0 +1,391 @@
+---
+source: crates/forge_tool/src/tool_service.rs
+expression: "serde_json::to_string_pretty(&tools).unwrap()"
+snapshot_kind: text
+---
+[
+  {
+    "name": "shell",
+    "description": "Execute shell commands with safety checks and validation. This tool provides\n controlled access to system shell commands while preventing dangerous\n operations through a comprehensive blacklist and validation system.\n\nParameters:\n- command (required): The shell command to execute.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShellInput",
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "The shell command to execute.",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShellOutput",
+      "type": "object",
+      "required": [
+        "stderr",
+        "stdout",
+        "success"
+      ],
+      "properties": {
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  {
+    "name": "fs_read",
+    "description": "Request to read the contents of a file at the specified path. Use this when\n you need to examine the contents of an existing file you do not know the\n contents of, for example to analyze code, review text files, or extract\n information from configuration files. Automatically extracts raw text from\n PDF and DOCX files. May not be suitable for other types of binary files, as\n it returns the raw content as a string.\n\nParameters:\n- path (required): The path of the file to read (relative to the current working directory)",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSReadInput",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path of the file to read (relative to the current working directory)",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string"
+    }
+  },
+  {
+    "name": "fs_replace",
+    "description": "Replace sections in a file using SEARCH/REPLACE blocks for precise\n modifications.\n <<<<<<< SEARCH\n [exact content to find]\n =======\n [new content to replace with]\n >>>>>>> REPLACE\n Rules:\n 1. SEARCH must match exactly (whitespace, indentation, line endings)\n 2. Each block replaces first match only\n 3. Keep blocks minimal - include only changing lines plus needed context\n 4. Complete lines only - no truncation\n 5. For moves: use 2 blocks (delete + insert)\n 6. For deletes: use empty REPLACE section\n Example:\n <<<<<<< SEARCH\n def old_function(x):\n     return x + 1\n =======\n def new_function(x, y=0):\n     return x + y\n >>>>>>> REPLACE\n\nParameters:\n- diff (required): SEARCH/REPLACE blocks defining changes\n- path (required): File path relative to the current working directory",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSReplaceInput",
+      "type": "object",
+      "required": [
+        "diff",
+        "path"
+      ],
+      "properties": {
+        "diff": {
+          "description": "SEARCH/REPLACE blocks defining changes",
+          "type": "string"
+        },
+        "path": {
+          "description": "File path relative to the current working directory",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSReplaceOutput",
+      "type": "object",
+      "required": [
+        "content",
+        "path"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "fs_file_info",
+    "description": "Request to retrieve detailed metadata about a file or directory at the\n specified path. Returns comprehensive information including size, creation\n time, last modified time, permissions, and type. Use this when you need to\n understand file characteristics without reading the actual content.\n\nParameters:\n- path (required): The path of the file or directory to inspect (relative to the current working directory)",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSFileInfoInput",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path of the file or directory to inspect (relative to the current working directory)",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string"
+    }
+  },
+  {
+    "name": "fs_write",
+    "description": "Request to write content to a file at the specified path. If the file\n exists, it will be overwritten with the provided content. If the file\n doesn\\'t exist, it will be created. This tool will automatically create any\n directories needed to write the file.\n\nParameters:\n- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.\n- path (required): The path of the file to write to (relative to the current working directory)",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSWriteInput",
+      "type": "object",
+      "required": [
+        "content",
+        "path"
+      ],
+      "properties": {
+        "content": {
+          "description": "The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The path of the file to write to (relative to the current working directory)",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSWriteOutput",
+      "type": "object",
+      "required": [
+        "content",
+        "path"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "name": "fs_list",
+    "description": "Request to list files and directories within the specified directory. If\n recursive is true, it will list all files and directories recursively. If\n recursive is false or not provided, it will only list the top-level\n contents. Do not use this tool to confirm the existence of files you may\n have created, as the user will let you know if the files were created\n successfully or not.\n\nParameters:\n- path (required): The path of the directory to list contents for (relative to the current working directory)\n- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSListInput",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path of the directory to list contents for (relative to the current working directory)",
+          "type": "string"
+        },
+        "recursive": {
+          "description": "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_String",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  {
+    "name": "think",
+    "description": "A framework for iterative reasoning in problem-solving.\n Purpose:\n Tracks reasoning steps (\\\"thoughts\\\") to solve complex problems:\n - Breaks tasks into steps\n - Supports revisions and branching\n - Tracks confidence and verifies solutions\n Key Features:\n - Adjust `total_thoughts` for complexity\n - Link revisions with `revises_thought`\n - Branch paths via `branch_from_thought`\n - Update `solution_confidence`\n - Mark completion with `solution_reached`\n Workflow:\n 1. Initialize `Think` with `total_thoughts`.\n 2. Add steps to `thought_history`.\n 3. Revise or branch as needed.\n 4. Update confidence and validate.\n 5. Mark `solution_reached` when done.\n Fields:\n - `thought_history`: Steps taken.\n - `branches`: Alternate paths.\n - `solution_reached`: Final solution.\n\nParameters:\n- branch_from_thought: The number of the thought from which this thought branches, if this is a branch.\n- branch_id: A unique identifier for the branch, if this is a branch.\n- is_revision: Whether this thought is a revision of a previous thought.\n- needs_more_thoughts: Whether additional thoughts are needed to reach a solution.\n- next_thought_needed (required): Whether another thought is needed to reach a solution.\n- revises_thought: The number of the thought being revised, if this is a revision.\n- solution_confidence: The current confidence in the solution, ranging from 0.0 to 1.0.\n- thought (required): The description of the current thought or reasoning step.\n- thought_number (required): The number of the current thought or reasoning step.\n- total_thoughts (required): The total number of thoughts or reasoning steps expected to reach a solution.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ThoughtInput",
+      "type": "object",
+      "required": [
+        "next_thought_needed",
+        "thought",
+        "thought_number",
+        "total_thoughts"
+      ],
+      "properties": {
+        "branch_from_thought": {
+          "description": "The number of the thought from which this thought branches, if this is a branch.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "branch_id": {
+          "description": "A unique identifier for the branch, if this is a branch.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_revision": {
+          "description": "Whether this thought is a revision of a previous thought.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "needs_more_thoughts": {
+          "description": "Whether additional thoughts are needed to reach a solution.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "next_thought_needed": {
+          "description": "Whether another thought is needed to reach a solution.",
+          "type": "boolean"
+        },
+        "revises_thought": {
+          "description": "The number of the thought being revised, if this is a revision.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "solution_confidence": {
+          "description": "The current confidence in the solution, ranging from 0.0 to 1.0.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "thought": {
+          "description": "The description of the current thought or reasoning step.",
+          "type": "string"
+        },
+        "thought_number": {
+          "description": "The number of the current thought or reasoning step.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_thoughts": {
+          "description": "The total number of thoughts or reasoning steps expected to reach a solution.",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ThoughtResult",
+      "type": "object",
+      "required": [
+        "branches",
+        "next_thought_needed",
+        "solution_confidence",
+        "solution_reached",
+        "thought_history_length",
+        "thought_number",
+        "total_thoughts"
+      ],
+      "properties": {
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_thought_needed": {
+          "type": "boolean"
+        },
+        "solution_confidence": {
+          "type": "number",
+          "format": "float"
+        },
+        "solution_reached": {
+          "type": "boolean"
+        },
+        "thought_history_length": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "thought_number": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_thoughts": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    }
+  },
+  {
+    "name": "outline",
+    "description": "List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.\n\nParameters:\n- path (required): The path to the directory containing the source code files to analyze.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OutlineInput",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path to the directory containing the source code files to analyze.",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string"
+    }
+  },
+  {
+    "name": "fs_search",
+    "description": "Request to perform a regex search across files in a specified directory,\n providing context-rich results. This tool searches for patterns or specific\n content across multiple files, displaying each match with encapsulating\n context.\n\nParameters:\n- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).\n- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.\n- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSSearchInput",
+      "type": "object",
+      "required": [
+        "path",
+        "regex"
+      ],
+      "properties": {
+        "file_pattern": {
+          "description": "Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.",
+          "type": "string"
+        },
+        "regex": {
+          "description": "The regular expression pattern to search for. Uses Rust regex syntax.",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_String",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+]

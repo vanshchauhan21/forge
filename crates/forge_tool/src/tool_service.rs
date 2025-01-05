@@ -140,4 +140,11 @@ mod test {
 
         assert_snapshot!(docs);
     }
+
+    #[test]
+    fn test_tool_definition() {
+        let tools = Service::tool_service().list();
+
+        assert_snapshot!(serde_json::to_string_pretty(&tools).unwrap());
+    }
 }
