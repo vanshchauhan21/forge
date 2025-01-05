@@ -1,4 +1,4 @@
-use forge_domain::{Context, Model, ModelId, Parameters, Response, ResultStream};
+use forge_domain::{ChatCompletionMessage, Context, Model, ModelId, Parameters, ResultStream};
 use moka2::future::Cache;
 
 use super::error::Result;
@@ -6,7 +6,7 @@ use crate::Error;
 
 #[async_trait::async_trait]
 pub trait ProviderService: Send + Sync + 'static {
-    async fn chat(&self, request: Context) -> ResultStream<Response, Error>;
+    async fn chat(&self, request: Context) -> ResultStream<ChatCompletionMessage, Error>;
     async fn models(&self) -> Result<Vec<Model>>;
     async fn parameters(&self, model: &ModelId) -> Result<Parameters>;
 }
@@ -24,7 +24,7 @@ impl Live {
 
 #[async_trait::async_trait]
 impl ProviderService for Live {
-    async fn chat(&self, request: Context) -> ResultStream<Response, Error> {
+    async fn chat(&self, request: Context) -> ResultStream<ChatCompletionMessage, Error> {
         self.provider.chat(request).await
     }
 

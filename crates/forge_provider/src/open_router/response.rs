@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use forge_domain::{FinishReason, Response as ModelResponse, ToolCallId, ToolCallPart, ToolName};
+use forge_domain::{
+    ChatCompletionMessage as ModelResponse, FinishReason, ToolCallId, ToolCallPart, ToolName,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;

@@ -8,9 +8,15 @@ pub struct Model {
     pub description: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Setters)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Parameters {
     pub tool_supported: bool,
+}
+
+impl Parameters {
+    pub fn new(tool_supported: bool) -> Self {
+        Self { tool_supported }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Hash, Eq)]

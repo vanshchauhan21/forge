@@ -247,8 +247,8 @@ mod tests {
 
     use derive_setters::Setters;
     use forge_domain::{
-        Context, ContextMessage, FinishReason, ModelId, Response, ToolCall, ToolCallId,
-        ToolCallPart, ToolDefinition, ToolName, ToolResult,
+        ChatCompletionMessage, Context, ContextMessage, FinishReason, ModelId, ToolCall,
+        ToolCallId, ToolCallPart, ToolDefinition, ToolName, ToolResult,
     };
     use forge_tool::ToolService;
     use pretty_assertions::assert_eq;
@@ -315,7 +315,7 @@ mod tests {
     #[setters(into, strip_option)]
     struct Fixture {
         tools: Vec<Value>,
-        assistant_responses: Vec<Vec<Response>>,
+        assistant_responses: Vec<Vec<ChatCompletionMessage>>,
         system_prompt: String,
     }
 
@@ -364,7 +364,7 @@ mod tests {
     #[tokio::test]
     async fn test_messages() {
         let actual = Fixture::default()
-            .assistant_responses(vec![vec![Response::assistant(
+            .assistant_responses(vec![vec![ChatCompletionMessage::assistant(
                 "Yes sure, tell me what you need.",
             )]])
             .run(ChatRequest::new("Hello can you help me?"))
@@ -403,7 +403,7 @@ mod tests {
     async fn test_messages_with_tool_call() {
         let mock_llm_responses = vec![
             vec![
-                Response::default()
+                ChatCompletionMessage::default()
                     .content("Let's use foo tool")
                     .add_tool_call(
                         ToolCallPart::default()
@@ -411,14 +411,14 @@ mod tests {
                             .arguments_part(r#"{"foo": 1,"#)
                             .call_id(ToolCallId::new("too_call_001")),
                     ),
-                Response::default()
+                ChatCompletionMessage::default()
                     .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
                 // IMPORTANT: the last message has an empty string in content
-                Response::default()
+                ChatCompletionMessage::default()
                     .content("")
                     .finish_reason(FinishReason::ToolCalls),
             ],
-            vec![Response::default()
+            vec![ChatCompletionMessage::default()
                 .content("Task is complete, let me know if you need anything else.")],
         ];
         let actual = Fixture::default()
@@ -454,7 +454,7 @@ mod tests {
     async fn test_llm_calls_with_tool() {
         let mock_llm_responses = vec![
             vec![
-                Response::default()
+                ChatCompletionMessage::default()
                     .content("Let's use foo tool")
                     .add_tool_call(
                         ToolCallPart::default()
@@ -462,15 +462,16 @@ mod tests {
                             .arguments_part(r#"{"foo": 1,"#)
                             .call_id(ToolCallId::new("too_call_001")),
                     ),
-                Response::default()
+                ChatCompletionMessage::default()
                     .content("")
                     .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
                 // IMPORTANT: the last message has an empty string in content
-                Response::default()
+                ChatCompletionMessage::default()
                     .content("")
                     .finish_reason(FinishReason::ToolCalls),
             ],
-            vec![Response::default().content("Task is complete, let me know how can i help you!")],
+            vec![ChatCompletionMessage::default()
+                .content("Task is complete, let me know how can i help you!")],
         ];
 
         let actual = Fixture::default()

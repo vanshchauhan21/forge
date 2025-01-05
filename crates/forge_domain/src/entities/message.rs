@@ -9,7 +9,7 @@ use super::ToolCallPart;
 /// of the message.
 #[derive(Default, Clone, Debug, Setters)]
 #[setters(into, strip_option)]
-pub struct Response {
+pub struct ChatCompletionMessage {
     pub content: Option<String>,
     pub tool_call: Vec<ToolCallPart>,
     pub finish_reason: Option<FinishReason>,
@@ -35,9 +35,9 @@ pub enum FinishReason {
     Stop,
 }
 
-impl Response {
-    pub fn assistant(content: impl ToString) -> Response {
-        Response::default().content(content.to_string())
+impl ChatCompletionMessage {
+    pub fn assistant(content: impl ToString) -> ChatCompletionMessage {
+        ChatCompletionMessage::default().content(content.to_string())
     }
 
     pub fn add_tool_call(mut self, call_tool: impl Into<ToolCallPart>) -> Self {
