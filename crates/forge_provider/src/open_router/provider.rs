@@ -3,7 +3,7 @@ use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
 use tokio_stream::StreamExt;
 
-use super::model::{ListModelResponse, Model};
+use super::model::{ListModelResponse, OpenRouterModel};
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use super::ParameterResponse;
@@ -164,8 +164,8 @@ impl Service {
     }
 }
 
-impl From<Model> for crate::Model {
-    fn from(value: Model) -> Self {
+impl From<OpenRouterModel> for crate::Model {
+    fn from(value: OpenRouterModel) -> Self {
         crate::Model {
             id: value.id,
             name: value.name,

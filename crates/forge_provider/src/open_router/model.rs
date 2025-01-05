@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::ModelId;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Model {
+pub struct OpenRouterModel {
     pub id: ModelId,
     pub name: String,
     pub created: u64,
@@ -39,5 +39,5 @@ pub struct TopProvider {
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ListModelResponse {
-    pub data: Vec<Model>,
+    pub data: Vec<OpenRouterModel>,
 }
