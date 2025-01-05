@@ -64,9 +64,10 @@ impl Display for ToolResult {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use insta::assert_snapshot;
     use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn test_snapshot_minimal() {

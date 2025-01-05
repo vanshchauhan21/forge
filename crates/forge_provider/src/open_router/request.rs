@@ -299,12 +299,13 @@ pub enum OpenRouterRole {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use forge_domain::{
         ContentMessage, ContextMessage, Role, ToolCall, ToolCallId, ToolName, ToolResult,
     };
     use insta::assert_json_snapshot;
     use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn test_user_message_conversion() {
