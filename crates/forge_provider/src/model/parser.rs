@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_tool::ToolName;
+use forge_domain::ToolName;
 use nom::bytes::complete::{tag, take_until, take_while1};
 use nom::character::complete::multispace0;
 use nom::multi::many0;

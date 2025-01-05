@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use forge_tool::ToolName;
+use forge_domain::ToolName;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;

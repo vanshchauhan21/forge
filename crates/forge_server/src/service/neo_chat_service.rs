@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use derive_setters::Setters;
+use forge_domain::{ToolName, ToolService};
 use forge_provider::{
     CompletionMessage, FinishReason, ModelId, ProviderService, Request, ResultStream, ToolCall,
     ToolResult,
 };
-use forge_tool::{ToolName, ToolService};
 use serde::Serialize;
 use serde_json::Value;
 use tokio_stream::wrappers::ReceiverStream;
@@ -253,11 +253,11 @@ mod tests {
     use std::vec;
 
     use derive_setters::Setters;
+    use forge_domain::{ToolDefinition, ToolName, ToolService};
     use forge_provider::{
         CompletionMessage, FinishReason, ModelId, Request, Response, ToolCall, ToolCallId,
         ToolCallPart, ToolResult,
     };
-    use forge_tool::{ToolDefinition, ToolName, ToolService};
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;

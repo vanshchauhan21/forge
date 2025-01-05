@@ -1,10 +1,9 @@
 use std::collections::{BTreeSet, HashMap};
-use std::fmt::Display;
 
+use forge_domain::{ToolDefinition, ToolName, ToolService};
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::info;
 
@@ -32,125 +31,8 @@ where
     }
 }
 
-#[async_trait::async_trait]
-pub trait ToolService: Send + Sync {
-    async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String>;
-    fn list(&self) -> Vec<ToolDefinition>;
-    fn usage_prompt(&self) -> String;
-}
-
 struct Live {
     tools: HashMap<ToolName, Tool>,
-}
-
-///
-/// Refer to the specification over here:
-/// https://glama.ai/blog/2024-11-25-model-context-protocol-quickstart#server
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ToolDefinition {
-    pub name: ToolName,
-    pub description: String,
-    pub input_schema: RootSchema,
-    pub output_schema: Option<RootSchema>,
-}
-
-#[derive(Debug)]
-pub struct UsagePrompt {
-    tool_name: String,
-    input_parameters: Vec<UsageParameterPrompt>,
-    description: String,
-}
-
-impl Display for UsagePrompt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.tool_name)?;
-        f.write_str("\n")?;
-        f.write_str(&self.description)?;
-
-        f.write_str("\n\nUsage:\n")?;
-        f.write_str("<")?;
-        f.write_str(&self.tool_name)?;
-        f.write_str(">")?;
-
-        for parameter in self.input_parameters.iter() {
-            f.write_str("\n")?;
-            parameter.fmt(f)?;
-        }
-
-        f.write_str("\n")?;
-        f.write_str("</")?;
-        f.write_str(&self.tool_name)?;
-        f.write_str(">\n")?;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct UsageParameterPrompt {
-    pub parameter_name: String,
-    pub parameter_type: String,
-}
-
-impl Display for UsageParameterPrompt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("<")?;
-        f.write_str(&self.parameter_name)?;
-        f.write_str(">")?;
-        f.write_str(&self.parameter_type)?;
-        f.write_str("</")?;
-        f.write_str(&self.parameter_name)?;
-        f.write_str(">")?;
-
-        Ok(())
-    }
-}
-
-impl ToolDefinition {
-    pub fn usage_prompt(&self) -> UsagePrompt {
-        let input_parameters = self
-            .input_schema
-            .schema
-            .object
-            .clone()
-            .map(|object| {
-                object
-                    .properties
-                    .keys()
-                    .map(|name| UsageParameterPrompt {
-                        parameter_name: name.to_string(),
-                        parameter_type: "...".to_string(),
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-
-        UsagePrompt {
-            tool_name: self.name.clone().into_string(),
-            input_parameters,
-            description: self.description.to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct ToolName(String);
-
-impl ToolName {
-    pub fn new(value: impl ToString) -> Self {
-        ToolName(value.to_string())
-    }
-}
-
-impl ToolName {
-    pub fn into_string(self) -> String {
-        self.0
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
 }
 
 impl Live {
@@ -276,13 +158,13 @@ impl Tool {
         }
 
         let tool = ToolDefinition {
-            name: ToolName(name.clone()),
+            name: ToolName::new(name.clone()),
             description,
             input_schema: input,
             output_schema: Some(output),
         };
 
-        Tool { executable, definition: tool, name: ToolName(name) }
+        Tool { executable, definition: tool, name: ToolName::new(name) }
     }
 }
 

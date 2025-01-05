@@ -34,6 +34,7 @@ futures = "0.3.31"
 pulldown-cmark = { version = "0.12.0" }
 handlebars = "6.2.0"
 r2d2 = "0.8.10"
+forge_domain = { path = "../forge_domain" }
 
 [dev-dependencies]
 insta = "1.41.1"

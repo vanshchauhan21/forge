@@ -811,6 +811,7 @@ dependencies = [
 name = "forge_domain"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "derive_more",
  "derive_setters",
  "nom 7.1.3",
@@ -854,6 +855,7 @@ dependencies = [
  "async-trait",
  "derive_more",
  "derive_setters",
+ "forge_domain",
  "forge_tool",
  "moka2",
  "nom 8.0.0-beta.1",
@@ -883,6 +885,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dotenv",
+ "forge_domain",
  "forge_env",
  "forge_prompt",
  "forge_provider",
@@ -917,6 +920,7 @@ dependencies = [
  "async-trait",
  "colorize",
  "dissimilar",
+ "forge_domain",
  "forge_tool_macros",
  "forge_walker",
  "glob",

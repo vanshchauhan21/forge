@@ -1,5 +1,5 @@
 use derive_setters::Setters;
-use forge_tool::ToolName;
+use forge_domain::ToolName;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

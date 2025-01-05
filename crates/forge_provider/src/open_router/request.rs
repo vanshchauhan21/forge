@@ -1,5 +1,5 @@
 use derive_more::derive::Display;
-use forge_tool::{ToolDefinition, ToolName};
+use forge_domain::{ToolDefinition, ToolName};
 use serde::{Deserialize, Serialize};
 
 use super::response::{FunctionCall, OpenRouterToolCall};

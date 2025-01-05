@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use forge_domain::{ToolDefinition, ToolService};
 use forge_env::Environment;
 use forge_provider::{Model, ProviderService, Request, ResultStream};
-use forge_tool::{ToolDefinition, ToolService};
 
 use super::completion_service::CompletionService;
 use super::neo_chat_service::{ConversationHistory, NeoChatService};

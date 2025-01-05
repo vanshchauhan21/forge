@@ -1,5 +1,5 @@
 use derive_setters::Setters;
-use forge_tool::ToolDefinition;
+use forge_domain::ToolDefinition;
 use serde::{Deserialize, Serialize};
 
 use super::{CompletionMessage, Role};
