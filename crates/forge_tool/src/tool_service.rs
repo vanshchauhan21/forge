@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_domain::{ToolDefinition, ToolName};
+use forge_domain::{ToolCall, ToolDefinition, ToolName, ToolResult};
 use serde_json::Value;
 use tracing::info;
 
@@ -9,12 +9,11 @@ use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
 use crate::tool::Tool;
-use crate::tool_call_service::ToolCallService;
 use crate::Service;
 
 #[async_trait::async_trait]
 pub trait ToolService: Send + Sync {
-    async fn call(&self, name: &ToolName, input: Value) -> std::result::Result<Value, String>;
+    async fn call(&self, call: ToolCall) -> ToolResult;
     fn list(&self) -> Vec<ToolDefinition>;
     fn usage_prompt(&self) -> String;
 }
@@ -36,14 +35,31 @@ impl FromIterator<Tool> for Live {
 
 #[async_trait::async_trait]
 impl ToolService for Live {
-    async fn call(&self, name: &ToolName, input: Value) -> Result<Value, String> {
+    async fn call(&self, call: ToolCall) -> ToolResult {
+        let name = call.name.clone();
+        let input = call.arguments.clone();
         info!("Calling tool: {}", name.as_str());
-        let output = match self.tools.get(name) {
+        let available_tools = self
+            .tools
+            .keys()
+            .map(|name| name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let output = match self.tools.get(&name) {
             Some(tool) => tool.executable.call(input).await,
-            None => Err(format!("No such tool found: {}", name.as_str())),
+            None => Err(format!(
+                "No tool with name '{}' was found. Please try again with one of these tools {}",
+                name.as_str(),
+                available_tools
+            )),
         };
 
-        output
+        match output {
+            Ok(output) => ToolResult::from(call).content(output),
+            Err(error) => {
+                ToolResult::from(call).content(Value::from(format!("<error>{}</error>", error)))
+            }
+        }
     }
 
     fn list(&self) -> Vec<ToolDefinition> {

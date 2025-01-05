@@ -1,5 +1,4 @@
 mod ask;
-mod error;
 mod fs;
 mod outline;
 mod shell;

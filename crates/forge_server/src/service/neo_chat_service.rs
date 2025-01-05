@@ -8,7 +8,6 @@ use forge_domain::{
 use forge_provider::ProviderService;
 use forge_tool::ToolService;
 use serde::Serialize;
-use serde_json::Value;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
@@ -107,13 +106,8 @@ impl Live {
                         .await
                         .unwrap();
 
-                    let value = self
-                        .tool
-                        .call(&tool_call.name, tool_call.arguments.clone())
-                        .await
-                        .unwrap_or_else(|error| Value::from(format!("<error>{}</error>", error)));
+                    let tool_result = self.tool.call(tool_call).await;
 
-                    let tool_result = ToolResult::from(tool_call).content(value);
                     some_tool_result = Some(tool_result.clone());
 
                     // send the tool use end message.
@@ -298,17 +292,13 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolService for TestToolService {
-        async fn call(
-            &self,
-            _name: &ToolName,
-            _input: Value,
-        ) -> std::result::Result<Value, String> {
+        async fn call(&self, call: ToolCall) -> ToolResult {
             let mut result = self.result.lock().unwrap();
 
             if let Some(value) = result.pop() {
-                Ok(value)
+                ToolResult::from(call).content(value)
             } else {
-                Err("No tool call is available".to_string())
+                ToolResult::from(call).content(json!({"error": "No tool call is available"}))
             }
         }
 
