@@ -2,6 +2,7 @@
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
 mod message;
+mod model;
 mod request;
 mod response;
 mod tool_call;
@@ -12,6 +13,7 @@ mod tool_result;
 mod tool_usage;
 
 pub use message::*;
+pub use model::*;
 pub use request::*;
 pub use response::*;
 pub use tool_call::*;
