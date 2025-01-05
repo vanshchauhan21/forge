@@ -816,6 +816,7 @@ dependencies = [
  "derive_more",
  "derive_setters",
  "forge_domain",
+ "insta",
  "moka2",
  "reqwest",
  "reqwest-eventsource",

@@ -1,0 +1,11 @@
+---
+source: crates/forge_provider/src/open_router/request.rs
+expression: router_message
+snapshot_kind: text
+---
+{
+  "role": "tool",
+  "content": "<tool_result><tool_name>test_tool</tool_name><success><address><city>New York</city></address><address><city>San Francisco</city></address><age>30</age><user>John</user></success></tool_result>",
+  "name": "test_tool",
+  "tool_call_id": "123"
+}
