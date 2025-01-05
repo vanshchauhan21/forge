@@ -11,7 +11,8 @@ use crate::fs::*;
 use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
-use crate::{Description, Service, ToolCallService};
+use crate::tool_call_service::ToolCallService;
+use crate::{Description, Service};
 
 #[async_trait::async_trait]
 pub trait ToolService: Send + Sync {

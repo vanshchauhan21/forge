@@ -5,7 +5,8 @@ use forge_tool_macros::Description as DescriptionDerive;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{Description, ToolCallService};
+use crate::tool_call_service::ToolCallService;
+use crate::Description;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSSearchInput {

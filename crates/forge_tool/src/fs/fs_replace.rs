@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tracing::{debug, error};
 
-use crate::{Description, ToolCallService};
+use crate::tool_call_service::ToolCallService;
+use crate::Description;
 
 fn persist_changes<P: AsRef<Path>>(
     temp_file: NamedTempFile,

@@ -8,7 +8,8 @@ use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
-use crate::{Description, ToolCallService};
+use crate::tool_call_service::ToolCallService;
+use crate::Description;
 
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");
