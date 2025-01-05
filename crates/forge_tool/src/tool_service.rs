@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap};
 
-use forge_domain::{ToolDefinition, ToolName, ToolService};
+use forge_domain::{ToolDefinition, ToolName};
 use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
@@ -12,6 +12,13 @@ use crate::outline::Outline;
 use crate::shell::Shell;
 use crate::think::Think;
 use crate::{Description, Service, ToolCallService};
+
+#[async_trait::async_trait]
+pub trait ToolService: Send + Sync {
+    async fn call(&self, name: &ToolName, input: Value) -> std::result::Result<Value, String>;
+    fn list(&self) -> Vec<ToolDefinition>;
+    fn usage_prompt(&self) -> String;
+}
 
 struct JsonTool<T>(T);
 
