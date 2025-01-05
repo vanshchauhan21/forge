@@ -4,7 +4,7 @@ use std::path::Path;
 
 use dissimilar::Chunk;
 use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description as DescriptionDerive;
+use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
@@ -73,7 +73,7 @@ pub struct FSReplaceInput {
 /// def new_function(x, y=0):
 ///     return x + y
 /// >>>>>>> REPLACE
-#[derive(DescriptionDerive)]
+#[derive(Description)]
 pub struct FSReplace;
 
 struct Block {

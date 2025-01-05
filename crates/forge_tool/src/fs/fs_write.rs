@@ -1,5 +1,5 @@
 use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description as DescriptionDerive;
+use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct FSWriteInput {
 /// exists, it will be overwritten with the provided content. If the file
 /// doesn't exist, it will be created. This tool will automatically create any
 /// directories needed to write the file.
-#[derive(DescriptionDerive)]
+#[derive(Description)]
 pub struct FSWrite;
 
 #[async_trait::async_trait]

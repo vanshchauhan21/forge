@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description as DescriptionDerive;
+use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -22,7 +22,7 @@ pub struct FSSearchInput {
 /// providing context-rich results. This tool searches for patterns or specific
 /// content across multiple files, displaying each match with encapsulating
 /// context.
-#[derive(DescriptionDerive)]
+#[derive(Description)]
 pub struct FSSearch;
 
 #[async_trait::async_trait]

@@ -1,5 +1,5 @@
 use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description as DescriptionDerive;
+use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -14,7 +14,7 @@ pub struct FSFileInfoInput {
 /// specified path. Returns comprehensive information including size, creation
 /// time, last modified time, permissions, and type. Use this when you need to
 /// understand file characteristics without reading the actual content.
-#[derive(DescriptionDerive)]
+#[derive(Description)]
 pub struct FSFileInfo;
 
 #[async_trait::async_trait]

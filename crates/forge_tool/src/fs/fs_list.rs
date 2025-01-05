@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description as DescriptionDerive;
+use forge_tool_macros::Description;
 use forge_walker::Walker;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -22,7 +22,7 @@ pub struct FSListInput {
 /// contents. Do not use this tool to confirm the existence of files you may
 /// have created, as the user will let you know if the files were created
 /// successfully or not.
-#[derive(DescriptionDerive)]
+#[derive(Description)]
 pub struct FSList;
 
 #[async_trait::async_trait]
