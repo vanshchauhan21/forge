@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1.84"
 derive_more = { version = "1.0.0", features = ["from", "display"] }
 derive_setters = "0.1.6"
 nom = "7.1.3"
