@@ -185,6 +185,12 @@ pub mod tests {
 
     use super::super::db_service::tests::TestDbPool;
     use super::*;
+
+    impl ConversationId {
+        pub fn new(id: impl Into<String>) -> Self {
+            ConversationId(Uuid::parse_str(&id.into()).unwrap())
+        }
+    }
     pub struct TestStorage;
     impl TestStorage {
         pub fn in_memory() -> Result<impl ConversationService> {

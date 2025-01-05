@@ -4,9 +4,9 @@ use forge_domain::{Context, Model, ResultStream, ToolDefinition, ToolService};
 use forge_env::Environment;
 use forge_provider::ProviderService;
 
-use super::chat_service::{ChatService, ConversationHistory};
+use super::chat_service::ConversationHistory;
 use super::completion_service::CompletionService;
-use super::{ConversationId, ConversationService, Service};
+use super::{ConversationId, ConversationService, Service, UIService};
 use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
 
 #[async_trait::async_trait]
@@ -31,7 +31,7 @@ struct Live {
     provider: Arc<dyn ProviderService>,
     tool: Arc<dyn ToolService>,
     completions: Arc<dyn CompletionService>,
-    chat_service: Arc<dyn ChatService>,
+    ui_service: Arc<dyn UIService>,
     storage: Arc<dyn ConversationService>,
 }
 
@@ -53,20 +53,27 @@ impl Live {
         let storage =
             Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
 
-        let chat_service = Arc::new(Service::chat_service(
+        let neo_chat_service = Arc::new(Service::chat_service(
             provider.clone(),
             system_prompt.clone(),
             tool.clone(),
             user_prompt,
-            storage.clone(),
         ));
+
+        let chat_service = Arc::new(Service::ui_service(storage.clone(), neo_chat_service));
 
         let completions = Arc::new(Service::completion_service(cwd.clone()));
 
         let storage =
             Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
 
-        Self { provider, tool, completions, chat_service, storage }
+        Self {
+            provider,
+            tool,
+            completions,
+            ui_service: chat_service,
+            storage,
+        }
     }
 }
 
@@ -93,7 +100,7 @@ impl RootAPIService for Live {
     }
 
     async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
-        Ok(self.chat_service.chat(chat).await?)
+        Ok(self.ui_service.chat(chat).await?)
     }
 
     async fn conversations(&self) -> Result<Vec<Conversation>> {

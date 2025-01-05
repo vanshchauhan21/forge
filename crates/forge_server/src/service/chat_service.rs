@@ -12,12 +12,16 @@ use tokio_stream::StreamExt;
 
 use super::system_prompt_service::SystemPromptService;
 use super::user_prompt_service::UserPromptService;
-use super::{ConversationId, ConversationService, Service};
+use super::{ConversationId, Service};
 use crate::{Errata, Error, Result};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
-    async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, Error>;
+    async fn chat(
+        &self,
+        prompt: ChatRequest,
+        context: Context,
+    ) -> ResultStream<ChatResponse, Error>;
 }
 
 impl Service {
@@ -26,9 +30,8 @@ impl Service {
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
         user_prompt: Arc<dyn UserPromptService>,
-        storage: Arc<dyn ConversationService>,
     ) -> impl ChatService {
-        Live::new(provider, system_prompt, tool, user_prompt, storage)
+        Live::new(provider, system_prompt, tool, user_prompt)
     }
 }
 
@@ -38,7 +41,6 @@ struct Live {
     system_prompt: Arc<dyn SystemPromptService>,
     tool: Arc<dyn ToolService>,
     user_prompt: Arc<dyn UserPromptService>,
-    storage: Arc<dyn ConversationService>,
 }
 
 impl Live {
@@ -47,9 +49,8 @@ impl Live {
         system_prompt: Arc<dyn SystemPromptService>,
         tool: Arc<dyn ToolService>,
         user_prompt: Arc<dyn UserPromptService>,
-        storage: Arc<dyn ConversationService>,
     ) -> Self {
-        Self { provider, system_prompt, tool, user_prompt, storage }
+        Self { provider, system_prompt, tool, user_prompt }
     }
 
     /// Executes the chat workflow until the task is complete.
@@ -57,12 +58,8 @@ impl Live {
         &self,
         mut request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
-        conversation_id: ConversationId,
     ) -> Result<()> {
         loop {
-            self.storage
-                .set_conversation(&request, Some(conversation_id))
-                .await?;
             let mut tool_call_parts = Vec::new();
             let mut some_tool_call = None;
             let mut some_tool_result = None;
@@ -121,58 +118,40 @@ impl Live {
                 some_tool_call,
             ));
 
+            tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                .await
+                .unwrap();
+
             if let Some(tool_result) = some_tool_result {
                 request = request.add_message(ContextMessage::ToolMessage(tool_result));
+                tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                    .await
+                    .unwrap();
             } else {
                 break Ok(());
             }
-            self.storage
-                .set_conversation(&request, Some(conversation_id))
-                .await?;
         }
     }
 }
 
 #[async_trait::async_trait]
 impl ChatService for Live {
-    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
+    async fn chat(&self, chat: ChatRequest, request: Context) -> ResultStream<ChatResponse, Error> {
         let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
         let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
         let (tx, rx) = tokio::sync::mpsc::channel(1);
 
-        let req = if let Some(conversation_id) = &chat.conversation_id {
-            let conversation = self.storage.get_conversation(*conversation_id).await?;
-            conversation.context
-        } else {
-            Context::default()
-        };
-
-        let request = req
+        let request = request
             .set_system_message(system_prompt)
             .add_message(ContextMessage::user(user_prompt))
             .tools(self.tool.list())
             .model(chat.model);
 
-        let conversation_id = self
-            .storage
-            .set_conversation(&request, chat.conversation_id)
-            .await?
-            .id;
-        // TODO: We need to remove the dependency of ConversationService from here into
-        // a separate service. This is a temporary fix to send the conversation id back
-        // to the client.
-        if chat.conversation_id.is_none() {
-            tx.send(Ok(ChatResponse::ConversationStarted { conversation_id }))
-                .await
-                .unwrap();
-        }
         let that = self.clone();
+
         tokio::spawn(async move {
             // TODO: simplify this match.
-            match that
-                .chat_workflow(request, tx.clone(), conversation_id)
-                .await
-            {
+            match that.chat_workflow(request, tx.clone()).await {
                 Ok(_) => {}
                 Err(e) => tx.send(Err(e)).await.unwrap(),
             };
@@ -193,7 +172,7 @@ pub struct ChatRequest {
     pub conversation_id: Option<ConversationId>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, derive_more::From)]
+#[derive(Debug, Clone, Serialize, PartialEq, derive_more::From)]
 #[serde(rename_all = "camelCase")]
 pub enum ChatResponse {
     #[from(ignore)]
@@ -204,6 +183,7 @@ pub enum ChatResponse {
     ConversationStarted {
         conversation_id: ConversationId,
     },
+    ModifyContext(Context),
     Complete,
     Error(Errata),
 }
@@ -254,11 +234,10 @@ mod tests {
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, Live};
-    use crate::conversation_service::tests::TestStorage;
     use crate::service::chat_service::ChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::service::user_prompt_service::tests::TestUserPrompt;
-    use crate::ChatResponse;
+    use crate::{ChatResponse, ConversationId};
 
     impl ChatRequest {
         pub fn new(content: impl ToString) -> ChatRequest {
@@ -329,17 +308,15 @@ mod tests {
             let system_prompt = Arc::new(TestSystemPrompt::new(system_prompt_message));
             let tool = Arc::new(TestToolService::new(self.tools.clone()));
             let user_prompt = Arc::new(TestUserPrompt);
-            let storage = Arc::new(TestStorage::in_memory().unwrap());
             let chat = Live::new(
                 provider.clone(),
                 system_prompt.clone(),
                 tool.clone(),
                 user_prompt.clone(),
-                storage,
             );
 
             let messages = chat
-                .chat(request)
+                .chat(request, Context::default())
                 .await
                 .unwrap()
                 .collect::<Vec<_>>()
@@ -365,25 +342,95 @@ mod tests {
             .assistant_responses(vec![vec![ChatCompletionMessage::assistant(
                 "Yes sure, tell me what you need.",
             )]])
-            .run(ChatRequest::new("Hello can you help me?"))
+            .run(
+                ChatRequest::new("Hello can you help me?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
             .await
-            .messages;
+            .messages
+            .into_iter()
+            .filter(|msg| !matches!(msg, ChatResponse::ModifyContext { .. }))
+            .collect::<Vec<_>>();
 
         let expected = vec![
-            ChatResponse::ConversationStarted {
-                conversation_id: crate::ConversationId::generate(),
-            },
             ChatResponse::Text("Yes sure, tell me what you need.".to_string()),
             ChatResponse::Complete,
         ];
-        assert_eq!(&actual[1..], &expected[1..]);
+        assert_eq!(&actual, &expected);
+    }
+
+    #[tokio::test]
+    async fn test_modify_context_count() {
+        let mock_llm_responses = vec![
+            // First tool call
+            vec![
+                ChatCompletionMessage::default()
+                    .content("Let's use foo tool first")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("foo"))
+                            .arguments_part(r#"{"foo": 1,"#)
+                            .call_id(ToolCallId::new("tool_call_001")),
+                    ),
+                ChatCompletionMessage::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
+                ChatCompletionMessage::default()
+                    .content("")
+                    .finish_reason(FinishReason::ToolCalls),
+            ],
+            // Second tool call
+            vec![
+                ChatCompletionMessage::default()
+                    .content("Now let's use bar tool")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("bar"))
+                            .arguments_part(r#"{"x": 100,"#)
+                            .call_id(ToolCallId::new("tool_call_002")),
+                    ),
+                ChatCompletionMessage::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""y": 200}"#)),
+                ChatCompletionMessage::default()
+                    .content("")
+                    .finish_reason(FinishReason::ToolCalls),
+            ],
+            // Final completion message
+            vec![ChatCompletionMessage::default().content("All tools have been used successfully.")],
+        ];
+
+        let actual = Fixture::default()
+            .assistant_responses(mock_llm_responses)
+            .tools(vec![
+                json!({"result": "foo tool called"}),
+                json!({"result": "bar tool called"}),
+            ])
+            .run(
+                ChatRequest::new("Hello can you help me?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
+            .await
+            .messages
+            .into_iter()
+            .filter(|msg| matches!(msg, ChatResponse::ModifyContext { .. }))
+            .count();
+
+        // Expected ModifyContext events:
+        // 1. After first assistant message with foo tool_call
+        // 2. After foo tool_result
+        // 3. After second assistant message with bar tool_call
+        // 4. After bar tool_result
+        // 5. After final completion message
+        assert_eq!(actual, 5);
     }
 
     #[tokio::test]
     async fn test_llm_calls_with_system_prompt() {
         let actual = Fixture::default()
             .system_prompt("Do everything that the user says")
-            .run(ChatRequest::new("Hello can you help me?"))
+            .run(
+                ChatRequest::new("Hello can you help me?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
             .await
             .llm_calls;
 
@@ -422,9 +469,15 @@ mod tests {
         let actual = Fixture::default()
             .assistant_responses(mock_llm_responses)
             .tools(vec![json!({"a": 100, "b": 200})])
-            .run(ChatRequest::new("Hello can you help me?"))
+            .run(
+                ChatRequest::new("Hello can you help me?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
             .await
-            .messages;
+            .messages
+            .into_iter()
+            .filter(|msg| !matches!(msg, ChatResponse::ModifyContext { .. }))
+            .collect::<Vec<_>>();
 
         let expected = vec![
             ChatResponse::Text("Let's use foo tool".to_string()),
@@ -445,7 +498,44 @@ mod tests {
             ChatResponse::Complete,
         ];
 
-        assert_eq!(&actual[1..], &expected);
+        assert_eq!(&actual, &expected);
+    }
+
+    #[tokio::test]
+    async fn test_modify_context_count_with_tool_call() {
+        let mock_llm_responses = vec![
+            vec![
+                ChatCompletionMessage::default()
+                    .content("Let's use foo tool")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("foo"))
+                            .arguments_part(r#"{"foo": 1,"#)
+                            .call_id(ToolCallId::new("too_call_001")),
+                    ),
+                ChatCompletionMessage::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
+                ChatCompletionMessage::default()
+                    .content("")
+                    .finish_reason(FinishReason::ToolCalls),
+            ],
+            vec![ChatCompletionMessage::default()
+                .content("Task is complete, let me know if you need anything else.")],
+        ];
+        let actual = Fixture::default()
+            .assistant_responses(mock_llm_responses)
+            .tools(vec![json!({"a": 100, "b": 200})])
+            .run(
+                ChatRequest::new("Hello can you help me?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
+            .await
+            .messages
+            .into_iter()
+            .filter(|msg| matches!(msg, ChatResponse::ModifyContext { .. }))
+            .count();
+
+        assert_eq!(actual, 3);
     }
 
     #[tokio::test]
@@ -475,7 +565,10 @@ mod tests {
         let actual = Fixture::default()
             .assistant_responses(mock_llm_responses)
             .tools(vec![json!({"a": 100, "b": 200})])
-            .run(ChatRequest::new("Hello can you use foo tool?"))
+            .run(
+                ChatRequest::new("Hello can you use foo tool?")
+                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+            )
             .await
             .llm_calls;
 
