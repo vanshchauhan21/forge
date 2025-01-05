@@ -146,7 +146,6 @@ impl ProviderService for OpenRouter {
         let response: ParameterResponse = serde_json::from_str(&text)?;
 
         Ok(Parameters {
-            model: model.clone(),
             tool_supported: response
                 .data
                 .supported_parameters
