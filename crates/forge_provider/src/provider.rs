@@ -1,9 +1,10 @@
 use derive_setters::Setters;
+use forge_domain::{Model, ModelId, Request, Response, ResultStream};
 use moka2::future::Cache;
 use serde::{Deserialize, Serialize};
 
 use super::error::Result;
-use crate::{Error, Model, ModelId, Request, Response, ResultStream};
+use crate::Error;
 
 #[async_trait::async_trait]
 pub trait ProviderService: Send + Sync + 'static {

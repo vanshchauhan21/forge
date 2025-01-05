@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use derive_setters::Setters;
-use forge_domain::ToolName;
-use forge_provider::{
-    CompletionMessage, FinishReason, ModelId, ProviderService, Request, ResultStream, ToolCall,
+use forge_domain::{
+    CompletionMessage, FinishReason, ModelId, Request, ResultStream, Role, ToolCall, ToolName,
     ToolResult,
 };
+use forge_provider::ProviderService;
 use forge_tool::ToolService;
 use serde::Serialize;
 use serde_json::Value;
@@ -226,9 +226,7 @@ impl From<Request> for ConversationHistory {
             .messages
             .iter()
             .filter(|message| match message {
-                CompletionMessage::ContentMessage(content) => {
-                    content.role != forge_provider::Role::System
-                }
+                CompletionMessage::ContentMessage(content) => content.role != Role::System,
                 CompletionMessage::ToolMessage(_) => true,
             })
             .flat_map(|message| match message {
@@ -254,10 +252,9 @@ mod tests {
     use std::vec;
 
     use derive_setters::Setters;
-    use forge_domain::{ToolDefinition, ToolName};
-    use forge_provider::{
+    use forge_domain::{
         CompletionMessage, FinishReason, ModelId, Request, Response, ToolCall, ToolCallId,
-        ToolCallPart, ToolResult,
+        ToolCallPart, ToolDefinition, ToolName, ToolResult,
     };
     use forge_tool::ToolService;
     use pretty_assertions::assert_eq;

@@ -1,6 +1,5 @@
+use forge_domain::ModelId;
 use serde::{Deserialize, Serialize};
-
-use crate::ModelId;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct OpenRouterModel {

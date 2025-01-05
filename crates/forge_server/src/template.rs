@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use derive_setters::Setters;
-use forge_provider::CompletionMessage;
+use forge_domain::CompletionMessage;
 use serde::Serialize;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Setters)]

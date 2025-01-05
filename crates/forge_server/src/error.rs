@@ -9,6 +9,7 @@ pub enum Error {
     Diesel(diesel::result::Error),
     DieselConnection(diesel::ConnectionError),
     DieselR2D2(diesel::r2d2::Error),
+    Domain(forge_domain::Error),
     EmptyResponse,
     Env(forge_env::Error),
     Handlebars(handlebars::RenderError),

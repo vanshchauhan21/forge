@@ -1,3 +1,4 @@
+use forge_domain::{Model, ModelId, Request, Response, ResultStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
@@ -8,10 +9,8 @@ use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use super::ParameterResponse;
 use crate::error::Result;
-use crate::provider::ProviderService;
-use crate::{
-    Error, Live, ModelId, Parameters, ProviderError, Request, Response, ResultStream, Service,
-};
+use crate::provider::{Parameters, ProviderService};
+use crate::{Error, Live, ProviderError, Service};
 
 const PROVIDER_NAME: &str = "Open Router";
 
@@ -86,7 +85,7 @@ impl ProviderService for OpenRouter {
 
                         Some(
                             match serde_json::from_str::<OpenRouterResponse>(&event.data) {
-                                Ok(response) => crate::Response::try_from(response),
+                                Ok(response) => Response::try_from(response),
                                 Err(_) => {
                                     let value: serde_json::Value =
                                         serde_json::from_str(&event.data).unwrap();
@@ -111,7 +110,7 @@ impl ProviderService for OpenRouter {
         Ok(Box::pin(Box::new(stream)))
     }
 
-    async fn models(&self) -> Result<Vec<crate::Model>> {
+    async fn models(&self) -> Result<Vec<Model>> {
         let text = self
             .client
             .get(self.config.url("/models"))
@@ -128,7 +127,7 @@ impl ProviderService for OpenRouter {
             .data
             .iter()
             .map(|r| r.clone().into())
-            .collect::<Vec<crate::Model>>())
+            .collect::<Vec<Model>>())
     }
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
@@ -164,9 +163,9 @@ impl Service {
     }
 }
 
-impl From<OpenRouterModel> for crate::Model {
+impl From<OpenRouterModel> for Model {
     fn from(value: OpenRouterModel) -> Self {
-        crate::Model {
+        Model {
             id: value.id,
             name: value.name,
             description: value.description,

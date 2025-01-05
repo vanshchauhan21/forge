@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_setters::Setters;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Text, Timestamp};
-use forge_provider::{Request as ProviderRequest, Request};
+use forge_domain::Request;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -82,7 +82,7 @@ impl TryFrom<RawConversation> for Conversation {
 pub trait ConversationService: Send + Sync {
     async fn set_conversation(
         &self,
-        request: &ProviderRequest,
+        request: &Request,
         id: Option<ConversationId>,
     ) -> Result<Conversation>;
     async fn get_conversation(&self, id: ConversationId) -> Result<Conversation>;
@@ -104,7 +104,7 @@ impl<P: DBService> Live<P> {
 impl<P: DBService + Send + Sync> ConversationService for Live<P> {
     async fn set_conversation(
         &self,
-        request: &ProviderRequest,
+        request: &Request,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
         let pool = self.pool_service.pool().await?;
@@ -181,7 +181,7 @@ impl Service {
 
 #[cfg(test)]
 pub mod tests {
-    use forge_provider::ModelId;
+    use forge_domain::ModelId;
 
     use super::super::db_service::tests::TestDbPool;
     use super::*;
@@ -201,7 +201,7 @@ pub mod tests {
         storage: &impl ConversationService,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
-        let request = ProviderRequest::new(ModelId::default());
+        let request = Request::new(ModelId::default());
         storage.set_conversation(&request, id).await
     }
 

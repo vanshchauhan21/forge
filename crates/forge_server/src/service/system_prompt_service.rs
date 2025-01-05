@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
+use forge_domain::ModelId;
 use forge_env::Environment;
-use forge_provider::{ModelId, ProviderService};
+use forge_provider::ProviderService;
 use forge_tool::ToolService;
 use handlebars::Handlebars;
 use serde::Serialize;

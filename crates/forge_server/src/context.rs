@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use forge_provider::Request;
+use forge_domain::{CompletionMessage, Request};
 use pulldown_cmark::{html, Options, Parser};
 
 pub struct ContextEngine {
@@ -18,8 +18,8 @@ impl ContextEngine {
         let mut markdown = String::new();
         for msg in &self.context.messages {
             let role = match msg {
-                forge_provider::CompletionMessage::ContentMessage(msg) => msg.role.to_string(),
-                forge_provider::CompletionMessage::ToolMessage(_) => "tool".to_string(),
+                CompletionMessage::ContentMessage(msg) => msg.role.to_string(),
+                CompletionMessage::ToolMessage(_) => "tool".to_string(),
             };
 
             markdown.push_str(&format!("# [:{}]\n{}\n", role, msg.content()));

@@ -18,9 +18,8 @@ mod tests {
     use std::sync::Mutex;
 
     use derive_setters::Setters;
-    use forge_provider::{
-        Model, ModelId, Parameters, ProviderError, ProviderService, Request, Response, ResultStream,
-    };
+    use forge_domain::{Model, ModelId, Request, Response, ResultStream};
+    use forge_provider::{Parameters, ProviderError, ProviderService};
     use serde_json::json;
     use tokio_stream::StreamExt;
 

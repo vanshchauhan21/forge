@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use forge_domain::ToolDefinition;
+use forge_domain::{Model, Request, ResultStream, ToolDefinition};
 use forge_env::Environment;
-use forge_provider::{Model, ProviderService, Request, ResultStream};
+use forge_provider::ProviderService;
 use forge_tool::ToolService;
 
 use super::completion_service::CompletionService;
