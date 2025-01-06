@@ -52,17 +52,17 @@ impl ToolCallFull {
     pub fn new(tool_name: ToolName) -> Self {
         Self { name: tool_name, call_id: None, arguments: Value::default() }
     }
-    pub fn try_from_parts(parts: Vec<ToolCallPart>) -> Result<Self> {
+    pub fn try_from_parts(parts: &Vec<ToolCallPart>) -> Result<Self> {
         let mut tool_name = None;
         let mut tool_call_id = None;
 
         let mut input = String::new();
-        for part in parts {
-            if let Some(value) = part.name {
+        for part in parts.iter() {
+            if let Some(value) = &part.name {
                 tool_name = Some(value);
             }
 
-            if let Some(value) = part.call_id {
+            if let Some(value) = &part.call_id {
                 tool_call_id = Some(value);
             }
 
@@ -71,8 +71,8 @@ impl ToolCallFull {
 
         if let Some(tool_name) = tool_name {
             Ok(ToolCallFull {
-                name: tool_name,
-                call_id: tool_call_id,
+                name: tool_name.clone(),
+                call_id: tool_call_id.cloned(),
                 arguments: serde_json::from_str(&input)?,
             })
         } else {

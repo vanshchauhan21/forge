@@ -95,7 +95,7 @@ impl Live {
 
                 if let Some(FinishReason::ToolCalls) = message.finish_reason {
                     // TODO: drop clone from here.
-                    let tool_call = ToolCallFull::try_from_parts(tool_call_parts.clone())?;
+                    let tool_call = ToolCallFull::try_from_parts(&tool_call_parts)?;
                     some_tool_call = Some(tool_call.clone());
 
                     tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
