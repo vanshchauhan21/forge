@@ -1,6 +1,6 @@
 use futures::Stream;
 
-use super::stream_ext::{Collect, StreamExt};
+use super::stream_ext::StreamExt;
 use super::{ChatCompletionMessage, FinishReason, ToolCall, ToolCallFull, ToolCallPart};
 use crate::Error;
 
@@ -9,58 +9,39 @@ where
     E: From<Error>,
 {
     fn collect_tool_call_parts(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
-        self.scan_stream(
-            Vec::<ToolCallPart>::new(),
-            |parts, message| match message {
-                Ok(ChatCompletionMessage { tool_call, finish_reason, .. }) => {
-                    if let Some(ToolCall::Part(tool_call)) = tool_call.first() {
-                        parts.push(tool_call.clone());
-                    }
+        self.try_collect(Vec::<ToolCallPart>::new(), |parts, message| {
+            if let Some(ToolCall::Part(tool_call)) = &message.tool_call.first() {
+                parts.push(tool_call.clone());
+            }
 
-                    if let Some(FinishReason::ToolCalls) = finish_reason {
-                        Collect::Ready
-                    } else {
-                        Collect::Continue
-                    }
-                }
-                _ => Collect::Continue,
-            },
-            |parts| {
+            if let Some(FinishReason::ToolCalls) = &message.finish_reason {
                 let tool_call = ToolCallFull::try_from_parts(parts)?;
-                Ok(ChatCompletionMessage::default().add_tool_call(tool_call.clone()))
-            },
-        )
+                return Ok(Some(
+                    ChatCompletionMessage::default().add_tool_call(tool_call.clone()),
+                ));
+            }
+            Ok(None)
+        })
     }
 
     fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
-        self.scan_stream(
-            String::new(),
-            |parts, message| match message {
-                Ok(ChatCompletionMessage { content, finish_reason, .. }) => {
-                    if let Some(content) = content {
-                        parts.push_str(content);
-                    }
+        self.try_collect(String::new(), |parts, message| {
+            if let Some(content) = &message.content {
+                parts.push_str(content);
+            }
 
-                    if finish_reason.is_some() {
-                        Collect::Ready
-                    } else {
-                        Collect::Continue
-                    }
-                }
-                _ => Collect::Continue,
-            },
-            |input| {
-                if let Ok(tool_calls) = ToolCallFull::try_from_xml(input) {
+            if message.finish_reason.is_some() {
+                if let Ok(tool_calls) = ToolCallFull::try_from_xml(parts) {
                     let mut message = ChatCompletionMessage::default();
                     for tool_call in tool_calls {
                         message = message.add_tool_call(tool_call);
                     }
-                    Ok(message)
-                } else {
-                    Ok(ChatCompletionMessage::default())
+                    return Ok(Some(message));
                 }
-            },
-        )
+            }
+
+            Ok(None)
+        })
     }
 }
 
@@ -105,7 +86,7 @@ mod tests {
             .collect::<Vec<_>>()
             .await;
 
-        // Verify original messages and combined tool call are present
+        // Verify original messages are present and combined tool call is appended
         let expected = vec![
             ChatCompletionMessage::default().add_tool_call(
                 ToolCallPart::default()
@@ -187,8 +168,8 @@ mod tests {
             .await;
 
         // Verify error is returned
-        assert_eq!(actual.len(), 2);
-        assert!(actual[1].is_err());
+        assert_eq!(actual.len(), 1);
+        assert!(actual[0].is_err());
     }
 
     /// Tests error handling when a tool call is missing the required name field
@@ -207,8 +188,8 @@ mod tests {
             .await;
 
         // Verify ToolUseMissingName error is returned
-        assert_eq!(actual.len(), 2);
-        assert!(matches!(actual[1], Err(Error::ToolUseMissingName)));
+        assert_eq!(actual.len(), 1);
+        assert!(matches!(actual[0], Err(Error::ToolUseMissingName)));
     }
 
     /// Tests that XML content is properly collected and parsed into a tool call
@@ -287,7 +268,7 @@ mod tests {
             .await;
 
         // Verify empty message is returned for invalid XML
-        assert_eq!(actual.len(), 3);
+        assert_eq!(actual.len(), 2);
         assert_eq!(actual.last().unwrap().tool_call.len(), 0);
     }
 
@@ -344,13 +325,12 @@ mod tests {
             .collect::<Vec<_>>()
             .await;
 
-        // Verify both tool calls are properly parsed
+        // Verify all messages including original ones and final combined tool calls
         assert_eq!(actual.len(), 6);
+        let final_message = actual.last().unwrap();
+        assert_eq!(final_message.tool_call.len(), 3);
 
-        let actual = actual.last().unwrap().clone();
-        assert_eq!(actual.tool_call.len(), 3);
-
-        let expected = ChatCompletionMessage::default()
+        let expected_final = ChatCompletionMessage::default()
             .add_tool_call(
                 ToolCallFull::new(ToolName::new("execute_command"))
                     .arguments(json!({"command": "ls", "requires_approval": false})),
@@ -365,6 +345,6 @@ mod tests {
                     .arguments(json!({"path": "test.txt"})),
             );
 
-        assert_eq!(actual, expected);
+        assert_eq!(final_message, &expected_final);
     }
 }
