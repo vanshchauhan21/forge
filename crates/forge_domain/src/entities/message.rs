@@ -1,3 +1,4 @@
+use derive_more::derive::From;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
@@ -10,10 +11,48 @@ use super::ToolCall;
 #[derive(Default, Clone, Debug, Setters, PartialEq, Eq)]
 #[setters(into, strip_option)]
 pub struct ChatCompletionMessage {
-    pub content: Option<String>,
+    pub content: Option<Content>,
     pub tool_call: Vec<ToolCall>,
     pub finish_reason: Option<FinishReason>,
 }
+
+/// Represents partial or full content of a message
+#[derive(Clone, Debug, PartialEq, Eq, From)]
+pub enum Content {
+    Part(ContentPart),
+    Full(ContentFull),
+}
+
+impl Content {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Content::Part(part) => &part.0,
+            Content::Full(full) => &full.0,
+        }
+    }
+
+    pub fn part(content: impl ToString) -> Self {
+        Content::Part(ContentPart(content.to_string()))
+    }
+
+    pub fn full(content: impl ToString) -> Self {
+        Content::Full(ContentFull(content.to_string()))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+}
+
+/// Used typically when streaming is enabled
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ContentPart(String);
+
+/// Used typically when full responses are enabled (Streaming is disabled)
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ContentFull(String);
 
 /// The reason why the model stopped generating output.
 /// Read more: https://platform.openai.com/docs/guides/function-calling#edge-cases
@@ -36,8 +75,8 @@ pub enum FinishReason {
 }
 
 impl ChatCompletionMessage {
-    pub fn assistant(content: impl ToString) -> ChatCompletionMessage {
-        ChatCompletionMessage::default().content(content.to_string())
+    pub fn assistant(content: impl Into<Content>) -> ChatCompletionMessage {
+        ChatCompletionMessage::default().content(content.into())
     }
 
     pub fn add_tool_call(mut self, call_tool: impl Into<ToolCall>) -> Self {
@@ -52,6 +91,16 @@ impl ChatCompletionMessage {
 
     pub fn finish_reason_opt(mut self, reason: Option<FinishReason>) -> Self {
         self.finish_reason = reason;
+        self
+    }
+
+    pub fn content_part(mut self, content: impl ToString) -> Self {
+        self.content = Some(Content::Part(ContentPart(content.to_string())));
+        self
+    }
+
+    pub fn content_full(mut self, content: impl ToString) -> Self {
+        self.content = Some(Content::Full(ContentFull(content.to_string())));
         self
     }
 }

@@ -27,7 +27,7 @@ where
     fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
         self.try_collect(String::new(), |parts, message| {
             if let Some(content) = &message.content {
-                parts.push_str(content);
+                parts.push_str(content.as_str());
             }
 
             if message.finish_reason.is_some() {
@@ -126,8 +126,8 @@ mod tests {
     async fn test_collect_tool_call_parts_no_tool_calls() {
         // Setup messages without tool calls
         let messages = vec![
-            ChatCompletionMessage::default().content("test message"),
-            ChatCompletionMessage::default().content("another message"),
+            ChatCompletionMessage::default().content_part("test message"),
+            ChatCompletionMessage::default().content_part("another message"),
         ];
 
         // Execute collection
@@ -197,10 +197,10 @@ mod tests {
     async fn test_collect_xml_content_success() {
         // Setup messages with XML content
         let messages = vec![
-            ChatCompletionMessage::default().content("<execute_command>"),
-            ChatCompletionMessage::default().content("<command>ls -la</command>"),
+            ChatCompletionMessage::default().content_part("<execute_command>"),
+            ChatCompletionMessage::default().content_part("<command>ls -la</command>"),
             ChatCompletionMessage::default()
-                .content("<requires_approval>false</requires_approval></execute_command>")
+                .content_part("<requires_approval>false</requires_approval></execute_command>")
                 .finish_reason_opt(Some(FinishReason::Stop)),
         ];
 
@@ -253,9 +253,9 @@ mod tests {
     async fn test_collect_xml_content_invalid_xml() {
         // Setup messages with invalid XML
         let messages = vec![
-            ChatCompletionMessage::default().content("hello-"),
+            ChatCompletionMessage::default().content_part("hello-"),
             ChatCompletionMessage::default()
-                .content("-world")
+                .content_part("-world")
                 .finish_reason_opt(Some(FinishReason::Stop)),
         ];
 
@@ -277,8 +277,8 @@ mod tests {
     async fn test_collect_xml_content_no_xml() {
         // Setup messages without XML content
         let messages = vec![
-            ChatCompletionMessage::default().content("Hello"),
-            ChatCompletionMessage::default().content("World"),
+            ChatCompletionMessage::default().content_part("Hello"),
+            ChatCompletionMessage::default().content_part("World"),
         ];
 
         // Execute collection
@@ -304,16 +304,16 @@ mod tests {
     async fn test_collect_xml_content_multiple_tools() {
         // Setup messages with multiple tool calls
         let messages = vec![
-            ChatCompletionMessage::default().content("<execute_command><command>"),
+            ChatCompletionMessage::default().content_part("<execute_command><command>"),
             ChatCompletionMessage::default()
-                .content("ls</command><requires_approval>false</requires"),
-            ChatCompletionMessage::default().content(
+                .content_part("ls</command><requires_approval>false</requires"),
+            ChatCompletionMessage::default().content_part(
                 "_approval></execute_command><execute_command><command>echo \"HELLO WORLD\"</command><requires",
             ),
             ChatCompletionMessage::default()
-                .content("_approval>false</requires_approval></execute_command>"),
+                .content_part("_approval>false</requires_approval></execute_command>"),
             ChatCompletionMessage::default()
-                .content("<read_file><path>test.txt</path></read_file>")
+                .content_part("<read_file><path>test.txt</path></read_file>")
                 .finish_reason_opt(Some(FinishReason::Stop)),
         ];
 
