@@ -4,6 +4,7 @@
 mod buffered_stream;
 mod context;
 mod message;
+mod message_stream;
 mod model;
 mod tool;
 mod tool_call;
