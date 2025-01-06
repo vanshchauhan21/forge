@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use forge_domain::{
-    ChatCompletionMessage as ModelResponse, FinishReason, ToolCallId, ToolCallPart, ToolName,
+    ChatCompletionMessage as ModelResponse, FinishReason, ToolCallFull, ToolCallId, ToolCallPart,
+    ToolName,
 };
 use serde::{Deserialize, Serialize};
 
@@ -73,7 +74,7 @@ pub struct OpenRouterToolCall {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FunctionCall {
-    pub name: Option<ToolName>,
+    pub name: ToolName,
     pub arguments: String,
 }
 
@@ -100,12 +101,10 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                             );
                     if let Some(tool_calls) = &message.tool_calls {
                         for tool_call in tool_calls {
-                            resp = resp.add_tool_call(ToolCallPart {
+                            resp = resp.add_tool_call(ToolCallFull {
                                 call_id: tool_call.id.clone(),
                                 name: tool_call.function.name.clone(),
-                                arguments_part: serde_json::from_str(
-                                    &tool_call.function.arguments,
-                                )?,
+                                arguments: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
                     }
@@ -123,7 +122,7 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallPart {
                                 call_id: tool_call.id.clone(),
-                                name: tool_call.function.name.clone(),
+                                name: Some(tool_call.function.name.clone()),
                                 arguments_part: tool_call.function.arguments.clone(),
                             });
                         }

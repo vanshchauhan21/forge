@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use derive_setters::Setters;
 use forge_domain::{
-    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCallFull, ToolName,
-    ToolResult, ToolService,
+    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCall, ToolCallFull,
+    ToolName, ToolResult, ToolService,
 };
 use forge_provider::ProviderService;
 use serde::Serialize;
@@ -80,7 +80,7 @@ impl Live {
                 }
 
                 if !message.tool_call.is_empty() {
-                    if let Some(tool_part) = message.tool_call.first() {
+                    if let Some(ToolCall::Part(tool_part)) = message.tool_call.first() {
                         if tool_call_parts.is_empty() {
                             // very first instance where we found a tool call.
                             if let Some(tool_name) = &tool_part.name {

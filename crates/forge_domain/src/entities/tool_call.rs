@@ -1,3 +1,4 @@
+use derive_more::derive::From;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -29,6 +30,12 @@ pub struct ToolCallPart {
     /// Arguments that need to be passed to the tool. NOTE: Not all tools
     /// require input
     pub arguments_part: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, From)]
+pub enum ToolCall {
+    Full(ToolCallFull),
+    Part(ToolCallPart),
 }
 
 /// Contains the full information about using a tool. This is received as a part

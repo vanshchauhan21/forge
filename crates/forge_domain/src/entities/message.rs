@@ -2,7 +2,7 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use super::ToolCallPart;
+use super::ToolCall;
 
 /// Represents a message that was received from the LLM provider
 /// NOTE: ToolUse messages are part of the larger Response object and not part
@@ -11,7 +11,7 @@ use super::ToolCallPart;
 #[setters(into, strip_option)]
 pub struct ChatCompletionMessage {
     pub content: Option<String>,
-    pub tool_call: Vec<ToolCallPart>,
+    pub tool_call: Vec<ToolCall>,
     pub finish_reason: Option<FinishReason>,
 }
 
@@ -40,12 +40,12 @@ impl ChatCompletionMessage {
         ChatCompletionMessage::default().content(content.to_string())
     }
 
-    pub fn add_tool_call(mut self, call_tool: impl Into<ToolCallPart>) -> Self {
+    pub fn add_tool_call(mut self, call_tool: impl Into<ToolCall>) -> Self {
         self.tool_call.push(call_tool.into());
         self
     }
 
-    pub fn extend_calls(mut self, calls: Vec<impl Into<ToolCallPart>>) -> Self {
+    pub fn extend_calls(mut self, calls: Vec<impl Into<ToolCall>>) -> Self {
         self.tool_call.extend(calls.into_iter().map(Into::into));
         self
     }
