@@ -35,13 +35,13 @@ pub struct ToolCallPart {
 /// of the response from the model when streaming is disabled.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
 #[setters(strip_option, into)]
-pub struct ToolCall {
+pub struct ToolCallFull {
     pub name: ToolName,
     pub call_id: Option<ToolCallId>,
     pub arguments: Value,
 }
 
-impl ToolCall {
+impl ToolCallFull {
     pub fn new(tool_name: ToolName) -> Self {
         Self { name: tool_name, call_id: None, arguments: Value::default() }
     }
@@ -63,7 +63,7 @@ impl ToolCall {
         }
 
         if let Some(tool_name) = tool_name {
-            Ok(ToolCall {
+            Ok(ToolCallFull {
                 name: tool_name,
                 call_id: tool_call_id,
                 arguments: serde_json::from_str(&input)?,

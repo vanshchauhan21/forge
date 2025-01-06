@@ -2,7 +2,7 @@ use derive_more::derive::{Display, From};
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use super::{ModelId, ToolCall, ToolResult};
+use super::{ModelId, ToolCallFull, ToolResult};
 use crate::ToolDefinition;
 
 /// Represents a message being sent to the LLM provider
@@ -33,7 +33,7 @@ impl ContextMessage {
         .into()
     }
 
-    pub fn assistant(content: impl ToString, tool_call: Option<ToolCall>) -> Self {
+    pub fn assistant(content: impl ToString, tool_call: Option<ToolCallFull>) -> Self {
         ContentMessage {
             role: Role::Assistant,
             content: content.to_string(),
@@ -57,7 +57,7 @@ pub struct ContentMessage {
     pub content: String,
 
     // FIXME: Message could contain multiple tool calls
-    pub tool_call: Option<ToolCall>,
+    pub tool_call: Option<ToolCallFull>,
 }
 
 impl ContentMessage {

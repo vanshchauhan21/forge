@@ -300,7 +300,7 @@ pub enum OpenRouterRole {
 #[cfg(test)]
 mod tests {
     use forge_domain::{
-        ContentMessage, ContextMessage, Role, ToolCall, ToolCallId, ToolName, ToolResult,
+        ContentMessage, ContextMessage, Role, ToolCallFull, ToolCallId, ToolName, ToolResult,
     };
     use insta::assert_json_snapshot;
     use serde_json::json;
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_assistant_message_with_tool_call_conversion() {
-        let tool_call = ToolCall {
+        let tool_call = ToolCallFull {
             call_id: Some(ToolCallId::new("123")),
             name: ToolName::new("test_tool"),
             arguments: json!({"key": "value"}),

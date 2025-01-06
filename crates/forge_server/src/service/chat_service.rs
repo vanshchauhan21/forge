@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use derive_setters::Setters;
 use forge_domain::{
-    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCall, ToolName,
+    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCallFull, ToolName,
     ToolResult, ToolService,
 };
 use forge_provider::ProviderService;
@@ -95,7 +95,7 @@ impl Live {
 
                 if let Some(FinishReason::ToolCalls) = message.finish_reason {
                     // TODO: drop clone from here.
-                    let tool_call = ToolCall::try_from_parts(tool_call_parts.clone())?;
+                    let tool_call = ToolCallFull::try_from_parts(tool_call_parts.clone())?;
                     some_tool_call = Some(tool_call.clone());
 
                     tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
@@ -178,7 +178,7 @@ pub enum ChatResponse {
     #[from(ignore)]
     Text(String),
     ToolUseDetected(ToolName),
-    ToolCallStart(ToolCall),
+    ToolCallStart(ToolCallFull),
     ToolUseEnd(ToolResult),
     ConversationStarted {
         conversation_id: ConversationId,
@@ -226,7 +226,7 @@ mod tests {
 
     use derive_setters::Setters;
     use forge_domain::{
-        ChatCompletionMessage, Context, ContextMessage, FinishReason, ModelId, ToolCall,
+        ChatCompletionMessage, Context, ContextMessage, FinishReason, ModelId, ToolCallFull,
         ToolCallId, ToolCallPart, ToolDefinition, ToolName, ToolResult, ToolService,
     };
     use pretty_assertions::assert_eq;
@@ -269,7 +269,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolService for TestToolService {
-        async fn call(&self, call: ToolCall) -> ToolResult {
+        async fn call(&self, call: ToolCallFull) -> ToolResult {
             let mut result = self.result.lock().unwrap();
 
             if let Some(value) = result.pop() {
@@ -483,7 +483,7 @@ mod tests {
             ChatResponse::Text("Let's use foo tool".to_string()),
             ChatResponse::ToolUseDetected(ToolName::new("foo")),
             ChatResponse::ToolCallStart(
-                ToolCall::new(ToolName::new("foo"))
+                ToolCallFull::new(ToolName::new("foo"))
                     .arguments(json!({"foo": 1, "bar": 2}))
                     .call_id(ToolCallId::new("too_call_001")),
             ),
@@ -584,7 +584,7 @@ mod tests {
                 .add_message(ContextMessage::assistant(
                     "Let's use foo tool",
                     Some(
-                        ToolCall::new(ToolName::new("foo"))
+                        ToolCallFull::new(ToolName::new("foo"))
                             .arguments(json!({"foo": 1, "bar": 2}))
                             .call_id(ToolCallId::new("too_call_001")),
                     ),

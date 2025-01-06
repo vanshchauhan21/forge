@@ -6,7 +6,7 @@ use nom::multi::many0;
 use nom::{IResult, Parser};
 use serde_json::Value;
 
-use super::ToolCall;
+use super::ToolCallFull;
 use crate::ToolName;
 
 #[derive(Debug, PartialEq)]
@@ -95,8 +95,8 @@ fn convert_string_to_value(value: &str) -> Value {
     Value::String(value.to_string())
 }
 
-fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCall {
-    ToolCall {
+fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCallFull {
+    ToolCallFull {
         name: ToolName::new(parsed.name),
         call_id: None,
         arguments: Value::Object(parsed.args.into_iter().fold(
@@ -109,7 +109,7 @@ fn tool_call_to_struct(parsed: ToolCallParsed) -> ToolCall {
     }
 }
 
-pub fn parse(input: &str) -> Result<Vec<ToolCall>, String> {
+pub fn parse(input: &str) -> Result<Vec<ToolCallFull>, String> {
     let mut tool_calls = Vec::new();
     let mut current_input = input;
 
@@ -180,14 +180,14 @@ mod tests {
             xml
         }
 
-        fn build_expected(&self) -> ToolCall {
+        fn build_expected(&self) -> ToolCallFull {
             let mut args = Value::Object(Default::default());
             for (key, value) in &self.args {
                 args.as_object_mut()
                     .unwrap()
                     .insert(key.clone(), convert_string_to_value(value));
             }
-            ToolCall {
+            ToolCallFull {
                 name: ToolName::new(&self.name),
                 call_id: None,
                 arguments: args,

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_domain::{Tool, ToolCall, ToolDefinition, ToolName, ToolResult, ToolService};
+use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
 use serde_json::Value;
 use tracing::info;
 
@@ -27,7 +27,7 @@ impl FromIterator<Tool> for Live {
 
 #[async_trait::async_trait]
 impl ToolService for Live {
-    async fn call(&self, call: ToolCall) -> ToolResult {
+    async fn call(&self, call: ToolCallFull) -> ToolResult {
         let name = call.name.clone();
         let input = call.arguments.clone();
         info!("Calling tool: {}", name.as_str());

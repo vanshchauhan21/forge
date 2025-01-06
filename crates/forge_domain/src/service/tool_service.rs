@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::{Tool, ToolCall, ToolDefinition, ToolName, ToolResult};
+use crate::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult};
 
 #[async_trait::async_trait]
 pub trait ToolService: Send + Sync {
-    async fn call(&self, call: ToolCall) -> ToolResult;
+    async fn call(&self, call: ToolCallFull) -> ToolResult;
     fn list(&self) -> Vec<ToolDefinition>;
     fn usage_prompt(&self) -> String;
 }
@@ -28,7 +28,7 @@ impl FromIterator<Tool> for Live {
 
 #[async_trait::async_trait]
 impl ToolService for Live {
-    async fn call(&self, call: ToolCall) -> ToolResult {
+    async fn call(&self, call: ToolCallFull) -> ToolResult {
         let name = call.name.clone();
         let input = call.arguments.clone();
         let available_tools = self

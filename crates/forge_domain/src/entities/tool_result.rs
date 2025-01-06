@@ -4,7 +4,7 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{ToolCall, ToolCallId, ToolName};
+use crate::{ToolCallFull, ToolCallId, ToolName};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
 #[setters(strip_option)]
@@ -37,8 +37,8 @@ impl ToolResult {
     }
 }
 
-impl From<ToolCall> for ToolResult {
-    fn from(value: ToolCall) -> Self {
+impl From<ToolCallFull> for ToolResult {
+    fn from(value: ToolCallFull) -> Self {
         Self {
             name: value.name,
             call_id: value.call_id,
