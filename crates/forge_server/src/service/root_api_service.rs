@@ -6,9 +6,11 @@ use forge_provider::ProviderService;
 
 use super::chat_service::ConversationHistory;
 use super::completion_service::CompletionService;
-use super::{ConversationId, ConversationService, Service, UIService};
+use super::{
+    ChatRequest, ChatResponse, Conversation, ConversationId, ConversationService, File, Service,
+    UIService,
+};
 use crate::{Error, Result};
-use super::{ChatRequest, ChatResponse, Conversation, File};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {
@@ -22,8 +24,8 @@ pub trait RootAPIService: Send + Sync {
 }
 
 impl Service {
-    pub fn root_api_service(env: Environment, api_key: impl Into<String>) -> impl RootAPIService {
-        Live::new(env, api_key)
+    pub fn root_api_service(env: Environment) -> impl RootAPIService {
+        Live::new(env)
     }
 }
 
@@ -37,10 +39,9 @@ struct Live {
 }
 
 impl Live {
-    fn new(env: Environment, api_key: impl Into<String>) -> Self {
+    fn new(env: Environment) -> Self {
         let cwd: String = env.cwd.clone();
-        let api_key: String = api_key.into();
-        let provider = Arc::new(forge_provider::Service::open_router(api_key));
+        let provider = Arc::new(forge_provider::Service::open_router(env.api_key.clone()));
         let tool = Arc::new(forge_tool::Service::tool_service());
 
         let system_prompt = Arc::new(Service::system_prompt(

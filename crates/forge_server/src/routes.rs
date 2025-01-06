@@ -15,21 +15,13 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::context::ContextEngine;
-use crate::service::{ChatRequest, Conversation, ConversationId, File, RootAPIService, ConversationHistory};
+use crate::service::{
+    ChatRequest, Conversation, ConversationHistory, ConversationId, File, RootAPIService,
+};
 use crate::{Errata, Result, Service};
 
-pub struct API {
-    // TODO: rename Conversation to Server and drop Server
-    api_key: String,
-}
-
-impl Default for API {
-    fn default() -> Self {
-        dotenv::dotenv().ok();
-        let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
-        Self { api_key }
-    }
-}
+#[derive(Default)]
+pub struct API;
 
 async fn context_html_handler(
     State(state): State<Arc<dyn RootAPIService>>,
@@ -44,11 +36,7 @@ impl API {
     pub async fn launch(self) -> Result<()> {
         tracing_subscriber::fmt().init();
         let env = Environment::from_env().await?;
-        let state = Arc::new(Service::root_api_service(env, self.api_key));
-
-        if dotenv::dotenv().is_ok() {
-            info!("Loaded .env file");
-        }
+        let state = Arc::new(Service::root_api_service(env));
 
         // Setup HTTP server
         let app = Router::new()
