@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use forge_domain::{
-    ChatCompletionMessage as ModelResponse, Content, FinishReason,
-    ToolCallFull, ToolCallId, ToolCallPart, ToolName,
+    ChatCompletionMessage as ModelResponse, Content, FinishReason, ToolCallFull, ToolCallId,
+    ToolCallPart, ToolName,
 };
 use serde::{Deserialize, Serialize};
 
