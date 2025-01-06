@@ -1,11 +1,11 @@
 //! The model is built on top of Open AI's API specification
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
-mod buffered_stream;
+mod chat_stream_ext;
 mod context;
 mod message;
-mod message_stream;
 mod model;
+mod stream_ext;
 mod tool;
 mod tool_call;
 mod tool_call_parser;
@@ -14,9 +14,9 @@ mod tool_name;
 mod tool_result;
 mod tool_usage;
 
+pub use chat_stream_ext::*;
 pub use context::*;
 pub use message::*;
-pub use message_stream::*;
 pub use model::*;
 pub use tool::*;
 pub use tool_call::*;

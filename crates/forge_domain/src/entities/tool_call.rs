@@ -52,7 +52,7 @@ impl ToolCallFull {
     pub fn new(tool_name: ToolName) -> Self {
         Self { name: tool_name, call_id: None, arguments: Value::default() }
     }
-    pub fn try_from_parts(parts: &Vec<ToolCallPart>) -> Result<Self> {
+    pub fn try_from_parts(parts: &[ToolCallPart]) -> Result<Self> {
         let mut tool_name = None;
         let mut tool_call_id = None;
 

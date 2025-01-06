@@ -1,23 +1,15 @@
 use futures::Stream;
 
-use super::buffered_stream::{scan_stream, Collect};
+use super::stream_ext::{Collect, StreamExt};
 use super::{ChatCompletionMessage, FinishReason, ToolCall, ToolCallFull, ToolCallPart};
 use crate::Error;
 
-pub trait BoxStreamExt<E> {
-    /// Collects all the tool parts to create a full tool call
-    fn collect_tool_call_parts(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>>;
-    fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>>;
-}
-
-impl<S, E> BoxStreamExt<E> for S
+pub trait BoxStreamExt<E>: Stream<Item = Result<ChatCompletionMessage, E>> + Sized
 where
-    E: Send + Sync + From<Error> + 'static,
-    S: Stream<Item = Result<ChatCompletionMessage, E>> + Send + 'static,
+    E: From<Error>,
 {
     fn collect_tool_call_parts(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
-        scan_stream(
-            self,
+        self.scan_stream(
             Vec::<ToolCallPart>::new(),
             |parts, message| match message {
                 Ok(ChatCompletionMessage { tool_call, finish_reason, .. }) => {
@@ -41,8 +33,7 @@ where
     }
 
     fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
-        scan_stream(
-            self,
+        self.scan_stream(
             String::new(),
             |parts, message| match message {
                 Ok(ChatCompletionMessage { content, finish_reason, .. }) => {
@@ -71,6 +62,13 @@ where
             },
         )
     }
+}
+
+impl<S, E> BoxStreamExt<E> for S
+where
+    E: From<Error> + 'static,
+    S: Stream<Item = Result<ChatCompletionMessage, E>>,
+{
 }
 
 #[cfg(test)]
