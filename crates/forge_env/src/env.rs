@@ -19,10 +19,15 @@ pub struct Environment {
     pub home: Option<String>,
     /// A list of files in the current working directory.
     pub files: Vec<String>,
+    /// The Forge API key.
+    pub api_key: String,
 }
 
 impl Environment {
     pub async fn from_env() -> Result<Self> {
+        dotenv::dotenv().ok();
+        let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
+
         let cwd = std::env::current_dir()?;
         let files = match Walker::new(cwd.clone()).get().await {
             Ok(files) => files
@@ -43,6 +48,7 @@ impl Environment {
             },
             home: dirs::home_dir().map(|a| a.display().to_string()),
             files,
+            api_key,
         })
     }
 }

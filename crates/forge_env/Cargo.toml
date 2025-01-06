@@ -9,3 +9,4 @@ serde = "1.0.216"
 dirs = "5.0.1"
 forge_walker = { path = "../forge_walker" }
 derive_setters = "0.1.6"
+dotenv = "0.15.0"
