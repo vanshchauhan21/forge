@@ -1,6 +1,7 @@
 //! The model is built on top of Open AI's API specification
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
+mod buffered_stream;
 mod context;
 mod message;
 mod model;
