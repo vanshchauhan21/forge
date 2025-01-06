@@ -3,6 +3,7 @@
 
 mod chat_stream_ext;
 mod context;
+mod environment;
 mod message;
 mod model;
 mod stream_ext;
@@ -16,6 +17,7 @@ mod tool_usage;
 
 pub use chat_stream_ext::*;
 pub use context::*;
+pub use environment::*;
 pub use message::*;
 pub use model::*;
 pub use tool::*;

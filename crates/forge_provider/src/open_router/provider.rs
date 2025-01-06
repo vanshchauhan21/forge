@@ -60,8 +60,7 @@ impl ProviderService for OpenRouter {
     async fn chat(&self, request: Context) -> ResultStream<ChatCompletionMessage, Error> {
         let mut request = OpenRouterRequest::from(request);
         request.stream = Some(true);
-        let request = serde_json::to_string_pretty(&request)?;
-        println!("{}", request);
+        let request = serde_json::to_string(&request)?;
 
         let rb = self
             .client
@@ -76,8 +75,6 @@ impl ProviderService for OpenRouter {
                 Ok(ref event) => match event {
                     Event::Open => None,
                     Event::Message(event) => {
-                        // TODO: print should happen only in debug mode
-                        println!("{}", &event.data);
                         // Ignoring wasteful events
                         if ["[DONE]", ""].contains(&event.data.as_str()) {
                             return None;

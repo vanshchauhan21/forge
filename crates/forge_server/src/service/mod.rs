@@ -2,6 +2,7 @@ mod chat_service;
 mod completion_service;
 mod conversation_service;
 mod db_service;
+mod env_service;
 mod file_read_service;
 mod root_api_service;
 mod system_prompt_service;
@@ -11,6 +12,7 @@ mod user_prompt_service;
 pub use chat_service::*;
 pub use completion_service::*;
 pub use conversation_service::*;
+pub use env_service::*;
 pub use root_api_service::*;
 pub use ui_service::*;
 

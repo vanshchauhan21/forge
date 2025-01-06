@@ -1,6 +1,8 @@
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
+use super::Environment;
+
 #[derive(Clone, Debug, Deserialize, Serialize, Setters)]
 pub struct Model {
     pub id: ModelId,
@@ -32,5 +34,11 @@ impl ModelId {
 impl Default for ModelId {
     fn default() -> Self {
         ModelId("openai/gpt-3.5-turbo".to_string())
+    }
+}
+
+impl ModelId {
+    pub fn from_env(env: &Environment) -> Self {
+        ModelId(env.large_model_id.clone())
     }
 }

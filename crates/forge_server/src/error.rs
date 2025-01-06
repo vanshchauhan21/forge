@@ -11,7 +11,6 @@ pub enum Error {
     DieselR2D2(diesel::r2d2::Error),
     Domain(forge_domain::Error),
     EmptyResponse,
-    Env(forge_env::Error),
     Handlebars(handlebars::RenderError),
     IO(std::io::Error),
     Provider(forge_provider::Error),

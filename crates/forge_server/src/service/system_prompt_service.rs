@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use forge_domain::{ModelId, ToolService};
-use forge_env::Environment;
+use forge_domain::{Environment, ModelId, ToolService};
 use forge_provider::ProviderService;
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -86,6 +85,8 @@ mod tests {
             home: Some("/home/user".to_string()),
             files: vec!["file1.txt".to_string(), "file2.txt".to_string()],
             api_key: "test".to_string(),
+            large_model_id: "open-ai/gpt-4o".to_string(),
+            small_model_id: "open-ai/gpt-4o-mini".to_string(),
         }
     }
 
