@@ -7,7 +7,8 @@ use forge_provider::ProviderService;
 use super::chat_service::ConversationHistory;
 use super::completion_service::CompletionService;
 use super::{ConversationId, ConversationService, Service, UIService};
-use crate::{ChatRequest, ChatResponse, Conversation, Error, File, Result};
+use crate::{Error, Result};
+use super::{ChatRequest, ChatResponse, Conversation, File};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {
@@ -53,14 +54,14 @@ impl Live {
         let storage =
             Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
 
-        let neo_chat_service = Arc::new(Service::chat_service(
+        let chat_service = Arc::new(Service::chat_service(
             provider.clone(),
             system_prompt.clone(),
             tool.clone(),
             user_prompt,
         ));
 
-        let chat_service = Arc::new(Service::ui_service(storage.clone(), neo_chat_service));
+        let chat_service = Arc::new(Service::ui_service(storage.clone(), chat_service));
 
         let completions = Arc::new(Service::completion_service(cwd.clone()));
 

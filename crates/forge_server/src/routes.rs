@@ -15,10 +15,8 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::context::ContextEngine;
-use crate::{
-    ChatRequest, Conversation, ConversationHistory, ConversationId, Errata, File, Result,
-    RootAPIService, Service,
-};
+use crate::service::{ChatRequest, Conversation, ConversationId, File, RootAPIService, ConversationHistory};
+use crate::{Errata, Result, Service};
 
 pub struct API {
     // TODO: rename Conversation to Server and drop Server

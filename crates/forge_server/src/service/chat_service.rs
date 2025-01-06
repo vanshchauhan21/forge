@@ -237,7 +237,7 @@ mod tests {
     use crate::service::chat_service::ChatService;
     use crate::service::tests::{TestProvider, TestSystemPrompt};
     use crate::service::user_prompt_service::tests::TestUserPrompt;
-    use crate::{ChatResponse, ConversationId};
+    use crate::service::{ChatResponse, ConversationId};
 
     impl ChatRequest {
         pub fn new(content: impl ToString) -> ChatRequest {

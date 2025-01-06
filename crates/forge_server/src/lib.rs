@@ -8,4 +8,4 @@ mod template;
 
 pub use error::*;
 pub use routes::API;
-pub use service::*;
+pub use service::Service;
