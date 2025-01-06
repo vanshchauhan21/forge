@@ -16,6 +16,7 @@ mod tool_usage;
 
 pub use context::*;
 pub use message::*;
+pub use message_stream::*;
 pub use model::*;
 pub use tool::*;
 pub use tool_call::*;
