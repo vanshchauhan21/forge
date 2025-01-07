@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
         let full_path = cwd.join(path);
         let content = tokio::fs::read_to_string(full_path).await?;
 
-        println!("\r{}", content);
+        println!("{}", content.trim());
 
         let mut stream = api.run(content).await?;
         while let Some(message) = stream.next().await {

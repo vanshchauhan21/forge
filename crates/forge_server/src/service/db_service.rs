@@ -32,9 +32,16 @@ impl Live {
         let db_path = format!("{}/{}", db_path, DB_NAME);
 
         // Run migrations first
-        info!("Running migrations for database: {}", db_path);
+
         let mut conn = SqliteConnection::establish(&db_path)?;
-        conn.run_pending_migrations(MIGRATIONS)?;
+        let migrations = conn.run_pending_migrations(MIGRATIONS)?;
+
+        info!(
+            "Running {} migrations for database: {}",
+            migrations.len(),
+            db_path
+        );
+
         drop(conn);
 
         // Create connection pool
