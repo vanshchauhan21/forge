@@ -81,9 +81,7 @@ impl ProviderService for OpenRouter {
                         let message = serde_json::from_str::<OpenRouterResponse>(&event.data)
                             .map_err(Error::from)
                             .and_then(|message| {
-                                ChatCompletionMessage::try_from(message.clone())
-                                    .map_err(Error::from)
-                            });
+                                ChatCompletionMessage::try_from(message.clone())});
 
                         Some(message)
                     }

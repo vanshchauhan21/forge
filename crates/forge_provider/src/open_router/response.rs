@@ -105,7 +105,11 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallFull {
                                 call_id: tool_call.id.clone(),
-                                name: tool_call.function.name.clone().ok_or(Error::ToolCallMissingName)?,
+                                name: tool_call
+                                    .function
+                                    .name
+                                    .clone()
+                                    .ok_or(Error::ToolCallMissingName)?,
                                 arguments: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }

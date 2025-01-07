@@ -89,10 +89,8 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
-    
 
     use forge_domain::ModelId;
-    
 
     use super::super::conversation_service::tests::TestStorage;
     use super::*;
