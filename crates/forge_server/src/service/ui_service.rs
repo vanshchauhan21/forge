@@ -61,9 +61,7 @@ impl UIService for Live {
 
         if is_new {
             let id = conversation.id;
-            stream = Box::pin(
-                once(ChatResponse::ConversationStarted { conversation_id: id }).chain(stream),
-            );
+            stream = Box::pin(once(ChatResponse::ConversationStarted(id)).chain(stream));
         }
 
         let conversation_service = self.conversation_service.clone();
@@ -98,11 +96,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ChatService for TestStorage {
-        async fn chat(
-            &self,
-            prompt: ChatRequest,
-            context: Context,
-        ) -> Result<UStream<ChatResponse>> {
+        async fn chat(&self, _: ChatRequest, _: Context) -> Result<UStream<ChatResponse>> {
             Ok(Box::pin(once(ChatResponse::Text(
                 "test message".to_string(),
             ))))
@@ -128,9 +122,7 @@ mod tests {
 
         let mut responses = service.chat(request).await.unwrap();
 
-        if let Some(ChatResponse::ConversationStarted { conversation_id: _ }) =
-            responses.next().await
-        {
+        if let Some(ChatResponse::ConversationStarted(_)) = responses.next().await {
         } else {
             panic!("Expected ConversationStarted response");
         }

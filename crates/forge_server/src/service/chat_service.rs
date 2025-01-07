@@ -103,7 +103,7 @@ impl Live {
                     some_tool_result = Some(tool_result.clone());
 
                     // send the tool use end message.
-                    tx.send(ChatResponse::ToolUseEnd(tool_result))
+                    tx.send(ChatResponse::ToolCallEnd(tool_result))
                         .await
                         .unwrap();
                 }
@@ -180,10 +180,8 @@ pub enum ChatResponse {
     Text(String),
     ToolUseDetected(ToolName),
     ToolCallStart(ToolCallFull),
-    ToolUseEnd(ToolResult),
-    ConversationStarted {
-        conversation_id: ConversationId,
-    },
+    ToolCallEnd(ToolResult),
+    ConversationStarted(ConversationId),
     ModifyContext(Context),
     Complete,
     Error(Errata),
@@ -221,7 +219,7 @@ impl From<Context> for ConversationHistory {
                     messages
                 }
                 ContextMessage::ToolMessage(result) => {
-                    vec![ChatResponse::ToolUseEnd(result.clone())]
+                    vec![ChatResponse::ToolCallEnd(result.clone())]
                 }
             })
             .collect();
@@ -497,7 +495,7 @@ mod tests {
                     .arguments(json!({"foo": 1, "bar": 2}))
                     .call_id(ToolCallId::new("too_call_001")),
             ),
-            ChatResponse::ToolUseEnd(
+            ChatResponse::ToolCallEnd(
                 ToolResult::new(ToolName::new("foo"))
                     .content(json!({"a": 100, "b": 200}))
                     .call_id(ToolCallId::new("too_call_001")),
