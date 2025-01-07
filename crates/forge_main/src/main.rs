@@ -13,7 +13,9 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     if let Some(path) = cli.path {
-        let content = tokio::fs::read_to_string(path).await?;
+        let cwd = std::env::current_dir()?;
+        let full_path = cwd.join(path);
+        let content = tokio::fs::read_to_string(full_path).await?;
 
         println!("\r{}", content);
 
@@ -32,11 +34,9 @@ async fn main() -> Result<()> {
                     );
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
-                    println!("{}", tool_result);
+                    println!("{}", tool_result.content);
                 }
-                ChatResponse::ConversationStarted(conversation_id) => {
-                    println!("Job {} started", conversation_id.as_uuid());
-                }
+                ChatResponse::ConversationStarted(_) => {}
                 ChatResponse::ModifyContext(_) => {}
                 ChatResponse::Complete => {
                     println!("Job completed");
