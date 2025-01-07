@@ -29,9 +29,6 @@ impl Error {
 
 #[derive(Debug, Display)]
 pub enum ProviderError {
-    // Custom display message for OpenAI error
-    // OpenAI(OpenAIError),
-
     // Custom display message for EmptyResponse
     EmptyContent,
     ToolUseEmptyName,
