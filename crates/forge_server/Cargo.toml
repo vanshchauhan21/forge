@@ -21,7 +21,6 @@ forge_tool = { path = "../forge_tool" }
 forge_provider = { path = "../forge_provider" }
 forge_walker = { path = "../forge_walker" }
 forge_prompt = { path = "../forge_prompt" }
-forge_env = { path = "../forge_env" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.133"
 derive_setters = "0.1.6"
@@ -31,6 +30,7 @@ pulldown-cmark = { version = "0.12.0" }
 handlebars = "6.2.0"
 r2d2 = "0.8.10"
 forge_domain = { path = "../forge_domain" }
+dirs = "5.0.1"
 
 [dev-dependencies]
 insta = "1.41.1"

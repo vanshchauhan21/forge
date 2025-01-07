@@ -8,4 +8,4 @@ mod template;
 
 pub use error::*;
 pub use routes::API;
-pub use service::Service;
+pub use service::{ChatResponse, RootAPIService, Service};

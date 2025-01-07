@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use derive_setters::Setters;
 use forge_domain::{
-    Context, ContextMessage, FinishReason, ModelId, ResultStream, Role, ToolCall, ToolCallFull,
-    ToolName, ToolResult, ToolService,
+    Context, ContextMessage, FinishReason, ModelId, Role, ToolCall, ToolCallFull, ToolName,
+    ToolResult, ToolService, UStream,
 };
 use forge_provider::ProviderService;
 use serde::Serialize;
@@ -13,15 +13,11 @@ use tokio_stream::StreamExt;
 use super::system_prompt_service::SystemPromptService;
 use super::user_prompt_service::UserPromptService;
 use super::{ConversationId, Service};
-use crate::{Errata, Error, Result};
+use crate::{Errata, Result};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
-    async fn chat(
-        &self,
-        prompt: ChatRequest,
-        context: Context,
-    ) -> ResultStream<ChatResponse, Error>;
+    async fn chat(&self, prompt: ChatRequest, context: Context) -> Result<UStream<ChatResponse>>;
 }
 
 impl Service {
@@ -57,7 +53,7 @@ impl Live {
     async fn chat_workflow(
         &self,
         mut request: Context,
-        tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
+        tx: tokio::sync::mpsc::Sender<ChatResponse>,
     ) -> Result<()> {
         loop {
             let mut tool_call_parts = Vec::new();
@@ -73,7 +69,7 @@ impl Live {
                 if let Some(ref content) = message.content {
                     if !content.is_empty() {
                         assistant_message_content.push_str(content.as_str());
-                        tx.send(Ok(ChatResponse::Text(content.as_str().to_string())))
+                        tx.send(ChatResponse::Text(content.as_str().to_string()))
                             .await
                             .unwrap();
                     }
@@ -84,7 +80,7 @@ impl Live {
                         if tool_call_parts.is_empty() {
                             // very first instance where we found a tool call.
                             if let Some(tool_name) = &tool_part.name {
-                                tx.send(Ok(ChatResponse::ToolUseDetected(tool_name.clone())))
+                                tx.send(ChatResponse::ToolUseDetected(tool_name.clone()))
                                     .await
                                     .unwrap();
                             }
@@ -98,7 +94,7 @@ impl Live {
                     let tool_call = ToolCallFull::try_from_parts(&tool_call_parts)?;
                     some_tool_call = Some(tool_call.clone());
 
-                    tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
+                    tx.send(ChatResponse::ToolCallStart(tool_call.clone()))
                         .await
                         .unwrap();
 
@@ -107,7 +103,7 @@ impl Live {
                     some_tool_result = Some(tool_result.clone());
 
                     // send the tool use end message.
-                    tx.send(Ok(ChatResponse::ToolUseEnd(tool_result)))
+                    tx.send(ChatResponse::ToolUseEnd(tool_result))
                         .await
                         .unwrap();
                 }
@@ -118,13 +114,13 @@ impl Live {
                 some_tool_call,
             ));
 
-            tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+            tx.send(ChatResponse::ModifyContext(request.clone()))
                 .await
                 .unwrap();
 
             if let Some(tool_result) = some_tool_result {
                 request = request.add_message(ContextMessage::ToolMessage(tool_result));
-                tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                tx.send(ChatResponse::ModifyContext(request.clone()))
                     .await
                     .unwrap();
             } else {
@@ -136,10 +132,10 @@ impl Live {
 
 #[async_trait::async_trait]
 impl ChatService for Live {
-    async fn chat(&self, chat: ChatRequest, request: Context) -> ResultStream<ChatResponse, Error> {
+    async fn chat(&self, chat: ChatRequest, request: Context) -> Result<UStream<ChatResponse>> {
         let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
         let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        let (tx, rx) = tokio::sync::mpsc::channel::<ChatResponse>(1);
 
         let request = request
             .set_system_message(system_prompt)
@@ -153,9 +149,12 @@ impl ChatService for Live {
             // TODO: simplify this match.
             match that.chat_workflow(request, tx.clone()).await {
                 Ok(_) => {}
-                Err(e) => tx.send(Err(e)).await.unwrap(),
+                Err(e) => tx
+                    .send(ChatResponse::Error(Errata::from(&e)))
+                    .await
+                    .unwrap(),
             };
-            tx.send(Ok(ChatResponse::Complete)).await.unwrap();
+            tx.send(ChatResponse::Complete).await.unwrap();
 
             drop(tx);
         });
@@ -172,6 +171,8 @@ pub struct ChatRequest {
     pub conversation_id: Option<ConversationId>,
 }
 
+/// Events that are emitted by the agent for external consumption. This includes
+/// events for all internal state changes.
 #[derive(Debug, Clone, Serialize, PartialEq, derive_more::From)]
 #[serde(rename_all = "camelCase")]
 pub enum ChatResponse {
@@ -186,6 +187,15 @@ pub enum ChatResponse {
     ModifyContext(Context),
     Complete,
     Error(Errata),
+}
+
+impl From<Result<ChatResponse>> for ChatResponse {
+    fn from(value: Result<ChatResponse>) -> Self {
+        match value {
+            Ok(value) => value,
+            Err(e) => ChatResponse::Error(Errata::from(&e)),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Serialize)]
@@ -322,7 +332,6 @@ mod tests {
                 .collect::<Vec<_>>()
                 .await
                 .into_iter()
-                .map(|value| value.unwrap())
                 .collect::<Vec<_>>();
 
             let llm_calls = provider.get_calls();
