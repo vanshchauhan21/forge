@@ -13,13 +13,15 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     if let Some(path) = cli.path {
+        let api = API::init().await?;
+
         let cwd = std::env::current_dir()?;
         let full_path = cwd.join(path);
         let content = tokio::fs::read_to_string(full_path).await?;
 
         println!("\r{}", content);
 
-        let mut stream = API::init().await?.run(content).await?;
+        let mut stream = api.run(content).await?;
         while let Some(message) = stream.next().await {
             match message {
                 ChatResponse::Text(text) => {
