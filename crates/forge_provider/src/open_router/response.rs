@@ -74,7 +74,8 @@ pub struct OpenRouterToolCall {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FunctionCall {
-    pub name: ToolName,
+    // Only the first event typically has the name of the function call
+    pub name: Option<ToolName>,
     pub arguments: String,
 }
 
@@ -104,7 +105,7 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallFull {
                                 call_id: tool_call.id.clone(),
-                                name: tool_call.function.name.clone(),
+                                name: tool_call.function.name.clone().ok_or(Error::ToolCallMissingName)?,
                                 arguments: serde_json::from_str(&tool_call.function.arguments)?,
                             });
                         }
@@ -124,7 +125,7 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                         for tool_call in tool_calls {
                             resp = resp.add_tool_call(ToolCallPart {
                                 call_id: tool_call.id.clone(),
-                                name: Some(tool_call.function.name.clone()),
+                                name: tool_call.function.name.clone(),
                                 arguments_part: tool_call.function.arguments.clone(),
                             });
                         }
@@ -135,7 +136,7 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
 
             Ok(response)
         } else {
-            Err(Error::empty_response("Open Router"))
+            Err(Error::EmptyContent)
         }
     }
 }

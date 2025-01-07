@@ -6,7 +6,7 @@ use strum_macros::EnumString;
 use super::ToolCall;
 
 /// Represents a message that was received from the LLM provider
-/// NOTE: ToolUse messages are part of the larger Response object and not part
+/// NOTE: Tool call messages are part of the larger Response object and not part
 /// of the message.
 #[derive(Default, Clone, Debug, Setters, PartialEq, Eq)]
 #[setters(into, strip_option)]

@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use forge_domain::{Context, UStream};
+use forge_domain::{Context, ResultStream};
 use tokio_stream::{once, StreamExt};
 use tracing::info;
 
 use super::chat_service::ChatService;
 use super::{ChatRequest, ChatResponse, ConversationService};
-use crate::{Result, Service};
+use crate::{Error, Service};
 
 #[async_trait::async_trait]
 pub trait UIService: Send + Sync {
-    async fn chat(&self, request: ChatRequest) -> Result<UStream<ChatResponse>>;
+    async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, Error>;
 }
 
 struct Live {
@@ -38,7 +38,7 @@ impl Service {
 
 #[async_trait::async_trait]
 impl UIService for Live {
-    async fn chat(&self, request: ChatRequest) -> Result<UStream<ChatResponse>> {
+    async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, Error> {
         let (conversation, is_new) = if let Some(conversation_id) = &request.conversation_id {
             let context = self
                 .conversation_service
@@ -63,7 +63,7 @@ impl UIService for Live {
 
         if is_new {
             let id = conversation.id;
-            stream = Box::pin(once(ChatResponse::ConversationStarted(id)).chain(stream));
+            stream = Box::pin(once(Ok(ChatResponse::ConversationStarted(id))).chain(stream));
         }
 
         let conversation_service = self.conversation_service.clone();
@@ -71,18 +71,17 @@ impl UIService for Live {
             .then(move |message| {
                 let conversation_service = conversation_service.clone();
                 async move {
-                    if let ChatResponse::ModifyContext(context) = &message {
+                    if let Ok(ChatResponse::ModifyContext(context)) = &message {
                         conversation_service
                             .set_conversation(context, request.conversation_id)
                             .await?;
-                        Ok(message)
+                        message
                     } else {
-                        Ok(message)
+                        message
                     }
                 }
             })
-            .map(|message: Result<ChatResponse>| ChatResponse::from(message))
-            .filter(|message| !matches!(message, ChatResponse::ModifyContext { .. }));
+            .filter(|message| !matches!(message, Ok(ChatResponse::ModifyContext { .. })));
 
         Ok(Box::pin(stream))
     }
@@ -90,18 +89,20 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
+    
 
     use forge_domain::ModelId;
+    
 
     use super::super::conversation_service::tests::TestStorage;
     use super::*;
 
     #[async_trait::async_trait]
     impl ChatService for TestStorage {
-        async fn chat(&self, _: ChatRequest, _: Context) -> Result<UStream<ChatResponse>> {
-            Ok(Box::pin(once(ChatResponse::Text(
+        async fn chat(&self, _: ChatRequest, _: Context) -> ResultStream<ChatResponse, Error> {
+            Ok(Box::pin(once(Ok(ChatResponse::Text(
                 "test message".to_string(),
-            ))))
+            )))))
         }
     }
 
@@ -124,12 +125,12 @@ mod tests {
 
         let mut responses = service.chat(request).await.unwrap();
 
-        if let Some(ChatResponse::ConversationStarted(_)) = responses.next().await {
+        if let Some(Ok(ChatResponse::ConversationStarted(_))) = responses.next().await {
         } else {
             panic!("Expected ConversationStarted response");
         }
 
-        if let Some(ChatResponse::Text(content)) = responses.next().await {
+        if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {
             assert_eq!(content, "test message");
         } else {
             panic!("Expected Text response");
@@ -150,7 +151,7 @@ mod tests {
         let request = ChatRequest::default().conversation_id(conversation.id);
         let mut responses = service.chat(request).await.unwrap();
 
-        if let Some(ChatResponse::Text(content)) = responses.next().await {
+        if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {
             assert_eq!(content, "test message");
         } else {
             panic!("Expected Text response");

@@ -7,7 +7,7 @@ use axum::response::sse::{Event, Sse};
 use axum::response::Html;
 use axum::routing::{get, post};
 use axum::Router;
-use forge_domain::{Context, Environment, Model, ModelId, ToolDefinition, UStream};
+use forge_domain::{Context, Environment, Model, ModelId, ResultStream, ToolDefinition};
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
@@ -18,7 +18,7 @@ use crate::service::{
     ChatRequest, ChatResponse, Conversation, ConversationHistory, ConversationId,
     EnvironmentService, File, RootAPIService,
 };
-use crate::{Result, Service};
+use crate::{Errata, Error, Result, Service};
 
 pub struct API {
     api: Arc<dyn RootAPIService>,
@@ -45,7 +45,7 @@ async fn context_html_handler(
 }
 
 impl API {
-    pub async fn run(self, content: String) -> Result<UStream<ChatResponse>> {
+    pub async fn run(self, content: String) -> ResultStream<ChatResponse, Error> {
         let model = ModelId::from_env(&self.env);
         let chat = ChatRequest { content, model, conversation_id: None };
         self.api.chat(chat).await
@@ -114,7 +114,10 @@ async fn conversation_handler(
         .await
         .expect("Engine failed to respond with a chat message");
     Sse::new(stream.map(|message| {
-        let data = serde_json::to_string(&message).expect("Failed to serialize message");
+        let data = serde_json::to_string(
+            &message.unwrap_or_else(|error| Errata::new(error.to_string()).into()),
+        )
+        .expect("Failed to serialize message");
         Ok(Event::default().data(data))
     }))
 }

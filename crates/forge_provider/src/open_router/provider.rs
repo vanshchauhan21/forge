@@ -10,9 +10,7 @@ use super::response::OpenRouterResponse;
 use super::ParameterResponse;
 use crate::error::Result;
 use crate::provider::ProviderService;
-use crate::{Error, Live, ProviderError, Service};
-
-const PROVIDER_NAME: &str = "Open Router";
+use crate::{Error, Live, Service};
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -80,19 +78,14 @@ impl ProviderService for OpenRouter {
                             return None;
                         }
 
-                        Some(
-                            match serde_json::from_str::<OpenRouterResponse>(&event.data) {
-                                Ok(response) => ChatCompletionMessage::try_from(response),
-                                Err(_) => {
-                                    let value: serde_json::Value =
-                                        serde_json::from_str(&event.data).unwrap();
-                                    Err(Error::Provider {
-                                        provider: PROVIDER_NAME.to_string(),
-                                        error: ProviderError::UpstreamError(value),
-                                    })
-                                }
-                            },
-                        )
+                        let message = serde_json::from_str::<OpenRouterResponse>(&event.data)
+                            .map_err(Error::from)
+                            .and_then(|message| {
+                                ChatCompletionMessage::try_from(message.clone())
+                                    .map_err(Error::from)
+                            });
+
+                        Some(message)
                     }
                 },
                 Err(err) => Some(Err(err.into())),

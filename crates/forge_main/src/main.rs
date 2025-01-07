@@ -1,5 +1,7 @@
+use core::panic;
+
 use clap::Parser;
-use colored::*;
+use colored::Colorize;
 use forge_server::{ChatResponse, Result, API};
 use tokio_stream::StreamExt;
 
@@ -23,11 +25,11 @@ async fn main() -> Result<()> {
 
         let mut stream = api.run(content).await?;
         while let Some(message) = stream.next().await {
-            match message {
+            match message.unwrap() {
                 ChatResponse::Text(text) => {
                     print!("{}", text);
                 }
-                ChatResponse::ToolUseDetected(_) => {}
+                ChatResponse::ToolCallDetected(_) => {}
                 ChatResponse::ToolCallStart(tool_call_full) => {
                     println!(
                         "{} {}",
@@ -43,7 +45,9 @@ async fn main() -> Result<()> {
                 ChatResponse::Complete => {
                     println!("Job completed");
                 }
-                ChatResponse::Error(_) => {}
+                ChatResponse::Error(err) => {
+                    panic!("{:?}", err);
+                }
             }
         }
 

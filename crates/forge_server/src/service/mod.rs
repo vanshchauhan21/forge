@@ -24,7 +24,7 @@ mod tests {
 
     use derive_setters::Setters;
     use forge_domain::{ChatCompletionMessage, Context, Model, ModelId, Parameters, ResultStream};
-    use forge_provider::{ProviderError, ProviderService};
+    use forge_provider::ProviderService;
     use serde_json::json;
     use tokio_stream::StreamExt;
 
@@ -88,10 +88,9 @@ mod tests {
 
         async fn parameters(&self, model: &ModelId) -> forge_provider::Result<Parameters> {
             match self.parameters.iter().find(|(id, _)| id == model) {
-                None => Err(forge_provider::Error::Provider {
-                    provider: "closed_ai".to_string(),
-                    error: ProviderError::UpstreamError(json!({"error": "Model not found"})),
-                }),
+                None => Err(forge_provider::Error::Upstream(
+                    json!({"error": "Model not found"}),
+                )),
                 Some((_, parameter)) => Ok(parameter.clone()),
             }
         }

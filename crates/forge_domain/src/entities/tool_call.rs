@@ -76,7 +76,7 @@ impl ToolCallFull {
                 arguments: serde_json::from_str(&input)?,
             })
         } else {
-            Err(Error::ToolUseMissingName)
+            Err(Error::ToolCallMissingName)
         }
     }
 

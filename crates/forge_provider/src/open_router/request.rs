@@ -250,7 +250,7 @@ impl From<ContextMessage> for OpenRouterMessage {
                         r#type: "function".to_string(),
                         function: FunctionCall {
                             arguments: serde_json::to_string(&tool_call.arguments).unwrap(),
-                            name: tool_call.name,
+                            name: Some(tool_call.name),
                         },
                     }]
                 }),

@@ -187,9 +187,9 @@ mod tests {
             .collect::<Vec<_>>()
             .await;
 
-        // Verify ToolUseMissingName error is returned
+        // Verify ToolCallMissingName error is returned
         assert_eq!(actual.len(), 1);
-        assert!(matches!(actual[0], Err(Error::ToolUseMissingName)));
+        assert!(matches!(actual[0], Err(Error::ToolCallMissingName)));
     }
 
     /// Tests that XML content is properly collected and parsed into a tool call

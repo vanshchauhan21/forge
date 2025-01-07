@@ -4,7 +4,7 @@ use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-#[derive(Display, derive_more::From)]
+#[derive(Debug, Display, derive_more::From)]
 pub enum Error {
     Diesel(diesel::result::Error),
     DieselConnection(diesel::ConnectionError),
@@ -42,12 +42,6 @@ pub struct InnerErrorResponse {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&Errata::from(self), f)
-    }
-}
-
 #[derive(Clone, Setters, Serialize, PartialEq, Eq)]
 pub struct Errata {
     pub message: String,
@@ -79,28 +73,6 @@ impl Debug for Errata {
             }
         }
         Ok(())
-    }
-}
-
-impl From<&Error> for Errata {
-    fn from(error: &Error) -> Self {
-        match error {
-            Error::Provider(forge_provider::Error::Provider {
-                provider,
-                error: forge_provider::ProviderError::UpstreamError(value),
-            }) => {
-                let value: ErrorResponse = serde_json::from_value(value.clone()).unwrap();
-                Self {
-                    message: format!("{}: {}", provider, value.error.message),
-                    code: Some(value.error.code),
-                    description: value
-                        .error
-                        .metadata
-                        .map(|m| serde_json::to_string(&m).unwrap()),
-                }
-            }
-            _ => Errata::new(error.to_string()),
-        }
     }
 }
 

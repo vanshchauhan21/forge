@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use forge_domain::{Context, Environment, Model, ToolDefinition, ToolService, UStream};
+use forge_domain::{Context, Environment, Model, ResultStream, ToolDefinition, ToolService};
 use forge_provider::ProviderService;
 
 use super::chat_service::ConversationHistory;
@@ -9,7 +9,7 @@ use super::{
     ChatRequest, ChatResponse, Conversation, ConversationId, ConversationService, File, Service,
     UIService,
 };
-use crate::Result;
+use crate::{Error, Result};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {
@@ -17,7 +17,7 @@ pub trait RootAPIService: Send + Sync {
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self, conversation_id: ConversationId) -> Result<Context>;
     async fn models(&self) -> Result<Vec<Model>>;
-    async fn chat(&self, chat: ChatRequest) -> Result<UStream<ChatResponse>>;
+    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error>;
     async fn conversations(&self) -> Result<Vec<Conversation>>;
     async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory>;
 }
@@ -100,7 +100,7 @@ impl RootAPIService for Live {
         Ok(self.provider.models().await?)
     }
 
-    async fn chat(&self, chat: ChatRequest) -> Result<UStream<ChatResponse>> {
+    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         Ok(self.ui_service.chat(chat).await?)
     }
 
