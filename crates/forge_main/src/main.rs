@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
                 }
             }
 
-            std::io::stdout().flush().unwrap();
+            println!("");
             content = inquire::Text::new("")
                 .with_help_message("type '/done' to end this conversation.")
                 .prompt()
