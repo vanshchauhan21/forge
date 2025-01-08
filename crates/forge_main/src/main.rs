@@ -62,7 +62,10 @@ async fn main() -> Result<()> {
             }
 
             std::io::stdout().flush().unwrap();
-            content = inquire::Text::new("").with_help_message("type '/done' to end this conversation.").prompt().unwrap();
+            content = inquire::Text::new("")
+                .with_help_message("type '/done' to end this conversation.")
+                .prompt()
+                .unwrap();
             if content.trim() == "/done" {
                 break;
             }
