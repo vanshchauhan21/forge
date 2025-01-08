@@ -4,6 +4,7 @@ mod fs_list;
 mod fs_read;
 mod fs_replace;
 mod fs_write;
+mod syn;
 
 pub use file_info::*;
 pub use fs_find::*;

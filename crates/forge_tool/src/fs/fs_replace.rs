@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tracing::{debug, error};
 
+use crate::fs::syn;
+
 fn persist_changes<P: AsRef<Path>>(
     temp_file: NamedTempFile,
     path: P,
@@ -160,6 +162,8 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
     if !path.as_ref().exists() || blocks[0].search.is_empty() {
         let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
         if !blocks[0].replace.is_empty() {
+            // Validate content before writing for new file
+            syn::validate(path.as_ref(), &blocks[0].replace)?;
             write!(temp_file, "{}", blocks[0].replace).map_err(|e| e.to_string())?;
             result = blocks[0].replace.clone();
         }
@@ -235,6 +239,9 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
             }
         }
     }
+
+    // Validate the final content before writing
+    syn::validate(path.as_ref(), &result)?;
 
     // Write the modified content
     write!(temp_file, "{}", result).map_err(|e| e.to_string())?;
@@ -569,5 +576,44 @@ function computeTotal(items, tax = 0) {
 }
 "#
         );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_rust_replace() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.rs");
+        let content = "fn main() { let x = 42; }";
+
+        write_test_file(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nfn main() { let x = 42; }\n=======\nfn main() { let x = \n>>>>>>> REPLACE\n".to_string(),
+            })
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_valid_rust_replace() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.rs");
+        let content = "fn main() { let x = 42; }";
+
+        write_test_file(&file_path, content).await.unwrap();
+
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: file_path.to_string_lossy().to_string(),
+                diff: "<<<<<<< SEARCH\nfn main() { let x = 42; }\n=======\nfn main() { let x = 42; let y = x * 2; }\n>>>>>>> REPLACE\n".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.content, "fn main() { let x = 42; let y = x * 2; }\n");
     }
 }

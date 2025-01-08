@@ -3,6 +3,8 @@ use forge_tool_macros::Description;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::fs::syn;
+
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
     /// The path of the file to write to (relative to the current working
@@ -27,9 +29,14 @@ impl ToolCallService for FSWrite {
     type Output = FSWriteOutput;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        // Validate file content if it's a supported language file
+        syn::validate(&input.path, &input.content)?;
+
+        // Write file only after validation passes
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
+
         Ok(FSWriteOutput { path: input.path, content: input.content })
     }
 }
@@ -42,6 +49,7 @@ pub struct FSWriteOutput {
 
 #[cfg(test)]
 mod test {
+
     use tempfile::TempDir;
     use tokio::fs;
 
@@ -66,5 +74,42 @@ mod test {
         // Verify file was actually written
         let content = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(content, "Hello, World!")
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_invalid_rust() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.rs");
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput {
+                path: file_path.to_string_lossy().to_string(),
+                content: "fn main() { let x = ".to_string(),
+            })
+            .await;
+
+        assert!(result.is_err());
+        // File should not exist since validation failed
+        assert!(!file_path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_valid_rust() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.rs");
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput {
+                path: file_path.to_string_lossy().to_string(),
+                content: "fn main() { let x = 42; }".to_string(),
+            })
+            .await;
+
+        assert!(result.is_ok());
+        // Verify file contains valid Rust code
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "fn main() { let x = 42; }");
     }
 }
