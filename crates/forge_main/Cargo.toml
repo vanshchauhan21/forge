@@ -11,3 +11,4 @@ forge_domain = { path = "../forge_domain" }
 tokio = { version = "1.0", features = ["full"] }
 tokio-stream = "0.1.17"
 colored = "3.0.0"
+inquire = "0.7.5"

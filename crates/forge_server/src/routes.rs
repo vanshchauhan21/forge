@@ -7,7 +7,7 @@ use axum::response::sse::{Event, Sse};
 use axum::response::Html;
 use axum::routing::{get, post};
 use axum::Router;
-use forge_domain::{Context, Environment, Model, ModelId, ResultStream, ToolDefinition};
+use forge_domain::{Context, Environment, Model, ResultStream, ToolDefinition};
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
@@ -25,16 +25,6 @@ pub struct API {
     env: Environment,
 }
 
-impl API {
-    pub async fn init() -> Result<Self> {
-        tracing_subscriber::fmt().init();
-        let env = Service::environment_service().get().await?;
-        let api = Arc::new(Service::root_api_service(env.clone()));
-
-        Ok(Self { api, env })
-    }
-}
-
 async fn context_html_handler(
     State(state): State<Arc<dyn RootAPIService>>,
     axum::extract::Path(id): axum::extract::Path<ConversationId>,
@@ -45,9 +35,19 @@ async fn context_html_handler(
 }
 
 impl API {
-    pub async fn run(self, content: String) -> ResultStream<ChatResponse, Error> {
-        let model = ModelId::from_env(&self.env);
-        let chat = ChatRequest { content, model, conversation_id: None };
+    pub async fn init() -> Result<Self> {
+        tracing_subscriber::fmt().init();
+        let env = Service::environment_service().get().await?;
+        let api = Arc::new(Service::root_api_service(env.clone()));
+
+        Ok(Self { api, env })
+    }
+
+    pub fn env(&self) -> &Environment {
+        &self.env
+    }
+
+    pub async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         self.api.chat(chat).await
     }
 

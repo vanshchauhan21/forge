@@ -1,5 +1,3 @@
-use std::usize;
-
 use forge_domain::Environment;
 use forge_walker::Walker;
 use tokio::sync::Mutex;
