@@ -1,5 +1,4 @@
 use core::panic;
-use std::io::Write;
 
 use clap::Parser;
 use colored::Colorize;
@@ -61,7 +60,7 @@ async fn main() -> Result<()> {
                 }
             }
 
-            println!("");
+            println!();
             content = inquire::Text::new("")
                 .with_help_message("type '/done' to end this conversation.")
                 .prompt()
