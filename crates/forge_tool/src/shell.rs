@@ -13,7 +13,6 @@ pub struct ShellInput {
     /// The shell command to execute.
     pub command: String,
     /// The working directory where the command should be executed.
-    #[schemars(skip)]
     pub cwd: PathBuf,
 }
 
