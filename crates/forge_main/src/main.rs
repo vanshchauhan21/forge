@@ -1,4 +1,5 @@
 use core::panic;
+use std::io::Write;
 
 use clap::Parser;
 use colored::Colorize;
@@ -39,10 +40,13 @@ async fn main() -> Result<()> {
                         print!("{}", text);
                     }
                     ChatResponse::ToolCallDetected(_) => {}
+                    ChatResponse::ToolCallArgPart(arg) => {
+                        print!("{}", arg);
+                    }
                     ChatResponse::ToolCallStart(tool_call_full) => {
                         println!(
-                            "{} {}",
-                            "Tool use detected:".green(),
+                            "\n{} {}",
+                            "Running tool:".bright_green(),
                             tool_call_full.name.as_str()
                         );
                     }
@@ -58,6 +62,8 @@ async fn main() -> Result<()> {
                         panic!("{:?}", err);
                     }
                 }
+
+                std::io::stdout().flush().unwrap();
             }
 
             println!();

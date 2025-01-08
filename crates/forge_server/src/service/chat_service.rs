@@ -81,15 +81,19 @@ impl Live {
 
                 if !message.tool_call.is_empty() {
                     if let Some(ToolCall::Part(tool_part)) = message.tool_call.first() {
+                        // Send tool call detection on first part
                         if tool_call_parts.is_empty() {
-                            // very first instance where we found a tool call.
                             if let Some(tool_name) = &tool_part.name {
                                 tx.send(Ok(ChatResponse::ToolCallDetected(tool_name.clone())))
                                     .await
                                     .unwrap();
                             }
                         }
+                        // Add to parts and send the part itself
                         tool_call_parts.push(tool_part.clone());
+                        tx.send(Ok(ChatResponse::ToolCallArgPart(tool_part.arguments_part.clone())))
+                            .await
+                            .unwrap();
                     }
                 }
 
@@ -181,6 +185,7 @@ pub enum ChatResponse {
     #[from(ignore)]
     Text(String),
     ToolCallDetected(ToolName),
+    ToolCallArgPart(String),
     ToolCallStart(ToolCallFull),
     ToolCallEnd(ToolResult),
     ConversationStarted(ConversationId),
@@ -484,6 +489,8 @@ mod tests {
         let expected = vec![
             ChatResponse::Text("Let's use foo tool".to_string()),
             ChatResponse::ToolCallDetected(ToolName::new("foo")),
+            ChatResponse::ToolCallArgPart(r#"{"foo": 1,"#.to_string()),
+            ChatResponse::ToolCallArgPart(r#""bar": 2}"#.to_string()),
             ChatResponse::ToolCallStart(
                 ToolCallFull::new(ToolName::new("foo"))
                     .arguments(json!({"foo": 1, "bar": 2}))
