@@ -91,9 +91,11 @@ impl Live {
                         }
                         // Add to parts and send the part itself
                         tool_call_parts.push(tool_part.clone());
-                        tx.send(Ok(ChatResponse::ToolCallArgPart(tool_part.arguments_part.clone())))
-                            .await
-                            .unwrap();
+                        tx.send(Ok(ChatResponse::ToolCallArgPart(
+                            tool_part.arguments_part.clone(),
+                        )))
+                        .await
+                        .unwrap();
                     }
                 }
 
