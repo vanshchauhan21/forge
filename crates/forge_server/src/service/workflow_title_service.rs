@@ -108,7 +108,6 @@ mod tests {
     use std::sync::Arc;
     use std::vec;
 
-    use derive_setters::Setters;
     use forge_domain::{ChatCompletionMessage, FinishReason};
     use tokio_stream::StreamExt;
 
@@ -116,16 +115,12 @@ mod tests {
     use crate::service::tests::TestProvider;
     use crate::service::{ChatResponse, ConversationId};
 
-    #[derive(Default, Setters)]
-    #[setters(into, strip_option)]
-    struct Fixture {
-        assistant_responses: Vec<Vec<ChatCompletionMessage>>,
-    }
+    #[derive(Default)]
+    struct Fixture(Vec<Vec<ChatCompletionMessage>>);
 
     impl Fixture {
         pub async fn run(&self, request: ChatRequest) -> Vec<ChatResponse> {
-            let provider =
-                Arc::new(TestProvider::default().with_messages(self.assistant_responses.clone()));
+            let provider = Arc::new(TestProvider::default().with_messages(self.0.clone()));
             let chat = Live::new(provider.clone());
 
             chat.get_title(request)
@@ -145,8 +140,7 @@ mod tests {
             .content_part("Fibonacci Sequence in Rust")
             .finish_reason(FinishReason::Stop)]];
 
-        let actual = Fixture::default()
-            .assistant_responses(mock_llm_responses)
+        let actual = Fixture(mock_llm_responses)
             .run(
                 ChatRequest::new("write an rust program to generate an fibo seq.")
                     .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
