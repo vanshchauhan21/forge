@@ -53,13 +53,17 @@ async fn main() -> Result<()> {
                     ChatResponse::ToolCallEnd(tool_result) => {
                         println!("{}", tool_result.content);
                     }
-                    ChatResponse::ConversationStarted(id) => {
-                        current_conversation_id = Some(id);
+                    ChatResponse::ConversationStarted(conversation_id) => {
+                        current_conversation_id = Some(conversation_id);
                     }
                     ChatResponse::ModifyContext(_) => {}
                     ChatResponse::Complete => {}
                     ChatResponse::Error(err) => {
                         panic!("{:?}", err);
+                    }
+                    ChatResponse::PartialTitle(_) => {}
+                    ChatResponse::CompleteTitle(title) => {
+                        println!("title: {}", title);
                     }
                 }
 

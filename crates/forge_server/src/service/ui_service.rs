@@ -4,8 +4,8 @@ use forge_domain::{Context, ResultStream};
 use tokio_stream::{once, StreamExt};
 use tracing::info;
 
-use super::chat_service::ChatService;
-use super::{ChatRequest, ChatResponse, ConversationService};
+use super::workflow_title_service::TitleService;
+use super::{ChatRequest, ChatResponse, ChatService, ConversationService};
 use crate::{Error, Service};
 
 #[async_trait::async_trait]
@@ -16,14 +16,16 @@ pub trait UIService: Send + Sync {
 struct Live {
     conversation_service: Arc<dyn ConversationService>,
     chat_service: Arc<dyn ChatService>,
+    title_service: Arc<dyn TitleService>,
 }
 
 impl Live {
     fn new(
         conversation_service: Arc<dyn ConversationService>,
         chat_service: Arc<dyn ChatService>,
+        title_service: Arc<dyn TitleService>,
     ) -> Self {
-        Self { conversation_service, chat_service }
+        Self { conversation_service, chat_service, title_service }
     }
 }
 
@@ -31,8 +33,9 @@ impl Service {
     pub fn ui_service(
         conversation_service: Arc<dyn ConversationService>,
         neo_chat_service: Arc<dyn ChatService>,
+        title_service: Arc<dyn TitleService>,
     ) -> impl UIService {
-        Live::new(conversation_service, neo_chat_service)
+        Live::new(conversation_service, neo_chat_service, title_service)
     }
 }
 
@@ -62,8 +65,13 @@ impl UIService for Live {
             .await?;
 
         if is_new {
+            let title_stream = self.title_service.get_title(request.clone()).await?;
             let id = conversation.id;
-            stream = Box::pin(once(Ok(ChatResponse::ConversationStarted(id))).chain(stream));
+            stream = Box::pin(
+                once(Ok(ChatResponse::ConversationStarted(id)))
+                    .chain(stream)
+                    .merge(title_stream),
+            );
         }
 
         let conversation_service = self.conversation_service.clone();
@@ -71,13 +79,23 @@ impl UIService for Live {
             .then(move |message| {
                 let conversation_service = conversation_service.clone();
                 async move {
-                    if let Ok(ChatResponse::ModifyContext(context)) = &message {
-                        conversation_service
-                            .set_conversation(context, request.conversation_id)
-                            .await?;
-                        message
-                    } else {
-                        message
+                    match &message {
+                        Ok(ChatResponse::CompleteTitle(title)) => {
+                            let conversation_id = request
+                                .conversation_id
+                                .expect("`conversation_id` must be set at this point.");
+                            conversation_service
+                                .set_conversation_title(&conversation_id, title.to_owned())
+                                .await?;
+                            message
+                        }
+                        Ok(ChatResponse::ModifyContext(context)) => {
+                            conversation_service
+                                .set_conversation(context, request.conversation_id)
+                                .await?;
+                            message
+                        }
+                        _ => message,
                     }
                 }
             })
@@ -94,6 +112,17 @@ mod tests {
 
     use super::super::conversation_service::tests::TestStorage;
     use super::*;
+
+    struct TestTitleService;
+
+    #[async_trait::async_trait]
+    impl TitleService for TestTitleService {
+        async fn get_title(&self, _: ChatRequest) -> ResultStream<ChatResponse, Error> {
+            Ok(Box::pin(once(Ok(ChatResponse::CompleteTitle(
+                "test title generated".to_string(),
+            )))))
+        }
+    }
 
     #[async_trait::async_trait]
     impl ChatService for TestStorage {
@@ -118,7 +147,11 @@ mod tests {
     async fn test_chat_new_conversation() {
         let storage = Arc::new(TestStorage);
         let conversation_service = Arc::new(TestStorage::in_memory().unwrap());
-        let service = Service::ui_service(conversation_service.clone(), storage.clone());
+        let service = Service::ui_service(
+            conversation_service.clone(),
+            storage.clone(),
+            Arc::new(TestTitleService),
+        );
         let request = ChatRequest::default();
 
         let mut responses = service.chat(request).await.unwrap();
@@ -126,6 +159,12 @@ mod tests {
         if let Some(Ok(ChatResponse::ConversationStarted(_))) = responses.next().await {
         } else {
             panic!("Expected ConversationStarted response");
+        }
+
+        if let Some(Ok(ChatResponse::CompleteTitle(content))) = responses.next().await {
+            assert_eq!(content, "test title generated");
+        } else {
+            panic!("Expected Text response");
         }
 
         if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {
@@ -139,7 +178,11 @@ mod tests {
     async fn test_chat_existing_conversation() {
         let storage = Arc::new(TestStorage);
         let conversation_service = Arc::new(TestStorage::in_memory().unwrap());
-        let service = Service::ui_service(conversation_service.clone(), storage.clone());
+        let service = Service::ui_service(
+            conversation_service.clone(),
+            storage.clone(),
+            Arc::new(TestTitleService),
+        );
 
         let conversation = conversation_service
             .set_conversation(&Context::default(), None)

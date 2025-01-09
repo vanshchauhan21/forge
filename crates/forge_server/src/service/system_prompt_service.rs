@@ -51,7 +51,7 @@ impl Live {
 #[async_trait::async_trait]
 impl SystemPromptService for Live {
     async fn get_system_prompt(&self, model: &ModelId) -> Result<String> {
-        let template = include_str!("../prompts/system.md").to_string();
+        let template = include_str!("../prompts/coding/system.md");
 
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
@@ -65,7 +65,7 @@ impl SystemPromptService for Live {
             tool_supported,
         };
 
-        Ok(hb.render_template(template.as_str(), &ctx)?)
+        Ok(hb.render_template(template, &ctx)?)
     }
 }
 

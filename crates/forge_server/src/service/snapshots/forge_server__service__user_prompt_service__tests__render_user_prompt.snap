@@ -5,9 +5,9 @@ expression: rendered_prompt
 <task>read this file content from @foo.txt and @bar.txt</task>
 
 <file_content path="foo.txt">
-Hello World
+Hello World - Foo
 </file_content>
 
 <file_content path="bar.txt">
-Hello World
+Hello World - Bar
 </file_content>

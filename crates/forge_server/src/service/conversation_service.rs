@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_setters::Setters;
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Text, Timestamp};
+use diesel::sql_types::{Bool, Nullable, Text, Timestamp};
 use forge_domain::Context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -18,6 +18,7 @@ pub struct Conversation {
     pub meta: Option<ConversationMeta>,
     pub context: Context,
     pub archived: bool,
+    pub title: Option<String>,
 }
 
 impl Conversation {
@@ -27,6 +28,7 @@ impl Conversation {
             meta: None,
             context,
             archived: false,
+            title: None,
         }
     }
 }
@@ -64,6 +66,8 @@ struct RawConversation {
     content: String,
     #[diesel(sql_type = Bool)]
     archived: bool,
+    #[diesel(sql_type = Nullable<Text>)]
+    title: Option<String>,
 }
 
 impl TryFrom<RawConversation> for Conversation {
@@ -78,6 +82,7 @@ impl TryFrom<RawConversation> for Conversation {
             }),
             context: serde_json::from_str(&raw.content)?,
             archived: raw.archived,
+            title: raw.title,
         })
     }
 }
@@ -92,6 +97,11 @@ pub trait ConversationService: Send + Sync {
     async fn get_conversation(&self, id: ConversationId) -> Result<Conversation>;
     async fn list_conversations(&self) -> Result<Vec<Conversation>>;
     async fn archive_conversation(&self, id: ConversationId) -> Result<Conversation>;
+    async fn set_conversation_title(
+        &self,
+        id: &ConversationId,
+        title: String,
+    ) -> Result<Conversation>;
 }
 
 pub struct Live<P: DBService> {
@@ -121,6 +131,7 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
             updated_at: Utc::now().naive_utc(),
             content: serde_json::to_string(request)?,
             archived: false,
+            title: None,
         };
 
         diesel::insert_into(conversations::table)
@@ -173,6 +184,25 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
             .first(&mut conn)?;
 
         Conversation::try_from(raw)
+    }
+
+    async fn set_conversation_title(
+        &self,
+        id: &ConversationId,
+        title: String,
+    ) -> Result<Conversation> {
+        let pool = self.pool_service.pool().await?;
+        let mut conn = pool.get()?;
+
+        diesel::update(conversations::table.find(id.0.to_string()))
+            .set(conversations::title.eq(title))
+            .execute(&mut conn)?;
+
+        let raw: RawConversation = conversations::table
+            .find(id.0.to_string())
+            .first(&mut conn)?;
+
+        raw.try_into()
     }
 }
 
@@ -257,5 +287,18 @@ pub mod tests {
 
         assert!(archived.archived);
         assert_eq!(archived.id, conversation.id);
+    }
+
+    #[tokio::test]
+    async fn test_set_title_for_conversation() {
+        let storage = setup_storage().await.unwrap();
+        let conversation = create_conversation(&storage, None).await.unwrap();
+        let result = storage
+            .set_conversation_title(&conversation.id, "test-title".to_string())
+            .await
+            .unwrap();
+
+        assert!(result.title.is_some());
+        assert_eq!(result.id, conversation.id);
     }
 }

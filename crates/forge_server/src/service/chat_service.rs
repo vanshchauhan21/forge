@@ -193,6 +193,10 @@ pub enum ChatResponse {
     ConversationStarted(ConversationId),
     ModifyContext(Context),
     Complete,
+    #[from(ignore)]
+    PartialTitle(String),
+    #[from(ignore)]
+    CompleteTitle(String),
     Error(Errata),
 }
 

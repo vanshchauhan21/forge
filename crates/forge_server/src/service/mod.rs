@@ -9,6 +9,7 @@ mod root_api_service;
 mod system_prompt_service;
 mod ui_service;
 mod user_prompt_service;
+mod workflow_title_service;
 
 pub use chat_service::*;
 pub use completion_service::*;

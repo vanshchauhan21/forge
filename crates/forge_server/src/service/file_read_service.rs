@@ -23,20 +23,31 @@ impl FileReadService for Live {
 
 #[cfg(test)]
 pub mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
-    pub struct TestFileReadService(String);
+    #[derive(Default)]
+    pub struct TestFileReadService(HashMap<String, String>);
 
     impl TestFileReadService {
-        pub fn new(s: impl ToString) -> Self {
-            Self(s.to_string())
+        pub fn new(s: HashMap<String, String>) -> Self {
+            let mut default_file_read = Self::default();
+            default_file_read.0.extend(s);
+            default_file_read
         }
     }
 
     #[async_trait::async_trait]
     impl FileReadService for TestFileReadService {
-        async fn read(&self, _: String) -> Result<String> {
-            Ok(self.0.clone())
+        async fn read(&self, path: String) -> Result<String> {
+            self.0.get(&path).cloned().ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("File not found: {}", path),
+                )
+                .into()
+            })
         }
     }
 }

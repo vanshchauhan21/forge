@@ -47,31 +47,33 @@ impl Live {
         let cwd: String = env.cwd.clone();
         let provider = Arc::new(forge_provider::Service::open_router(env.api_key.clone()));
         let tool = Arc::new(forge_tool::Service::tool_service());
+        let file_read = Arc::new(Service::file_read_service());
 
         let system_prompt = Arc::new(Service::system_prompt(
             env.clone(),
             tool.clone(),
             provider.clone(),
         ));
-        let file_read = Arc::new(Service::file_read_service());
-        let user_prompt = Arc::new(Service::user_prompt_service(file_read));
+        let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));
 
         let storage =
             Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
 
-        let chat_service = Arc::new(Service::chat_service(
+        let neo_chat_service = Arc::new(Service::chat_service(
             provider.clone(),
             system_prompt.clone(),
             tool.clone(),
             user_prompt,
         ));
-
-        let chat_service = Arc::new(Service::ui_service(storage.clone(), chat_service));
-
         let completions = Arc::new(Service::completion_service(cwd.clone()));
 
-        let storage =
-            Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
+        let title_service = Arc::new(Service::title_service(provider.clone()));
+
+        let chat_service = Arc::new(Service::ui_service(
+            storage.clone(),
+            neo_chat_service,
+            title_service,
+        ));
         let config_storage = Arc::new(
             Service::config_service(&cwd).expect("Failed to create config storage service"),
         );

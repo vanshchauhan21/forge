@@ -38,8 +38,7 @@ struct FileRead {
 #[async_trait::async_trait]
 impl UserPromptService for Live {
     async fn get_user_prompt(&self, task: &str) -> Result<String> {
-        let template = include_str!("../prompts/user_task.md").to_string();
-
+        let template = include_str!("../prompts/coding/user_task.md");
         let parsed_task = Prompt::parse(task.to_string());
 
         let mut file_contents = vec![];
@@ -54,12 +53,14 @@ impl UserPromptService for Live {
 
         let ctx = Context { task: task.to_string(), files: file_contents };
 
-        Ok(hb.render_template(template.as_str(), &ctx)?)
+        Ok(hb.render_template(template, &ctx)?)
     }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::service::file_read_service::tests::TestFileReadService;
 
@@ -74,7 +75,11 @@ pub mod tests {
 
     #[tokio::test]
     async fn test_render_user_prompt() {
-        let file_read = Arc::new(TestFileReadService::new("Hello World"));
+        let mut file_map = HashMap::new();
+        file_map.insert("foo.txt".to_string(), "Hello World - Foo".to_string());
+        file_map.insert("bar.txt".to_string(), "Hello World - Bar".to_string());
+
+        let file_read = Arc::new(TestFileReadService::new(file_map));
         let rendered_prompt = Service::user_prompt_service(file_read)
             .get_user_prompt("read this file content from @foo.txt and @bar.txt")
             .await

@@ -1,0 +1,5 @@
+---
+source: crates/forge_server/src/service/workflow_title_service.rs
+expression: "chat.user_prompt(\"write an rust program to generate an fibo seq.\").unwrap()"
+---
+<content>write an rust program to generate an fibo seq.</content>
