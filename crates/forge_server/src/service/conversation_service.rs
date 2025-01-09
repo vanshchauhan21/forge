@@ -186,6 +186,7 @@ impl Service {
 #[cfg(test)]
 pub mod tests {
     use forge_domain::ModelId;
+    use pretty_assertions::assert_eq;
 
     use super::super::db_service::tests::TestDbPool;
     use super::*;

@@ -121,6 +121,8 @@ impl ToolCallService for Shell {
 mod tests {
     use std::{env, fs};
 
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[tokio::test]

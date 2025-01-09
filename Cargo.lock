@@ -834,6 +834,7 @@ name = "forge_ci"
 version = "0.1.0"
 dependencies = [
  "gh-workflow-tailcall",
+ "pretty_assertions",
 ]
 
 [[package]]
@@ -876,6 +877,7 @@ name = "forge_prompt"
 version = "0.1.0"
 dependencies = [
  "nom",
+ "pretty_assertions",
 ]
 
 [[package]]
@@ -888,6 +890,7 @@ dependencies = [
  "forge_domain",
  "insta",
  "moka2",
+ "pretty_assertions",
  "reqwest",
  "reqwest-eventsource",
  "serde",
@@ -950,6 +953,7 @@ dependencies = [
  "forge_walker",
  "glob",
  "insta",
+ "pretty_assertions",
  "regex",
  "schemars",
  "serde",
@@ -979,6 +983,7 @@ name = "forge_walker"
 version = "0.1.0"
 dependencies = [
  "ignore",
+ "pretty_assertions",
  "thiserror 2.0.10",
  "tokio",
 ]

@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
                     ChatResponse::ToolCallStart(tool_call_full) => {
                         println!(
                             "\n{} {}",
-                            "Running tool:".bright_green(),
+                            "Tool use detected:".green(),
                             tool_call_full.name.as_str()
                         );
                     }

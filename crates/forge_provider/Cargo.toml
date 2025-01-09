@@ -21,3 +21,4 @@ forge_domain = { path = "../forge_domain" }
 
 [dev-dependencies]
 insta = { version = "1.36.1", features = ["json"] }
+pretty_assertions = "1.4.1"

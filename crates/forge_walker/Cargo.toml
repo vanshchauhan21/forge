@@ -7,3 +7,6 @@ edition = "2021"
 ignore = "0.4.23"
 tokio = { version = "1.42.0", features = ["fs"] }
 thiserror = "2.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"

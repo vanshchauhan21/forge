@@ -29,6 +29,8 @@ impl ToolCallService for AskFollowUpQuestion {
 
 #[cfg(test)]
 mod test {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[tokio::test]

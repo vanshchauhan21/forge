@@ -89,8 +89,8 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
-
     use forge_domain::ModelId;
+    use pretty_assertions::assert_eq;
 
     use super::super::conversation_service::tests::TestStorage;
     use super::*;
