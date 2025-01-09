@@ -73,19 +73,13 @@ pub fn validate(path: impl AsRef<Path>, content: &str) -> Result<(), String> {
     // Find syntax errors in the tree
     let root_node = tree.root_node();
     if root_node.has_error() || root_node.is_error() {
-        let error_text = root_node
-            .utf8_text(content.as_bytes())
-            .unwrap_or("unknown error")
-            .to_string();
-        return Err(format!(
-            "Syntax error found in {} while parsing as {}: {}",
+        Err(format!(
+            "Syntax error found in {} while parsing",
             path.display(),
-            ext,
-            error_text
-        ));
+        ))
+    } else {
+        Ok(())
     }
-
-    Ok(())
 }
 
 #[cfg(test)]

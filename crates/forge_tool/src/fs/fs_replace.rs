@@ -163,7 +163,6 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
         let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
         if !blocks[0].replace.is_empty() {
             // Validate content before writing for new file
-            syn::validate(path.as_ref(), &blocks[0].replace)?;
             write!(temp_file, "{}", blocks[0].replace).map_err(|e| e.to_string())?;
             result = blocks[0].replace.clone();
         }
@@ -240,9 +239,6 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
         }
     }
 
-    // Validate the final content before writing
-    syn::validate(path.as_ref(), &result)?;
-
     // Write the modified content
     write!(temp_file, "{}", result).map_err(|e| e.to_string())?;
     persist_changes(temp_file, path, backup_path)?;
@@ -254,6 +250,8 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
 pub struct FSReplaceOutput {
     pub path: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub syntax_checker: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -264,7 +262,8 @@ impl ToolCallService for FSReplace {
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let blocks = parse_blocks(&input.diff)?;
         let content = apply_changes(&input.path, blocks)?;
-        Ok(FSReplaceOutput { path: input.path, content })
+        let syntax_checker = syn::validate(&input.path, &content).err();
+        Ok(FSReplaceOutput { path: input.path, content, syntax_checker })
     }
 }
 
@@ -594,7 +593,7 @@ function computeTotal(items, tax = 0) {
             })
             .await;
 
-        assert!(result.is_err());
+        assert!(result.unwrap().syntax_checker.is_some());
     }
 
     #[tokio::test]

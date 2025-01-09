@@ -119,6 +119,12 @@ snapshot_kind: text
         },
         "path": {
           "type": "string"
+        },
+        "syntax_checker": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     }
@@ -197,6 +203,12 @@ snapshot_kind: text
         },
         "path": {
           "type": "string"
+        },
+        "syntax_checker": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     }

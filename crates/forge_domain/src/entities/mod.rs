@@ -2,6 +2,7 @@
 //! Specification: https://platform.openai.com/docs/api-reference/chat/create
 
 mod chat_stream_ext;
+mod config;
 mod context;
 mod environment;
 mod message;
@@ -16,6 +17,7 @@ mod tool_result;
 mod tool_usage;
 
 pub use chat_stream_ext::*;
+pub use config::*;
 pub use context::*;
 pub use environment::*;
 pub use message::*;

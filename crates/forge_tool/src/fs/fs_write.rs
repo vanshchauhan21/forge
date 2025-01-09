@@ -30,14 +30,14 @@ impl ToolCallService for FSWrite {
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         // Validate file content if it's a supported language file
-        syn::validate(&input.path, &input.content)?;
+        let syntax_checker = syn::validate(&input.path, &input.content).err();
 
         // Write file only after validation passes
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
 
-        Ok(FSWriteOutput { path: input.path, content: input.content })
+        Ok(FSWriteOutput { path: input.path, syntax_checker, content: input.content })
     }
 }
 
@@ -45,6 +45,8 @@ impl ToolCallService for FSWrite {
 pub struct FSWriteOutput {
     pub path: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub syntax_checker: Option<String>,
 }
 
 #[cfg(test)]
@@ -89,9 +91,7 @@ mod test {
             })
             .await;
 
-        assert!(result.is_err());
-        // File should not exist since validation failed
-        assert!(!file_path.exists());
+        assert!(result.unwrap().syntax_checker.is_some());
     }
 
     #[tokio::test]

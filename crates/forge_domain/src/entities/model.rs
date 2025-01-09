@@ -26,6 +26,12 @@ impl Parameters {
 pub struct ModelId(String);
 
 impl ModelId {
+    pub fn new(id: &str) -> Self {
+        Self(id.to_string())
+    }
+}
+
+impl ModelId {
     pub fn as_str(&self) -> &str {
         &self.0
     }
