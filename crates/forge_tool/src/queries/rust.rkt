@@ -1,13 +1,24 @@
+;; Capture struct declarations
 (struct_item
-    name: (type_identifier) @name.definition.class) @definition.class
+  name: (type_identifier) @definition.class.name
+) @definition.class.declaration
 
-(function_item
-    name: (identifier) @name.definition.function) @definition.function
+;; Capture enum declarations
+(enum_item
+  name: (type_identifier) @definition.class.name
+) @definition.class.declaration
 
+;; Capture implementation blocks
 (impl_item
-    body: (declaration_list
-        (function_item
-            name: (identifier)
-            parameters: (parameters)
-            return_type: (_)?
-            body: (_)?) @name.definition.method)) @definition.method
+  type: (type_identifier) @definition.class.name
+) @definition.class
+
+;; Capture function declarations
+(function_item
+  name: (identifier) @function.name
+) @definition.function
+
+;; Capture trait declarations
+(trait_item
+  name: (type_identifier) @definition.class.name
+) @definition.class
