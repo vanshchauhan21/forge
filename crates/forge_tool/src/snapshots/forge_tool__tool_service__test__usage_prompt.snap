@@ -120,7 +120,36 @@ Usage:
 </fs_write>
 
 7. outline
-List definition names (classes, functions, methods, etc.) used in source code files. Provides insights into codebase structure and important constructs. Supports multiple programming languages including Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.
+List definition names (classes, functions, methods, etc.) in source code files. This tool is particularly 
+ useful when you need to:
+ 
+ - Map relationships between types, traits, and interfaces
+   - See inheritance hierarchies in object-oriented code
+   - Identify trait implementations in Rust
+   - Understand class composition patterns
+ - Analyze architectural patterns:
+   - Discover service/component dependencies
+   - Find implementation details of interfaces
+   - Track type usage across modules
+ - Navigate large codebases:
+   - Quickly find relevant type definitions
+   - Understand module organization
+   - Locate specific implementations
+ 
+ Supports multiple programming languages:
+ - Rust (.rs files): structs, traits, impls
+ - JavaScript (.js files): classes, methods, prototypes
+ - Python (.py files): classes, decorators, inheritance
+ 
+ Returns a formatted string showing file names and their definitions in a tree-like structure.
+ Example output:
+ ```text
+ models.rs
+ │trait Repository<T>
+ │struct UserRepository
+ |----
+ │impl Repository<User> for UserRepository
+ ```
 
 Parameters:
 - path (required): The path to the directory containing the source code files to analyze.
