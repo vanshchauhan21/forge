@@ -36,7 +36,7 @@ async fn context_html_handler(
 
 impl API {
     pub async fn init() -> Result<Self> {
-        tracing_subscriber::fmt().init();
+        crate::log::init_logger();
         let env = Service::environment_service().get().await?;
         let api = Arc::new(Service::root_api_service(env.clone()));
 
