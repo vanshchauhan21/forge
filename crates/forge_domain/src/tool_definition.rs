@@ -1,11 +1,10 @@
 use std::collections::BTreeSet;
 
-use inflector::Inflector;
 use schemars::schema::RootSchema;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{ToolCallService, ToolName, UsageParameterPrompt, UsagePrompt};
+use crate::{NamedTool, ToolCallService, ToolName, UsageParameterPrompt, UsagePrompt};
 
 ///
 /// Refer to the specification over here:
@@ -19,21 +18,15 @@ pub struct ToolDefinition {
 }
 
 impl ToolDefinition {
-    pub fn new<T>(description: String) -> Self
+    pub fn new<T>(t: &T) -> Self
     where
-        T: ToolCallService + ToolDescription + Send + Sync + 'static,
+        T: NamedTool + ToolCallService + ToolDescription + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
-        let name = std::any::type_name::<T>()
-            .split("::")
-            .last()
-            .unwrap()
-            .to_snake_case();
-
         let input: RootSchema = schemars::schema_for!(T::Input);
         let output: RootSchema = schemars::schema_for!(T::Output);
-        let mut full_description = description;
+        let mut full_description = t.description();
 
         full_description.push_str("\n\nParameters:");
 
@@ -76,7 +69,7 @@ impl ToolDefinition {
         }
 
         ToolDefinition {
-            name: ToolName::new(name),
+            name: t.tool_name(),
             description: full_description,
             input_schema: input,
             output_schema: Some(output),
