@@ -47,12 +47,11 @@ impl From<LogLevel> for LevelFilter {
 
 pub fn init_logger() {
     let level = LogLevel::from_env();
-    let filter = EnvFilter::from_default_env()
-        .add_directive(LevelFilter::from(level).into());
-        
+    let filter = EnvFilter::from_default_env().add_directive(LevelFilter::from(level).into());
+
     tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .without_time()     // Remove timestamp from log output
+        .without_time() // Remove timestamp from log output
         .with_target(false) // Remove package name/target from log output
         .init();
 }
