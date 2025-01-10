@@ -3,9 +3,16 @@ source: crates/forge_tool/src/outline.rs
 expression: result
 ---
 test.py
-│def greet(name):
+│def greet(name: str) -> str:
 |----
 │class Person:
-│def __init__(self, name):
+│__init__
 |----
-│def say_hello(self):
+│say_hello
+|----
+│def decorator(func):
+│def wrapper(*args, **kwargs):
+|----
+│def decorated_function():
+|----
+│async def fetch_data():

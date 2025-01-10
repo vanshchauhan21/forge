@@ -208,20 +208,36 @@ impl User {
     async fn test_outline_javascript() {
         let temp_dir = TempDir::new().unwrap();
         let content = r#"
+// Basic function
 function calculateTotal(items) {
     return items.reduce((sum, item) => sum + item.price, 0);
 }
+
+// Arrow function
+const processItems = (items) => {
+    return items.map(item => item.name);
+};
 
 class ShoppingCart {
     constructor() {
         this.items = [];
     }
 
+    // Instance method
     addItem(item) {
         this.items.push(item);
     }
+
+    // Static method
+    static getTotalPrice(items) {
+        return calculateTotal(items);
+    }
 }
-"#;
+
+// Async function
+async function fetchItems() {
+    return Promise.resolve([]);
+}"#;
         let file_path = temp_dir.path().join("test.js");
         fs::write(&file_path, content).await.unwrap();
 
@@ -238,16 +254,30 @@ class ShoppingCart {
     async fn test_outline_python() {
         let temp_dir = TempDir::new().unwrap();
         let content = r#"
-def greet(name):
+def greet(name: str) -> str:
     return f"Hello, {name}!"
 
+# Class with inheritance
 class Person:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
 
     def say_hello(self):
         return greet(self.name)
-"#;
+
+# Decorated method
+def decorator(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@decorator
+def decorated_function():
+    pass
+
+# Async function
+async def fetch_data():
+    return "data""#;
         let file_path = temp_dir.path().join("test.py");
         fs::write(&file_path, content).await.unwrap();
 
