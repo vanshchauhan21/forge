@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     let api = API::init()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
-    
+
     let mut content = initial_content;
     loop {
         let model = ModelId::from_env(api.env());
@@ -49,7 +49,8 @@ async fn main() -> Result<()> {
             conversation_id: current_conversation_id,
         };
 
-        let mut stream = api.chat(chat)
+        let mut stream = api
+            .chat(chat)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start chat stream: {}", e))?;
 
@@ -97,7 +98,7 @@ async fn main() -> Result<()> {
             "Available commands: {}",
             UserInput::available_commands().join(", ")
         );
-        
+
         let input = inquire::Text::new("")
             .with_help_message(&help_message)
             .prompt()?;

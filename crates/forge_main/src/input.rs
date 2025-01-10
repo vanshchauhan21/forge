@@ -28,7 +28,7 @@ impl UserInput {
         }
     }
 
-    fn available_commands() -> Vec<String> {
+    pub fn available_commands() -> Vec<String> {
         UserInput::iter()
             .filter_map(|cmd| match cmd {
                 UserInput::Message(_) => None,

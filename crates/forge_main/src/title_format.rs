@@ -29,10 +29,11 @@ pub fn format_title(title: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use insta::assert_snapshot;
     use once_cell::sync::Lazy;
     use regex::Regex;
+
+    use super::*;
 
     static ANSI_REGEX: Lazy<Regex> =
         Lazy::new(|| Regex::new(r"\x1B\[([0-9]{1,2}(;[0-9]{1,2})*)?[m|K]").unwrap());
@@ -48,7 +49,10 @@ mod tests {
             ("A", "single_char"),
             ("Hello", "short"),
             ("Hello, World!", "medium"),
-            ("This is a much longer title that should still work properly", "long"),
+            (
+                "This is a much longer title that should still work properly",
+                "long",
+            ),
             ("     ", "whitespace"),
         ];
 

@@ -85,9 +85,9 @@ pub struct OutlineInput {
     pub path: String,
 }
 
-/// List definition names (classes, functions, methods, etc.) in source code files. This tool is particularly 
-/// useful when you need to:
-/// 
+/// List definition names (classes, functions, methods, etc.) in source code
+/// files. This tool is particularly useful when you need to:
+///
 /// - Map relationships between types, traits, and interfaces
 ///   - See inheritance hierarchies in object-oriented code
 ///   - Identify trait implementations in Rust
@@ -100,14 +100,14 @@ pub struct OutlineInput {
 ///   - Quickly find relevant type definitions
 ///   - Understand module organization
 ///   - Locate specific implementations
-/// 
+///
 /// Supports multiple programming languages:
 /// - Rust (.rs files): structs, traits, impls
 /// - JavaScript (.js files): classes, methods, prototypes
 /// - Python (.py files): classes, decorators, inheritance
-/// 
-/// Returns a formatted string showing file names and their definitions in a tree-like structure.
-/// Example output:
+///
+/// Returns a formatted string showing file names and their definitions in a
+/// tree-like structure. Example output:
 /// ```text
 /// models.rs
 /// │trait Repository<T>
