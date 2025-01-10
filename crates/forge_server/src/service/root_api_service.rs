@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
 use forge_domain::{
-    Config, Context, Environment, Model, ResultStream, ToolDefinition, ToolService,
+    ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
+    ResultStream, ToolDefinition, ToolService,
 };
 use forge_provider::ProviderService;
 
 use super::chat_service::ConversationHistory;
 use super::completion_service::CompletionService;
-use super::{
-    ChatRequest, ChatResponse, ConfigService, Conversation, ConversationId, ConversationService,
-    File, Service, UIService,
-};
+use super::{ConfigService, ConversationService, File, Service, UIService};
 use crate::{Error, Result};
 
 #[async_trait::async_trait]

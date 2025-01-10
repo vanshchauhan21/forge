@@ -6,6 +6,7 @@ use derive_more::derive::{Display, From};
 pub enum Error {
     ToolCallMissingName,
     Serde(serde_json::Error),
+    Uuid(uuid::Error),
 }
 
 pub type Result<A> = std::result::Result<A, Error>;

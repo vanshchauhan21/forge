@@ -7,17 +7,18 @@ use axum::response::sse::{Event, Sse};
 use axum::response::Html;
 use axum::routing::{get, post};
 use axum::Router;
-use forge_domain::{Config, Context, Environment, Model, ResultStream, ToolDefinition};
+use forge_domain::{
+    ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Errata,
+    Model, ResultStream, ToolDefinition,
+};
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 use crate::context::ContextEngine;
-use crate::service::{
-    ChatRequest, Conversation, ConversationHistory, ConversationId, EnvironmentService, File,
-};
-use crate::{ChatResponse, Errata, Error, Result, RootAPIService, Service};
+use crate::service::{ConversationHistory, EnvironmentService, File};
+use crate::{Error, Result, RootAPIService, Service};
 
 pub struct API {
     api: Arc<dyn RootAPIService>,

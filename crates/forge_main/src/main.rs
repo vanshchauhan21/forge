@@ -3,8 +3,8 @@ use std::io::Write;
 
 use clap::Parser;
 use colored::Colorize;
-use forge_domain::ModelId;
-use forge_server::{ChatRequest, ChatResponse, Result, API};
+use forge_domain::{ChatRequest, ChatResponse, ModelId};
+use forge_server::{Result, API};
 use tokio_stream::StreamExt;
 
 #[derive(Parser)]

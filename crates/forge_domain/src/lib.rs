@@ -1,7 +1,11 @@
+mod chat_request;
+mod chat_response;
 mod chat_stream_ext;
 mod config;
 mod context;
+mod conversation;
 mod environment;
+mod errata;
 mod error;
 mod message;
 mod model;
@@ -16,10 +20,14 @@ mod tool_result;
 mod tool_service;
 mod tool_usage;
 
+pub use chat_request::*;
+pub use chat_response::*;
 pub use chat_stream_ext::*;
 pub use config::*;
 pub use context::*;
+pub use conversation::*;
 pub use environment::*;
+pub use errata::*;
 pub use error::*;
 pub use message::*;
 pub use model::*;

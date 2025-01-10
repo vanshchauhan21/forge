@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use forge_domain::{Context, ResultStream};
+use forge_domain::{ChatRequest, ChatResponse, Context, ResultStream};
 use tokio_stream::{once, StreamExt};
 use tracing::info;
 
 use super::workflow_title_service::TitleService;
-use super::{ChatRequest, ChatResponse, ChatService, ConversationService};
+use super::{ChatService, ConversationService};
 use crate::{Error, Service};
 
 #[async_trait::async_trait]
@@ -56,7 +56,7 @@ impl UIService for Live {
             (conversation, true)
         };
 
-        info!("Job {} started", conversation.id.as_uuid());
+        info!("Job {} started", conversation.id);
         let request = request.conversation_id(conversation.id);
 
         let mut stream = self
@@ -107,7 +107,7 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
-    use forge_domain::ModelId;
+
     use pretty_assertions::assert_eq;
 
     use super::super::conversation_service::tests::TestStorage;
@@ -133,16 +133,6 @@ mod tests {
         }
     }
 
-    impl Default for ChatRequest {
-        fn default() -> Self {
-            Self {
-                content: "test".to_string(),
-                model: ModelId::default(),
-                conversation_id: None,
-            }
-        }
-    }
-
     #[tokio::test]
     async fn test_chat_new_conversation() {
         let storage = Arc::new(TestStorage);
@@ -152,7 +142,7 @@ mod tests {
             storage.clone(),
             Arc::new(TestTitleService),
         );
-        let request = ChatRequest::default();
+        let request = ChatRequest::new("test");
 
         let mut responses = service.chat(request).await.unwrap();
 
@@ -189,7 +179,7 @@ mod tests {
             .await
             .unwrap();
 
-        let request = ChatRequest::default().conversation_id(conversation.id);
+        let request = ChatRequest::new("test").conversation_id(conversation.id);
         let mut responses = service.chat(request).await.unwrap();
 
         if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {

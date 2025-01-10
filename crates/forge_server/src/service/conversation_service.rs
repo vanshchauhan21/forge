@@ -1,57 +1,12 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use derive_setters::Setters;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable, Text, Timestamp};
-use forge_domain::Context;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use forge_domain::{Context, Conversation, ConversationId, ConversationMeta};
 
 use super::Service;
 use crate::schema::conversations;
 use crate::service::db_service::DBService;
 use crate::Result;
-
-#[derive(Debug, Setters, Serialize, Deserialize)]
-pub struct Conversation {
-    pub id: ConversationId,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<ConversationMeta>,
-    pub context: Context,
-    pub archived: bool,
-    pub title: Option<String>,
-}
-
-impl Conversation {
-    pub fn new(context: Context) -> Self {
-        Self {
-            id: ConversationId::generate(),
-            meta: None,
-            context,
-            archived: false,
-            title: None,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
-#[serde(transparent)]
-pub struct ConversationId(Uuid);
-
-impl ConversationId {
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ConversationMeta {
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
 
 #[derive(Debug, Insertable, Queryable, QueryableByName)]
 #[diesel(table_name = conversations)]
@@ -75,7 +30,7 @@ impl TryFrom<RawConversation> for Conversation {
 
     fn try_from(raw: RawConversation) -> Result<Self> {
         Ok(Conversation {
-            id: ConversationId(Uuid::parse_str(&raw.id).unwrap()),
+            id: ConversationId::parse(raw.id)?,
             meta: Some(ConversationMeta {
                 created_at: DateTime::from_naive_utc_and_offset(raw.created_at, Utc),
                 updated_at: DateTime::from_naive_utc_and_offset(raw.updated_at, Utc),
@@ -126,7 +81,7 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
         let id = id.unwrap_or_else(ConversationId::generate);
 
         let raw = RawConversation {
-            id: id.0.to_string(),
+            id: id.into_string(),
             created_at: Utc::now().naive_utc(),
             updated_at: Utc::now().naive_utc(),
             content: serde_json::to_string(request)?,
@@ -145,7 +100,7 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
             .execute(&mut conn)?;
 
         let raw: RawConversation = conversations::table
-            .find(id.0.to_string())
+            .find(id.into_string())
             .first(&mut conn)?;
 
         Conversation::try_from(raw)
@@ -155,7 +110,7 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
         let raw: RawConversation = conversations::table
-            .find(id.0.to_string())
+            .find(id.into_string())
             .first(&mut conn)?;
 
         Conversation::try_from(raw)
@@ -175,12 +130,12 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
 
-        diesel::update(conversations::table.find(id.0.to_string()))
+        diesel::update(conversations::table.find(id.into_string()))
             .set(conversations::archived.eq(true))
             .execute(&mut conn)?;
 
         let raw: RawConversation = conversations::table
-            .find(id.0.to_string())
+            .find(id.into_string())
             .first(&mut conn)?;
 
         Conversation::try_from(raw)
@@ -194,12 +149,12 @@ impl<P: DBService + Send + Sync> ConversationService for Live<P> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
 
-        diesel::update(conversations::table.find(id.0.to_string()))
+        diesel::update(conversations::table.find(id.into_string()))
             .set(conversations::title.eq(title))
             .execute(&mut conn)?;
 
         let raw: RawConversation = conversations::table
-            .find(id.0.to_string())
+            .find(id.into_string())
             .first(&mut conn)?;
 
         raw.try_into()
@@ -221,11 +176,6 @@ pub mod tests {
     use super::super::db_service::tests::TestDbPool;
     use super::*;
 
-    impl ConversationId {
-        pub fn new(id: impl Into<String>) -> Self {
-            ConversationId(Uuid::parse_str(&id.into()).unwrap())
-        }
-    }
     pub struct TestStorage;
     impl TestStorage {
         pub fn in_memory() -> Result<impl ConversationService> {
@@ -254,7 +204,7 @@ pub mod tests {
         let saved = create_conversation(&storage, Some(id)).await.unwrap();
         let retrieved = storage.get_conversation(id).await.unwrap();
 
-        assert_eq!(saved.id.0, retrieved.id.0);
+        assert_eq!(saved.id, retrieved.id);
         assert_eq!(saved.context, retrieved.context);
     }
 

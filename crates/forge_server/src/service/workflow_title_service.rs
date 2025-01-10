@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use forge_domain::{Context, ContextMessage, ResultStream};
+use forge_domain::{ChatRequest, ChatResponse, Context, ContextMessage, ResultStream};
 use forge_provider::ProviderService;
 use handlebars::Handlebars;
 use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
-use super::{ChatRequest, ChatResponse, Service};
+use super::Service;
 use crate::{Error, Result};
 
 impl Service {
@@ -108,12 +108,11 @@ mod tests {
     use std::sync::Arc;
     use std::vec;
 
-    use forge_domain::{ChatCompletionMessage, FinishReason};
+    use forge_domain::{ChatCompletionMessage, ChatResponse, ConversationId, FinishReason};
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, Live, TitleService};
     use crate::service::tests::TestProvider;
-    use crate::service::{ChatResponse, ConversationId};
 
     #[derive(Default)]
     struct Fixture(Vec<Vec<ChatCompletionMessage>>);
@@ -142,8 +141,9 @@ mod tests {
 
         let actual = Fixture(mock_llm_responses)
             .run(
-                ChatRequest::new("write an rust program to generate an fibo seq.")
-                    .conversation_id(ConversationId::new("5af97419-0277-410a-8ca6-0e2a252152c5")),
+                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
+                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
+                ),
             )
             .await;
 
