@@ -12,11 +12,32 @@ struct Cli {
     exec: Option<String>,
 }
 
+#[derive(Debug)]
+enum ChatCommand {
+    End,
+    New,
+    Message(String),
+}
+
+impl ChatCommand {
+    fn parse(input: &str) -> Result<Self> {
+        let trimmed = input.trim();
+        match trimmed {
+            "/end" => Ok(ChatCommand::End),
+            "/new" => Ok(ChatCommand::New),
+            cmd if cmd.starts_with('/') => {
+                Err(forge_server::Error::InvalidInput(format!("Unknown command: {}", cmd)))
+            }
+            text => Ok(ChatCommand::Message(text.to_string())),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let mut content = if let Some(path) = cli.exec {
+    let initial_content = if let Some(path) = cli.exec {
         let cwd = std::env::current_dir()?;
         let full_path = cwd.join(path);
         tokio::fs::read_to_string(full_path)
@@ -31,9 +52,11 @@ async fn main() -> Result<()> {
             .to_string()
     };
 
-    println!("{}", content.trim());
+    println!("{}", initial_content.trim());
     let mut current_conversation_id = None;
     let api = API::init().await?;
+    
+    let mut content = initial_content;
     loop {
         let model = ModelId::from_env(api.env());
         let chat = ChatRequest {
@@ -72,9 +95,7 @@ async fn main() -> Result<()> {
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
-                    println!("╔═{:═>1$}═╗", "", title.len() + 2);
-                    println!("║ {} ║", title.bright_cyan().bold());
-                    println!("╚═{:═>1$}═╝", "", title.len() + 2);
+                    println!("{}", forge_main::format_title(&title));
                 }
             }
 
@@ -82,21 +103,27 @@ async fn main() -> Result<()> {
         }
 
         println!();
-        content = inquire::Text::new("")
-            .with_help_message("type '/done' to end, '/clear' to start fresh")
+        let input = inquire::Text::new("")
+            .with_help_message(
+                "type '/end' to end this conversation, '/new' to start a new conversation",
+            )
             .prompt()
             .unwrap();
-        let trimmed = content.trim();
-        if trimmed == "/done" {
-            break;
-        } else if trimmed == "/clear" {
-            println!("Starting fresh conversation...");
-            current_conversation_id = None;
-            content = inquire::Text::new("")
-                .with_help_message("How can I help?")
-                .prompt()
-                .unwrap()
-                .to_string();
+
+        match ChatCommand::parse(&input)? {
+            ChatCommand::End => break,
+            ChatCommand::New => {
+                println!("Starting fresh conversation...");
+                current_conversation_id = None;
+                content = inquire::Text::new("")
+                    .with_help_message("How can I help?")
+                    .prompt()
+                    .unwrap()
+                    .to_string();
+            }
+            ChatCommand::Message(msg) => {
+                content = msg;
+            }
         }
     }
 

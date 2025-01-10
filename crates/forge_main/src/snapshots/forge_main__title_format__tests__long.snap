@@ -1,0 +1,8 @@
+---
+source: crates/forge_main/src/title_format.rs
+expression: clean
+snapshot_kind: text
+---
+╔═════════════════════════════════════════════════════════════╗
+║ This is a much longer title that should still work properly ║
+╚═════════════════════════════════════════════════════════════╝
