@@ -3,7 +3,7 @@ use proc_macro2::TokenTree;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(Description)]
+#[proc_macro_derive(ToolDescription)]
 pub fn derive_description(input: TokenStream) -> TokenStream {
     // Parse the input struct or enum
     let input = parse_macro_input!(input as DeriveInput);
@@ -44,11 +44,11 @@ pub fn derive_description(input: TokenStream) -> TokenStream {
     }
     let doc_string = doc_lines.join("\n").trim().to_string();
 
-    // Generate an implementation of `Description` that returns the doc string
+    // Generate an implementation of `ToolDescription` that returns the doc string
     let expanded = quote! {
-        impl Description for #name {
-            fn description() -> &'static str {
-                #doc_string
+        impl ToolDescription for #name {
+            fn description(&self) -> String {
+                #doc_string.into()
             }
         }
     };

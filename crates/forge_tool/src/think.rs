@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use colorize::AnsiColor;
-use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description;
+use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 /// - `thought_history`: Steps taken.
 /// - `branches`: Alternate paths.
 /// - `solution_reached`: Final solution.
-#[derive(Clone, Default, Description)]
+#[derive(Clone, Default, ToolDescription)]
 pub struct Think {
     thought_history: Vec<ThoughtInput>,
     branches: HashMap<String, Vec<ThoughtInput>>,

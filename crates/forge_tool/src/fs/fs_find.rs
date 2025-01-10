@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description;
+use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
 use regex::Regex;
 use schemars::JsonSchema;
@@ -24,7 +24,7 @@ pub struct FSSearchInput {
 /// providing context-rich results. This tool searches for patterns or specific
 /// content across multiple files, displaying each match with encapsulating
 /// context.
-#[derive(Description)]
+#[derive(ToolDescription)]
 pub struct FSSearch;
 
 #[async_trait::async_trait]

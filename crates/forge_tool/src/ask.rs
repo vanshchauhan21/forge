@@ -1,5 +1,5 @@
-use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description;
+use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -14,7 +14,7 @@ pub struct AskFollowUpQuestionInput {
 /// the task. This tool should be used when you encounter ambiguities, need
 /// clarification, or require more details to proceed effectively. It allows for
 /// interactive problem-solving by enabling direct communication with the user.
-#[derive(Description)]
+#[derive(ToolDescription)]
 pub struct AskFollowUpQuestion;
 
 #[async_trait::async_trait]
@@ -46,6 +46,6 @@ mod test {
 
     #[test]
     fn test_description() {
-        assert!(AskFollowUpQuestion::description().len() > 100)
+        assert!(AskFollowUpQuestion.description().len() > 100)
     }
 }

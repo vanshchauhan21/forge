@@ -21,7 +21,7 @@ pub struct ToolDefinition {
 impl ToolDefinition {
     pub fn new<T>(description: String) -> Self
     where
-        T: ToolCallService + Description + Send + Sync + 'static,
+        T: ToolCallService + ToolDescription + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
@@ -109,6 +109,6 @@ impl ToolDefinition {
     }
 }
 
-pub trait Description {
-    fn description() -> &'static str;
+pub trait ToolDescription {
+    fn description(&self) -> String;
 }

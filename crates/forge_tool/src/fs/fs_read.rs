@@ -1,5 +1,5 @@
-use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description;
+use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -15,7 +15,7 @@ pub struct FSReadInput {
 /// information from configuration files. Automatically extracts raw text from
 /// PDF and DOCX files. May not be suitable for other types of binary files, as
 /// it returns the raw content as a string.
-#[derive(Description)]
+#[derive(ToolDescription)]
 pub struct FSRead;
 
 #[async_trait::async_trait]
@@ -86,6 +86,6 @@ mod test {
 
     #[test]
     fn test_description() {
-        assert!(FSRead::description().len() > 100)
+        assert!(FSRead.description().len() > 100)
     }
 }

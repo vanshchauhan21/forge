@@ -2,8 +2,8 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use forge_domain::{Description, ToolCallService};
-use forge_tool_macros::Description;
+use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
@@ -26,7 +26,7 @@ pub struct ShellOutput {
 /// Execute shell commands with safety checks and validation. This tool provides
 /// controlled access to system shell commands while preventing dangerous
 /// operations through a comprehensive blacklist and validation system.
-#[derive(Description)]
+#[derive(ToolDescription)]
 pub struct Shell {
     blacklist: HashSet<String>,
 }
@@ -275,6 +275,6 @@ mod tests {
 
     #[test]
     fn test_description() {
-        assert!(Shell::description().len() > 100)
+        assert!(Shell::default().description().len() > 100)
     }
 }

@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde_json::Value;
 
-use crate::{Description, ToolCallService, ToolDefinition};
+use crate::{ToolCallService, ToolDefinition, ToolDescription};
 
 struct JsonTool<T>(T);
 
@@ -35,12 +35,12 @@ pub struct Tool {
 impl Tool {
     pub fn new<T>(tool: T) -> Tool
     where
-        T: ToolCallService + Description + Send + Sync + 'static,
+        T: ToolCallService + ToolDescription + Send + Sync + 'static,
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
+        let description = tool.description().to_string();
         let executable = Box::new(JsonTool::new(tool));
-        let description = T::description().to_string();
         let definition = ToolDefinition::new::<T>(description);
 
         Tool { executable, definition }
