@@ -72,7 +72,9 @@ async fn main() -> Result<()> {
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
-                    println!("title: {}", title);
+                    println!("╔═{:═>1$}═╗", "", title.len() + 2);
+                    println!("║ {} ║", title.bright_cyan().bold());
+                    println!("╚═{:═>1$}═╝", "", title.len() + 2);
                 }
             }
 
@@ -81,11 +83,20 @@ async fn main() -> Result<()> {
 
         println!();
         content = inquire::Text::new("")
-            .with_help_message("type '/done' to end this conversation.")
+            .with_help_message("type '/done' to end, '/clear' to start fresh")
             .prompt()
             .unwrap();
-        if content.trim() == "/done" {
+        let trimmed = content.trim();
+        if trimmed == "/done" {
             break;
+        } else if trimmed == "/clear" {
+            println!("Starting fresh conversation...");
+            current_conversation_id = None;
+            content = inquire::Text::new("")
+                .with_help_message("How can I help?")
+                .prompt()
+                .unwrap()
+                .to_string();
         }
     }
 
