@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
 use serde_json::Value;
-use tracing::info;
+use tracing::debug;
 
 use crate::fs::*;
 use crate::outline::Outline;
@@ -30,7 +30,7 @@ impl ToolService for Live {
     async fn call(&self, call: ToolCallFull) -> ToolResult {
         let name = call.name.clone();
         let input = call.arguments.clone();
-        info!("Calling tool: {}", name.as_str());
+        debug!("Calling tool: {}", name.as_str());
         let available_tools = self
             .tools
             .keys()

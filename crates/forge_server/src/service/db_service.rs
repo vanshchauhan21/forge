@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use tracing::info;
+use tracing::debug;
 
 use super::Service;
 use crate::Result;
@@ -36,7 +36,7 @@ impl Live {
         let mut conn = SqliteConnection::establish(&db_path)?;
         let migrations = conn.run_pending_migrations(MIGRATIONS)?;
 
-        info!(
+        debug!(
             "Running {} migrations for database: {}",
             migrations.len(),
             db_path

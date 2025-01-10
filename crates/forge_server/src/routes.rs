@@ -14,7 +14,7 @@ use forge_domain::{
 use serde::Serialize;
 use tokio_stream::{Stream, StreamExt};
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::debug;
 
 use crate::context::ContextEngine;
 use crate::service::{ConversationHistory, EnvironmentService, File};
@@ -85,7 +85,7 @@ impl API {
             let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{SERVER_PORT}"))
                 .await
                 .unwrap();
-            info!("Server running on http://127.0.0.1:{SERVER_PORT}");
+            debug!("Server running on http://127.0.0.1:{SERVER_PORT}");
             axum::serve(listener, app).await.unwrap();
         });
 

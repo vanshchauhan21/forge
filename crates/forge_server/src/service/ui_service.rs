@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use forge_domain::{ChatRequest, ChatResponse, Context, ResultStream};
 use tokio_stream::{once, StreamExt};
-use tracing::info;
+use tracing::debug;
 
 use super::workflow_title_service::TitleService;
 use super::{ChatService, ConversationService};
@@ -56,7 +56,7 @@ impl UIService for Live {
             (conversation, true)
         };
 
-        info!("Job {} started", conversation.id);
+        debug!("Job {} started", conversation.id);
         let request = request.conversation_id(conversation.id);
 
         let mut stream = self
