@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use forge_domain::{ToolCallService, ToolDescription};
+use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use streaming_iterator::{IntoStreamingIterator, StreamingIterator};
@@ -84,17 +85,11 @@ pub struct OutlineInput {
     pub path: String,
 }
 
+/// List definition names (classes, functions, methods, etc.) used in source code files. Provides insights
+/// into codebase structure and important constructs. Supports multiple programming languages including
+/// Rust, JavaScript, and Python. Returns a formatted string showing file names and their definitions.
+#[derive(ToolDescription)]
 pub(crate) struct Outline;
-
-impl ToolDescription for Outline {
-    fn description(&self) -> String {
-        "List definition names (classes, functions, methods, etc.) used in source code files. \
-        Provides insights into codebase structure and important constructs. Supports multiple \
-        programming languages including Rust, JavaScript, and Python. Returns a formatted \
-        string showing file names and their definitions."
-            .into()
-    }
-}
 
 #[async_trait::async_trait]
 impl ToolCallService for Outline {
