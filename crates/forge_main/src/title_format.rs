@@ -41,46 +41,26 @@ mod tests {
         ANSI_REGEX.replace_all(s, "").to_string()
     }
 
-    fn debug_string_chars(s: &str) {
-        println!("String literal bytes: {:?}", s.as_bytes());
-        println!("String visual width: {}", s.width());
-        println!("String chars:");
-        for (i, c) in s.chars().enumerate() {
-            println!("  {}: {:?} (width: {})", i, c, c.to_string().width());
-        }
-    }
-
     #[test]
     fn test_format_title_various_lengths() {
-        // Test cases
         let test_cases = [
             ("", "empty"),
             ("A", "single_char"),
             ("Hello", "short"),
             ("Hello, World!", "medium"),
-            (
-                "This is a much longer title that should still work properly",
-                "long",
-            ),
-            ("     ", "whitespace"), // Added whitespace test
+            ("This is a much longer title that should still work properly", "long"),
+            ("     ", "whitespace"),
         ];
 
         for (title, name) in test_cases {
             let formatted = format_title(title);
-            // Strip ANSI codes for snapshot testing
             let clean = strip_ansi(&formatted);
-            println!("\nTest case: {}", name);
-            println!("Input: {:?}", title);
-            println!("Output:\n{}", clean);
-            println!("Character analysis of output:");
-            debug_string_chars(&clean);
             assert_snapshot!(name, clean);
         }
     }
 
     #[test]
     fn test_border_alignment() {
-        // Test cases with expected alignments
         let cases = [
             "",
             "Test Title",
@@ -92,18 +72,6 @@ mod tests {
         for title in cases {
             let formatted = strip_ansi(&format_title(title));
             let lines: Vec<&str> = formatted.lines().collect();
-
-            println!("\nTesting title: {:?}", title);
-            println!("Output:\n{}", formatted);
-            println!(
-                "Line visual widths: {:?}",
-                lines.iter().map(|l| l.width()).collect::<Vec<_>>()
-            );
-            println!("Line character analysis:");
-            for (i, line) in lines.iter().enumerate() {
-                println!("Line {}:", i);
-                debug_string_chars(line);
-            }
 
             assert_eq!(lines.len(), 3, "Should have exactly 3 lines");
             assert_eq!(
@@ -129,9 +97,5 @@ mod tests {
         assert_eq!(make_border_line(4, false), "╚════╝");
         assert_eq!(make_border_line(0, true), "╔╗");
         assert_eq!(make_border_line(0, false), "╚╝");
-
-        println!("\nDebug border line characters:");
-        let line = make_border_line(4, true);
-        debug_string_chars(&line);
     }
 }

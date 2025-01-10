@@ -865,13 +865,20 @@ dependencies = [
 name = "forge_main"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "colored",
  "forge_domain",
  "forge_server",
  "inquire",
+ "insta",
+ "once_cell",
+ "regex",
+ "strum",
+ "strum_macros",
  "tokio",
  "tokio-stream",
+ "unicode-width",
 ]
 
 [[package]]

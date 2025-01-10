@@ -1,36 +1,18 @@
-use core::panic;
 use std::io::Write;
 
+use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
-use forge_server::{Result, API};
+use forge_server::API;
 use tokio_stream::StreamExt;
+
+mod input;
+use input::UserInput;
 
 #[derive(Parser)]
 struct Cli {
     exec: Option<String>,
-}
-
-#[derive(Debug)]
-enum ChatCommand {
-    End,
-    New,
-    Message(String),
-}
-
-impl ChatCommand {
-    fn parse(input: &str) -> Result<Self> {
-        let trimmed = input.trim();
-        match trimmed {
-            "/end" => Ok(ChatCommand::End),
-            "/new" => Ok(ChatCommand::New),
-            cmd if cmd.starts_with('/') => {
-                Err(forge_server::Error::InvalidInput(format!("Unknown command: {}", cmd)))
-            }
-            text => Ok(ChatCommand::Message(text.to_string())),
-        }
-    }
 }
 
 #[tokio::main]
@@ -40,21 +22,23 @@ async fn main() -> Result<()> {
     let initial_content = if let Some(path) = cli.exec {
         let cwd = std::env::current_dir()?;
         let full_path = cwd.join(path);
-        tokio::fs::read_to_string(full_path)
-            .await?
+        tokio::fs::read_to_string(&full_path)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to read file {}: {}", full_path.display(), e))?
             .trim()
             .to_string()
     } else {
         inquire::Text::new("")
             .with_help_message("How can I help?")
-            .prompt()
-            .unwrap()
+            .prompt()?
             .to_string()
     };
 
     println!("{}", initial_content.trim());
     let mut current_conversation_id = None;
-    let api = API::init().await?;
+    let api = API::init()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
     
     let mut content = initial_content;
     loop {
@@ -65,9 +49,13 @@ async fn main() -> Result<()> {
             conversation_id: current_conversation_id,
         };
 
-        let mut stream = api.chat(chat).await?;
+        let mut stream = api.chat(chat)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to start chat stream: {}", e))?;
+
         while let Some(message) = stream.next().await {
-            match message.unwrap() {
+            let message = message.map_err(|e| anyhow::anyhow!("Stream error: {}", e))?;
+            match message {
                 ChatResponse::Text(text) => {
                     print!("{}", text);
                 }
@@ -91,7 +79,7 @@ async fn main() -> Result<()> {
                 ChatResponse::ModifyContext(_) => {}
                 ChatResponse::Complete => {}
                 ChatResponse::Error(err) => {
-                    panic!("{:?}", err);
+                    return Err(anyhow::anyhow!("Chat error: {:?}", err));
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
@@ -99,29 +87,32 @@ async fn main() -> Result<()> {
                 }
             }
 
-            std::io::stdout().flush().unwrap();
+            std::io::stdout()
+                .flush()
+                .map_err(|e| anyhow::anyhow!("Failed to flush stdout: {}", e))?;
         }
 
         println!();
+        let help_message = format!(
+            "Available commands: {}",
+            UserInput::available_commands().join(", ")
+        );
+        
         let input = inquire::Text::new("")
-            .with_help_message(
-                "type '/end' to end this conversation, '/new' to start a new conversation",
-            )
-            .prompt()
-            .unwrap();
+            .with_help_message(&help_message)
+            .prompt()?;
 
-        match ChatCommand::parse(&input)? {
-            ChatCommand::End => break,
-            ChatCommand::New => {
+        match UserInput::parse(&input)? {
+            UserInput::End => break,
+            UserInput::New => {
                 println!("Starting fresh conversation...");
                 current_conversation_id = None;
                 content = inquire::Text::new("")
                     .with_help_message("How can I help?")
-                    .prompt()
-                    .unwrap()
+                    .prompt()?
                     .to_string();
             }
-            ChatCommand::Message(msg) => {
+            UserInput::Message(msg) => {
                 content = msg;
             }
         }
