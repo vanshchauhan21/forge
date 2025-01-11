@@ -1,47 +1,14 @@
-use std::io::Write;
 use std::path::Path;
 
 use dissimilar::Chunk;
 use forge_domain::{ToolCallService, ToolDescription};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tempfile::NamedTempFile;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
 use tracing::{debug, error};
 
 use super::fs_replace_marker::{DIVIDER, REPLACE, SEARCH};
 use crate::fs::syn;
-
-async fn persist_changes<P: AsRef<Path>>(
-    temp_file: NamedTempFile,
-    path: P,
-    backup_path: impl AsRef<Path>,
-) -> Result<(), String> {
-    // Persist changes atomically
-    match temp_file.persist(&path) {
-        Ok(_) => {
-            debug!("Successfully persisted changes to {:?}", path.as_ref());
-            // Remove backup file on success
-            if backup_path.as_ref().exists() {
-                if let Err(e) = fs::remove_file(&backup_path).await {
-                    error!("Failed to remove backup file: {}", e);
-                }
-            }
-            Ok(())
-        }
-        Err(e) => {
-            error!("Failed to persist changes: {}", e);
-            // Restore from backup if persist failed
-            if backup_path.as_ref().exists() {
-                if let Err(e) = fs::rename(&backup_path, &path).await {
-                    error!("Failed to restore from backup: {}", e);
-                }
-            }
-            Err(e.to_string())
-        }
-    }
-}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReplaceInput {
@@ -165,42 +132,22 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
     Ok(blocks)
 }
 
+/// Apply changes to file content based on search/replace blocks.
+/// Changes are only written to disk if all replacements are successful.
 async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
-    let mut content = String::new();
-    let mut result = String::new();
-    let backup_path = path.as_ref().with_extension("bak");
-
-    // Handle new file or empty file case
-    if !path.as_ref().exists() || blocks[0].search.is_empty() {
-        let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
-        if !blocks[0].replace.is_empty() {
-            // Validate content before writing for new file
-            write!(temp_file, "{}", blocks[0].replace).map_err(|e| e.to_string())?;
-            result = blocks[0].replace.clone();
-        }
-        persist_changes(temp_file, path, backup_path).await?;
-        return Ok(result);
-    }
-
-    // Create backup and read existing file
-    fs::copy(&path, &backup_path).await.map_err(|e| {
-        error!("Failed to create backup: {}", e);
-        e.to_string()
-    })?;
-    debug!("Created backup at {:?}", backup_path);
-
-    let mut file = fs::File::open(&path).await.map_err(|e| {
-        error!("Failed to open source file: {}", e);
-        e.to_string()
-    })?;
-
-    file.read_to_string(&mut content).await.map_err(|e| {
-        error!("Failed to read file content: {}", e);
-        e.to_string()
-    })?;
-
-    result = content.clone();
-    let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
+    // Initialize content based on whether file exists
+    let mut result = if path.as_ref().exists() {
+        fs::read_to_string(&path)
+            .await
+            .map_err(|e| {
+                error!("Failed to read file content: {}", e);
+                e.to_string()
+            })?
+    } else if !blocks[0].search.is_empty() {
+        return Err("File does not exist and search pattern is not empty".to_string());
+    } else {
+        String::new()
+    };
 
     // Apply each block sequentially
     for block in blocks {
@@ -250,8 +197,13 @@ async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<St
     }
 
     // Write the modified content
-    write!(temp_file, "{}", result).map_err(|e| e.to_string())?;
-    persist_changes(temp_file, path, backup_path).await?;
+    fs::write(&path, &result)
+        .await
+        .map_err(|e| {
+            error!("Failed to write file: {}", e);
+            e.to_string()
+        })?;
+    debug!("Successfully wrote changes to {:?}", path.as_ref());
 
     Ok(result)
 }
@@ -578,10 +530,8 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!(
-                    "{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n",
-                    SEARCH, DIVIDER, REPLACE
-                )
+                diff: format!("{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n", 
+                    SEARCH, DIVIDER, REPLACE)
                 .to_string(),
             })
             .await;
