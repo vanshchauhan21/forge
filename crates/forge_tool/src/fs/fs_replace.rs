@@ -137,12 +137,10 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
 async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
     // Initialize content based on whether file exists
     let mut result = if path.as_ref().exists() {
-        fs::read_to_string(&path)
-            .await
-            .map_err(|e| {
-                error!("Failed to read file content: {}", e);
-                e.to_string()
-            })?
+        fs::read_to_string(&path).await.map_err(|e| {
+            error!("Failed to read file content: {}", e);
+            e.to_string()
+        })?
     } else if !blocks[0].search.is_empty() {
         return Err("File does not exist and search pattern is not empty".to_string());
     } else {
@@ -197,12 +195,10 @@ async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<St
     }
 
     // Write the modified content
-    fs::write(&path, &result)
-        .await
-        .map_err(|e| {
-            error!("Failed to write file: {}", e);
-            e.to_string()
-        })?;
+    fs::write(&path, &result).await.map_err(|e| {
+        error!("Failed to write file: {}", e);
+        e.to_string()
+    })?;
     debug!("Successfully wrote changes to {:?}", path.as_ref());
 
     Ok(result)
@@ -530,8 +526,10 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n", 
-                    SEARCH, DIVIDER, REPLACE)
+                diff: format!(
+                    "{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n",
+                    SEARCH, DIVIDER, REPLACE
+                )
                 .to_string(),
             })
             .await;
