@@ -17,6 +17,7 @@ strum = "0.26.3"
 strum_macros = "0.26.4"
 anyhow = "1.0.95"
 unicode-width = "0.1.11"
+chrono = "0.4"
 
 [dev-dependencies]
 insta = "1.34.0"
