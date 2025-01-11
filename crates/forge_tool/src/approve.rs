@@ -13,7 +13,8 @@ pub struct ApproveInput {
 }
 
 /// The approve tool provides an interactive confirmation dialog for critical
-/// operations.
+/// operations. Use this tool when a simple yes/no answer is sufficient for
+/// to proceed with its decision-making.
 ///
 /// # Use Cases
 /// - Confirming destructive operations (file deletions, data modifications)
