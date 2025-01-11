@@ -263,16 +263,20 @@ snapshot_kind: text
       "title": "ShellOutput",
       "type": "object",
       "required": [
-        "stderr",
-        "stdout",
         "success"
       ],
       "properties": {
         "stderr": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "stdout": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "success": {
           "type": "boolean"
