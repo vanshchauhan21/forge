@@ -10,7 +10,9 @@ use tokio_stream::StreamExt;
 
 mod input;
 mod status;
+mod console;
 
+use console::CONSOLE;
 use input::UserInput;
 use status::{StatusDisplay, StatusKind};
 
@@ -22,8 +24,7 @@ struct Cli {
 }
 
 fn clear_line() {
-    print!("\r\x1B[K"); // Clear the current line
-    std::io::stdout().flush().unwrap();
+    CONSOLE.write("\r\x1B[K").unwrap(); // Clear the current line
 }
 
 fn get_timestamp() -> String {
@@ -46,7 +47,7 @@ async fn main() -> Result<()> {
         UserInput::prompt_initial()?
     };
 
-    println!("{}", initial_content.trim());
+    CONSOLE.writeln(&initial_content.trim())?;
     let mut current_conversation_id = None;
     let api = API::init()
         .await
@@ -73,33 +74,32 @@ async fn main() -> Result<()> {
             match message {
                 ChatResponse::Text(text) => {
                     if current_tool.is_some() {
-                        println!();
+                        CONSOLE.writeln("")?;
                         current_tool = None;
                     }
-                    print!("{}", text);
+                    CONSOLE.write(&text)?;
                 }
                 ChatResponse::ToolCallDetected(_) => {}
                 ChatResponse::ToolCallArgPart(arg) => {
                     if cli.verbose {
-                        print!("{}", arg);
+                        CONSOLE.write(&arg)?;
                     }
                 }
                 ChatResponse::ToolCallStart(tool_call_full) => {
                     let tool_name = tool_call_full.name.as_str();
                     if cli.verbose {
-                        println!(
+                        CONSOLE.writeln(&format!(
                             "\n{} {} {} {}",
                             "▶".white(),
                             "TOOL USE DETECTED:".bold().white(),
                             tool_name,
                             "◀".white()
-                        );
+                        ))?;
                     } else {
-                        // Only clear line if we're already showing a tool status
                         if current_tool.is_some() {
                             clear_line();
                         } else {
-                            println!(); // New line for first tool status
+                            CONSOLE.writeln("")?;
                         }
                         let status = StatusDisplay {
                             kind: StatusKind::Execute,
@@ -107,14 +107,13 @@ async fn main() -> Result<()> {
                             timestamp: Some(get_timestamp()),
                             error_details: None,
                         };
-                        print!("{}", status.format());
-                        std::io::stdout().flush()?;
+                        CONSOLE.write(&status.format())?;
                         current_tool = Some(tool_name.to_string());
                     }
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
                     if cli.verbose {
-                        println!("{}", tool_result);
+                        CONSOLE.writeln(&tool_result.to_string())?;
                     } else if let Some(tool_name) = &current_tool {
                         clear_line();
                         let status = if tool_result.is_error {
@@ -132,8 +131,7 @@ async fn main() -> Result<()> {
                                 error_details: None,
                             }
                         };
-                        print!("{}", status.format());
-                        std::io::stdout().flush()?;
+                        CONSOLE.write(&status.format())?;
                     }
                 }
                 ChatResponse::ConversationStarted(conversation_id) => {
@@ -143,14 +141,14 @@ async fn main() -> Result<()> {
                 ChatResponse::Complete => {}
                 ChatResponse::Error(err) => {
                     if current_tool.is_some() {
-                        println!();
+                        CONSOLE.writeln("")?;
                     }
                     return Err(anyhow::anyhow!("Chat error: {:?}", err));
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
                     if current_tool.is_some() {
-                        println!();
+                        CONSOLE.writeln("")?;
                         current_tool = None;
                     }
                     let status = StatusDisplay {
@@ -159,25 +157,21 @@ async fn main() -> Result<()> {
                         timestamp: Some(get_timestamp()),
                         error_details: None,
                     };
-                    println!("{}", status.format());
+                    CONSOLE.writeln(&status.format())?;
                 }
                 ChatResponse::FinishReason(_) => {
                     if current_tool.is_some() {
-                        println!();
+                        CONSOLE.writeln("")?;
                         current_tool = None;
                     }
                 }
             }
-
-            std::io::stdout()
-                .flush()
-                .map_err(|e| anyhow::anyhow!("Failed to flush stdout: {}", e))?;
         }
 
         match UserInput::prompt()? {
             UserInput::End => break,
             UserInput::New => {
-                println!("Starting fresh conversation...");
+                CONSOLE.writeln("Starting fresh conversation...")?;
                 current_conversation_id = None;
                 content = UserInput::prompt_initial()?;
             }

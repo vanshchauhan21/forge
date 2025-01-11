@@ -874,6 +874,7 @@ dependencies = [
  "forge_server",
  "inquire 0.7.5",
  "insta",
+ "lazy_static",
  "once_cell",
  "regex",
  "strum",

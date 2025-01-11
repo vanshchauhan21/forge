@@ -2,6 +2,8 @@ use anyhow::Result;
 use inquire::Autocomplete;
 use strum_macros::AsRefStr;
 
+use crate::console::CONSOLE;
+
 #[derive(Debug)]
 pub enum UserInput {
     End,
@@ -112,7 +114,7 @@ impl UserInput {
 
             match InputKind::parse(&text)? {
                 InputKind::Help => {
-                    println!("\n{}\n", InputKind::get_help_text());
+                    CONSOLE.writeln(&format!("\n{}\n", InputKind::get_help_text()))?;
                     continue;
                 }
                 InputKind::User(input) => return Ok(input),
@@ -132,7 +134,7 @@ impl UserInput {
 
             match InputKind::parse(&text)? {
                 InputKind::Help => {
-                    println!("\n{}\n", InputKind::get_help_text());
+                    CONSOLE.writeln(&format!("\n{}\n", InputKind::get_help_text()))?;
                     continue;
                 }
                 InputKind::User(UserInput::Message(msg)) => return Ok(msg),
