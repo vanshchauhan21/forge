@@ -18,8 +18,10 @@ pub struct ShellInput {
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ShellOutput {
-    pub stdout: String,
-    pub stderr: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
     pub success: bool,
 }
 
@@ -98,9 +100,12 @@ impl Shell {
 
         let output = cmd.output().await.map_err(|e| e.to_string())?;
 
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
         Ok(ShellOutput {
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            stdout: if stdout.is_empty() { None } else { Some(stdout) },
+            stderr: if stderr.is_empty() { None } else { Some(stderr) },
             success: output.status.success(),
         })
     }
@@ -137,8 +142,8 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        assert!(result.stdout.contains("Hello, World!"));
-        assert!(result.stderr.is_empty());
+        assert!(result.stdout.as_ref().unwrap().contains("Hello, World!"));
+        assert!(result.stderr.is_none());
     }
 
     #[tokio::test]
@@ -159,7 +164,7 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        let output_path = PathBuf::from(result.stdout.trim());
+        let output_path = PathBuf::from(result.stdout.as_ref().unwrap().trim());
         let actual_path = match fs::canonicalize(output_path.clone()) {
             Ok(path) => path,
             Err(_) => output_path,
@@ -171,7 +176,7 @@ mod tests {
             "\nExpected path: {:?}\nActual path: {:?}",
             expected_path, actual_path
         );
-        assert!(result.stderr.is_empty());
+        assert!(result.stderr.is_none());
     }
 
     #[tokio::test]
@@ -186,7 +191,7 @@ mod tests {
             .unwrap();
 
         assert!(!result.success);
-        assert!(!result.stderr.is_empty());
+        assert!(result.stderr.is_some());
     }
 
     #[tokio::test]
@@ -231,13 +236,13 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        let output_path = PathBuf::from(result.stdout.trim());
+        let output_path = PathBuf::from(result.stdout.as_ref().unwrap().trim());
         let actual_path = match fs::canonicalize(output_path.clone()) {
             Ok(path) => path,
             Err(_) => output_path,
         };
         assert_eq!(actual_path, current_dir);
-        assert!(result.stderr.is_empty());
+        assert!(result.stderr.is_none());
     }
 
     #[tokio::test]
@@ -252,9 +257,9 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        assert!(result.stdout.contains("first"));
-        assert!(result.stdout.contains("second"));
-        assert!(result.stderr.is_empty());
+        assert!(result.stdout.as_ref().unwrap().contains("first"));
+        assert!(result.stdout.as_ref().unwrap().contains("second"));
+        assert!(result.stderr.is_none());
     }
 
     #[tokio::test]
@@ -269,8 +274,8 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        assert!(!result.stdout.is_empty());
-        assert!(result.stderr.is_empty());
+        assert!(result.stdout.is_some());
+        assert!(result.stderr.is_none()); 
     }
 
     #[test]
