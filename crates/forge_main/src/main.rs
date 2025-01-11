@@ -8,9 +8,9 @@ use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use forge_server::API;
 use tokio_stream::StreamExt;
 
+mod console;
 mod input;
 mod status;
-mod console;
 
 use console::CONSOLE;
 use input::UserInput;
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
         UserInput::prompt_initial()?
     };
 
-    CONSOLE.writeln(&initial_content.trim())?;
+    CONSOLE.writeln(initial_content.trim())?;
     let mut current_conversation_id = None;
     let api = API::init()
         .await
@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
                 ChatResponse::ToolCallStart(tool_call_full) => {
                     let tool_name = tool_call_full.name.as_str();
                     if cli.verbose {
-                        CONSOLE.writeln(&format!(
+                        CONSOLE.writeln(format!(
                             "\n{} {} {} {}",
                             "▶".white(),
                             "TOOL USE DETECTED:".bold().white(),
@@ -107,13 +107,13 @@ async fn main() -> Result<()> {
                             timestamp: Some(get_timestamp()),
                             error_details: None,
                         };
-                        CONSOLE.write(&status.format())?;
+                        CONSOLE.write(status.format())?;
                         current_tool = Some(tool_name.to_string());
                     }
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
                     if cli.verbose {
-                        CONSOLE.writeln(&tool_result.to_string())?;
+                        CONSOLE.writeln(tool_result.to_string())?;
                     } else if let Some(tool_name) = &current_tool {
                         clear_line();
                         let status = if tool_result.is_error {
@@ -131,7 +131,7 @@ async fn main() -> Result<()> {
                                 error_details: None,
                             }
                         };
-                        CONSOLE.write(&status.format())?;
+                        CONSOLE.write(status.format())?;
                     }
                 }
                 ChatResponse::ConversationStarted(conversation_id) => {
@@ -157,7 +157,7 @@ async fn main() -> Result<()> {
                         timestamp: Some(get_timestamp()),
                         error_details: None,
                     };
-                    CONSOLE.writeln(&status.format())?;
+                    CONSOLE.writeln(status.format())?;
                 }
                 ChatResponse::FinishReason(_) => {
                     if current_tool.is_some() {

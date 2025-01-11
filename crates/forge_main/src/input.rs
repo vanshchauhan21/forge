@@ -114,7 +114,7 @@ impl UserInput {
 
             match InputKind::parse(&text)? {
                 InputKind::Help => {
-                    CONSOLE.writeln(&format!("\n{}\n", InputKind::get_help_text()))?;
+                    CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
                     continue;
                 }
                 InputKind::User(input) => return Ok(input),
@@ -134,7 +134,7 @@ impl UserInput {
 
             match InputKind::parse(&text)? {
                 InputKind::Help => {
-                    CONSOLE.writeln(&format!("\n{}\n", InputKind::get_help_text()))?;
+                    CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
                     continue;
                 }
                 InputKind::User(UserInput::Message(msg)) => return Ok(msg),

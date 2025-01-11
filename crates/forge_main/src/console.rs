@@ -39,21 +39,58 @@ impl Console {
 
     /// Writes the given content without a newline
     pub fn write(&self, content: impl AsRef<str>) -> io::Result<()> {
+        self.write_internal(content, false)
+    }
+
+    /// Writes the given content with a newline
+    pub fn writeln(&self, content: impl AsRef<str>) -> io::Result<()> {
+        self.write_internal(content, true)
+    }
+
+    /// Returns the last text that was written
+    pub fn last_text(&self) -> String {
+        self.state.lock().unwrap().last_text.clone()
+    }
+
+    /// Internal write implementation that handles both write and writeln cases
+    fn write_internal(&self, content: impl AsRef<str>, add_newline: bool) -> io::Result<()> {
         let content = content.as_ref();
         let mut state = self.state.lock().unwrap();
         let mut stdout = self.stdout.lock().unwrap();
-        
-        if content.is_empty() {
+
+        if content.is_empty() && !add_newline {
             return Ok(());
         }
 
-        let normalized = if state.trailing_newlines > 0 && content.starts_with('\n') {
+        // Handle the content based on current state and what we're writing
+        let normalized = self.normalize_content(content, &state, add_newline);
+        
+        // Write and flush
+        write!(stdout, "{}", normalized)?;
+        stdout.flush()?;
+        
+        // Update state
+        state.last_text = content.to_string();
+        state.trailing_newlines = Self::count_trailing_newlines(&normalized);
+        
+        Ok(())
+    }
+
+    /// Normalizes content based on current state and whether we're adding a newline
+    fn normalize_content(&self, content: &str, state: &ConsoleState, add_newline: bool) -> String {
+        let mut result = if state.trailing_newlines > 0 && content.starts_with('\n') {
+            // If we already have trailing newlines and content starts with newline,
+            // we need to consider the existing newlines
             let additional_newlines = Self::count_trailing_newlines(content);
             let total_newlines = (state.trailing_newlines + additional_newlines).min(2);
             
             if total_newlines > state.trailing_newlines {
+                // Only add the difference in newlines
                 let extra_newlines = total_newlines - state.trailing_newlines;
-                "\n".repeat(extra_newlines) + content.trim_start_matches(&['\n', '\r'][..])
+                format!("{}{}", 
+                    "\n".repeat(extra_newlines), 
+                    content.trim_start_matches(&['\n', '\r'][..])
+                )
             } else {
                 content.trim_start_matches(&['\n', '\r'][..]).to_string()
             }
@@ -61,44 +98,18 @@ impl Console {
             Self::normalize_newlines(content)
         };
 
-        write!(stdout, "{}", normalized)?;
-        stdout.flush()?;
-        
-        state.last_text = content.to_string();
-        state.trailing_newlines = Self::count_trailing_newlines(&normalized);
-        
-        Ok(())
-    }
-
-    /// Writes the given content with a newline
-    pub fn writeln(&self, content: impl AsRef<str>) -> io::Result<()> {
-        let content = content.as_ref();
-        let mut state = self.state.lock().unwrap();
-        let mut stdout = self.stdout.lock().unwrap();
-        
-        let mut normalized = Self::normalize_newlines(content);
-        
-        let current_newlines = Self::count_trailing_newlines(&normalized);
-        let total_newlines = (current_newlines + 1).min(2);
-        
-        if current_newlines > 0 {
-            normalized.truncate(normalized.len() - current_newlines);
+        if add_newline {
+            let current_newlines = Self::count_trailing_newlines(&result);
+            if current_newlines > 0 {
+                // Remove existing trailing newlines first
+                result.truncate(result.len() - current_newlines);
+            }
+            // Add the correct number of newlines (including the one we're adding)
+            let total_newlines = (current_newlines + 1).min(2);
+            result.push_str(&"\n".repeat(total_newlines));
         }
-        
-        normalized.push_str(&"\n".repeat(total_newlines));
-        
-        write!(stdout, "{}", normalized)?;
-        stdout.flush()?;
-        
-        state.last_text = content.to_string();
-        state.trailing_newlines = total_newlines;
-        
-        Ok(())
-    }
 
-    /// Returns the last text that was written
-    pub fn last_text(&self) -> String {
-        self.state.lock().unwrap().last_text.clone()
+        result
     }
 
     /// Returns the number of trailing newlines in a string
