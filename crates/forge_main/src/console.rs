@@ -2,21 +2,24 @@ use std::io::{self, Write};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 
+mod normalize;
+use normalize::ConsoleNormalizer;
+
 lazy_static! {
     /// Global console instance for standardized output handling
     pub static ref CONSOLE: Console = Console::new();
 }
 
-/// A specialized console that provides enhanced printing capabilities
-pub struct Console {
-    stdout: Mutex<io::Stdout>,
-    /// Stores the last text written and a count of trailing newlines
-    state: Mutex<ConsoleState>,
+/// Console state containing both the output stream and normalizer
+struct ConsoleState {
+    stdout: io::Stdout,
+    normalizer: ConsoleNormalizer,
 }
 
-struct ConsoleState {
-    last_text: String,
-    trailing_newlines: usize,
+/// A specialized console that provides enhanced printing capabilities
+pub struct Console {
+    /// Combined state under a single mutex
+    state: Mutex<ConsoleState>,
 }
 
 impl Default for Console {
@@ -29,10 +32,9 @@ impl Console {
     /// Creates a new Console instance
     pub fn new() -> Self {
         Self {
-            stdout: Mutex::new(io::stdout()),
             state: Mutex::new(ConsoleState {
-                last_text: String::new(),
-                trailing_newlines: 0,
+                stdout: io::stdout(),
+                normalizer: ConsoleNormalizer::new(),
             }),
         }
     }
@@ -51,89 +53,25 @@ impl Console {
     fn write_internal(&self, content: impl AsRef<str>, add_newline: bool) -> io::Result<()> {
         let content = content.as_ref();
         let mut state = self.state.lock().unwrap();
-        let mut stdout = self.stdout.lock().unwrap();
 
-        if content.is_empty() && !add_newline {
+        // Handle empty string cases
+        if content.is_empty() {
+            if !add_newline {
+                state.normalizer.reset();
+                return Ok(());
+            }
+            state.normalizer.reset();
             return Ok(());
         }
 
-        // Handle the content based on current state and what we're writing
-        let normalized = self.normalize_content(content, &state, add_newline);
+        // Normalize the content
+        let normalized = state.normalizer.normalize(content, add_newline);
         
         // Write and flush
-        write!(stdout, "{}", normalized)?;
-        stdout.flush()?;
-        
-        // Update state
-        state.last_text = content.to_string();
-        state.trailing_newlines = Self::count_trailing_newlines(&normalized);
+        write!(state.stdout, "{}", normalized)?;
+        state.stdout.flush()?;
         
         Ok(())
-    }
-
-    /// Normalizes content based on current state and whether we're adding a newline
-    fn normalize_content(&self, content: &str, state: &ConsoleState, add_newline: bool) -> String {
-        let mut result = if state.trailing_newlines > 0 && content.starts_with('\n') {
-            // If we already have trailing newlines and content starts with newline,
-            // we need to consider the existing newlines
-            let additional_newlines = Self::count_trailing_newlines(content);
-            let total_newlines = (state.trailing_newlines + additional_newlines).min(2);
-            
-            if total_newlines > state.trailing_newlines {
-                // Only add the difference in newlines
-                let extra_newlines = total_newlines - state.trailing_newlines;
-                format!("{}{}", 
-                    "\n".repeat(extra_newlines), 
-                    content.trim_start_matches(&['\n', '\r'][..])
-                )
-            } else {
-                content.trim_start_matches(&['\n', '\r'][..]).to_string()
-            }
-        } else {
-            Self::normalize_newlines(content)
-        };
-
-        if add_newline {
-            let current_newlines = Self::count_trailing_newlines(&result);
-            if current_newlines > 0 {
-                // Remove existing trailing newlines first
-                result.truncate(result.len() - current_newlines);
-            }
-            // Add the correct number of newlines (including the one we're adding)
-            let total_newlines = (current_newlines + 1).min(2);
-            result.push_str(&"\n".repeat(total_newlines));
-        }
-
-        result
-    }
-
-    /// Returns the number of trailing newlines in a string
-    fn count_trailing_newlines(s: &str) -> usize {
-        s.as_bytes()
-            .iter()
-            .rev()
-            .take_while(|&&b| b == b'\n' || b == b'\r')
-            .filter(|&&b| b == b'\n')
-            .count()
-    }
-
-    /// Normalizes consecutive newlines to ensure no more than 2 in a row
-    fn normalize_newlines(content: &str) -> String {
-        let mut result = String::with_capacity(content.len());
-        let mut consecutive_newlines = 0;
-
-        for c in content.chars() {
-            if c == '\n' {
-                consecutive_newlines += 1;
-                if consecutive_newlines <= 2 {
-                    result.push(c);
-                }
-            } else if c != '\r' { // Skip \r as we'll normalize to \n only
-                consecutive_newlines = 0;
-                result.push(c);
-            }
-        }
-        result
     }
 }
 
@@ -141,24 +79,122 @@ impl Console {
 mod tests {
     use super::*;
 
-    /// Test-only extension trait for Console
-    trait ConsoleTestExt {
-        fn last_text(&self) -> String;
-    }
-
-    impl ConsoleTestExt for Console {
-        fn last_text(&self) -> String {
-            self.state.lock().unwrap().last_text.clone()
+    impl Console {
+        fn last_output(&self) -> String {
+            self.state.lock().unwrap().normalizer.last_text().to_string()
         }
     }
 
-    #[test]
-    fn test_last_text() {
-        let console = Console::new();
-        console.write("Hello").unwrap();
-        assert_eq!(console.last_text(), "Hello");
-        
-        console.writeln("World").unwrap();
-        assert_eq!(console.last_text(), "World");
+    mod basic_operations {
+        use super::*;
+
+        #[test]
+        fn write() {
+            let console = Console::new();
+            console.write("Hello").unwrap();
+            assert_eq!(console.last_output(), "Hello");
+        }
+
+        #[test]
+        fn writeln() {
+            let console = Console::new();
+            console.writeln("World").unwrap();
+            assert_eq!(console.last_output(), "World\n");
+        }
+
+        #[test]
+        fn write_empty() {
+            let console = Console::new();
+            console.write("").unwrap();
+            assert_eq!(console.last_output(), "");
+        }
+
+        #[test]
+        fn writeln_empty() {
+            let console = Console::new();
+            console.writeln("").unwrap();
+            assert_eq!(console.last_output(), "");
+        }
+    }
+
+    mod sequences {
+        use super::*;
+
+        #[test]
+        fn multiple_writes() {
+            let console = Console::new();
+            console.write("line1").unwrap();
+            console.write("line2").unwrap();
+            assert_eq!(console.last_output(), "line2");
+        }
+
+        #[test]
+        fn write_then_writeln() {
+            let console = Console::new();
+            console.write("Hello").unwrap();
+            console.writeln("World").unwrap();
+            assert_eq!(console.last_output(), "World\n");
+        }
+
+        #[test]
+        fn multiple_writeln() {
+            let console = Console::new();
+            console.writeln("line1").unwrap();
+            console.writeln("line2").unwrap();
+            assert_eq!(console.last_output(), "line2\n");
+        }
+    }
+
+    mod newline_handling {
+        use super::*;
+
+        #[test]
+        fn write_with_newlines() {
+            let console = Console::new();
+            console.write("line1\n\n").unwrap();
+            assert_eq!(console.last_output(), "line1\n\n");
+        }
+
+        #[test]
+        fn writeln_with_newlines() {
+            let console = Console::new();
+            console.writeln("line1\n").unwrap();
+            assert_eq!(console.last_output(), "line1\n\n");
+        }
+
+        #[test]
+        fn leading_newlines() {
+            let console = Console::new();
+            console.write("\n\ntext").unwrap();
+            assert_eq!(console.last_output(), "\n\ntext");
+        }
+    }
+
+    mod state_handling {
+        use super::*;
+
+        #[test]
+        fn consecutive_empty_writes() {
+            let console = Console::new();
+            console.write("").unwrap();
+            console.write("").unwrap();
+            assert_eq!(console.last_output(), "");
+        }
+
+        #[test]
+        fn write_after_newlines() {
+            let console = Console::new();
+            console.write("text\n\n").unwrap();
+            console.write("more").unwrap();
+            assert_eq!(console.last_output(), "more");
+        }
+
+        #[test]
+        fn writeln_after_newlines() {
+            let console = Console::new();
+            console.write("text\n\n").unwrap();
+            console.writeln("more").unwrap();
+            assert_eq!(console.last_output(), "more\n");
+        }
     }
 }
