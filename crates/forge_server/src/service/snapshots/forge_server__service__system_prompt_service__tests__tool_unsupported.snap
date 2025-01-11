@@ -111,27 +111,30 @@ Usage:
 
 4. fs_replace
 Replace sections in a file using SEARCH/REPLACE blocks for precise
- modifications.
- <<<<<<< SEARCH
- [exact content to find]
- =======
- [new content to replace with]
- >>>>>>> REPLACE
- Rules:
- 1. SEARCH must match exactly (whitespace, indentation, line endings)
- 2. Each block replaces first match only
- 3. Keep blocks minimal - include only changing lines plus needed context
- 4. Complete lines only - no truncation
- 5. For moves: use 2 blocks (delete + insert)
- 6. For deletes: use empty REPLACE section
- Example:
- <<<<<<< SEARCH
- def old_function(x):
-     return x + 1
- =======
- def new_function(x, y=0):
-     return x + y
- >>>>>>> REPLACE
+modifications.
+
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+
+Rules:
+1. SEARCH must match exactly (whitespace, indentation, line endings)
+2. Each block replaces first match only
+3. Keep blocks minimal - include only changing lines plus needed context
+4. Complete lines only - no truncation
+5. For moves: use 2 blocks (delete + insert)
+6. For deletes: use empty REPLACE section
+
+Example:
+<<<<<<< SEARCH
+def old_function(x):
+    return x + 1
+=======
+def new_function(x, y=0):
+    return x + y
+>>>>>>> REPLACE
 
 Parameters:
 - diff (required): SEARCH/REPLACE blocks defining changes

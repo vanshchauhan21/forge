@@ -3,6 +3,7 @@ mod fs_find;
 mod fs_list;
 mod fs_read;
 mod fs_replace;
+mod fs_replace_marker;
 mod fs_write;
 mod syn;
 

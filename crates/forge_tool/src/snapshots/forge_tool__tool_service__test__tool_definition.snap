@@ -1,6 +1,7 @@
 ---
 source: crates/forge_tool/src/tool_service.rs
 expression: "serde_json::to_string_pretty(&tools).unwrap()"
+snapshot_kind: text
 ---
 [
   {
@@ -84,7 +85,7 @@ expression: "serde_json::to_string_pretty(&tools).unwrap()"
   },
   {
     "name": "fs_replace",
-    "description": "Replace sections in a file using SEARCH/REPLACE blocks for precise\n modifications.\n <<<<<<< SEARCH\n [exact content to find]\n =======\n [new content to replace with]\n >>>>>>> REPLACE\n Rules:\n 1. SEARCH must match exactly (whitespace, indentation, line endings)\n 2. Each block replaces first match only\n 3. Keep blocks minimal - include only changing lines plus needed context\n 4. Complete lines only - no truncation\n 5. For moves: use 2 blocks (delete + insert)\n 6. For deletes: use empty REPLACE section\n Example:\n <<<<<<< SEARCH\n def old_function(x):\n     return x + 1\n =======\n def new_function(x, y=0):\n     return x + y\n >>>>>>> REPLACE\n\nParameters:\n- diff (required): SEARCH/REPLACE blocks defining changes\n- path (required): File path relative to the current working directory",
+    "description": "Replace sections in a file using SEARCH/REPLACE blocks for precise\nmodifications.\n\n<<<<<<< SEARCH\n[exact content to find]\n=======\n[new content to replace with]\n>>>>>>> REPLACE\n\nRules:\n1. SEARCH must match exactly (whitespace, indentation, line endings)\n2. Each block replaces first match only\n3. Keep blocks minimal - include only changing lines plus needed context\n4. Complete lines only - no truncation\n5. For moves: use 2 blocks (delete + insert)\n6. For deletes: use empty REPLACE section\n\nExample:\n<<<<<<< SEARCH\ndef old_function(x):\n    return x + 1\n=======\ndef new_function(x, y=0):\n    return x + y\n>>>>>>> REPLACE\n\nParameters:\n- diff (required): SEARCH/REPLACE blocks defining changes\n- path (required): File path relative to the current working directory",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "FSReplaceInput",
