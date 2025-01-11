@@ -1,5 +1,4 @@
-use std::fs::{self, File};
-use std::io::{BufReader, Read, Write};
+use std::io::Write;
 use std::path::Path;
 
 use dissimilar::Chunk;
@@ -7,12 +6,14 @@ use forge_domain::{ToolCallService, ToolDescription};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
+use tokio::fs;
+use tokio::io::AsyncReadExt;
 use tracing::{debug, error};
 
 use super::fs_replace_marker::{DIVIDER, REPLACE, SEARCH};
 use crate::fs::syn;
 
-fn persist_changes<P: AsRef<Path>>(
+async fn persist_changes<P: AsRef<Path>>(
     temp_file: NamedTempFile,
     path: P,
     backup_path: impl AsRef<Path>,
@@ -23,7 +24,7 @@ fn persist_changes<P: AsRef<Path>>(
             debug!("Successfully persisted changes to {:?}", path.as_ref());
             // Remove backup file on success
             if backup_path.as_ref().exists() {
-                if let Err(e) = fs::remove_file(&backup_path) {
+                if let Err(e) = fs::remove_file(&backup_path).await {
                     error!("Failed to remove backup file: {}", e);
                 }
             }
@@ -33,7 +34,7 @@ fn persist_changes<P: AsRef<Path>>(
             error!("Failed to persist changes: {}", e);
             // Restore from backup if persist failed
             if backup_path.as_ref().exists() {
-                if let Err(e) = fs::rename(&backup_path, &path) {
+                if let Err(e) = fs::rename(&backup_path, &path).await {
                     error!("Failed to restore from backup: {}", e);
                 }
             }
@@ -164,7 +165,7 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
     Ok(blocks)
 }
 
-fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
+async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
     let mut content = String::new();
     let mut result = String::new();
     let backup_path = path.as_ref().with_extension("bak");
@@ -177,28 +178,26 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
             write!(temp_file, "{}", blocks[0].replace).map_err(|e| e.to_string())?;
             result = blocks[0].replace.clone();
         }
-        persist_changes(temp_file, path, backup_path)?;
+        persist_changes(temp_file, path, backup_path).await?;
         return Ok(result);
     }
 
     // Create backup and read existing file
-    fs::copy(&path, &backup_path).map_err(|e| {
+    fs::copy(&path, &backup_path).await.map_err(|e| {
         error!("Failed to create backup: {}", e);
         e.to_string()
     })?;
     debug!("Created backup at {:?}", backup_path);
 
-    let file = File::open(&path).map_err(|e| {
+    let mut file = fs::File::open(&path).await.map_err(|e| {
         error!("Failed to open source file: {}", e);
         e.to_string()
     })?;
 
-    BufReader::new(file)
-        .read_to_string(&mut content)
-        .map_err(|e| {
-            error!("Failed to read file content: {}", e);
-            e.to_string()
-        })?;
+    file.read_to_string(&mut content).await.map_err(|e| {
+        error!("Failed to read file content: {}", e);
+        e.to_string()
+    })?;
 
     result = content.clone();
     let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
@@ -252,7 +251,7 @@ fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, 
 
     // Write the modified content
     write!(temp_file, "{}", result).map_err(|e| e.to_string())?;
-    persist_changes(temp_file, path, backup_path)?;
+    persist_changes(temp_file, path, backup_path).await?;
 
     Ok(result)
 }
@@ -272,7 +271,7 @@ impl ToolCallService for FSReplace {
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
         let blocks = parse_blocks(&input.diff)?;
-        let content = apply_changes(&input.path, blocks)?;
+        let content = apply_changes(&input.path, blocks).await?;
         let syntax_checker = syn::validate(&input.path, &content).err();
         Ok(FSReplaceOutput { path: input.path, content, syntax_checker })
     }
@@ -280,17 +279,12 @@ impl ToolCallService for FSReplace {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
-
     use tempfile::TempDir;
 
     use super::*;
 
     async fn write_test_file(path: impl AsRef<Path>, content: &str) -> Result<(), String> {
-        let mut file = File::create(path).map_err(|e| e.to_string())?;
-        file.write_all(content.as_bytes())
-            .map_err(|e| e.to_string())?;
-        Ok(())
+        fs::write(&path, content).await.map_err(|e| e.to_string())
     }
 
     #[tokio::test]
