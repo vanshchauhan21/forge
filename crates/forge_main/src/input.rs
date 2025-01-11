@@ -19,14 +19,15 @@ struct CommandCompleter {
 
 impl CommandCompleter {
     fn new() -> Self {
-        Self {
-            commands: UserInput::available_commands(),
-        }
+        Self { commands: UserInput::available_commands() }
     }
 }
 
 impl Autocomplete for CommandCompleter {
-    fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    fn get_suggestions(
+        &mut self,
+        input: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         if input.starts_with('/') {
             Ok(self
                 .commands
@@ -66,7 +67,7 @@ impl UserInput {
             ))
             .with_autocomplete(CommandCompleter::new())
             .prompt()?;
-            
+
         Self::parse(&text)
     }
 
