@@ -1,4 +1,4 @@
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,6 +16,12 @@ pub struct FSFileInfoInput {
 /// understand file characteristics without reading the actual content.
 #[derive(ToolDescription)]
 pub struct FSFileInfo;
+
+impl NamedTool for FSFileInfo {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_file_info")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for FSFileInfo {

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use inquire::Confirm;
 use schemars::JsonSchema;
@@ -29,6 +29,12 @@ pub struct ApproveInput {
 /// - Returns true only on explicit 'yes' confirmation
 #[derive(ToolDescription)]
 pub struct Approve;
+
+impl NamedTool for Approve {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("approve")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for Approve {

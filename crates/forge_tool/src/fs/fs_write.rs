@@ -1,4 +1,4 @@
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,12 @@ pub struct FSWriteInput {
 /// directories needed to write the file.
 #[derive(ToolDescription)]
 pub struct FSWrite;
+
+impl NamedTool for FSWrite {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_write")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for FSWrite {

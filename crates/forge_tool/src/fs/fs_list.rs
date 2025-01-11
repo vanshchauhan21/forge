@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
 use schemars::JsonSchema;
@@ -24,6 +24,12 @@ pub struct FSListInput {
 /// successfully or not.
 #[derive(ToolDescription)]
 pub struct FSList;
+
+impl NamedTool for FSList {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_list")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for FSList {

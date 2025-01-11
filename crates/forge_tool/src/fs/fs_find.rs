@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
 use regex::Regex;
@@ -26,6 +26,12 @@ pub struct FSSearchInput {
 /// context.
 #[derive(ToolDescription)]
 pub struct FSSearch;
+
+impl NamedTool for FSSearch {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_search")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for FSSearch {

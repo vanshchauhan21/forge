@@ -1,4 +1,4 @@
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -17,6 +17,12 @@ pub struct FSReadInput {
 /// it returns the raw content as a string.
 #[derive(ToolDescription)]
 pub struct FSRead;
+
+impl NamedTool for FSRead {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_read")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for FSRead {

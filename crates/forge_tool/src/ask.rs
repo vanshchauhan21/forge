@@ -1,4 +1,4 @@
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,6 +16,12 @@ pub struct AskFollowUpQuestionInput {
 /// interactive problem-solving by enabling direct communication with the user.
 #[derive(ToolDescription)]
 pub struct AskFollowUpQuestion;
+
+impl NamedTool for AskFollowUpQuestion {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("ask_follow_up_question")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for AskFollowUpQuestion {

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use dissimilar::Chunk;
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
@@ -19,6 +19,12 @@ pub struct FSReplaceInput {
 }
 
 pub struct FSReplace;
+
+impl NamedTool for FSReplace {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("fs_replace")
+    }
+}
 
 struct Block {
     search: String,

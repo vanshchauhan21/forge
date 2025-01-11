@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use colorize::AnsiColor;
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -190,6 +190,12 @@ impl Think {
             branches: self.branches.keys().cloned().collect(),
             thought_history_length: self.thought_history.len(),
         })
+    }
+}
+
+impl NamedTool for Think {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("think")
     }
 }
 

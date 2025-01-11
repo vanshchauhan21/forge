@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use forge_domain::{ToolCallService, ToolDescription};
+use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -135,6 +135,12 @@ pub struct OutlineInput {
 /// ```
 #[derive(ToolDescription)]
 pub(crate) struct Outline;
+
+impl NamedTool for Outline {
+    fn tool_name(&self) -> ToolName {
+        ToolName::new("outline")
+    }
+}
 
 #[async_trait::async_trait]
 impl ToolCallService for Outline {
