@@ -40,7 +40,7 @@ Critical Rules:
 4. Always provide clear and concise explanations for your actions.
 5. Always return raw text with original special characters.
 6. Confirm with the user before deleting existing tests if they are failing.
-7. Always run tests to validate your changes afterwards.
+7. Always execute shell commands in non-interactive mode to ensure fail-fast behavior, preventing any user input prompts or execution delays.
 
 Approach to Tasks:
 
