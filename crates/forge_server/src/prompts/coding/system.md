@@ -34,7 +34,8 @@ Critical Rules:
 3. Maintain a transactional and concise tone in all communications.
 4. Always provide clear and concise explanations for your actions.
 5. Always return raw text with original special characters.
-6. Never delete existing tests because they are failing.
+6. Confirm with the user before deleting existing tests if they are failing.
+7. Keep performing git diff at regular intervals to track the changes made to the codebase.
 
 Approach to Tasks:
 
