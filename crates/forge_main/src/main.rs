@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use anyhow::Result;
+use chrono::Local;
 use clap::Parser;
 use colored::Colorize;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
@@ -8,11 +9,25 @@ use forge_server::API;
 use tokio_stream::StreamExt;
 
 mod input;
+mod status;
+
 use input::UserInput;
+use status::{StatusDisplay, StatusKind};
 
 #[derive(Parser)]
 struct Cli {
     exec: Option<String>,
+    #[arg(long, default_value_t = false)]
+    verbose: bool,
+}
+
+fn clear_line() {
+    print!("\r\x1B[K"); // Clear the current line
+    std::io::stdout().flush().unwrap();
+}
+
+fn get_timestamp() -> String {
+    Local::now().format("%H:%M:%S%.3f").to_string()
 }
 
 #[tokio::main]
@@ -38,6 +53,8 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
 
     let mut content = initial_content;
+    let mut current_tool: Option<String> = None;
+
     loop {
         let model = ModelId::from_env(api.env());
         let chat = ChatRequest {
@@ -55,23 +72,69 @@ async fn main() -> Result<()> {
             let message = message.map_err(|e| anyhow::anyhow!("Stream error: {}", e))?;
             match message {
                 ChatResponse::Text(text) => {
+                    if current_tool.is_some() {
+                        println!();
+                        current_tool = None;
+                    }
                     print!("{}", text);
                 }
                 ChatResponse::ToolCallDetected(_) => {}
                 ChatResponse::ToolCallArgPart(arg) => {
-                    print!("{}", arg);
+                    if cli.verbose {
+                        print!("{}", arg);
+                    }
                 }
                 ChatResponse::ToolCallStart(tool_call_full) => {
-                    println!(
-                        "\n{} {} {} {}",
-                        "▶".white(),
-                        "TOOL USE DETECTED:".bold().white(),
-                        tool_call_full.name.as_str(),
-                        "◀".white()
-                    );
+                    let tool_name = tool_call_full.name.as_str();
+                    if cli.verbose {
+                        println!(
+                            "\n{} {} {} {}",
+                            "▶".white(),
+                            "TOOL USE DETECTED:".bold().white(),
+                            tool_name,
+                            "◀".white()
+                        );
+                    } else {
+                        // Only clear line if we're already showing a tool status
+                        if current_tool.is_some() {
+                            clear_line();
+                        } else {
+                            println!(); // New line for first tool status
+                        }
+                        let status = StatusDisplay {
+                            kind: StatusKind::Execute,
+                            message: tool_name,
+                            timestamp: Some(get_timestamp()),
+                            error_details: None,
+                        };
+                        print!("{}", status.format());
+                        std::io::stdout().flush()?;
+                        current_tool = Some(tool_name.to_string());
+                    }
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
-                    println!("{}", tool_result);
+                    if cli.verbose {
+                        println!("{}", tool_result);
+                    } else if let Some(tool_name) = &current_tool {
+                        clear_line();
+                        let status = if tool_result.is_error {
+                            StatusDisplay {
+                                kind: StatusKind::Failed,
+                                message: tool_name,
+                                timestamp: Some(get_timestamp()),
+                                error_details: Some("error"),
+                            }
+                        } else {
+                            StatusDisplay {
+                                kind: StatusKind::Success,
+                                message: tool_name,
+                                timestamp: Some(get_timestamp()),
+                                error_details: None,
+                            }
+                        };
+                        print!("{}", status.format());
+                        std::io::stdout().flush()?;
+                    }
                 }
                 ChatResponse::ConversationStarted(conversation_id) => {
                     current_conversation_id = Some(conversation_id);
@@ -79,14 +142,30 @@ async fn main() -> Result<()> {
                 ChatResponse::ModifyContext(_) => {}
                 ChatResponse::Complete => {}
                 ChatResponse::Error(err) => {
+                    if current_tool.is_some() {
+                        println!();
+                    }
                     return Err(anyhow::anyhow!("Chat error: {:?}", err));
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
-                    println!("{}", forge_main::format_title(&title));
+                    if current_tool.is_some() {
+                        println!();
+                        current_tool = None;
+                    }
+                    let status = StatusDisplay {
+                        kind: StatusKind::Title,
+                        message: &title,
+                        timestamp: Some(get_timestamp()),
+                        error_details: None,
+                    };
+                    println!("{}", status.format());
                 }
                 ChatResponse::FinishReason(_) => {
-                    println!();
+                    if current_tool.is_some() {
+                        println!();
+                        current_tool = None;
+                    }
                 }
             }
 
@@ -95,7 +174,6 @@ async fn main() -> Result<()> {
                 .map_err(|e| anyhow::anyhow!("Failed to flush stdout: {}", e))?;
         }
 
-        println!();
         match UserInput::prompt()? {
             UserInput::End => break,
             UserInput::New => {
