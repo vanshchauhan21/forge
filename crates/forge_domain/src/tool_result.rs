@@ -58,8 +58,8 @@ impl Display for ToolResult {
         };
 
         let xml = quick_xml::se::to_string(&xml).unwrap();
-        let decoded = html_escape::decode_html_entities(&xml);
-        write!(f, "{}", decoded)
+        let xml = html_escape::decode_html_entities(&xml);
+        write!(f, "{}", xml)
     }
 }
 

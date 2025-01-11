@@ -1,0 +1,11 @@
+---
+source: crates/forge_provider/src/open_router/request.rs
+expression: router_message
+snapshot_kind: text
+---
+{
+  "role": "tool",
+  "content": "<tool_result><tool_name>rust_tool</tool_name><success><code>fn main<T>(gt: T) {let b = &gt; }</code></success></tool_result>",
+  "name": "rust_tool",
+  "tool_call_id": "456"
+}

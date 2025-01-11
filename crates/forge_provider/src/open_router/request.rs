@@ -319,6 +319,27 @@ mod tests {
     }
 
     #[test]
+    fn test_message_with_special_chars() {
+        let xml_content = r#"Here's some XML content:
+<task>
+    <id>123</id>
+    <description>Test <special> characters</description>
+    <data key="value">
+        <item>1</item>
+        <item>2</item>
+    </data>
+</task>"#;
+
+        let message = ContextMessage::ContentMessage(ContentMessage {
+            role: Role::User,
+            content: xml_content.to_string(),
+            tool_call: None,
+        });
+        let router_message = OpenRouterMessage::from(message);
+        assert_json_snapshot!(router_message);
+    }
+
+    #[test]
     fn test_assistant_message_with_tool_call_conversion() {
         let tool_call = ToolCallFull {
             call_id: Some(ToolCallId::new("123")),
@@ -343,6 +364,37 @@ mod tests {
                "user": "John",
                "age": 30,
                "address": [{"city": "New York"}, {"city": "San Francisco"}]
+            }));
+
+        let tool_message = ContextMessage::ToolMessage(tool_result);
+        let router_message = OpenRouterMessage::from(tool_message);
+        assert_json_snapshot!(router_message);
+    }
+
+    #[test]
+    fn test_tool_message_with_special_chars() {
+        let tool_result = ToolResult::new(ToolName::new("html_tool"))
+            .call_id(ToolCallId::new("456"))
+            .content(json!({
+                "html": "<div class=\"container\"><p>Hello <World></p></div>",
+                "elements": ["<span>", "<br/>", "<hr>"],
+                "attributes": {
+                    "style": "color: blue; font-size: 12px;",
+                    "data-test": "<test>&value</test>"
+                }
+            }));
+
+        let tool_message = ContextMessage::ToolMessage(tool_result);
+        let router_message = OpenRouterMessage::from(tool_message);
+        assert_json_snapshot!(router_message);
+    }
+
+    #[test]
+    fn test_tool_message_typescript_code() {
+        let tool_result = ToolResult::new(ToolName::new("rust_tool"))
+            .call_id(ToolCallId::new("456"))
+            .content(json!({
+                "code": "fn main<T>(gt: T) {let b = &gt; }",
             }));
 
         let tool_message = ContextMessage::ToolMessage(tool_result);
