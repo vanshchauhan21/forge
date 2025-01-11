@@ -116,6 +116,12 @@ impl Live {
                         .await
                         .unwrap();
                 }
+
+                if let Some(reason) = &message.finish_reason {
+                    tx.send(Ok(ChatResponse::FinishReason(reason.clone())))
+                        .await
+                        .unwrap();
+                }
             }
 
             request = request.add_message(ContextMessage::assistant(
@@ -467,6 +473,7 @@ mod tests {
                     .content(json!({"a": 100, "b": 200}))
                     .call_id(ToolCallId::new("too_call_001")),
             ),
+            ChatResponse::FinishReason(FinishReason::ToolCalls),
             ChatResponse::Text(
                 "Task is complete, let me know if you need anything else.".to_string(),
             ),

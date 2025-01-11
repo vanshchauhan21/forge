@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{Context, ConversationId, Errata, ToolCallFull, ToolName, ToolResult};
+use crate::{Context, ConversationId, Errata, FinishReason, ToolCallFull, ToolName, ToolResult};
 
 /// Events that are emitted by the agent for external consumption. This includes
 /// events for all internal state changes.
@@ -21,4 +21,5 @@ pub enum ChatResponse {
     #[from(ignore)]
     CompleteTitle(String),
     Error(Errata),
+    FinishReason(FinishReason),
 }

@@ -63,8 +63,9 @@ async fn main() -> Result<()> {
                 }
                 ChatResponse::ToolCallStart(tool_call_full) => {
                     println!(
-                        "\n{} {} {}",
-                        format!("{} {}", "▶".white(), "TOOL USE DETECTED:".bold().white()),
+                        "\n{} {} {} {}",
+                        "▶".white(),
+                        "TOOL USE DETECTED:".bold().white(),
                         tool_call_full.name.as_str(),
                         "◀".white()
                     );
@@ -83,6 +84,9 @@ async fn main() -> Result<()> {
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
                     println!("{}", forge_main::format_title(&title));
+                }
+                ChatResponse::FinishReason(_) => {
+                    println!();
                 }
             }
 

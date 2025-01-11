@@ -35,8 +35,7 @@ Critical Rules:
 4. Always provide clear and concise explanations for your actions.
 5. Always return raw text with original special characters.
 6. Confirm with the user before deleting existing tests if they are failing.
-7. Keep performing git diff at regular intervals to track the changes made to the codebase.
-8. For statically compiled languages always compile before attempting completion.
+7. Always run tests to validate your changes afterwards.
 
 Approach to Tasks:
 
