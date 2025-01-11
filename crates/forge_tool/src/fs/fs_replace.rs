@@ -59,7 +59,8 @@ struct Block {
 
 impl ToolDescription for FSReplace {
     fn description(&self) -> String {
-        format!(r#"        
+        format!(
+            r#"        
 Replace sections in a file using SEARCH/REPLACE blocks for precise
 modifications.
 
@@ -85,7 +86,9 @@ def old_function(x):
 def new_function(x, y=0):
     return x + y
 {}
-        "#, SEARCH, DIVIDER, REPLACE, SEARCH, DIVIDER, REPLACE)
+        "#,
+            SEARCH, DIVIDER, REPLACE, SEARCH, DIVIDER, REPLACE
+        )
         .trim()
         .to_string()
     }
@@ -302,9 +305,11 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n    Hello World    \n{}\n    Hi World    \n{}\n",
-                    SEARCH, DIVIDER, REPLACE)
-                    .to_string(),
+                diff: format!(
+                    "{}\n    Hello World    \n{}\n    Hi World    \n{}\n",
+                    SEARCH, DIVIDER, REPLACE
+                )
+                .to_string(),
             })
             .await
             .unwrap();
@@ -369,7 +374,8 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n  Middle Line  \n{}\n{}\n", SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{}\n  Middle Line  \n{}\n{}\n", SEARCH, DIVIDER, REPLACE)
+                    .to_string(),
             })
             .await
             .unwrap();
@@ -407,8 +413,11 @@ mod test {
         let result2 = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n\n// Footer comment\n\n\n{}\n\n\n\n// Updated footer\n\n{}\n", 
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!(
+                    "{}\n\n// Footer comment\n\n\n{}\n\n\n\n// Updated footer\n\n{}\n",
+                    SEARCH, DIVIDER, REPLACE
+                )
+                .to_string(),
             })
             .await
             .unwrap();
@@ -422,8 +431,11 @@ mod test {
         let result3 = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n\n\n// Header comment\n\n\n{}\n\n\n\n// New header\n\n\n\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!(
+                    "{}\n\n\n// Header comment\n\n\n{}\n\n\n\n// New header\n\n\n\n{}\n",
+                    SEARCH, DIVIDER, REPLACE
+                )
+                .to_string(),
             })
             .await
             .unwrap();
@@ -572,8 +584,11 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n", 
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!(
+                    "{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n",
+                    SEARCH, DIVIDER, REPLACE
+                )
+                .to_string(),
             })
             .await;
 
