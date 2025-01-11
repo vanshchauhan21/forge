@@ -50,14 +50,37 @@ impl From<ToolCallFull> for ToolResult {
 
 impl Display for ToolResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut xml = ToolResultXML::default().tool_name(self.name.as_str().to_owned());
-        xml = if self.is_error {
-            xml.error(self.content.clone())
-        } else {
-            xml.success(self.content.clone())
+        let xml = {
+            let xml = ToolResultXML::default().tool_name(self.name.as_str().to_owned());
+            if self.is_error {
+                xml.error(self.content.clone())
+            } else {
+                xml.success(self.content.clone())
+            }
         };
 
-        let xml = quick_xml::se::to_string(&xml).unwrap();
+        // First serialize to string
+        let mut out = String::new();
+        {
+            let ser = quick_xml::se::Serializer::new(&mut out);
+            xml.serialize(ser).unwrap();
+        }
+
+        // Now reformat with pretty printing
+        let mut writer = quick_xml::Writer::new_with_indent(Vec::new(), b' ', 0);
+        let mut reader = quick_xml::reader::Reader::from_reader(out.as_bytes());
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(quick_xml::events::Event::Eof) => break,
+                Ok(event) => writer.write_event(event).unwrap(),
+                Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            }
+        }
+
+        let result = writer.into_inner();
+        let xml = String::from_utf8(result).unwrap();
         let xml = html_escape::decode_html_entities(&xml);
         write!(f, "{}", xml)
     }
