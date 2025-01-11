@@ -45,7 +45,8 @@ impl ConsoleNormalizer {
                 if consecutive_newlines <= 2 {
                     result.push(c);
                 }
-            } else if c != '\r' { // Skip \r as we'll normalize to \n only
+            } else if c != '\r' {
+                // Skip \r as we'll normalize to \n only
                 consecutive_newlines = 0;
                 result.push(c);
             }
@@ -60,12 +61,13 @@ impl ConsoleNormalizer {
             // we need to consider the existing newlines
             let additional_newlines = Self::count_trailing_newlines(content);
             let total_newlines = (self.trailing_newlines + additional_newlines).min(2);
-            
+
             if total_newlines > self.trailing_newlines {
                 // Only add the difference in newlines
                 let extra_newlines = total_newlines - self.trailing_newlines;
-                format!("{}{}", 
-                    "\n".repeat(extra_newlines), 
+                format!(
+                    "{}{}",
+                    "\n".repeat(extra_newlines),
                     content.trim_start_matches(&['\n', '\r'][..])
                 )
             } else {
@@ -89,7 +91,7 @@ impl ConsoleNormalizer {
         // Update state
         self.last_output = result.clone();
         self.trailing_newlines = Self::count_trailing_newlines(&result);
-        
+
         result
     }
 }
@@ -111,8 +113,14 @@ mod tests {
         #[test]
         fn consecutive_newlines() {
             // Should limit to maximum of 2 newlines
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc\n\n\n"), "abc\n\n");
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc\n\n\n\n\n"), "abc\n\n");
+            assert_eq!(
+                ConsoleNormalizer::normalize_newlines("abc\n\n\n"),
+                "abc\n\n"
+            );
+            assert_eq!(
+                ConsoleNormalizer::normalize_newlines("abc\n\n\n\n\n"),
+                "abc\n\n"
+            );
             assert_eq!(ConsoleNormalizer::normalize_newlines("\n\n\n"), "\n\n");
         }
 
@@ -132,7 +140,10 @@ mod tests {
         fn leading_and_trailing() {
             assert_eq!(ConsoleNormalizer::normalize_newlines("\n\nabc"), "\n\nabc");
             assert_eq!(ConsoleNormalizer::normalize_newlines("abc\n\n"), "abc\n\n");
-            assert_eq!(ConsoleNormalizer::normalize_newlines("\n\nabc\n\n"), "\n\nabc\n\n");
+            assert_eq!(
+                ConsoleNormalizer::normalize_newlines("\n\nabc\n\n"),
+                "\n\nabc\n\n"
+            );
         }
     }
 
@@ -141,7 +152,7 @@ mod tests {
 
         #[test]
         fn basic_state() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let normalizer = ConsoleNormalizer::new();
             assert_eq!(normalizer.trailing_newlines, 0);
             assert_eq!(normalizer.last_text(), "");
         }
@@ -149,7 +160,7 @@ mod tests {
         #[test]
         fn state_after_normalize() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             // Single line
             normalizer.normalize("abc", false);
             assert_eq!(normalizer.trailing_newlines, 0);
@@ -164,7 +175,7 @@ mod tests {
         #[test]
         fn state_after_writeln() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             // Normal writeln
             normalizer.normalize("abc", true);
             assert_eq!(normalizer.trailing_newlines, 1);
@@ -179,10 +190,10 @@ mod tests {
         #[test]
         fn state_reset() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             normalizer.normalize("abc\n\n", false);
             assert_eq!(normalizer.trailing_newlines, 2);
-            
+
             normalizer.reset();
             assert_eq!(normalizer.trailing_newlines, 0);
             assert_eq!(normalizer.last_text(), "");
@@ -195,7 +206,7 @@ mod tests {
         #[test]
         fn empty_content() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             let output = normalizer.normalize("", false);
             assert_eq!(output, "");
             assert_eq!(normalizer.last_text(), "");
@@ -205,7 +216,7 @@ mod tests {
         #[test]
         fn only_newlines() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             let output = normalizer.normalize("\n\n\n", false);
             assert_eq!(output, "\n\n");
             assert_eq!(normalizer.last_text(), "\n\n");
@@ -215,7 +226,7 @@ mod tests {
         #[test]
         fn carriage_returns() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             let output = normalizer.normalize("text\r\n\r\n", false);
             assert_eq!(output, "text\n\n");
             assert_eq!(normalizer.last_text(), "text\n\n");
@@ -225,7 +236,7 @@ mod tests {
         #[test]
         fn max_newlines() {
             let mut normalizer = ConsoleNormalizer::new();
-            
+
             normalizer.normalize("abc\n\n", false);
             assert_eq!(normalizer.trailing_newlines, 2);
 

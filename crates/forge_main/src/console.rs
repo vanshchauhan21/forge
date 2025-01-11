@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 use std::sync::Mutex;
+
 use lazy_static::lazy_static;
 
 mod normalize;
@@ -66,11 +67,11 @@ impl Console {
 
         // Normalize the content
         let normalized = state.normalizer.normalize(content, add_newline);
-        
+
         // Write and flush
         write!(state.stdout, "{}", normalized)?;
         state.stdout.flush()?;
-        
+
         Ok(())
     }
 }
@@ -81,7 +82,12 @@ mod tests {
 
     impl Console {
         fn last_output(&self) -> String {
-            self.state.lock().unwrap().normalizer.last_text().to_string()
+            self.state
+                .lock()
+                .unwrap()
+                .normalizer
+                .last_text()
+                .to_string()
         }
     }
 
