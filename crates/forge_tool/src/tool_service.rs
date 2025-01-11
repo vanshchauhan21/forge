@@ -7,6 +7,7 @@ use tracing::debug;
 use crate::approve::Approve;
 use crate::fs::*;
 use crate::outline::Outline;
+use crate::select::SelectTool;
 use crate::shell::Shell;
 use crate::think::Think;
 use crate::Service;
@@ -96,6 +97,7 @@ impl Service {
             Tool::new(FSFileInfo),
             Tool::new(FSReplace),
             Tool::new(Outline),
+            Tool::new(SelectTool),
             Tool::new(Shell::default()),
             Tool::new(Think::default()),
         ])
