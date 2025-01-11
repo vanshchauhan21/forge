@@ -1,7 +1,6 @@
 ---
 source: crates/forge_tool/src/tool_service.rs
 expression: docs
-snapshot_kind: text
 ---
 1. fs_file_info
 Request to retrieve detailed metadata about a file or directory at the
@@ -138,6 +137,10 @@ List definition names (classes, functions, methods, etc.) in source code
  - Rust (.rs files): structs, traits, impls
  - JavaScript (.js files): classes, methods, prototypes
  - Python (.py files): classes, decorators, inheritance
+ - TypeScript (.ts, .tsx files): interfaces, classes, methods
+ - Scala (.scala files): traits, classes, objects
+ - Java (.java files): classes, methods, interfaces
+ - CSS (.css files): classes, ids, pseudo-classes
  Returns a formatted string showing file names and their definitions in a
  tree-like structure. Example output:
  ```text

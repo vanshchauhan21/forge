@@ -1,0 +1,16 @@
+---
+source: crates/forge_tool/src/outline/tests/tsx.rs
+expression: result
+---
+test.tsx
+│interface Props {
+|----
+│function UserProfile({ name, age }: Props) {
+|----
+│UserList: React.FC<{ users: Props[] }> = ({ users }) => {
+|----
+│class UserContainer extends React.Component<Props, { loading: boolean }> {
+|----
+│componentDidMount() {
+|----
+│render() {

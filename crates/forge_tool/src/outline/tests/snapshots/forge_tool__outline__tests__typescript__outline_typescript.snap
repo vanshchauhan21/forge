@@ -1,0 +1,20 @@
+---
+source: crates/forge_tool/src/outline/tests/typescript.rs
+expression: result
+---
+test.ts
+│interface User {
+|----
+│type UserResponse = {
+|----
+│class UserService {
+|----
+│async addUser(user: User): Promise<void> {
+|----
+│static getInstance(): UserService {
+|----
+│enum UserRole {
+|----
+│async function fetchUser(id: string): Promise<User> {
+|----
+│processUser = (user: User): UserResponse => {

@@ -1,0 +1,23 @@
+---
+source: crates/forge_tool/src/outline/tests/scala.rs
+expression: result
+---
+test.scala
+│sealed trait UserRole
+│case object Admin extends UserRole
+│case object Regular extends UserRole
+|----
+│case class User(name: String, age: Int, role: UserRole)
+|----
+│object UserService {
+│def createUser(name: String, age: Int): User = {
+|----
+│def processUser[T](user: User)(f: User => T): T = {
+|----
+│trait UserRepository {
+|----
+│class UserServiceImpl extends UserRepository {
+|----
+│override def findById(id: String): Option[User] = users.get(id)
+|----
+│override def save(user: User): Unit = {

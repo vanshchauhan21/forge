@@ -1,0 +1,20 @@
+---
+source: crates/forge_tool/src/outline/tests/java.rs
+expression: result
+---
+test.java
+│public class UserService {
+|----
+│public UserService() {
+|----
+│@Override
+│toString
+|----
+│public void addUser(User user) throws IllegalArgumentException {
+|----
+│static class User {
+|----
+│public User(String name, int age) {
+|----
+│interface UserValidator {
+│boolean validate(User user);

@@ -1,0 +1,15 @@
+---
+source: crates/forge_tool/src/outline/tests/css.rs
+expression: result
+---
+test.css
+│@media (max-width: 768px) {
+│.container {
+|----
+│@keyframes fade {
+|----
+│.header {
+|----
+│--primary-color: #333;
+|----
+│.grid-layout {

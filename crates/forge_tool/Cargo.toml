@@ -22,6 +22,13 @@ tree-sitter = "0.24"
 tree-sitter-rust = "0.23"
 tree-sitter-javascript = "0.23"
 tree-sitter-python = "0.23"
+tree-sitter-typescript = { version = "0.23" }
+tree-sitter-css = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-scala = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-ruby = "0.23"
 forge_walker = { path = "../forge_walker" }
 forge_domain = { path = "../forge_domain" }
 tempfile = "3.8.1"

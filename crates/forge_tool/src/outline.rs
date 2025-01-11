@@ -13,12 +13,21 @@ use walkdir::WalkDir;
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");
 const RUST: &str = include_str!("queries/rust.rkt");
+const TYPESCRIPT: &str = include_str!("queries/typescript.rkt");
+const CSS: &str = include_str!("queries/css.rkt");
+const JAVA: &str = include_str!("queries/java.rkt");
+const SCALA: &str = include_str!("queries/scala.rkt");
 
 fn load_language_parser(language_name: &str) -> Result<Language, String> {
     match language_name {
         "rust" => Ok(tree_sitter_rust::LANGUAGE.into()),
         "javascript" => Ok(tree_sitter_javascript::LANGUAGE.into()),
         "python" => Ok(tree_sitter_python::LANGUAGE.into()),
+        "typescript" => Ok(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
+        "tsx" => Ok(tree_sitter_typescript::LANGUAGE_TSX.into()),
+        "css" => Ok(tree_sitter_css::LANGUAGE.into()),
+        "java" => Ok(tree_sitter_java::LANGUAGE.into()),
+        "scala" => Ok(tree_sitter_scala::LANGUAGE.into()),
         x => Err(format!("Unsupported language: {}", x)),
     }
 }
@@ -28,6 +37,11 @@ fn load_queries() -> HashMap<&'static str, &'static str> {
     queries.insert("rust", RUST);
     queries.insert("javascript", JAVASCRIPT);
     queries.insert("python", PYTHON);
+    queries.insert("typescript", TYPESCRIPT);
+    queries.insert("tsx", TYPESCRIPT); // Use TypeScript query for TSX files
+    queries.insert("css", CSS);
+    queries.insert("java", JAVA);
+    queries.insert("scala", SCALA);
     queries
 }
 
@@ -105,6 +119,10 @@ pub struct OutlineInput {
 /// - Rust (.rs files): structs, traits, impls
 /// - JavaScript (.js files): classes, methods, prototypes
 /// - Python (.py files): classes, decorators, inheritance
+/// - TypeScript (.ts, .tsx files): interfaces, classes, methods
+/// - Scala (.scala files): traits, classes, objects
+/// - Java (.java files): classes, methods, interfaces
+/// - CSS (.css files): classes, ids, pseudo-classes
 ///
 /// Returns a formatted string showing file names and their definitions in a
 /// tree-like structure. Example output:
@@ -124,8 +142,17 @@ impl ToolCallService for Outline {
     type Output = String;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
-        let extensions_to_languages =
-            HashMap::from([("rs", "rust"), ("js", "javascript"), ("py", "python")]);
+        let extensions_to_languages = HashMap::from([
+            ("rs", "rust"),
+            ("js", "javascript"),
+            ("py", "python"),
+            ("ts", "typescript"),
+            ("tsx", "tsx"),
+            ("css", "css"),
+            ("scss", "css"),
+            ("java", "java"),
+            ("scala", "scala"),
+        ]);
 
         let queries = load_queries();
         let mut parsers: HashMap<&str, (Parser, Query)> = HashMap::new();
@@ -188,198 +215,4 @@ impl ToolCallService for Outline {
 }
 
 #[cfg(test)]
-mod tests {
-    use insta::assert_snapshot;
-    use tempfile::TempDir;
-    use tokio::fs;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_outline_rust() {
-        let temp_dir = TempDir::new().unwrap();
-        let content = r#"
-struct User {
-    name: String,
-    age: u32,
-}
-
-fn calculate_age(birth_year: u32) -> u32 {
-    2024 - birth_year
-}
-
-impl User {
-    fn new(name: String, age: u32) -> Self {
-        User { name, age }
-    }
-}
-"#;
-        let file_path = temp_dir.path().join("test.rs");
-        fs::write(&file_path, content).await.unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        assert_snapshot!("outline_rust", result);
-    }
-
-    #[tokio::test]
-    async fn test_outline_javascript() {
-        let temp_dir = TempDir::new().unwrap();
-        let content = r#"
-// Basic function
-function calculateTotal(items) {
-    return items.reduce((sum, item) => sum + item.price, 0);
-}
-
-// Arrow function
-const processItems = (items) => {
-    return items.map(item => item.name);
-};
-
-class ShoppingCart {
-    constructor() {
-        this.items = [];
-    }
-
-    // Instance method
-    addItem(item) {
-        this.items.push(item);
-    }
-
-    // Static method
-    static getTotalPrice(items) {
-        return calculateTotal(items);
-    }
-}
-
-// Async function
-async function fetchItems() {
-    return Promise.resolve([]);
-}"#;
-        let file_path = temp_dir.path().join("test.js");
-        fs::write(&file_path, content).await.unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        assert_snapshot!("outline_javascript", result);
-    }
-
-    #[tokio::test]
-    async fn test_outline_python() {
-        let temp_dir = TempDir::new().unwrap();
-        let content = r#"
-def greet(name: str) -> str:
-    return f"Hello, {name}!"
-
-# Class with inheritance
-class Person:
-    def __init__(self, name: str):
-        self.name = name
-
-    def say_hello(self):
-        return greet(self.name)
-
-# Decorated method
-def decorator(func):
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-@decorator
-def decorated_function():
-    pass
-
-# Async function
-async def fetch_data():
-    return "data""#;
-        let file_path = temp_dir.path().join("test.py");
-        fs::write(&file_path, content).await.unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        assert_snapshot!("outline_python", result);
-    }
-
-    #[tokio::test]
-    async fn test_outline_multiple_files() {
-        let temp_dir = TempDir::new().unwrap();
-
-        // Rust file
-        fs::write(
-            temp_dir.path().join("main.rs"),
-            "fn main() { println!(\"Hello\"); }",
-        )
-        .await
-        .unwrap();
-
-        // JavaScript file
-        fs::write(
-            temp_dir.path().join("script.js"),
-            "function init() { console.log('Ready'); }",
-        )
-        .await
-        .unwrap();
-
-        // Python file
-        fs::write(
-            temp_dir.path().join("app.py"),
-            "def start(): print('Starting')",
-        )
-        .await
-        .unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        let seperator = "\n|----\n";
-        let mut result = result.split(seperator).collect::<Vec<_>>();
-        result.sort();
-        result = result.iter().map(|x| x.trim()).collect();
-        let result = result.join(seperator);
-        assert_snapshot!("outline_multiple_files", result);
-    }
-
-    #[tokio::test]
-    async fn test_outline_empty_directory() {
-        let temp_dir = TempDir::new().unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        assert_snapshot!("outline_empty_directory", result);
-    }
-
-    #[tokio::test]
-    async fn test_outline_unsupported_files() {
-        let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("data.txt"), "Some text")
-            .await
-            .unwrap();
-
-        let outline = Outline;
-        let result = outline
-            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
-            .await
-            .unwrap();
-
-        assert_snapshot!("outline_unsupported_files", result);
-    }
-}
+mod tests;
