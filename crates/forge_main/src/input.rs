@@ -8,7 +8,6 @@ use strum_macros::{AsRefStr, EnumIter};
 pub enum UserInput {
     End,
     New,
-    Help,
     Message(String),
 }
 
@@ -60,15 +59,24 @@ impl Autocomplete for CommandCompleter {
 
 impl UserInput {
     pub fn prompt() -> Result<Self> {
-        let text = inquire::Text::new("")
-            .with_help_message(&format!(
-                "Available commands: {}",
-                Self::available_commands().join(", ")
-            ))
-            .with_autocomplete(CommandCompleter::new())
-            .prompt()?;
+        loop {
+            let text = inquire::Text::new("")
+                .with_help_message(&format!(
+                    "Available commands: {}",
+                    Self::available_commands().join(", ")
+                ))
+                .with_autocomplete(CommandCompleter::new())
+                .prompt()?;
 
-        Self::parse(&text)
+            match Self::parse(&text)? {
+                None => {
+                    // Show help text and continue the loop
+                    println!("\n{}\n", Self::get_help_text());
+                    continue;
+                }
+                Some(input) => return Ok(input),
+            }
+        }
     }
 
     pub fn prompt_initial() -> Result<String> {
@@ -92,12 +100,12 @@ Other Usage:
             .to_string()
     }
 
-    pub fn parse(input: &str) -> Result<Self> {
+    pub fn parse(input: &str) -> Result<Option<Self>> {
         let trimmed = input.trim();
         match trimmed {
-            "/end" => Ok(UserInput::End),
-            "/new" => Ok(UserInput::New),
-            "/help" => Ok(UserInput::Help),
+            "/end" => Ok(Some(UserInput::End)),
+            "/new" => Ok(Some(UserInput::New)),
+            "/help" => Ok(None), // Return None to indicate help should be shown
             cmd if cmd.starts_with('/') => {
                 let available_commands = Self::available_commands();
                 Err(anyhow::anyhow!(
@@ -106,7 +114,7 @@ Other Usage:
                     available_commands.join(", ")
                 ))
             }
-            text => Ok(UserInput::Message(text.to_string())),
+            text => Ok(Some(UserInput::Message(text.to_string()))),
         }
     }
 
