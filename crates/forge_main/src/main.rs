@@ -28,10 +28,7 @@ async fn main() -> Result<()> {
             .trim()
             .to_string()
     } else {
-        inquire::Text::new("")
-            .with_help_message("How can I help?")
-            .prompt()?
-            .to_string()
+        UserInput::prompt_initial()?
     };
 
     println!("{}", initial_content.trim());
@@ -94,24 +91,12 @@ async fn main() -> Result<()> {
         }
 
         println!();
-        let help_message = format!(
-            "Available commands: {}",
-            UserInput::available_commands().join(", ")
-        );
-
-        let input = inquire::Text::new("")
-            .with_help_message(&help_message)
-            .prompt()?;
-
-        match UserInput::parse(&input)? {
+        match UserInput::prompt()? {
             UserInput::End => break,
             UserInput::New => {
                 println!("Starting fresh conversation...");
                 current_conversation_id = None;
-                content = inquire::Text::new("")
-                    .with_help_message("How can I help?")
-                    .prompt()?
-                    .to_string();
+                content = UserInput::prompt_initial()?;
             }
             UserInput::Message(msg) => {
                 content = msg;
