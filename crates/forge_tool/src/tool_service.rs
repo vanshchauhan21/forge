@@ -4,6 +4,7 @@ use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, Too
 use serde_json::Value;
 use tracing::debug;
 
+use crate::approve::Approve;
 use crate::fs::*;
 use crate::outline::Outline;
 use crate::shell::Shell;
@@ -87,6 +88,7 @@ impl ToolService for Live {
 impl Service {
     pub fn tool_service() -> impl ToolService {
         Live::from_iter([
+            Tool::new(Approve),
             Tool::new(FSRead),
             Tool::new(FSWrite),
             Tool::new(FSList),

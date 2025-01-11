@@ -5,6 +5,30 @@ snapshot_kind: text
 ---
 [
   {
+    "name": "approve",
+    "description": "The approve tool provides an interactive confirmation dialog for critical\n operations.\n # Use Cases\n - Confirming destructive operations (file deletions, data modifications)\n - Validating important user decisions\n - Ensuring user awareness before significant actions\n - Getting explicit consent for sensitive operations\n # Behavior\n - Displays a yes/no dialog with the provided message\n - Default selection is \\'yes\\' for quick confirmations\n - Interactive: requires direct user input\n - Returns true only on explicit \\'yes\\' confirmation\n\nParameters:\n- message (required): The message to display when asking for confirmation",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ApproveInput",
+      "description": "Input parameters for the approve tool",
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "description": "The message to display when asking for confirmation",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Boolean",
+      "type": "boolean"
+    }
+  },
+  {
     "name": "fs_file_info",
     "description": "Request to retrieve detailed metadata about a file or directory at the\n specified path. Returns comprehensive information including size, creation\n time, last modified time, permissions, and type. Use this when you need to\n understand file characteristics without reading the actual content.\n\nParameters:\n- path (required): The path of the file or directory to inspect (relative to the current working directory)",
     "input_schema": {
