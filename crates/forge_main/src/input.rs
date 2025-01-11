@@ -1,14 +1,19 @@
 use anyhow::Result;
 use inquire::Autocomplete;
-use strum::IntoEnumIterator;
-use strum_macros::{AsRefStr, EnumIter};
+use strum_macros::AsRefStr;
 
-#[derive(Debug, EnumIter, AsRefStr)]
-#[strum(serialize_all = "lowercase")]
+#[derive(Debug)]
 pub enum UserInput {
     End,
     New,
     Message(String),
+}
+
+#[derive(Debug, AsRefStr)]
+#[strum(serialize_all = "lowercase")]
+enum InputKind {
+    Help,
+    User(UserInput),
 }
 
 #[derive(Clone)]
@@ -18,7 +23,7 @@ struct CommandCompleter {
 
 impl CommandCompleter {
     fn new() -> Self {
-        Self { commands: UserInput::available_commands() }
+        Self { commands: InputKind::available_commands() }
     }
 }
 
@@ -57,38 +62,31 @@ impl Autocomplete for CommandCompleter {
     }
 }
 
-impl UserInput {
-    pub fn prompt() -> Result<Self> {
-        loop {
-            let text = inquire::Text::new("")
-                .with_help_message(&format!(
-                    "Available commands: {}",
-                    Self::available_commands().join(", ")
-                ))
-                .with_autocomplete(CommandCompleter::new())
-                .prompt()?;
-
-            match Self::parse(&text)? {
-                None => {
-                    // Show help text and continue the loop
-                    println!("\n{}\n", Self::get_help_text());
-                    continue;
-                }
-                Some(input) => return Ok(input),
-            }
-        }
+impl InputKind {
+    fn available_commands() -> Vec<String> {
+        vec!["/end".to_string(), "/new".to_string()]
     }
 
-    pub fn prompt_initial() -> Result<String> {
-        Ok(inquire::Text::new("")
-            .with_help_message("How can I help?")
-            .prompt()?
-            .to_string())
+    fn parse(input: &str) -> Result<Self> {
+        let trimmed = input.trim();
+        match trimmed {
+            "/end" => Ok(InputKind::User(UserInput::End)),
+            "/new" => Ok(InputKind::User(UserInput::New)),
+            "/help" => Ok(InputKind::Help),
+            cmd if cmd.starts_with('/') => {
+                let available_commands = Self::available_commands();
+                Err(anyhow::anyhow!(
+                    "Unknown command: '{}'. Available commands: {}",
+                    cmd,
+                    available_commands.join(", ")
+                ))
+            }
+            text => Ok(InputKind::User(UserInput::Message(text.to_string()))),
+        }
     }
 
     fn get_help_text() -> String {
         "Available Commands:
-/help  - Display this help message
 /new   - Start a new conversation
 /end   - End the current conversation and exit
 
@@ -99,31 +97,33 @@ Other Usage:
 - Arrow keys can be used to navigate command history"
             .to_string()
     }
+}
 
-    pub fn parse(input: &str) -> Result<Option<Self>> {
-        let trimmed = input.trim();
-        match trimmed {
-            "/end" => Ok(Some(UserInput::End)),
-            "/new" => Ok(Some(UserInput::New)),
-            "/help" => Ok(None), // Return None to indicate help should be shown
-            cmd if cmd.starts_with('/') => {
-                let available_commands = Self::available_commands();
-                Err(anyhow::anyhow!(
-                    "Unknown command: '{}'. Available commands: {}",
-                    cmd,
-                    available_commands.join(", ")
+impl UserInput {
+    pub fn prompt() -> Result<Self> {
+        loop {
+            let text = inquire::Text::new("")
+                .with_help_message(&format!(
+                    "Available commands: {}",
+                    InputKind::available_commands().join(", ")
                 ))
+                .with_autocomplete(CommandCompleter::new())
+                .prompt()?;
+
+            match InputKind::parse(&text)? {
+                InputKind::Help => {
+                    println!("\n{}\n", InputKind::get_help_text());
+                    continue;
+                }
+                InputKind::User(input) => return Ok(input),
             }
-            text => Ok(Some(UserInput::Message(text.to_string()))),
         }
     }
 
-    pub fn available_commands() -> Vec<String> {
-        UserInput::iter()
-            .filter_map(|cmd| match cmd {
-                UserInput::Message(_) => None,
-                cmd => Some(format!("/{}", cmd.as_ref())),
-            })
-            .collect()
+    pub fn prompt_initial() -> Result<String> {
+        Ok(inquire::Text::new("")
+            .with_help_message("How can I help?")
+            .prompt()?
+            .to_string())
     }
 }
