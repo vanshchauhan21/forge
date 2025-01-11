@@ -34,7 +34,7 @@ pub struct StatusDisplay<'a> {
     pub error_details: Option<&'a str>,
 }
 
-impl<'a> StatusDisplay<'a> {
+impl StatusDisplay<'_> {
     pub fn format(&self) -> String {
         let (icon, label, message) = match self.kind {
             StatusKind::Execute => (
