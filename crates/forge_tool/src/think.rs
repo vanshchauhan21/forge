@@ -195,7 +195,7 @@ impl Think {
 
 impl NamedTool for Think {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("think")
+        ToolName::new("think_step")
     }
 }
 

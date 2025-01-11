@@ -19,7 +19,7 @@ pub struct FSFileInfo;
 
 impl NamedTool for FSFileInfo {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("fs_file_info")
+        ToolName::new("file_information")
     }
 }
 

@@ -61,29 +61,22 @@ You have access to a set of tools that can be executed upon user approval. Use o
 Available tools:
 <tool_list>
 
-1. approve
-The approve tool provides an interactive confirmation dialog for critical
- operations.
- # Use Cases
- - Confirming destructive operations (file deletions, data modifications)
- - Validating important user decisions
- - Ensuring user awareness before significant actions
- - Getting explicit consent for sensitive operations
- # Behavior
- - Displays a yes/no dialog with the provided message
- - Default selection is \'yes\' for quick confirmations
- - Interactive: requires direct user input
- - Returns true only on explicit \'yes\' confirmation
+1. execute_command
+Execute shell commands with safety checks and validation. This tool provides
+ controlled access to system shell commands while preventing dangerous
+ operations through a comprehensive blacklist and validation system.
 
 Parameters:
-- message (required): The message to display when asking for confirmation
+- command (required): The shell command to execute.
+- cwd (required): The working directory where the command should be executed.
 
 Usage:
-<approve>
-<message>...</message>
-</approve>
+<execute_command>
+<command>...</command>
+<cwd>...</cwd>
+</execute_command>
 
-2. fs_file_info
+2. file_information
 Request to retrieve detailed metadata about a file or directory at the
  specified path. Returns comprehensive information including size, creation
  time, last modified time, permissions, and type. Use this when you need to
@@ -93,45 +86,11 @@ Parameters:
 - path (required): The path of the file or directory to inspect (relative to the current working directory)
 
 Usage:
-<fs_file_info>
+<file_information>
 <path>...</path>
-</fs_file_info>
+</file_information>
 
-3. fs_list
-Request to list files and directories within the specified directory. If
- recursive is true, it will list all files and directories recursively. If
- recursive is false or not provided, it will only list the top-level
- contents. Do not use this tool to confirm the existence of files you may
- have created, as the user will let you know if the files were created
- successfully or not.
-
-Parameters:
-- path (required): The path of the directory to list contents for (relative to the current working directory)
-- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
-
-Usage:
-<fs_list>
-<path>...</path>
-<recursive>...</recursive>
-</fs_list>
-
-4. fs_read
-Request to read the contents of a file at the specified path. Use this when
- you need to examine the contents of an existing file you do not know the
- contents of, for example to analyze code, review text files, or extract
- information from configuration files. Automatically extracts raw text from
- PDF and DOCX files. May not be suitable for other types of binary files, as
- it returns the raw content as a string.
-
-Parameters:
-- path (required): The path of the file to read (relative to the current working directory)
-
-Usage:
-<fs_read>
-<path>...</path>
-</fs_read>
-
-5. fs_replace
+3. find_and_replace
 Replace sections in a file using SEARCH/REPLACE blocks for precise
 modifications.
 
@@ -163,46 +122,30 @@ Parameters:
 - path (required): File path relative to the current working directory
 
 Usage:
-<fs_replace>
+<find_and_replace>
 <diff>...</diff>
 <path>...</path>
-</fs_replace>
+</find_and_replace>
 
-6. fs_search
-Request to perform a regex search across files in a specified directory,
- providing context-rich results. This tool searches for patterns or specific
- content across multiple files, displaying each match with encapsulating
- context.
-
-Parameters:
-- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).
-- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
-- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
-
-Usage:
-<fs_search>
-<file_pattern>...</file_pattern>
-<path>...</path>
-<regex>...</regex>
-</fs_search>
-
-7. fs_write
-Request to write content to a file at the specified path. If the file
- exists, it will be overwritten with the provided content. If the file
- doesn\'t exist, it will be created. This tool will automatically create any
- directories needed to write the file.
+4. list_directory_content
+Request to list files and directories within the specified directory. If
+ recursive is true, it will list all files and directories recursively. If
+ recursive is false or not provided, it will only list the top-level
+ contents. Do not use this tool to confirm the existence of files you may
+ have created, as the user will let you know if the files were created
+ successfully or not.
 
 Parameters:
-- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
-- path (required): The path of the file to write to (relative to the current working directory)
+- path (required): The path of the directory to list contents for (relative to the current working directory)
+- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
 
 Usage:
-<fs_write>
-<content>...</content>
+<list_directory_content>
 <path>...</path>
-</fs_write>
+<recursive>...</recursive>
+</list_directory_content>
 
-8. outline
+5. outline
 List definition names (classes, functions, methods, etc.) in source code
  files. This tool is particularly useful when you need to:
  - Map relationships between types, traits, and interfaces
@@ -243,22 +186,41 @@ Usage:
 <path>...</path>
 </outline>
 
-9. shell
-Execute shell commands with safety checks and validation. This tool provides
- controlled access to system shell commands while preventing dangerous
- operations through a comprehensive blacklist and validation system.
+6. read_file
+Request to read the contents of a file at the specified path. Use this when
+ you need to examine the contents of an existing file you do not know the
+ contents of, for example to analyze code, review text files, or extract
+ information from configuration files. Automatically extracts raw text from
+ PDF and DOCX files. May not be suitable for other types of binary files, as
+ it returns the raw content as a string.
 
 Parameters:
-- command (required): The shell command to execute.
-- cwd (required): The working directory where the command should be executed.
+- path (required): The path of the file to read (relative to the current working directory)
 
 Usage:
-<shell>
-<command>...</command>
-<cwd>...</cwd>
-</shell>
+<read_file>
+<path>...</path>
+</read_file>
 
-10. think
+7. search_in_files
+Request to perform a regex search across files in a specified directory,
+ providing context-rich results. This tool searches for patterns or specific
+ content across multiple files, displaying each match with encapsulating
+ context.
+
+Parameters:
+- file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).
+- path (required): The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
+- regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
+
+Usage:
+<search_in_files>
+<file_pattern>...</file_pattern>
+<path>...</path>
+<regex>...</regex>
+</search_in_files>
+
+8. think_step
 A framework for iterative reasoning in problem-solving.
  Purpose:
  Tracks reasoning steps (\"thoughts\") to solve complex problems:
@@ -295,7 +257,7 @@ Parameters:
 - total_thoughts (required): The total number of thoughts or reasoning steps expected to reach a solution.
 
 Usage:
-<think>
+<think_step>
 <branch_from_thought>...</branch_from_thought>
 <branch_id>...</branch_id>
 <is_revision>...</is_revision>
@@ -306,7 +268,72 @@ Usage:
 <thought>...</thought>
 <thought_number>...</thought_number>
 <total_thoughts>...</total_thoughts>
-</think>
+</think_step>
+
+9. user_confirmation
+The approve tool provides an interactive confirmation dialog for critical
+ operations. Use this tool when a simple yes/no answer is sufficient for
+ to proceed with its decision-making.
+ # Use Cases
+ - Confirming destructive operations (file deletions, data modifications)
+ - Validating important user decisions
+ - Ensuring user awareness before significant actions
+ - Getting explicit consent for sensitive operations
+ # Behavior
+ - Displays a yes/no dialog with the provided message
+ - Default selection is \'yes\' for quick confirmations
+ - Interactive: requires direct user input
+ - Returns true only on explicit \'yes\' confirmation
+
+Parameters:
+- message (required): The message to display when asking for confirmation
+
+Usage:
+<user_confirmation>
+<message>...</message>
+</user_confirmation>
+
+10. user_options
+The select tool provides an interactive selection dialog for choosing from
+ multiple options. Use this tool when you need the user to choose one item
+ from a list of possibilities.
+ # Use Cases
+ - Selecting from multiple available options
+ - Making configuration choices
+ - Choosing between different paths of action
+ - Filtering or narrowing down possibilities
+ # Behavior
+ - Displays a selection dialog with the provided message and options
+ - Interactive: user can navigate through options using arrow keys
+ - Returns the selected option as a string
+ - Supports keyboard navigation and search
+ - Best used with multiple options to provide meaningful choices
+
+Parameters:
+- message (required): The message to display above the selection options
+- options (required): The list of options to choose from. Intended for multiple options (2 or more) to provide meaningful choices to the user.
+
+Usage:
+<user_options>
+<message>...</message>
+<options>...</options>
+</user_options>
+
+11. write_file
+Request to write content to a file at the specified path. If the file
+ exists, it will be overwritten with the provided content. If the file
+ doesn\'t exist, it will be created. This tool will automatically create any
+ directories needed to write the file.
+
+Parameters:
+- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
+- path (required): The path of the file to write to (relative to the current working directory)
+
+Usage:
+<write_file>
+<content>...</content>
+<path>...</path>
+</write_file>
 
 </tool_list>
 

@@ -25,7 +25,7 @@ pub struct FSWrite;
 
 impl NamedTool for FSWrite {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("fs_write")
+        ToolName::new("write_file")
     }
 }
 

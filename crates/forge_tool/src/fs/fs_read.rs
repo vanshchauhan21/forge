@@ -20,7 +20,7 @@ pub struct FSRead;
 
 impl NamedTool for FSRead {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("fs_read")
+        ToolName::new("read_file")
     }
 }
 

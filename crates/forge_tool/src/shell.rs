@@ -121,7 +121,7 @@ impl Shell {
 
 impl NamedTool for Shell {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("shell")
+        ToolName::new("execute_command")
     }
 }
 

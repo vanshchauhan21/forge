@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 pub struct SelectInput {
     /// The message to display above the selection options
     pub message: String,
-    /// The list of options to choose from. Intended for multiple options (2 or more)
-    /// to provide meaningful choices to the user.
+    /// The list of options to choose from. Intended for multiple options (2 or
+    /// more) to provide meaningful choices to the user.
     pub options: Vec<String>,
 }
 
@@ -36,7 +36,7 @@ pub struct SelectTool;
 
 impl NamedTool for SelectTool {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("select")
+        ToolName::new("user_options")
     }
 }
 
