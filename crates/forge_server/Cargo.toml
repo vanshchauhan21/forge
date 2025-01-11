@@ -15,7 +15,6 @@ derive_more = { version = "1.0.0", features = ["full"] }
 clap = { version = "4.5.23", features = ["derive"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-colorize = "0.1.0"
 async-trait = "0.1.83"
 forge_tool = { path = "../forge_tool" }
 forge_provider = { path = "../forge_provider" }
