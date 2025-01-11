@@ -104,8 +104,16 @@ impl Shell {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
         Ok(ShellOutput {
-            stdout: if stdout.is_empty() { None } else { Some(stdout) },
-            stderr: if stderr.is_empty() { None } else { Some(stderr) },
+            stdout: if stdout.is_empty() {
+                None
+            } else {
+                Some(stdout)
+            },
+            stderr: if stderr.is_empty() {
+                None
+            } else {
+                Some(stderr)
+            },
             success: output.status.success(),
         })
     }
@@ -275,7 +283,7 @@ mod tests {
 
         assert!(result.success);
         assert!(result.stdout.is_some());
-        assert!(result.stderr.is_none()); 
+        assert!(result.stderr.is_none());
     }
 
     #[test]
