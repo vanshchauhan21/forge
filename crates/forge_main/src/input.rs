@@ -64,7 +64,7 @@ impl Autocomplete for CommandCompleter {
 
 impl InputKind {
     fn available_commands() -> Vec<String> {
-        vec!["/end".to_string(), "/new".to_string()]
+        vec!["/end".to_string(), "/new".to_string(), "/help".to_string()]
     }
 
     fn parse(input: &str) -> Result<Self> {
@@ -121,9 +121,23 @@ impl UserInput {
     }
 
     pub fn prompt_initial() -> Result<String> {
-        Ok(inquire::Text::new("")
-            .with_help_message("How can I help?")
-            .prompt()?
-            .to_string())
+        loop {
+            let text = inquire::Text::new("")
+                .with_help_message(&format!(
+                    "How can I help? Available commands: {}",
+                    InputKind::available_commands().join(", ")
+                ))
+                .with_autocomplete(CommandCompleter::new())
+                .prompt()?;
+
+            match InputKind::parse(&text)? {
+                InputKind::Help => {
+                    println!("\n{}\n", InputKind::get_help_text());
+                    continue;
+                }
+                InputKind::User(UserInput::Message(msg)) => return Ok(msg),
+                InputKind::User(_) => continue, // Ignore other commands in initial prompt
+            }
+        }
     }
 }
