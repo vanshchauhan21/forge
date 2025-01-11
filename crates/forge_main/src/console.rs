@@ -47,11 +47,6 @@ impl Console {
         self.write_internal(content, true)
     }
 
-    /// Returns the last text that was written
-    pub fn last_text(&self) -> String {
-        self.state.lock().unwrap().last_text.clone()
-    }
-
     /// Internal write implementation that handles both write and writeln cases
     fn write_internal(&self, content: impl AsRef<str>, add_newline: bool) -> io::Result<()> {
         let content = content.as_ref();
@@ -139,5 +134,31 @@ impl Console {
             }
         }
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test-only extension trait for Console
+    trait ConsoleTestExt {
+        fn last_text(&self) -> String;
+    }
+
+    impl ConsoleTestExt for Console {
+        fn last_text(&self) -> String {
+            self.state.lock().unwrap().last_text.clone()
+        }
+    }
+
+    #[test]
+    fn test_last_text() {
+        let console = Console::new();
+        console.write("Hello").unwrap();
+        assert_eq!(console.last_text(), "Hello");
+        
+        console.writeln("World").unwrap();
+        assert_eq!(console.last_text(), "World");
     }
 }

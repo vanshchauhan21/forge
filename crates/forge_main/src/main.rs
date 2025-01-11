@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use anyhow::Result;
 use chrono::Local;
 use clap::Parser;
