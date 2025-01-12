@@ -113,14 +113,8 @@ mod tests {
         #[test]
         fn consecutive_newlines() {
             // Should limit to maximum of 2 newlines
-            assert_eq!(
-                NewLine::normalize_newlines("abc\n\n\n"),
-                "abc\n\n"
-            );
-            assert_eq!(
-                NewLine::normalize_newlines("abc\n\n\n\n\n"),
-                "abc\n\n"
-            );
+            assert_eq!(NewLine::normalize_newlines("abc\n\n\n"), "abc\n\n");
+            assert_eq!(NewLine::normalize_newlines("abc\n\n\n\n\n"), "abc\n\n");
             assert_eq!(NewLine::normalize_newlines("\n\n\n"), "\n\n");
         }
 
@@ -140,10 +134,7 @@ mod tests {
         fn leading_and_trailing() {
             assert_eq!(NewLine::normalize_newlines("\n\nabc"), "\n\nabc");
             assert_eq!(NewLine::normalize_newlines("abc\n\n"), "abc\n\n");
-            assert_eq!(
-                NewLine::normalize_newlines("\n\nabc\n\n"),
-                "\n\nabc\n\n"
-            );
+            assert_eq!(NewLine::normalize_newlines("\n\nabc\n\n"), "\n\nabc\n\n");
         }
     }
 
