@@ -117,22 +117,22 @@ mod test {
             .definition
             .name
             .into_string()
-            .ends_with("fs_read"));
+            .ends_with("read_file"));
         assert!(Tool::new(FSSearch)
             .definition
             .name
             .into_string()
-            .ends_with("fs_search"));
+            .ends_with("search_in_files"));
         assert!(Tool::new(FSList)
             .definition
             .name
             .into_string()
-            .ends_with("fs_list"));
+            .ends_with("list_directory_content"));
         assert!(Tool::new(FSFileInfo)
             .definition
             .name
             .into_string()
-            .ends_with("file_info"));
+            .ends_with("file_information"));
     }
 
     #[test]
