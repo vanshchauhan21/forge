@@ -74,24 +74,14 @@ async fn main() -> Result<()> {
                 }
                 ChatResponse::ToolCallStart(tool_call_full) => {
                     let tool_name = tool_call_full.name.as_str();
-                    if cli.verbose {
-                        CONSOLE.writeln(format!(
-                            "\n{} {} {} {}",
-                            "▶".white(),
-                            "TOOL USE DETECTED:".bold().white(),
-                            tool_name,
-                            "◀".white()
-                        ))?;
-                    } else {
-                        let status = StatusDisplay {
-                            kind: StatusKind::Execute,
-                            message: tool_name,
-                            timestamp: Some(get_timestamp()),
-                            error_details: None,
-                        };
-                        CONSOLE.writeln(status.format())?;
-                        current_tool = Some(tool_name.to_string());
-                    }
+                    let status = StatusDisplay {
+                        kind: StatusKind::Execute,
+                        message: tool_name,
+                        timestamp: Some(get_timestamp()),
+                        error_details: None,
+                    };
+                    CONSOLE.writeln(status.format())?;
+                    current_tool = Some(tool_name.to_string());
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
                     if cli.verbose {
