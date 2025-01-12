@@ -2,7 +2,7 @@ use colored::Colorize;
 use unicode_width::UnicodeWidthStr;
 
 /// Create a border line with the given width and fill character
-pub fn make_border_line(width: usize, is_top: bool) -> String {
+fn make_border_line(width: usize, is_top: bool) -> String {
     let left = if is_top { '╔' } else { '╚' };
     let right = if is_top { '╗' } else { '╝' };
     let fill = '═'.to_string().repeat(width);
