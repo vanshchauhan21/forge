@@ -79,6 +79,7 @@ async fn main() -> Result<()> {
                         timestamp: Some(get_timestamp()),
                         error_details: None,
                     };
+                    CONSOLE.newline()?;
                     CONSOLE.writeln(status.format())?;
                     current_tool = Some(tool_name.to_string());
                 }

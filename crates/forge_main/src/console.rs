@@ -54,4 +54,9 @@ impl Console {
         let content = format!("{}\n", content.as_ref());
         self.write(content)
     }
+
+    /// Writes a newline
+    pub fn newline(&self) -> io::Result<()> {
+        self.write("\n")
+    }
 }
