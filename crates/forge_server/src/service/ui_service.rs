@@ -69,8 +69,8 @@ impl UIService for Live {
             let id = conversation.id;
             stream = Box::pin(
                 once(Ok(ChatResponse::ConversationStarted(id)))
-                    .chain(stream)
-                    .merge(title_stream),
+                    .chain(title_stream)
+                    .chain(stream),
             );
         }
 
@@ -119,7 +119,9 @@ mod tests {
     impl TestTitleService {
         fn single() -> Self {
             Self {
-                events: vec![ChatResponse::CompleteTitle("test title generated".to_string())],
+                events: vec![ChatResponse::CompleteTitle(
+                    "test title generated".to_string(),
+                )],
             }
         }
 
@@ -148,9 +150,7 @@ mod tests {
 
     impl TestChatService {
         fn single() -> Self {
-            Self {
-                events: vec![ChatResponse::Text("test message".to_string())],
-            }
+            Self { events: vec![ChatResponse::Text("test message".to_string())] }
         }
 
         fn multiple() -> Self {
