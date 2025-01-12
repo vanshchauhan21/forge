@@ -1,12 +1,12 @@
 /// Handles normalization of console output with respect to newlines
 #[derive(Debug, Default)]
-pub struct ConsoleNormalizer {
+pub struct NewLine {
     /// The last normalized output
     pub(crate) last_output: String,
     trailing_newlines: usize,
 }
 
-impl ConsoleNormalizer {
+impl NewLine {
     /// Creates a new ConsoleNormalizer instance
     pub fn new() -> Self {
         Self::default()
@@ -105,43 +105,43 @@ mod tests {
 
         #[test]
         fn basic_text() {
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc"), "abc");
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc\n"), "abc\n");
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc\r\n"), "abc\n");
+            assert_eq!(NewLine::normalize_newlines("abc"), "abc");
+            assert_eq!(NewLine::normalize_newlines("abc\n"), "abc\n");
+            assert_eq!(NewLine::normalize_newlines("abc\r\n"), "abc\n");
         }
 
         #[test]
         fn consecutive_newlines() {
             // Should limit to maximum of 2 newlines
             assert_eq!(
-                ConsoleNormalizer::normalize_newlines("abc\n\n\n"),
+                NewLine::normalize_newlines("abc\n\n\n"),
                 "abc\n\n"
             );
             assert_eq!(
-                ConsoleNormalizer::normalize_newlines("abc\n\n\n\n\n"),
+                NewLine::normalize_newlines("abc\n\n\n\n\n"),
                 "abc\n\n"
             );
-            assert_eq!(ConsoleNormalizer::normalize_newlines("\n\n\n"), "\n\n");
+            assert_eq!(NewLine::normalize_newlines("\n\n\n"), "\n\n");
         }
 
         #[test]
         fn mixed_content() {
             assert_eq!(
-                ConsoleNormalizer::normalize_newlines("line1\n\nline2\n\n\nline3"),
+                NewLine::normalize_newlines("line1\n\nline2\n\n\nline3"),
                 "line1\n\nline2\n\nline3"
             );
             assert_eq!(
-                ConsoleNormalizer::normalize_newlines("line1\r\n\r\nline2"),
+                NewLine::normalize_newlines("line1\r\n\r\nline2"),
                 "line1\n\nline2"
             );
         }
 
         #[test]
         fn leading_and_trailing() {
-            assert_eq!(ConsoleNormalizer::normalize_newlines("\n\nabc"), "\n\nabc");
-            assert_eq!(ConsoleNormalizer::normalize_newlines("abc\n\n"), "abc\n\n");
+            assert_eq!(NewLine::normalize_newlines("\n\nabc"), "\n\nabc");
+            assert_eq!(NewLine::normalize_newlines("abc\n\n"), "abc\n\n");
             assert_eq!(
-                ConsoleNormalizer::normalize_newlines("\n\nabc\n\n"),
+                NewLine::normalize_newlines("\n\nabc\n\n"),
                 "\n\nabc\n\n"
             );
         }
@@ -152,14 +152,14 @@ mod tests {
 
         #[test]
         fn basic_state() {
-            let normalizer = ConsoleNormalizer::new();
+            let normalizer = NewLine::new();
             assert_eq!(normalizer.trailing_newlines, 0);
             assert_eq!(normalizer.last_text(), "");
         }
 
         #[test]
         fn state_after_normalize() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             // Single line
             normalizer.normalize("abc", false);
@@ -174,7 +174,7 @@ mod tests {
 
         #[test]
         fn state_after_writeln() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             // Normal writeln
             normalizer.normalize("abc", true);
@@ -189,7 +189,7 @@ mod tests {
 
         #[test]
         fn state_reset() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             normalizer.normalize("abc\n\n", false);
             assert_eq!(normalizer.trailing_newlines, 2);
@@ -205,7 +205,7 @@ mod tests {
 
         #[test]
         fn empty_content() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             let output = normalizer.normalize("", false);
             assert_eq!(output, "");
@@ -215,7 +215,7 @@ mod tests {
 
         #[test]
         fn only_newlines() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             let output = normalizer.normalize("\n\n\n", false);
             assert_eq!(output, "\n\n");
@@ -225,7 +225,7 @@ mod tests {
 
         #[test]
         fn carriage_returns() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             let output = normalizer.normalize("text\r\n\r\n", false);
             assert_eq!(output, "text\n\n");
@@ -235,7 +235,7 @@ mod tests {
 
         #[test]
         fn max_newlines() {
-            let mut normalizer = ConsoleNormalizer::new();
+            let mut normalizer = NewLine::new();
 
             normalizer.normalize("abc\n\n", false);
             assert_eq!(normalizer.trailing_newlines, 2);
@@ -252,28 +252,28 @@ mod tests {
 
         #[test]
         fn count_basic() {
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc"), 0);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n"), 1);
+            assert_eq!(NewLine::count_trailing_newlines("abc"), 0);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n"), 1);
         }
 
         #[test]
         fn count_multiple() {
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n\n"), 2);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n\n\n"), 3);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n\n"), 2);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n\n\n"), 3);
         }
 
         #[test]
         fn count_with_carriage_returns() {
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\r\n"), 1);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n\r\n"), 2);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\r\n\r\n"), 2);
+            assert_eq!(NewLine::count_trailing_newlines("abc\r\n"), 1);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n\r\n"), 2);
+            assert_eq!(NewLine::count_trailing_newlines("abc\r\n\r\n"), 2);
         }
 
         #[test]
         fn count_mixed() {
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n\r"), 1);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\r\n\n"), 2);
-            assert_eq!(ConsoleNormalizer::count_trailing_newlines("abc\n\r\n\r"), 2);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n\r"), 1);
+            assert_eq!(NewLine::count_trailing_newlines("abc\r\n\n"), 2);
+            assert_eq!(NewLine::count_trailing_newlines("abc\n\r\n\r"), 2);
         }
     }
 }

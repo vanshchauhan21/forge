@@ -3,16 +3,9 @@ use chrono::Local;
 use clap::Parser;
 use colored::Colorize;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
+use forge_main::{CONSOLE, StatusDisplay, StatusKind, UserInput};
 use forge_server::API;
 use tokio_stream::StreamExt;
-
-mod console;
-mod input;
-mod status;
-
-use console::CONSOLE;
-use input::UserInput;
-use status::{StatusDisplay, StatusKind};
 
 #[derive(Parser)]
 struct Cli {

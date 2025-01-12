@@ -3,8 +3,7 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 
-mod normalize;
-use normalize::ConsoleNormalizer;
+use crate::normalize::NewLine;
 
 lazy_static! {
     /// Global console instance for standardized output handling
@@ -14,7 +13,7 @@ lazy_static! {
 /// Console state containing both the output stream and normalizer
 struct ConsoleState {
     stdout: io::Stdout,
-    normalizer: ConsoleNormalizer,
+    normalizer: NewLine,
 }
 
 /// A specialized console that provides enhanced printing capabilities
@@ -33,10 +32,7 @@ impl Console {
     /// Creates a new Console instance
     pub fn new() -> Self {
         Self {
-            state: Mutex::new(ConsoleState {
-                stdout: io::stdout(),
-                normalizer: ConsoleNormalizer::new(),
-            }),
+            state: Mutex::new(ConsoleState { stdout: io::stdout(), normalizer: NewLine::new() }),
         }
     }
 
