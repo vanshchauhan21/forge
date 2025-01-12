@@ -107,40 +107,79 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
-
     use pretty_assertions::assert_eq;
 
     use super::super::conversation_service::tests::TestStorage;
     use super::*;
 
-    struct TestTitleService;
+    struct TestTitleService {
+        events: Vec<ChatResponse>,
+    }
 
-    #[async_trait::async_trait]
-    impl TitleService for TestTitleService {
-        async fn get_title(&self, _: ChatRequest) -> ResultStream<ChatResponse, Error> {
-            Ok(Box::pin(once(Ok(ChatResponse::CompleteTitle(
-                "test title generated".to_string(),
-            )))))
+    impl TestTitleService {
+        fn single() -> Self {
+            Self {
+                events: vec![ChatResponse::CompleteTitle("test title generated".to_string())],
+            }
+        }
+
+        fn multiple() -> Self {
+            Self {
+                events: vec![
+                    ChatResponse::Text("Processing title...".to_string()),
+                    ChatResponse::CompleteTitle("test title generated".to_string()),
+                ],
+            }
         }
     }
 
     #[async_trait::async_trait]
-    impl ChatService for TestStorage {
+    impl TitleService for TestTitleService {
+        async fn get_title(&self, _: ChatRequest) -> ResultStream<ChatResponse, Error> {
+            Ok(Box::pin(tokio_stream::iter(
+                self.events.clone().into_iter().map(Ok),
+            )))
+        }
+    }
+
+    struct TestChatService {
+        events: Vec<ChatResponse>,
+    }
+
+    impl TestChatService {
+        fn single() -> Self {
+            Self {
+                events: vec![ChatResponse::Text("test message".to_string())],
+            }
+        }
+
+        fn multiple() -> Self {
+            Self {
+                events: vec![
+                    ChatResponse::Text("first message".to_string()),
+                    ChatResponse::Text("second message".to_string()),
+                    ChatResponse::Text("third message".to_string()),
+                ],
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ChatService for TestChatService {
         async fn chat(&self, _: ChatRequest, _: Context) -> ResultStream<ChatResponse, Error> {
-            Ok(Box::pin(once(Ok(ChatResponse::Text(
-                "test message".to_string(),
-            )))))
+            Ok(Box::pin(tokio_stream::iter(
+                self.events.clone().into_iter().map(Ok),
+            )))
         }
     }
 
     #[tokio::test]
     async fn test_chat_new_conversation() {
-        let storage = Arc::new(TestStorage);
         let conversation_service = Arc::new(TestStorage::in_memory().unwrap());
         let service = Service::ui_service(
             conversation_service.clone(),
-            storage.clone(),
-            Arc::new(TestTitleService),
+            Arc::new(TestChatService::single()),
+            Arc::new(TestTitleService::single()),
         );
         let request = ChatRequest::new("test");
 
@@ -154,7 +193,7 @@ mod tests {
         if let Some(Ok(ChatResponse::CompleteTitle(content))) = responses.next().await {
             assert_eq!(content, "test title generated");
         } else {
-            panic!("Expected Text response");
+            panic!("Expected CompleteTitle response");
         }
 
         if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {
@@ -162,16 +201,17 @@ mod tests {
         } else {
             panic!("Expected Text response");
         }
+
+        assert!(responses.next().await.is_none(), "Expected end of stream");
     }
 
     #[tokio::test]
     async fn test_chat_existing_conversation() {
-        let storage = Arc::new(TestStorage);
         let conversation_service = Arc::new(TestStorage::in_memory().unwrap());
         let service = Service::ui_service(
             conversation_service.clone(),
-            storage.clone(),
-            Arc::new(TestTitleService),
+            Arc::new(TestChatService::single()),
+            Arc::new(TestTitleService::single()),
         );
 
         let conversation = conversation_service
@@ -187,5 +227,52 @@ mod tests {
         } else {
             panic!("Expected Text response");
         }
+
+        assert!(responses.next().await.is_none(), "Expected end of stream");
+    }
+
+    #[tokio::test]
+    async fn test_strict_ordering_with_multiple_events() {
+        let conversation_service = Arc::new(TestStorage::in_memory().unwrap());
+        let service = Service::ui_service(
+            conversation_service.clone(),
+            Arc::new(TestChatService::multiple()),
+            Arc::new(TestTitleService::multiple()),
+        );
+
+        let request = ChatRequest::new("test");
+        let mut responses = service.chat(request).await.unwrap();
+
+        // First: ConversationStarted
+        assert!(matches!(
+            responses.next().await,
+            Some(Ok(ChatResponse::ConversationStarted(_)))
+        ));
+
+        // Title service events should come next
+        assert_eq!(
+            responses.next().await.unwrap().unwrap(),
+            ChatResponse::Text("Processing title...".to_string())
+        );
+        assert_eq!(
+            responses.next().await.unwrap().unwrap(),
+            ChatResponse::CompleteTitle("test title generated".to_string())
+        );
+
+        // Chat service events should come last
+        assert_eq!(
+            responses.next().await.unwrap().unwrap(),
+            ChatResponse::Text("first message".to_string())
+        );
+        assert_eq!(
+            responses.next().await.unwrap().unwrap(),
+            ChatResponse::Text("second message".to_string())
+        );
+        assert_eq!(
+            responses.next().await.unwrap().unwrap(),
+            ChatResponse::Text("third message".to_string())
+        );
+
+        assert!(responses.next().await.is_none(), "Expected end of stream");
     }
 }
