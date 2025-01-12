@@ -1,8 +1,0 @@
----
-source: crates/forge_main/src/title_format.rs
-expression: clean
-snapshot_kind: text
----
-╔═══════════════╗
-║ Hello, World! ║
-╚═══════════════╝

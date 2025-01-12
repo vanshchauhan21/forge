@@ -6,8 +6,8 @@
 /// Handles normalization of console output with respect to newlines
 #[derive(Debug, Default)]
 pub struct NewLine {
-    /// The last normalized output
-    last_output: String,
+    /// Count of consecutive newlines so far
+    newline_count: u32,
 }
 
 impl NewLine {
@@ -23,43 +23,30 @@ impl NewLine {
             return String::new();
         }
 
-        // Create temporary string with concatenated content
-        let mut combined = String::with_capacity(self.last_output.len() + content.len());
-        combined.push_str(&self.last_output);
-        combined.push_str(&content);
-
         // Replace multiple newlines with maximum of two
-        let mut output = String::with_capacity(combined.len());
-        let mut consecutive_newlines = 0;
+        let mut output = String::new();
+        let mut newline_count = self.newline_count;
 
-        for c in combined.chars() {
+        for c in content.chars() {
             if c == '\n' {
-                consecutive_newlines += 1;
-                if consecutive_newlines <= 2 {
+                newline_count += 1;
+                if newline_count <= 2 {
                     output.push(c);
                 }
             } else {
-                consecutive_newlines = 0;
+                newline_count = 0;
                 output.push(c);
             }
         }
 
-        // Get the new output by removing the previous output
-        let new_output = if self.last_output.is_empty() {
-            output
-        } else {
-            output[self.last_output.len()..].to_string()
-        };
+        self.newline_count = newline_count;
 
-        self.last_output = new_output.clone();
-        new_output
+        output
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use super::*;
 
     /// A writer used for testing newline normalization
@@ -188,5 +175,18 @@ mod tests {
         assert_eq!(writer.buffer(), "abc\n\ndef");
         writer.write("\n\n\nghi");
         assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi");
+    }
+
+    #[test]
+    fn empty_newlines() {
+        let mut writer = Writer::new();
+        writer.write("abc\n");
+        assert_eq!(writer.buffer(), "abc\n");
+        writer.write("\n");
+        assert_eq!(writer.buffer(), "abc\n\n");
+        writer.write("\n");
+        assert_eq!(writer.buffer(), "abc\n\n");
+        writer.write("\n\n\ndef");
+        assert_eq!(writer.buffer(), "abc\n\ndef");
     }
 }

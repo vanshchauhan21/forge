@@ -1,7 +1,6 @@
 use anyhow::Result;
 use chrono::Local;
 use clap::Parser;
-use colored::Colorize;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use forge_main::{StatusDisplay, StatusKind, UserInput, CONSOLE};
 use forge_server::API;
