@@ -14,10 +14,6 @@ struct Cli {
     verbose: bool,
 }
 
-fn clear_line() {
-    CONSOLE.write("\r\x1B[K").unwrap(); // Clear the current line
-}
-
 fn get_timestamp() -> String {
     Local::now().format("%H:%M:%S%.3f").to_string()
 }
@@ -87,18 +83,13 @@ async fn main() -> Result<()> {
                             "◀".white()
                         ))?;
                     } else {
-                        if current_tool.is_some() {
-                            clear_line();
-                        } else {
-                            CONSOLE.writeln("")?;
-                        }
                         let status = StatusDisplay {
                             kind: StatusKind::Execute,
                             message: tool_name,
                             timestamp: Some(get_timestamp()),
                             error_details: None,
                         };
-                        CONSOLE.write(status.format())?;
+                        CONSOLE.writeln(status.format())?;
                         current_tool = Some(tool_name.to_string());
                     }
                 }
@@ -106,7 +97,6 @@ async fn main() -> Result<()> {
                     if cli.verbose {
                         CONSOLE.writeln(tool_result.to_string())?;
                     } else if let Some(tool_name) = &current_tool {
-                        clear_line();
                         let status = if tool_result.is_error {
                             StatusDisplay {
                                 kind: StatusKind::Failed,

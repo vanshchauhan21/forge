@@ -104,6 +104,7 @@ Other Usage:
 impl UserInput {
     pub fn prompt() -> Result<Self> {
         loop {
+            CONSOLE.writeln("")?;
             let text = inquire::Text::new("")
                 .with_help_message(&format!(
                     "Available commands: {}",

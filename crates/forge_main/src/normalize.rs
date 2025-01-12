@@ -1,9 +1,13 @@
+//! Handles normalization of console output with respect to newlines.
+//!
+//! This module provides utilities for normalizing text output, particularly
+//! focusing on newline handling and buffering.
+
 /// Handles normalization of console output with respect to newlines
 #[derive(Debug, Default)]
 pub struct NewLine {
     /// The last normalized output
-    pub(crate) last_output: String,
-    trailing_newlines: usize,
+    last_output: String,
 }
 
 impl NewLine {
@@ -12,259 +16,177 @@ impl NewLine {
         Self::default()
     }
 
-    /// Resets the normalizer state
-    pub(crate) fn reset(&mut self) {
-        self.last_output.clear();
-        self.trailing_newlines = 0;
-    }
+    /// Normalizes content to have at most two consecutive newlines
+    pub fn normalize(&mut self, content: &str) -> String {
+        let content = content.replace("\r\n", "\n");
+        if content.is_empty() {
+            return String::new();
+        }
 
-    /// Returns the last normalized output
-    #[cfg(test)]
-    pub fn last_text(&self) -> &str {
-        &self.last_output
-    }
+        // Create temporary string with concatenated content
+        let mut combined = String::with_capacity(self.last_output.len() + content.len());
+        combined.push_str(&self.last_output);
+        combined.push_str(&content);
 
-    /// Count the number of trailing newlines in a string
-    pub(crate) fn count_trailing_newlines(s: &str) -> usize {
-        s.as_bytes()
-            .iter()
-            .rev()
-            .take_while(|&&b| b == b'\n' || b == b'\r')
-            .filter(|&&b| b == b'\n')
-            .count()
-    }
-
-    /// Normalizes consecutive newlines to ensure no more than 2 in a row
-    fn normalize_newlines(content: &str) -> String {
-        let mut result = String::with_capacity(content.len());
+        // Replace multiple newlines with maximum of two
+        let mut output = String::with_capacity(combined.len());
         let mut consecutive_newlines = 0;
 
-        for c in content.chars() {
+        for c in combined.chars() {
             if c == '\n' {
                 consecutive_newlines += 1;
                 if consecutive_newlines <= 2 {
-                    result.push(c);
+                    output.push(c);
                 }
-            } else if c != '\r' {
-                // Skip \r as we'll normalize to \n only
+            } else {
                 consecutive_newlines = 0;
-                result.push(c);
+                output.push(c);
             }
         }
-        result
-    }
 
-    /// Normalizes content and updates internal state
-    pub fn normalize(&mut self, content: &str, add_newline: bool) -> String {
-        let mut result = if self.trailing_newlines > 0 && content.starts_with('\n') {
-            // If we already have trailing newlines and content starts with newline,
-            // we need to consider the existing newlines
-            let additional_newlines = Self::count_trailing_newlines(content);
-            let total_newlines = (self.trailing_newlines + additional_newlines).min(2);
-
-            if total_newlines > self.trailing_newlines {
-                // Only add the difference in newlines
-                let extra_newlines = total_newlines - self.trailing_newlines;
-                format!(
-                    "{}{}",
-                    "\n".repeat(extra_newlines),
-                    content.trim_start_matches(&['\n', '\r'][..])
-                )
-            } else {
-                content.trim_start_matches(&['\n', '\r'][..]).to_string()
-            }
+        // Get the new output by removing the previous output
+        let new_output = if self.last_output.is_empty() {
+            output
         } else {
-            Self::normalize_newlines(content)
+            output[self.last_output.len()..].to_string()
         };
 
-        if add_newline {
-            let current_newlines = Self::count_trailing_newlines(&result);
-            if current_newlines > 0 {
-                // Remove existing trailing newlines first
-                result.truncate(result.len() - current_newlines);
-            }
-            // Add the correct number of newlines (including the one we're adding)
-            let total_newlines = (current_newlines + 1).min(2);
-            result.push_str(&"\n".repeat(total_newlines));
-        }
-
-        // Update state
-        self.last_output = result.clone();
-        self.trailing_newlines = Self::count_trailing_newlines(&result);
-
-        result
+        self.last_output = new_output.clone();
+        new_output
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
-    mod newline_normalization {
-        use super::*;
+    /// A writer used for testing newline normalization
+    struct Writer {
+        /// The newline normalizer
+        normalizer: NewLine,
+        /// The internal buffer for storing written text
+        buffer: String,
+    }
 
-        #[test]
-        fn basic_text() {
-            assert_eq!(NewLine::normalize_newlines("abc"), "abc");
-            assert_eq!(NewLine::normalize_newlines("abc\n"), "abc\n");
-            assert_eq!(NewLine::normalize_newlines("abc\r\n"), "abc\n");
+    impl Writer {
+        /// Creates a new Writer instance
+        fn new() -> Self {
+            Self { normalizer: NewLine::new(), buffer: String::new() }
         }
 
-        #[test]
-        fn consecutive_newlines() {
-            // Should limit to maximum of 2 newlines
-            assert_eq!(NewLine::normalize_newlines("abc\n\n\n"), "abc\n\n");
-            assert_eq!(NewLine::normalize_newlines("abc\n\n\n\n\n"), "abc\n\n");
-            assert_eq!(NewLine::normalize_newlines("\n\n\n"), "\n\n");
+        /// Writes text to the buffer, normalizing newlines
+        fn write(&mut self, content: &str) {
+            let normalized = self.normalizer.normalize(content);
+            self.buffer.push_str(&normalized);
         }
 
-        #[test]
-        fn mixed_content() {
-            assert_eq!(
-                NewLine::normalize_newlines("line1\n\nline2\n\n\nline3"),
-                "line1\n\nline2\n\nline3"
-            );
-            assert_eq!(
-                NewLine::normalize_newlines("line1\r\n\r\nline2"),
-                "line1\n\nline2"
-            );
-        }
-
-        #[test]
-        fn leading_and_trailing() {
-            assert_eq!(NewLine::normalize_newlines("\n\nabc"), "\n\nabc");
-            assert_eq!(NewLine::normalize_newlines("abc\n\n"), "abc\n\n");
-            assert_eq!(NewLine::normalize_newlines("\n\nabc\n\n"), "\n\nabc\n\n");
+        /// Returns the contents of the buffer
+        fn buffer(&self) -> &str {
+            &self.buffer
         }
     }
 
-    mod state_tracking {
-        use super::*;
+    #[test]
+    fn write_and_buffer() {
+        let mut writer = Writer::new();
+        writer.write("Hello\n\n\n");
+        assert_eq!(writer.buffer(), "Hello\n\n");
 
-        #[test]
-        fn basic_state() {
-            let normalizer = NewLine::new();
-            assert_eq!(normalizer.trailing_newlines, 0);
-            assert_eq!(normalizer.last_text(), "");
-        }
-
-        #[test]
-        fn state_after_normalize() {
-            let mut normalizer = NewLine::new();
-
-            // Single line
-            normalizer.normalize("abc", false);
-            assert_eq!(normalizer.trailing_newlines, 0);
-            assert_eq!(normalizer.last_text(), "abc");
-
-            // With newlines
-            normalizer.normalize("def\n\n", false);
-            assert_eq!(normalizer.trailing_newlines, 2);
-            assert_eq!(normalizer.last_text(), "def\n\n");
-        }
-
-        #[test]
-        fn state_after_writeln() {
-            let mut normalizer = NewLine::new();
-
-            // Normal writeln
-            normalizer.normalize("abc", true);
-            assert_eq!(normalizer.trailing_newlines, 1);
-            assert_eq!(normalizer.last_text(), "abc\n");
-
-            // Writeln with existing newlines
-            normalizer.normalize("def\n", true);
-            assert_eq!(normalizer.trailing_newlines, 2);
-            assert_eq!(normalizer.last_text(), "def\n\n");
-        }
-
-        #[test]
-        fn state_reset() {
-            let mut normalizer = NewLine::new();
-
-            normalizer.normalize("abc\n\n", false);
-            assert_eq!(normalizer.trailing_newlines, 2);
-
-            normalizer.reset();
-            assert_eq!(normalizer.trailing_newlines, 0);
-            assert_eq!(normalizer.last_text(), "");
-        }
+        writer.write("World\n\n\n");
+        assert_eq!(writer.buffer(), "Hello\n\nWorld\n\n");
     }
 
-    mod edge_cases {
-        use super::*;
-
-        #[test]
-        fn empty_content() {
-            let mut normalizer = NewLine::new();
-
-            let output = normalizer.normalize("", false);
-            assert_eq!(output, "");
-            assert_eq!(normalizer.last_text(), "");
-            assert_eq!(normalizer.trailing_newlines, 0);
-        }
-
-        #[test]
-        fn only_newlines() {
-            let mut normalizer = NewLine::new();
-
-            let output = normalizer.normalize("\n\n\n", false);
-            assert_eq!(output, "\n\n");
-            assert_eq!(normalizer.last_text(), "\n\n");
-            assert_eq!(normalizer.trailing_newlines, 2);
-        }
-
-        #[test]
-        fn carriage_returns() {
-            let mut normalizer = NewLine::new();
-
-            let output = normalizer.normalize("text\r\n\r\n", false);
-            assert_eq!(output, "text\n\n");
-            assert_eq!(normalizer.last_text(), "text\n\n");
-            assert_eq!(normalizer.trailing_newlines, 2);
-        }
-
-        #[test]
-        fn max_newlines() {
-            let mut normalizer = NewLine::new();
-
-            normalizer.normalize("abc\n\n", false);
-            assert_eq!(normalizer.trailing_newlines, 2);
-
-            // When at max newlines, writeln should still add one newline
-            let output = normalizer.normalize("def", true);
-            assert_eq!(output, "def\n");
-            assert_eq!(normalizer.trailing_newlines, 1);
-        }
+    #[test]
+    fn empty_write() {
+        let mut writer = Writer::new();
+        writer.write("");
+        assert_eq!(writer.buffer(), "");
     }
 
-    mod trailing_newlines {
-        use super::*;
+    #[test]
+    fn windows_line_endings() {
+        let mut writer = Writer::new();
+        writer.write("abc\r\n");
+        assert_eq!(writer.buffer(), "abc\n");
+        writer.write("\r\n\r\ndef");
+        assert_eq!(writer.buffer(), "abc\n\ndef");
+        writer.write("abc\r\n\r\n");
+        assert_eq!(writer.buffer(), "abc\n\ndefabc\n\n");
+    }
 
-        #[test]
-        fn count_basic() {
-            assert_eq!(NewLine::count_trailing_newlines("abc"), 0);
-            assert_eq!(NewLine::count_trailing_newlines("abc\n"), 1);
-        }
+    #[test]
+    fn mixed_line_endings() {
+        let mut writer = Writer::new();
+        writer.write("abc\r\n\n");
+        assert_eq!(writer.buffer(), "abc\n\n");
+        writer.write("\n\r\ndef");
+        assert_eq!(writer.buffer(), "abc\n\ndef");
+        writer.write("\r\n\n\r\n");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\n");
+    }
 
-        #[test]
-        fn count_multiple() {
-            assert_eq!(NewLine::count_trailing_newlines("abc\n\n"), 2);
-            assert_eq!(NewLine::count_trailing_newlines("abc\n\n\n"), 3);
-        }
+    #[test]
+    fn preserve_content_between_newlines() {
+        let mut writer = Writer::new();
+        writer.write("abc\n\ndef\n\nghi");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi");
 
-        #[test]
-        fn count_with_carriage_returns() {
-            assert_eq!(NewLine::count_trailing_newlines("abc\r\n"), 1);
-            assert_eq!(NewLine::count_trailing_newlines("abc\n\r\n"), 2);
-            assert_eq!(NewLine::count_trailing_newlines("abc\r\n\r\n"), 2);
-        }
+        writer.write("\n\njkl\n\nmno");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi\n\njkl\n\nmno");
+    }
 
-        #[test]
-        fn count_mixed() {
-            assert_eq!(NewLine::count_trailing_newlines("abc\n\r"), 1);
-            assert_eq!(NewLine::count_trailing_newlines("abc\r\n\n"), 2);
-            assert_eq!(NewLine::count_trailing_newlines("abc\n\r\n\r"), 2);
-        }
+    #[test]
+    fn only_newlines() {
+        let mut writer = Writer::new();
+        writer.write("\n\n\n");
+        assert_eq!(writer.buffer(), "\n\n");
+        writer.write("\n\n\n\n");
+        assert_eq!(writer.buffer(), "\n\n");
+    }
+
+    #[test]
+    fn complex_newline_sequence() {
+        let mut writer = Writer::new();
+        writer.write("abc\n\n");
+        assert_eq!(writer.buffer(), "abc\n\n");
+        writer.write("\n\n\ndef\n\n\n");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\n");
+        writer.write("\n\n\nghi\n\n\n");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi\n\n");
+    }
+
+    #[test]
+    fn newlines_at_boundaries() {
+        let mut writer = Writer::new();
+        writer.write("abc\n\n");
+        assert_eq!(writer.buffer(), "abc\n\n");
+        writer.write("\n\ndef");
+        assert_eq!(writer.buffer(), "abc\n\ndef");
+        writer.write("\n\nghi");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi");
+    }
+
+    #[test]
+    fn consecutive_outputs() {
+        let mut writer = Writer::new();
+        writer.write("abc\n");
+        assert_eq!(writer.buffer(), "abc\n");
+        writer.write("def");
+        assert_eq!(writer.buffer(), "abc\ndef");
+        writer.write("\n\n\nghi");
+        assert_eq!(writer.buffer(), "abc\ndef\n\nghi");
+    }
+
+    #[test]
+    fn newlines_between_outputs() {
+        let mut writer = Writer::new();
+        writer.write("abc\n");
+        assert_eq!(writer.buffer(), "abc\n");
+        writer.write("\n\n\ndef");
+        assert_eq!(writer.buffer(), "abc\n\ndef");
+        writer.write("\n\n\nghi");
+        assert_eq!(writer.buffer(), "abc\n\ndef\n\nghi");
     }
 }
