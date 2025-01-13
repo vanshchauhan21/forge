@@ -20,7 +20,7 @@ Before providing your final title, wrap your thought process in <title_generatio
 6. Evaluate each title based on how well it captures the core message and uses appropriate technical language.
 7. Select the best title and explain your choice.
 
-After your analysis, provide only the final title without any additional explanation or tags.
+After your analysis, provide the final title inside <title> tags.
 
 Example output structure:
 

@@ -53,26 +53,37 @@ impl Live {
         Ok(hb.render_template(template, &ctx)?)
     }
 
+    fn extract_title(&self, content: &str) -> Option<String> {
+        if let (Some(start), Some(end)) = (content.find("<title>"), content.find("</title>")) {
+            if start < end {
+                return Some(content[start + 7..end].trim().to_string());
+            }
+        }
+        None
+    }
+
     async fn execute(
         &self,
         request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
     ) -> Result<()> {
         let mut response = self.provider.chat(request).await?;
-        let mut title = String::new();
+        let mut full_response = String::new();
+
         while let Some(chunk) = response.next().await {
             let message = chunk?;
             if let Some(ref content) = message.content {
                 if !content.is_empty() {
-                    tx.send(Ok(ChatResponse::PartialTitle(content.as_str().to_string())))
-                        .await
-                        .unwrap();
-                    title.push_str(content.as_str());
+                    full_response.push_str(content.as_str());
                 }
             }
         }
 
-        // send the complete the title, so that we can save it in the database.
+        // Extract title from tags if present, otherwise use full response
+        let title = self
+            .extract_title(&full_response)
+            .unwrap_or_else(|| full_response.trim().to_string());
+
         tx.send(Ok(ChatResponse::CompleteTitle(title)))
             .await
             .unwrap();
@@ -136,6 +147,58 @@ mod tests {
     #[tokio::test]
     async fn test_title_generation() {
         let mock_llm_responses = vec![vec![ChatCompletionMessage::default()
+            .content_part("<title>Fibonacci Sequence in Rust</title>")
+            .finish_reason(FinishReason::Stop)]];
+
+        let actual = Fixture(mock_llm_responses)
+            .run(
+                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
+                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
+                ),
+            )
+            .await;
+
+        assert_eq!(
+            actual,
+            vec![ChatResponse::CompleteTitle(
+                "Fibonacci Sequence in Rust".to_string()
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_title_generation_chunked() {
+        let mock_llm_responses = vec![vec![
+            ChatCompletionMessage::default()
+                .content_part("<tit")
+                .finish_reason(FinishReason::Length),
+            ChatCompletionMessage::default()
+                .content_part("le>Fibonacci")
+                .finish_reason(FinishReason::Length),
+            ChatCompletionMessage::default()
+                .content_part(" Sequence in Rust</title>")
+                .finish_reason(FinishReason::Stop),
+        ]];
+
+        let actual = Fixture(mock_llm_responses)
+            .run(
+                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
+                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
+                ),
+            )
+            .await;
+
+        assert_eq!(
+            actual,
+            vec![ChatResponse::CompleteTitle(
+                "Fibonacci Sequence in Rust".to_string()
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_title_generation_without_tags() {
+        let mock_llm_responses = vec![vec![ChatCompletionMessage::default()
             .content_part("Fibonacci Sequence in Rust")
             .finish_reason(FinishReason::Stop)]];
 
@@ -147,9 +210,12 @@ mod tests {
             )
             .await;
 
-        assert!(actual.contains(&ChatResponse::CompleteTitle(
-            "Fibonacci Sequence in Rust".to_string()
-        )));
+        assert_eq!(
+            actual,
+            vec![ChatResponse::CompleteTitle(
+                "Fibonacci Sequence in Rust".to_string()
+            )]
+        );
     }
 
     #[tokio::test]
