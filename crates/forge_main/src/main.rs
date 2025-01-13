@@ -40,7 +40,6 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
 
     let mut content = initial_content;
-    let mut current_tool: Option<String> = None;
 
     loop {
         let model = ModelId::from_env(api.env());
@@ -59,10 +58,6 @@ async fn main() -> Result<()> {
             let message = message.map_err(|e| anyhow::anyhow!("Stream error: {}", e))?;
             match message {
                 ChatResponse::Text(text) => {
-                    if current_tool.is_some() {
-                        CONSOLE.writeln("")?;
-                        current_tool = None;
-                    }
                     CONSOLE.write(&text)?;
                 }
                 ChatResponse::ToolCallDetected(_) => {}
@@ -81,29 +76,28 @@ async fn main() -> Result<()> {
                     };
                     CONSOLE.newline()?;
                     CONSOLE.writeln(status.format())?;
-                    current_tool = Some(tool_name.to_string());
                 }
                 ChatResponse::ToolCallEnd(tool_result) => {
                     if cli.verbose {
                         CONSOLE.writeln(tool_result.to_string())?;
-                    } else if let Some(tool_name) = &current_tool {
-                        let status = if tool_result.is_error {
-                            StatusDisplay {
-                                kind: StatusKind::Failed,
-                                message: tool_name,
-                                timestamp: Some(get_timestamp()),
-                                error_details: Some("error"),
-                            }
-                        } else {
-                            StatusDisplay {
-                                kind: StatusKind::Success,
-                                message: tool_name,
-                                timestamp: Some(get_timestamp()),
-                                error_details: None,
-                            }
-                        };
-                        CONSOLE.write(status.format())?;
                     }
+                    let tool_name = tool_result.name.as_str();
+                    let status = if tool_result.is_error {
+                        StatusDisplay {
+                            kind: StatusKind::Failed,
+                            message: tool_name,
+                            timestamp: Some(get_timestamp()),
+                            error_details: Some("error"),
+                        }
+                    } else {
+                        StatusDisplay {
+                            kind: StatusKind::Success,
+                            message: tool_name,
+                            timestamp: Some(get_timestamp()),
+                            error_details: None,
+                        }
+                    };
+                    CONSOLE.write(status.format())?;
                 }
                 ChatResponse::ConversationStarted(conversation_id) => {
                     current_conversation_id = Some(conversation_id);
@@ -111,17 +105,10 @@ async fn main() -> Result<()> {
                 ChatResponse::ModifyContext(_) => {}
                 ChatResponse::Complete => {}
                 ChatResponse::Error(err) => {
-                    if current_tool.is_some() {
-                        CONSOLE.writeln("")?;
-                    }
                     return Err(anyhow::anyhow!("Chat error: {:?}", err));
                 }
                 ChatResponse::PartialTitle(_) => {}
                 ChatResponse::CompleteTitle(title) => {
-                    if current_tool.is_some() {
-                        CONSOLE.writeln("")?;
-                        current_tool = None;
-                    }
                     let status = StatusDisplay {
                         kind: StatusKind::Title,
                         message: &title,
@@ -130,12 +117,7 @@ async fn main() -> Result<()> {
                     };
                     CONSOLE.writeln(status.format())?;
                 }
-                ChatResponse::FinishReason(_) => {
-                    if current_tool.is_some() {
-                        CONSOLE.writeln("")?;
-                        current_tool = None;
-                    }
-                }
+                ChatResponse::FinishReason(_) => {}
             }
         }
 
