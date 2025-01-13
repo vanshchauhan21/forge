@@ -36,6 +36,7 @@ jobs:
     permissions:
       contents: read
     steps:
+    - run: apt-get install -y libsqlite3-dev
     - name: Checkout Code
       uses: actions/checkout@v4
     - name: Setup Rust Toolchain

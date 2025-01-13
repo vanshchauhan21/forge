@@ -1193,9 +1193,9 @@ dependencies = [
 
 [[package]]
 name = "gh-workflow-tailcall"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d60e98c430ebff00d51b8bfd13357bf551ee75d916e9f52f1a8b9ca3fdd4b29f"
+checksum = "077909057861af22b91b4adc7de3505efed2579f6260d794817e9b549bcacbeb"
 dependencies = [
  "derive_setters",
  "gh-workflow",
