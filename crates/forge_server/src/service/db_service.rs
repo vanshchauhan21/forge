@@ -9,7 +9,7 @@ use crate::Result;
 
 type SQLConnection = Pool<ConnectionManager<SqliteConnection>>;
 
-const DB_NAME: &str = "conversations.db";
+const DB_NAME: &str = ".forge.db";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[async_trait::async_trait]
