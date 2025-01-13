@@ -63,36 +63,7 @@ You have access to a set of tools that can be executed upon user approval. Use o
 Available tools:
 <tool_list>
 
-1. execute_command
-Execute shell commands with safety checks and validation. This tool provides
- controlled access to system shell commands while preventing dangerous
- operations through a comprehensive blacklist and validation system.
-
-Parameters:
-- command (required): The shell command to execute.
-- cwd (required): The working directory where the command should be executed.
-
-Usage:
-<execute_command>
-<command>...</command>
-<cwd>...</cwd>
-</execute_command>
-
-2. file_information
-Request to retrieve detailed metadata about a file or directory at the
- specified path. Returns comprehensive information including size, creation
- time, last modified time, permissions, and type. Use this when you need to
- understand file characteristics without reading the actual content.
-
-Parameters:
-- path (required): The path of the file or directory to inspect (relative to the current working directory)
-
-Usage:
-<file_information>
-<path>...</path>
-</file_information>
-
-3. find_and_replace
+1. apply_patch
 Replace sections in a file using SEARCH/REPLACE blocks for precise
 modifications.
 
@@ -124,10 +95,39 @@ Parameters:
 - path (required): File path relative to the current working directory
 
 Usage:
-<find_and_replace>
+<apply_patch>
 <diff>...</diff>
 <path>...</path>
-</find_and_replace>
+</apply_patch>
+
+2. execute_command
+Execute shell commands with safety checks and validation. This tool provides
+ controlled access to system shell commands while preventing dangerous
+ operations through a comprehensive blacklist and validation system.
+
+Parameters:
+- command (required): The shell command to execute.
+- cwd (required): The working directory where the command should be executed.
+
+Usage:
+<execute_command>
+<command>...</command>
+<cwd>...</cwd>
+</execute_command>
+
+3. file_information
+Request to retrieve detailed metadata about a file or directory at the
+ specified path. Returns comprehensive information including size, creation
+ time, last modified time, permissions, and type. Use this when you need to
+ understand file characteristics without reading the actual content.
+
+Parameters:
+- path (required): The path of the file or directory to inspect (relative to the current working directory)
+
+Usage:
+<file_information>
+<path>...</path>
+</file_information>
 
 4. list_directory_content
 Request to list files and directories within the specified directory. If

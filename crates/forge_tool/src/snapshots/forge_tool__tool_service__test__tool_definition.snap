@@ -5,6 +5,52 @@ snapshot_kind: text
 ---
 [
   {
+    "name": "apply_patch",
+    "description": "Replace sections in a file using SEARCH/REPLACE blocks for precise\nmodifications.\n\n<<<<<<< SEARCH\n[exact content to find]\n=======\n[new content to replace with]\n>>>>>>> REPLACE\n\nRules:\n1. SEARCH must match exactly (whitespace, indentation, line endings)\n2. Each block replaces first match only\n3. Keep blocks minimal - include only changing lines plus needed context\n4. Complete lines only - no truncation\n5. For moves: use 2 blocks (delete + insert)\n6. For deletes: use empty REPLACE section\n\nExample:\n<<<<<<< SEARCH\ndef old_function(x):\n    return x + 1\n=======\ndef new_function(x, y=0):\n    return x + y\n>>>>>>> REPLACE\n\nParameters:\n- diff (required): SEARCH/REPLACE blocks defining changes\n- path (required): File path relative to the current working directory",
+    "input_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSReplaceInput",
+      "type": "object",
+      "required": [
+        "diff",
+        "path"
+      ],
+      "properties": {
+        "diff": {
+          "description": "SEARCH/REPLACE blocks defining changes",
+          "type": "string"
+        },
+        "path": {
+          "description": "File path relative to the current working directory",
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FSReplaceOutput",
+      "type": "object",
+      "required": [
+        "content",
+        "path"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "syntax_checker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  {
     "name": "execute_command",
     "description": "Execute shell commands with safety checks and validation. This tool provides\n controlled access to system shell commands while preventing dangerous\n operations through a comprehensive blacklist and validation system.\n\nParameters:\n- command (required): The shell command to execute.\n- cwd (required): The working directory where the command should be executed.",
     "input_schema": {
@@ -73,52 +119,6 @@ snapshot_kind: text
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "String",
       "type": "string"
-    }
-  },
-  {
-    "name": "find_and_replace",
-    "description": "Replace sections in a file using SEARCH/REPLACE blocks for precise\nmodifications.\n\n<<<<<<< SEARCH\n[exact content to find]\n=======\n[new content to replace with]\n>>>>>>> REPLACE\n\nRules:\n1. SEARCH must match exactly (whitespace, indentation, line endings)\n2. Each block replaces first match only\n3. Keep blocks minimal - include only changing lines plus needed context\n4. Complete lines only - no truncation\n5. For moves: use 2 blocks (delete + insert)\n6. For deletes: use empty REPLACE section\n\nExample:\n<<<<<<< SEARCH\ndef old_function(x):\n    return x + 1\n=======\ndef new_function(x, y=0):\n    return x + y\n>>>>>>> REPLACE\n\nParameters:\n- diff (required): SEARCH/REPLACE blocks defining changes\n- path (required): File path relative to the current working directory",
-    "input_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FSReplaceInput",
-      "type": "object",
-      "required": [
-        "diff",
-        "path"
-      ],
-      "properties": {
-        "diff": {
-          "description": "SEARCH/REPLACE blocks defining changes",
-          "type": "string"
-        },
-        "path": {
-          "description": "File path relative to the current working directory",
-          "type": "string"
-        }
-      }
-    },
-    "output_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FSReplaceOutput",
-      "type": "object",
-      "required": [
-        "content",
-        "path"
-      ],
-      "properties": {
-        "content": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        },
-        "syntax_checker": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      }
     }
   },
   {
