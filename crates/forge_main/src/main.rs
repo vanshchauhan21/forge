@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use colored::Colorize;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use forge_main::{StatusDisplay, UserInput, CONSOLE};
 use forge_server::API;
@@ -19,16 +20,17 @@ async fn main() -> Result<()> {
     let initial_content = if let Some(path) = cli.exec {
         let cwd = std::env::current_dir()?;
         let full_path = cwd.join(path);
-        tokio::fs::read_to_string(&full_path)
+        let content = tokio::fs::read_to_string(&full_path)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read file {}: {}", full_path.display(), e))?
             .trim()
-            .to_string()
+            .to_string();
+        CONSOLE.writeln(content.cyan().to_string())?;
+        content
     } else {
         UserInput::prompt_initial()?
     };
 
-    CONSOLE.writeln(initial_content.trim())?;
     let mut current_conversation_id = None;
     let api = API::init()
         .await
