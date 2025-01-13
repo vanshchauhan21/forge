@@ -864,6 +864,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_infra"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "diesel",
+ "forge_domain",
+ "forge_server",
+ "r2d2",
+ "serde",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "forge_main"
 version = "0.1.0"
 dependencies = [

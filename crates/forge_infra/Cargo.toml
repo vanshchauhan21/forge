@@ -1,0 +1,17 @@
+[package]
+name = "forge_infra"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.83"
+chrono = { version = "0.4", features = ["serde"] }
+diesel = { version = "2.1.0", features = ["sqlite", "r2d2", "chrono", "uuid"] }
+forge_domain = { path = "../forge_domain" }
+forge_server = { path = "../forge_server" }
+r2d2 = "0.8.10"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1.41"
+uuid = { version = "1.0", features = ["v4", "serde"] }
