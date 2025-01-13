@@ -21,17 +21,17 @@ async fn main() -> Result<()> {
 
     let mut current_conversation_id = None;
     let mut current_title = None;
+    let mut current_content = None;
 
     let api = API::init()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
 
     // Get initial input from file or prompt
-    let mut input = match cli.exec {
-        Some(path) => UserInput::from_file(path).await?,
-        None => UserInput::prompt(None)?,
+    let mut input = match &cli.exec {
+        Some(ref path) => UserInput::from_file(path).await?,
+        None => UserInput::prompt(None, None)?,
     };
-    let initial_content = input.clone();
     let model = ModelId::from_env(api.env());
     loop {
         match input {
@@ -40,17 +40,21 @@ async fn main() -> Result<()> {
                 CONSOLE.writeln("Starting fresh conversation...")?;
                 current_conversation_id = None;
                 current_title = None;
-                input = UserInput::prompt(None)?;
+                input = UserInput::prompt(None, None)?;
                 continue;
             }
             UserInput::Reload => {
                 CONSOLE.writeln("Reloading conversation with original prompt...")?;
                 current_conversation_id = None;
                 current_title = None;
-                input = initial_content.clone();
+                input = match cli.exec {
+                    Some(ref path) => UserInput::from_file(path).await?,
+                    None => UserInput::prompt(None, current_content.as_deref())?,
+                };
                 continue;
             }
             UserInput::Message(ref content) => {
+                current_content = Some(content.clone());
                 let chat = ChatRequest {
                     content: content.clone(),
                     model: model.clone(),
@@ -123,7 +127,7 @@ async fn main() -> Result<()> {
                     }
                 }
 
-                input = UserInput::prompt(current_title.as_deref())?;
+                input = UserInput::prompt(current_title.as_deref(), None)?;
             }
         }
     }

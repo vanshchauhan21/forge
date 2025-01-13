@@ -204,7 +204,7 @@ impl UserInput {
     /// # Returns
     /// - `Ok(UserInput)` - Successfully processed input
     /// - `Err` - An error occurred during input processing
-    pub fn prompt(help_text: Option<&str>) -> Result<Self> {
+    pub fn prompt(help_text: Option<&str>, initial_text: Option<&str>) -> Result<Self> {
         loop {
             CONSOLE.writeln("")?;
             let help = help_text.map(|a| a.to_string()).unwrap_or(format!(
@@ -212,10 +212,15 @@ impl UserInput {
                 InputKind::available_commands().join(", ")
             ));
 
-            let text = inquire::Text::new("")
+            let mut text = inquire::Text::new("")
                 .with_help_message(&help)
-                .with_autocomplete(CommandCompleter::new())
-                .prompt()?;
+                .with_autocomplete(CommandCompleter::new());
+
+            if let Some(initial_text) = initial_text {
+                text = text.with_initial_value(initial_text);
+            }
+
+            let text = text.prompt()?;
 
             match InputKind::parse(&text)? {
                 InputKind::Help => {
