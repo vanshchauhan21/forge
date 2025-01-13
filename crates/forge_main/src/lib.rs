@@ -5,4 +5,4 @@ pub mod status;
 
 pub use console::CONSOLE;
 pub use input::UserInput;
-pub use status::{StatusDisplay, StatusKind};
+pub use status::StatusDisplay;

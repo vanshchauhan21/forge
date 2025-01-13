@@ -1,55 +1,102 @@
 use colored::Colorize;
 
-pub enum StatusKind {
+#[derive(Clone)]
+enum Kind {
     Execute,
     Success,
     Failed,
     Title,
 }
 
-impl StatusKind {
+impl Kind {
     fn icon(&self) -> &'static str {
         match self {
-            StatusKind::Execute => "⚙",
-            StatusKind::Success => "✓",
-            StatusKind::Failed => "✗",
-            StatusKind::Title => "◆",
+            Kind::Execute => "⚙",
+            Kind::Success => "✓",
+            Kind::Failed => "✗",
+            Kind::Title => "◆",
         }
     }
 
     fn label(&self) -> &'static str {
         match self {
-            StatusKind::Execute => "EXECUTE",
-            StatusKind::Success => "SUCCESS",
-            StatusKind::Failed => "FAILED",
-            StatusKind::Title => "TITLE",
+            Kind::Execute => "EXECUTE",
+            Kind::Success => "SUCCESS",
+            Kind::Failed => "FAILED",
+            Kind::Title => "TITLE",
         }
     }
 }
 
-pub struct StatusDisplay<'a> {
-    pub kind: StatusKind,
-    pub message: &'a str,
-    pub timestamp: Option<String>,
-    pub error_details: Option<&'a str>,
+#[derive(Clone)]
+pub struct StatusDisplay {
+    kind: Kind,
+    message: String,
+    error_details: Option<String>,
 }
 
-impl StatusDisplay<'_> {
+impl StatusDisplay {
+    /// Create a status for executing a tool
+    pub fn execute(message: impl Into<String>) -> Self {
+        Self {
+            kind: Kind::Execute,
+            message: message.into(),
+            error_details: None,
+        }
+    }
+
+    /// Create a success status
+    pub fn success(message: impl Into<String>) -> Self {
+        Self {
+            kind: Kind::Success,
+            message: message.into(),
+            error_details: None,
+        }
+    }
+
+    /// Create a failure status
+    pub fn failed(message: impl Into<String>) -> Self {
+        Self {
+            kind: Kind::Failed,
+            message: message.into(),
+            error_details: None,
+        }
+    }
+
+    /// Create a failure status with additional details
+    pub fn failed_with(message: impl Into<String>, details: impl Into<String>) -> Self {
+        Self {
+            kind: Kind::Failed,
+            message: message.into(),
+            error_details: Some(details.into()),
+        }
+    }
+
+    /// Create a title status
+    pub fn title(message: impl Into<String>) -> Self {
+        Self {
+            kind: Kind::Title,
+            message: message.into(),
+            error_details: None,
+        }
+    }
+
     pub fn format(&self) -> String {
         let (icon, label, message) = match self.kind {
-            StatusKind::Execute => (
+            Kind::Execute => (
                 self.icon().cyan(),
                 self.label().bold().cyan(),
                 format!("{} ...", self.message.bold().cyan()),
             ),
-            StatusKind::Success => (
+            Kind::Success => (
                 self.icon().green(),
                 self.label().bold().green(),
                 self.message.bold().green().to_string(),
             ),
-            StatusKind::Failed => {
+            Kind::Failed => {
                 let error_suffix = self
                     .error_details
+                    .as_ref()
                     .map(|e| format!(" ({})", e))
                     .unwrap_or_default();
                 (
@@ -58,25 +105,22 @@ impl StatusDisplay<'_> {
                     format!("{}{}", self.message.bold().red(), error_suffix.red()),
                 )
             }
-            StatusKind::Title => (
+            Kind::Title => (
                 self.icon().blue(),
                 self.label().bold().blue(),
                 self.message.bold().blue().to_string(),
             ),
         };
 
-        if let Some(timestamp) = &self.timestamp {
-            format!(
-                "{} {} {} {} {}",
-                timestamp.dimmed(),
-                icon,
-                label,
-                "▶".bold(),
-                message
-            )
-        } else {
-            format!("{} {} {} {}", icon, label, "▶".bold(), message)
-        }
+        let timestamp = chrono::Local::now().format("%H:%M:%S%.3f").to_string();
+        format!(
+            "{} {} {} {} {}",
+            timestamp.dimmed(),
+            icon,
+            label,
+            "▶".bold(),
+            message
+        )
     }
 
     fn icon(&self) -> &'static str {

@@ -1,8 +1,7 @@
 use anyhow::Result;
-use chrono::Local;
 use clap::Parser;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
-use forge_main::{StatusDisplay, StatusKind, UserInput, CONSOLE};
+use forge_main::{StatusDisplay, UserInput, CONSOLE};
 use forge_server::API;
 use tokio_stream::StreamExt;
 
@@ -11,10 +10,6 @@ struct Cli {
     exec: Option<String>,
     #[arg(long, default_value_t = false)]
     verbose: bool,
-}
-
-fn get_timestamp() -> String {
-    Local::now().format("%H:%M:%S%.3f").to_string()
 }
 
 #[tokio::main]
@@ -49,75 +44,62 @@ async fn main() -> Result<()> {
             conversation_id: current_conversation_id,
         };
 
-        let mut stream = api
-            .chat(chat)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to start chat stream: {}", e))?;
-
-        while let Some(message) = stream.next().await {
-            let message = message.map_err(|e| anyhow::anyhow!("Stream error: {}", e))?;
-            match message {
-                ChatResponse::Text(text) => {
-                    CONSOLE.write(&text)?;
-                }
-                ChatResponse::ToolCallDetected(_) => {}
-                ChatResponse::ToolCallArgPart(arg) => {
-                    if cli.verbose {
-                        CONSOLE.write(&arg)?;
+        match api.chat(chat).await {
+            Ok(mut stream) => {
+                while let Some(message) = stream.next().await {
+                    match message {
+                        Ok(message) => match message {
+                            ChatResponse::Text(text) => {
+                                CONSOLE.write(&text)?;
+                            }
+                            ChatResponse::ToolCallDetected(_) => {}
+                            ChatResponse::ToolCallArgPart(arg) => {
+                                if cli.verbose {
+                                    CONSOLE.write(&arg)?;
+                                }
+                            }
+                            ChatResponse::ToolCallStart(tool_call_full) => {
+                                let tool_name = tool_call_full.name.as_str();
+                                CONSOLE.newline()?;
+                                CONSOLE.writeln(StatusDisplay::execute(tool_name).format())?;
+                            }
+                            ChatResponse::ToolCallEnd(tool_result) => {
+                                if cli.verbose {
+                                    CONSOLE.writeln(tool_result.to_string())?;
+                                }
+                                let tool_name = tool_result.name.as_str();
+                                let status = if tool_result.is_error {
+                                    StatusDisplay::failed(tool_name)
+                                } else {
+                                    StatusDisplay::success(tool_name)
+                                };
+                                CONSOLE.write(status.format())?;
+                            }
+                            ChatResponse::ConversationStarted(conversation_id) => {
+                                current_conversation_id = Some(conversation_id);
+                            }
+                            ChatResponse::ModifyContext(_) => {}
+                            ChatResponse::Complete => {}
+                            ChatResponse::Error(err) => {
+                                CONSOLE.writeln(StatusDisplay::failed(err.to_string()).format())?;
+                            }
+                            ChatResponse::PartialTitle(_) => {}
+                            ChatResponse::CompleteTitle(title) => {
+                                CONSOLE.writeln(StatusDisplay::title(title).format())?;
+                            }
+                            ChatResponse::FinishReason(_) => {}
+                        },
+                        Err(err) => {
+                            CONSOLE.writeln(StatusDisplay::failed(err.to_string()).format())?;
+                        }
                     }
                 }
-                ChatResponse::ToolCallStart(tool_call_full) => {
-                    let tool_name = tool_call_full.name.as_str();
-                    let status = StatusDisplay {
-                        kind: StatusKind::Execute,
-                        message: tool_name,
-                        timestamp: Some(get_timestamp()),
-                        error_details: None,
-                    };
-                    CONSOLE.newline()?;
-                    CONSOLE.writeln(status.format())?;
-                }
-                ChatResponse::ToolCallEnd(tool_result) => {
-                    if cli.verbose {
-                        CONSOLE.writeln(tool_result.to_string())?;
-                    }
-                    let tool_name = tool_result.name.as_str();
-                    let status = if tool_result.is_error {
-                        StatusDisplay {
-                            kind: StatusKind::Failed,
-                            message: tool_name,
-                            timestamp: Some(get_timestamp()),
-                            error_details: Some("error"),
-                        }
-                    } else {
-                        StatusDisplay {
-                            kind: StatusKind::Success,
-                            message: tool_name,
-                            timestamp: Some(get_timestamp()),
-                            error_details: None,
-                        }
-                    };
-                    CONSOLE.write(status.format())?;
-                }
-                ChatResponse::ConversationStarted(conversation_id) => {
-                    current_conversation_id = Some(conversation_id);
-                }
-                ChatResponse::ModifyContext(_) => {}
-                ChatResponse::Complete => {}
-                ChatResponse::Error(err) => {
-                    return Err(anyhow::anyhow!("Chat error: {:?}", err));
-                }
-                ChatResponse::PartialTitle(_) => {}
-                ChatResponse::CompleteTitle(title) => {
-                    let status = StatusDisplay {
-                        kind: StatusKind::Title,
-                        message: &title,
-                        timestamp: Some(get_timestamp()),
-                        error_details: None,
-                    };
-                    CONSOLE.writeln(status.format())?;
-                }
-                ChatResponse::FinishReason(_) => {}
+            }
+            Err(err) => {
+                CONSOLE.writeln(
+                    StatusDisplay::failed_with(err.to_string(), "Failed to establish chat stream")
+                        .format(),
+                )?;
             }
         }
 
