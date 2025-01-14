@@ -3,10 +3,10 @@ use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable, Text, Timestamp};
 use forge_domain::{Context, Conversation, ConversationId, ConversationMeta};
 
-use super::Service;
+use crate::error::Result;
 use crate::schema::conversations;
+use crate::service::Service;
 use crate::sqlite::Sqlite;
-use crate::Result;
 
 #[derive(Debug, Insertable, Queryable, QueryableByName)]
 #[diesel(table_name = conversations)]

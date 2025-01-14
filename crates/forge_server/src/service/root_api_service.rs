@@ -8,8 +8,8 @@ use forge_provider::ProviderService;
 
 use super::chat_service::ConversationHistory;
 use super::completion_service::CompletionService;
-use super::{ConfigRepository, ConversationRepository, File, Service, UIService};
-use crate::{Error, Result};
+use super::{File, Service, UIService};
+use crate::{ConfigRepository, ConversationRepository, Error, Result};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {

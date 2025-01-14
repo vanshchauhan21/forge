@@ -5,9 +5,9 @@ use diesel::sql_types::{Text, Timestamp};
 use forge_domain::Config;
 use serde::{Deserialize, Serialize};
 
-use super::Service;
 use crate::error::Result;
 use crate::schema::configuration_table::{self};
+use crate::service::Service;
 use crate::sqlite::Sqlite;
 
 #[derive(Debug, Serialize, Deserialize)]
