@@ -56,7 +56,7 @@ impl ToolCallService for FSWrite {
     }
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct FSWriteOutput {
     pub path: String,
     pub content: String,
