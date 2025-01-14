@@ -16,10 +16,11 @@ pub struct FSWriteInput {
     pub content: String,
 }
 
-/// Request to write content to a file at the specified path. If the file
-/// exists, it will be overwritten with the provided content. If the file
-/// doesn't exist, it will be created. This tool will automatically create any
-/// directories needed to write the file.
+/// Use it to create a new file at a specified path with the provided content.
+/// If the file already exists, the tool will return an error to prevent
+/// overwriting. The tool automatically handles the creation of any missing
+/// directories in the specified path, ensuring that the new file can be created
+/// seamlessly. Use this tool only when creating files that do not yet exist.
 #[derive(ToolDescription)]
 pub struct FSWrite;
 
@@ -35,6 +36,14 @@ impl ToolCallService for FSWrite {
     type Output = FSWriteOutput;
 
     async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+        // Check if file already exists
+        if tokio::fs::metadata(&input.path).await.is_ok() {
+            return Err(format!(
+                "File {} already exists. Cannot overwrite.",
+                input.path
+            ));
+        }
+
         // Validate file content if it's a supported language file
         let syntax_checker = syn::validate(&input.path, &input.content).err();
 
@@ -117,5 +126,30 @@ mod test {
         // Verify file contains valid Rust code
         let content = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(content, "fn main() { let x = 42; }");
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_file_exists() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+
+        // Create the file first
+        fs::write(&file_path, "Existing content").await.unwrap();
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput {
+                path: file_path.to_string_lossy().to_string(),
+                content: "New content".to_string(),
+            })
+            .await;
+
+        // Check that the result is an error
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("already exists"));
+
+        // Verify original content remains unchanged
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "Existing content");
     }
 }
