@@ -2,7 +2,6 @@ pub mod console;
 pub mod input;
 mod normalize;
 pub mod status;
-pub mod worktree;
 
 pub use console::CONSOLE;
 pub use input::UserInput;
