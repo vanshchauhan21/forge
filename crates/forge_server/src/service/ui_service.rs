@@ -109,9 +109,8 @@ impl UIService for Live {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::repo::tests::TestConversationStorage;
-
     use super::*;
+    use crate::repo::tests::TestConversationStorage;
 
     struct TestTitleService {
         events: Vec<ChatResponse>,
