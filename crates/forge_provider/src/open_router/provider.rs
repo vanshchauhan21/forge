@@ -158,3 +158,24 @@ impl From<OpenRouterModel> for Model {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_deserialization() {
+        let content = serde_json::to_string(&serde_json::json!({
+          "error": {
+            "message": "This endpoint's maximum context length is 16384 tokens",
+            "code": 400
+          }
+        }))
+        .unwrap();
+        let message = serde_json::from_str::<OpenRouterResponse>(&content)
+            .map_err(Error::from)
+            .and_then(|message| ChatCompletionMessage::try_from(message.clone()));
+
+        assert!(matches!(message, Err(Error::Upstream { .. })));
+    }
+}

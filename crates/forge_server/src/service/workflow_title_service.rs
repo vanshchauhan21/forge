@@ -105,10 +105,10 @@ impl TitleService for Live {
 
         let that = self.clone();
         tokio::spawn(async move {
-            match that.execute(request, tx.clone()).await {
-                Ok(_) => {}
-                Err(e) => tx.send(Err(e)).await.unwrap(),
-            };
+            if let Err(e) = that.execute(request, tx.clone()).await {
+                tx.send(Err(e)).await.unwrap();
+            }
+            drop(tx);
         });
         Ok(Box::pin(ReceiverStream::new(rx)))
     }

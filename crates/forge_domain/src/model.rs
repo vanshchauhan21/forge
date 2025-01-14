@@ -1,3 +1,4 @@
+use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +22,7 @@ impl Parameters {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Hash, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Hash, Eq, Display)]
 #[serde(transparent)]
 pub struct ModelId(String);
 

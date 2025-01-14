@@ -23,7 +23,6 @@ mod tests {
     use derive_setters::Setters;
     use forge_domain::{ChatCompletionMessage, Context, Model, ModelId, Parameters, ResultStream};
     use forge_provider::ProviderService;
-    use serde_json::json;
     use tokio_stream::StreamExt;
 
     use super::system_prompt_service::SystemPromptService;
@@ -86,9 +85,7 @@ mod tests {
 
         async fn parameters(&self, model: &ModelId) -> forge_provider::Result<Parameters> {
             match self.parameters.iter().find(|(id, _)| id == model) {
-                None => Err(forge_provider::Error::Upstream(
-                    json!({"error": "Model not found"}),
-                )),
+                None => Err(forge_provider::Error::ModelNotFound(model.clone())),
                 Some((_, parameter)) => Ok(parameter.clone()),
             }
         }

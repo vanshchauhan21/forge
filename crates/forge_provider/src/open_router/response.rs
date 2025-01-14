@@ -10,15 +10,27 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct OpenRouterResponse {
-    pub id: String,
-    pub provider: String,
-    pub model: String,
-    pub choices: Vec<Choice>,
-    pub created: u64,
-    pub object: String,
-    pub system_fingerprint: Option<String>,
-    pub usage: Option<ResponseUsage>,
+#[serde(untagged)]
+pub enum OpenRouterResponse {
+    Success {
+        id: String,
+        provider: String,
+        model: String,
+        choices: Vec<Choice>,
+        created: u64,
+        object: String,
+        system_fingerprint: Option<String>,
+        usage: Option<ResponseUsage>,
+    },
+    Failure {
+        error: OpenRouterErrorResponse,
+    },
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct OpenRouterErrorResponse {
+    code: u32,
+    message: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -83,64 +95,73 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
     type Error = Error;
 
     fn try_from(res: OpenRouterResponse) -> Result<Self, Self::Error> {
-        if let Some(choice) = res.choices.first() {
-            let response = match choice {
-                Choice::NonChat { text, finish_reason, .. } => {
-                    ModelResponse::assistant(Content::full(text)).finish_reason_opt(
-                        finish_reason
-                            .clone()
-                            .and_then(|s| FinishReason::from_str(&s).ok()),
-                    )
-                }
-                Choice::NonStreaming { message, finish_reason, .. } => {
-                    let mut resp = ModelResponse::assistant(Content::full(
-                        message.content.clone().unwrap_or_default(),
-                    ))
-                    .finish_reason_opt(
-                        finish_reason
-                            .clone()
-                            .and_then(|s| FinishReason::from_str(&s).ok()),
-                    );
-                    if let Some(tool_calls) = &message.tool_calls {
-                        for tool_call in tool_calls {
-                            resp = resp.add_tool_call(ToolCallFull {
-                                call_id: tool_call.id.clone(),
-                                name: tool_call
-                                    .function
-                                    .name
+        match res {
+            OpenRouterResponse::Success { choices, .. } => {
+                if let Some(choice) = choices.first() {
+                    let response = match choice {
+                        Choice::NonChat { text, finish_reason, .. } => {
+                            ModelResponse::assistant(Content::full(text)).finish_reason_opt(
+                                finish_reason
                                     .clone()
-                                    .ok_or(Error::ToolCallMissingName)?,
-                                arguments: serde_json::from_str(&tool_call.function.arguments)?,
-                            });
+                                    .and_then(|s| FinishReason::from_str(&s).ok()),
+                            )
                         }
-                    }
-                    resp
-                }
-                Choice::Streaming { delta, finish_reason, .. } => {
-                    let mut resp = ModelResponse::assistant(Content::part(
-                        delta.content.clone().unwrap_or_default(),
-                    ))
-                    .finish_reason_opt(
-                        finish_reason
-                            .clone()
-                            .and_then(|s| FinishReason::from_str(&s).ok()),
-                    );
-                    if let Some(tool_calls) = &delta.tool_calls {
-                        for tool_call in tool_calls {
-                            resp = resp.add_tool_call(ToolCallPart {
-                                call_id: tool_call.id.clone(),
-                                name: tool_call.function.name.clone(),
-                                arguments_part: tool_call.function.arguments.clone(),
-                            });
+                        Choice::NonStreaming { message, finish_reason, .. } => {
+                            let mut resp = ModelResponse::assistant(Content::full(
+                                message.content.clone().unwrap_or_default(),
+                            ))
+                            .finish_reason_opt(
+                                finish_reason
+                                    .clone()
+                                    .and_then(|s| FinishReason::from_str(&s).ok()),
+                            );
+                            if let Some(tool_calls) = &message.tool_calls {
+                                for tool_call in tool_calls {
+                                    resp = resp.add_tool_call(ToolCallFull {
+                                        call_id: tool_call.id.clone(),
+                                        name: tool_call
+                                            .function
+                                            .name
+                                            .clone()
+                                            .ok_or(Error::ToolCallMissingName)?,
+                                        arguments: serde_json::from_str(
+                                            &tool_call.function.arguments,
+                                        )?,
+                                    });
+                                }
+                            }
+                            resp
                         }
-                    }
-                    resp
-                }
-            };
+                        Choice::Streaming { delta, finish_reason, .. } => {
+                            let mut resp = ModelResponse::assistant(Content::part(
+                                delta.content.clone().unwrap_or_default(),
+                            ))
+                            .finish_reason_opt(
+                                finish_reason
+                                    .clone()
+                                    .and_then(|s| FinishReason::from_str(&s).ok()),
+                            );
+                            if let Some(tool_calls) = &delta.tool_calls {
+                                for tool_call in tool_calls {
+                                    resp = resp.add_tool_call(ToolCallPart {
+                                        call_id: tool_call.id.clone(),
+                                        name: tool_call.function.name.clone(),
+                                        arguments_part: tool_call.function.arguments.clone(),
+                                    });
+                                }
+                            }
+                            resp
+                        }
+                    };
 
-            Ok(response)
-        } else {
-            Err(Error::EmptyContent)
+                    Ok(response)
+                } else {
+                    Err(Error::EmptyContent)
+                }
+            }
+            OpenRouterResponse::Failure { error } => {
+                Err(Error::Upstream { message: error.message, code: error.code })
+            }
         }
     }
 }
