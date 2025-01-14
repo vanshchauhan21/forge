@@ -47,13 +47,8 @@ impl Live {
         Self { provider }
     }
 
-    fn system_prompt(&self) -> Result<String> {
-        let template = include_str!("../prompts/title/system.md");
-        Ok(template.to_string())
-    }
-
-    fn user_prompt(&self, task: &str) -> Result<String> {
-        let template = include_str!("../prompts/title/user_task.md");
+    fn prompt(&self, task: &str) -> Result<String> {
+        let template = include_str!("../prompts/title.md");
 
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
@@ -93,14 +88,14 @@ impl Live {
 
 #[derive(JsonSchema, Deserialize, Debug)]
 struct Title {
-    /// The title selected for the provided text
+    /// Actual title content
     text: String,
 }
 
 impl Title {
     fn definition() -> ToolDefinition {
         ToolDefinition::new("generate_title")
-            .description("Generate a concise, descriptive title that captures the essence of the task or conversation")
+            .description("Receives a title that can be shown to the user")
             .input_schema(schema_for!(Title))
     }
 }
@@ -108,13 +103,10 @@ impl Title {
 #[async_trait::async_trait]
 impl TitleService for Live {
     async fn get_title(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
-        let system_prompt = self.system_prompt()?;
-        let user_prompt = self.user_prompt(&chat.content)?;
-
+        let user_prompt = self.prompt(&chat.content)?;
         let tool = Title::definition();
 
         let request = Context::default()
-            .set_system_message(system_prompt)
             .add_message(ContextMessage::user(user_prompt))
             .add_tool(tool.clone())
             .tool_choice(ToolChoice::Call(tool.name))
@@ -200,15 +192,7 @@ mod tests {
         let chat = Live::new(provider);
 
         insta::assert_snapshot!(chat
-            .user_prompt("write an rust program to generate an fibo seq.")
+            .prompt("write an rust program to generate an fibo seq.")
             .unwrap());
-    }
-
-    #[tokio::test]
-    async fn test_system_prompt() {
-        let provider = Arc::new(TestProvider::default());
-        let chat = Live::new(provider);
-
-        insta::assert_snapshot!(chat.system_prompt().unwrap());
     }
 }
