@@ -6,6 +6,7 @@ use strum_macros::AsRefStr;
 use tokio::fs;
 
 use crate::console::CONSOLE;
+use crate::StatusDisplay;
 
 /// Represents user input types in the chat application.
 ///
@@ -222,12 +223,17 @@ impl UserInput {
 
             let text = text.prompt()?;
 
-            match InputKind::parse(&text)? {
-                InputKind::Help => {
-                    CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
-                    continue;
+            match InputKind::parse(&text) {
+                Ok(input_kind) => match input_kind {
+                    InputKind::Help => {
+                        CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
+                        continue;
+                    }
+                    InputKind::User(input) => return Ok(input),
+                },
+                Err(e) => {
+                    CONSOLE.writeln(StatusDisplay::failed(e.to_string()).format())?;
                 }
-                InputKind::User(input) => return Ok(input),
             }
         }
     }
