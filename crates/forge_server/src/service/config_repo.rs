@@ -45,7 +45,7 @@ impl TryFrom<RawConfig> for Config {
 }
 
 #[async_trait::async_trait]
-pub trait ConfigService: Send + Sync {
+pub trait ConfigRepository: Send + Sync {
     async fn get(&self) -> Result<Config>;
     async fn set(&self, config: Config) -> Result<Config>;
 }
@@ -61,7 +61,7 @@ impl<P: Sqlite> Live<P> {
 }
 
 #[async_trait::async_trait]
-impl<P: Sqlite + Send + Sync> ConfigService for Live<P> {
+impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
     async fn get(&self) -> Result<Config> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
@@ -101,7 +101,7 @@ impl<P: Sqlite + Send + Sync> ConfigService for Live<P> {
 }
 
 impl Service {
-    pub fn config_service(database_url: &str) -> Result<impl ConfigService> {
+    pub fn config_service(database_url: &str) -> Result<impl ConfigRepository> {
         Ok(Live::new(Service::db_pool_service(database_url)?))
     }
 }
@@ -116,13 +116,13 @@ pub mod tests {
     pub struct TestStorage;
 
     impl TestStorage {
-        pub fn in_memory() -> Result<impl ConfigService> {
+        pub fn in_memory() -> Result<impl ConfigRepository> {
             let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
         }
     }
 
-    async fn setup_storage() -> Result<impl ConfigService> {
+    async fn setup_storage() -> Result<impl ConfigRepository> {
         TestStorage::in_memory()
     }
 

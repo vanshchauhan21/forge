@@ -5,7 +5,7 @@ use tokio_stream::{once, StreamExt};
 use tracing::debug;
 
 use super::workflow_title_service::TitleService;
-use super::{ChatService, ConversationService};
+use super::{ChatService, ConversationRepository};
 use crate::{Error, Service};
 
 #[async_trait::async_trait]
@@ -14,14 +14,14 @@ pub trait UIService: Send + Sync {
 }
 
 struct Live {
-    conversation_service: Arc<dyn ConversationService>,
+    conversation_service: Arc<dyn ConversationRepository>,
     chat_service: Arc<dyn ChatService>,
     title_service: Arc<dyn TitleService>,
 }
 
 impl Live {
     fn new(
-        conversation_service: Arc<dyn ConversationService>,
+        conversation_service: Arc<dyn ConversationRepository>,
         chat_service: Arc<dyn ChatService>,
         title_service: Arc<dyn TitleService>,
     ) -> Self {
@@ -31,7 +31,7 @@ impl Live {
 
 impl Service {
     pub fn ui_service(
-        conversation_service: Arc<dyn ConversationService>,
+        conversation_service: Arc<dyn ConversationRepository>,
         neo_chat_service: Arc<dyn ChatService>,
         title_service: Arc<dyn TitleService>,
     ) -> impl UIService {
@@ -109,7 +109,7 @@ impl UIService for Live {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use super::super::conversation_service::tests::TestStorage;
+    use super::super::conversation_repo::tests::TestStorage;
     use super::*;
 
     struct TestTitleService {

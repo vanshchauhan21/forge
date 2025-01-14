@@ -43,7 +43,7 @@ impl TryFrom<RawConversation> for Conversation {
 }
 
 #[async_trait::async_trait]
-pub trait ConversationService: Send + Sync {
+pub trait ConversationRepository: Send + Sync {
     async fn set_conversation(
         &self,
         request: &Context,
@@ -70,7 +70,7 @@ impl<P: Sqlite> Live<P> {
 }
 
 #[async_trait::async_trait]
-impl<P: Sqlite + Send + Sync> ConversationService for Live<P> {
+impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
     async fn set_conversation(
         &self,
         request: &Context,
@@ -162,7 +162,7 @@ impl<P: Sqlite + Send + Sync> ConversationService for Live<P> {
 }
 
 impl Service {
-    pub fn storage_service(database_url: &str) -> Result<impl ConversationService> {
+    pub fn storage_service(database_url: &str) -> Result<impl ConversationRepository> {
         let pool_service = Service::db_pool_service(database_url)?;
         Ok(Live::new(pool_service))
     }
@@ -178,18 +178,18 @@ pub mod tests {
 
     pub struct TestStorage;
     impl TestStorage {
-        pub fn in_memory() -> Result<impl ConversationService> {
+        pub fn in_memory() -> Result<impl ConversationRepository> {
             let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
         }
     }
 
-    async fn setup_storage() -> Result<impl ConversationService> {
+    async fn setup_storage() -> Result<impl ConversationRepository> {
         TestStorage::in_memory()
     }
 
     async fn create_conversation(
-        storage: &impl ConversationService,
+        storage: &impl ConversationRepository,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
         let request = Context::new(ModelId::default());
