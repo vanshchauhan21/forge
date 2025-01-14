@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use inquire::error::InquireResult;
 use inquire::Autocomplete;
 use strum_macros::AsRefStr;
 use tokio::fs;
@@ -213,32 +212,23 @@ impl UserInput {
                 InputKind::available_commands().join(", ")
             ));
 
-            let text = prompt(&help, &initial_text)?;
+            let mut text = inquire::Text::new("")
+                .with_help_message(&help)
+                .with_autocomplete(CommandCompleter::new());
 
-            match InputKind::parse(&text) {
-                Ok(input_kind) => match input_kind {
-                    InputKind::Help => {
-                        CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
-                        continue;
-                    }
-                    InputKind::User(input) => return Ok(input),
-                },
-                Err(e) => {
-                    eprintln!("Error: {}", e);
+            if let Some(initial_text) = initial_text {
+                text = text.with_initial_value(initial_text);
+            }
+
+            let text = text.prompt()?;
+
+            match InputKind::parse(&text)? {
+                InputKind::Help => {
+                    CONSOLE.writeln(format!("\n{}\n", InputKind::get_help_text()))?;
+                    continue;
                 }
+                InputKind::User(input) => return Ok(input),
             }
         }
     }
-}
-
-fn prompt(help: &str, initial_text: &Option<&str>) -> InquireResult<String> {
-    let mut text = inquire::Text::new("")
-        .with_help_message(help)
-        .with_autocomplete(CommandCompleter::new());
-
-    if let Some(initial_text) = initial_text {
-        text = text.with_initial_value(initial_text);
-    }
-
-    text.prompt()
 }
