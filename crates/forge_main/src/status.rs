@@ -5,7 +5,7 @@ enum Kind {
     Execute,
     Success,
     Failed,
-    Title,
+    Task,
 }
 
 impl Kind {
@@ -14,7 +14,7 @@ impl Kind {
             Kind::Execute => "⚙",
             Kind::Success => "✓",
             Kind::Failed => "✗",
-            Kind::Title => "◆",
+            Kind::Task => "◆",
         }
     }
 
@@ -23,7 +23,7 @@ impl Kind {
             Kind::Execute => "EXECUTE",
             Kind::Success => "SUCCESS",
             Kind::Failed => "FAILED",
-            Kind::Title => "TITLE",
+            Kind::Task => "TASK",
         }
     }
 }
@@ -75,7 +75,7 @@ impl StatusDisplay {
     /// Create a title status
     pub fn title(message: impl Into<String>) -> Self {
         Self {
-            kind: Kind::Title,
+            kind: Kind::Task,
             message: message.into(),
             error_details: None,
         }
@@ -86,12 +86,12 @@ impl StatusDisplay {
             Kind::Execute => (
                 self.icon().cyan(),
                 self.label().bold().cyan(),
-                format!("{} ...", self.message.bold().cyan()),
+                format!("{} ...", self.message),
             ),
             Kind::Success => (
                 self.icon().green(),
                 self.label().bold().green(),
-                self.message.bold().green().to_string(),
+                self.message.to_string(),
             ),
             Kind::Failed => {
                 let error_suffix = self
@@ -102,25 +102,18 @@ impl StatusDisplay {
                 (
                     self.icon().red(),
                     self.label().bold().red(),
-                    format!("{}{}", self.message.bold().red(), error_suffix.red()),
+                    format!("{}{}", self.message, error_suffix.red()),
                 )
             }
-            Kind::Title => (
+            Kind::Task => (
                 self.icon().blue(),
                 self.label().bold().blue(),
-                self.message.bold().blue().to_string(),
+                self.message.to_string(),
             ),
         };
 
         let timestamp = chrono::Local::now().format("%H:%M:%S%.3f").to_string();
-        format!(
-            "{} {} {} {} {}",
-            timestamp.dimmed(),
-            icon,
-            label,
-            "▶".bold(),
-            message
-        )
+        format!("{} {} {} {}", timestamp.dimmed(), icon, label, message)
     }
 
     fn icon(&self) -> &'static str {
