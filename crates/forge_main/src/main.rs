@@ -3,6 +3,7 @@ use clap::Parser;
 use colored::Colorize;
 use forge_app::API;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
+use forge_main::worktree::WorkTree;
 use forge_main::{StatusDisplay, UserInput, CONSOLE};
 use tokio_stream::StreamExt;
 
@@ -14,11 +15,24 @@ struct Cli {
     /// Enable verbose output, showing additional tool information
     #[arg(long, default_value_t = false)]
     verbose: bool,
+    /// Create and use a new git worktree for this session
+    #[arg(long)]
+    worktree: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    if let Some(worktree_name) = cli.worktree {
+        let worktree = WorkTree::new(&worktree_name)?;
+        worktree.change_dir()?;
+        CONSOLE.writeln(StatusDisplay::success(format!(
+                "Created and switched to worktree: {}",
+                worktree.get_path().display()
+            ))
+            .format())?;
+    }
 
     let mut current_conversation_id = None;
     let mut current_title = None;
