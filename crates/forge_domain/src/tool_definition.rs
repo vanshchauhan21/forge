@@ -17,13 +17,13 @@ pub struct ToolDefinition {
     pub output_schema: Option<RootSchema>,
 }
 
-impl ToolDefinition {
-    pub fn new<T>(t: &T) -> Self
-    where
-        T: NamedTool + ToolCallService + ToolDescription + Send + Sync + 'static,
-        T::Input: serde::de::DeserializeOwned + JsonSchema,
-        T::Output: serde::Serialize + JsonSchema,
-    {
+impl<T> From<&T> for ToolDefinition
+where
+    T: NamedTool + ToolCallService + ToolDescription + Send + Sync + 'static,
+    T::Input: serde::de::DeserializeOwned + JsonSchema,
+    T::Output: serde::Serialize + JsonSchema,
+{
+    fn from(t: &T) -> Self {
         let input: RootSchema = schemars::schema_for!(T::Input);
         let output: RootSchema = schemars::schema_for!(T::Output);
         let mut full_description = t.description();
@@ -75,7 +75,9 @@ impl ToolDefinition {
             output_schema: Some(output),
         }
     }
+}
 
+impl ToolDefinition {
     pub fn usage_prompt(&self) -> UsagePrompt {
         let input_parameters = self
             .input_schema

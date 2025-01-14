@@ -39,7 +39,7 @@ impl Tool {
         T::Input: serde::de::DeserializeOwned + JsonSchema,
         T::Output: serde::Serialize + JsonSchema,
     {
-        let definition = ToolDefinition::new(&tool);
+        let definition = ToolDefinition::from(&tool);
         let executable = Box::new(JsonTool::new(tool));
 
         Tool { executable, definition }
