@@ -215,7 +215,11 @@ impl From<Context> for OpenRouterRequest {
             stream: Default::default(),
             max_tokens: Default::default(),
             temperature: Default::default(),
-            tool_choice: Default::default(),
+            tool_choice: request.tool_choice.map(|tc| match tc {
+                forge_domain::ToolChoice::None => ToolChoice::None,
+                forge_domain::ToolChoice::Auto => ToolChoice::Auto,
+                forge_domain::ToolChoice::Call(tool_name) => ToolChoice::Function { name: tool_name.into_string() },
+            }),
             seed: Default::default(),
             top_p: Default::default(),
             top_k: Default::default(),

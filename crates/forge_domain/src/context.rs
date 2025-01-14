@@ -4,7 +4,7 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
 use super::{ModelId, ToolCallFull, ToolResult};
-use crate::ToolDefinition;
+use crate::{ToolChoice, ToolDefinition};
 
 /// Represents a message being sent to the LLM provider
 /// NOTE: ToolResults message are part of the larger Request object and not part
@@ -81,22 +81,28 @@ pub enum Role {
 /// Represents a request being made to the LLM provider. By default the request
 /// is created with assuming the model supports use of external tools.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Setters)]
+#[setters(into, strip_option)]
 pub struct Context {
     pub messages: Vec<ContextMessage>,
     pub model: ModelId,
     pub tools: Vec<ToolDefinition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_choice: Option<ToolChoice>,
 }
 
 impl Context {
     pub fn new(id: ModelId) -> Self {
-        Context { messages: vec![], tools: vec![], model: id }
+        Context {
+            messages: vec![],
+            tools: vec![],
+            model: id,
+            tool_choice: None,
+        }
     }
 
     pub fn add_tool(mut self, tool: impl Into<ToolDefinition>) -> Self {
-        let tool = tool;
         let tool: ToolDefinition = tool.into();
         self.tools.push(tool);
-
         self
     }
 
