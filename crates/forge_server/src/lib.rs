@@ -4,6 +4,7 @@ mod log;
 mod routes;
 mod schema;
 mod service;
+mod sqlite;
 
 pub use error::*;
 pub use routes::API;

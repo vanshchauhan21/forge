@@ -2,7 +2,6 @@ mod chat_service;
 mod completion_service;
 mod config_service;
 mod conversation_service;
-mod db_service;
 mod env_service;
 mod file_read_service;
 mod root_api_service;

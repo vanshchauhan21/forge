@@ -5,7 +5,7 @@ use forge_domain::{Context, Conversation, ConversationId, ConversationMeta};
 
 use super::Service;
 use crate::schema::conversations;
-use crate::service::db_service::DBService;
+use crate::sqlite::Sqlite;
 use crate::Result;
 
 #[derive(Debug, Insertable, Queryable, QueryableByName)]
@@ -59,18 +59,18 @@ pub trait ConversationService: Send + Sync {
     ) -> Result<Conversation>;
 }
 
-pub struct Live<P: DBService> {
+pub struct Live<P: Sqlite> {
     pool_service: P,
 }
 
-impl<P: DBService> Live<P> {
+impl<P: Sqlite> Live<P> {
     pub fn new(pool_service: P) -> Self {
         Self { pool_service }
     }
 }
 
 #[async_trait::async_trait]
-impl<P: DBService + Send + Sync> ConversationService for Live<P> {
+impl<P: Sqlite + Send + Sync> ConversationService for Live<P> {
     async fn set_conversation(
         &self,
         request: &Context,
@@ -173,13 +173,13 @@ pub mod tests {
     use forge_domain::ModelId;
     use pretty_assertions::assert_eq;
 
-    use super::super::db_service::tests::TestDbPool;
     use super::*;
+    use crate::sqlite::tests::TestSqlite;
 
     pub struct TestStorage;
     impl TestStorage {
         pub fn in_memory() -> Result<impl ConversationService> {
-            let pool_service = TestDbPool::new()?;
+            let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
         }
     }

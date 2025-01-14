@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::Service;
 use crate::error::Result;
 use crate::schema::configuration_table::{self};
-use crate::service::db_service::DBService;
+use crate::sqlite::Sqlite;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ConfigId(String);
@@ -54,14 +54,14 @@ pub struct Live<P> {
     pool_service: P,
 }
 
-impl<P: DBService> Live<P> {
+impl<P: Sqlite> Live<P> {
     pub fn new(pool_service: P) -> Self {
         Self { pool_service }
     }
 }
 
 #[async_trait::async_trait]
-impl<P: DBService + Send + Sync> ConfigService for Live<P> {
+impl<P: Sqlite + Send + Sync> ConfigService for Live<P> {
     async fn get(&self) -> Result<Config> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
@@ -110,14 +110,14 @@ impl Service {
 pub mod tests {
     use forge_domain::{ApiKey, ModelConfig, ModelId, Permissions, ProviderId};
 
-    use super::super::db_service::tests::TestDbPool;
     use super::*;
+    use crate::sqlite::tests::TestSqlite;
 
     pub struct TestStorage;
 
     impl TestStorage {
         pub fn in_memory() -> Result<impl ConfigService> {
-            let pool_service = TestDbPool::new()?;
+            let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
         }
     }

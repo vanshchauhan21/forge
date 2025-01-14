@@ -13,12 +13,12 @@ const DB_NAME: &str = ".forge.db";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[async_trait::async_trait]
-pub trait DBService: Send + Sync {
+pub trait Sqlite: Send + Sync {
     async fn pool(&self) -> Result<SQLConnection>;
 }
 
 impl Service {
-    pub fn db_pool_service(db_path: &str) -> Result<impl DBService> {
+    pub fn db_pool_service(db_path: &str) -> Result<impl Sqlite> {
         Live::new(db_path)
     }
 }
@@ -53,7 +53,7 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl DBService for Live {
+impl Sqlite for Live {
     async fn pool(&self) -> Result<SQLConnection> {
         Ok(self.pool.clone())
     }
@@ -65,13 +65,13 @@ pub mod tests {
 
     use super::*;
 
-    pub struct TestDbPool {
+    pub struct TestSqlite {
         live: Live,
         // Keep TempDir alive for the duration of TestDbPool
         _temp_dir: TempDir,
     }
 
-    impl TestDbPool {
+    impl TestSqlite {
         pub fn new() -> Result<Self> {
             let temp_dir = TempDir::new().unwrap();
             let db_path = temp_dir.path().to_str().unwrap().to_string();
@@ -81,7 +81,7 @@ pub mod tests {
     }
 
     #[async_trait::async_trait]
-    impl DBService for TestDbPool {
+    impl Sqlite for TestSqlite {
         async fn pool(&self) -> Result<SQLConnection> {
             Ok(self.live.pool.clone())
         }
