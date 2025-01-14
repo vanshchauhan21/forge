@@ -91,7 +91,7 @@ When approaching a task, follow these steps:
 
 3. Wait for user confirmation before proceeding. If the user requests changes, revise your analysis and present it again.
 
-4. Once approved, proceed with the task execution. If tool use is necessary, format the tool call correctly and explain why you're using it.
+4. Once approved, proceed with the task execution. If tool use is necessary, format the tool call correctly and explain why you're using it. IMPORTANT: Do not make any tool calls until after receiving user approval for your plan.
 
 5. After receiving tool results or completing a step, reassess the task progress and provide a clear, concise explanation of your actions and the outcome.
 
