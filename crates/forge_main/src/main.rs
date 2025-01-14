@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
+use forge_app::API;
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use forge_main::{StatusDisplay, UserInput, CONSOLE};
-use forge_server::API;
 use tokio_stream::StreamExt;
 
 /// Command line arguments for the application

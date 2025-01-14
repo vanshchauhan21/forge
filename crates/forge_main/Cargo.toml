@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
-forge_server = { path = "../forge_server" }
+forge_app = { path = "../forge_app" }
 forge_domain = { path = "../forge_domain" }
 tokio = { version = "1.0", features = ["full"] }
 tokio-stream = "0.1.17"

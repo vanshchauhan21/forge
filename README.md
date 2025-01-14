@@ -37,7 +37,7 @@ code-forge/
 │   ├── forge_main/        # CLI and main application logic
 │   ├── forge_domain/      # Core domain models and interfaces
 │   ├── forge_provider/    # AI provider integration
-│   ├── forge_server/      # HTTP API and database management
+│   ├── forge_app/      # HTTP API and database management
 │   ├── forge_tool/        # Tool implementations
 │   └── forge_walker/      # File system operations
 ```
@@ -47,7 +47,7 @@ code-forge/
 - **Domain Layer** (`forge_domain`) - Core business logic and interfaces
 - **Provider Layer** (`forge_provider`) - AI model integration
 - **Tool Layer** (`forge_tool`) - Development tools implementation
-- **Server Layer** (`forge_server`) - API endpoints and persistence
+- **Server Layer** (`forge_app`) - API endpoints and persistence
 - **Main Application** (`forge_main`) - CLI and application coordination
 
 ## 🔧 Configuration

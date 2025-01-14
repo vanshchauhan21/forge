@@ -1,5 +1,5 @@
 ---
-source: crates/forge_server/src/service/workflow_title.rs
+source: crates/forge_app/src/service/workflow_title.rs
 expression: "chat.user_prompt(\"write an rust program to generate an fibo seq.\").unwrap()"
 snapshot_kind: text
 ---

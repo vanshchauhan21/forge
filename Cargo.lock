@@ -830,6 +830,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
+name = "forge_app"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "clap",
+ "derive_more",
+ "derive_setters",
+ "diesel",
+ "diesel_migrations",
+ "dirs",
+ "dotenv",
+ "forge_domain",
+ "forge_prompt",
+ "forge_provider",
+ "forge_tool",
+ "forge_walker",
+ "handlebars",
+ "insta",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "r2d2",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "forge_ci"
 version = "0.1.0"
 dependencies = [
@@ -871,8 +907,8 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
+ "forge_app",
  "forge_domain",
- "forge_server",
  "inquire",
  "insta",
  "lazy_static",
@@ -914,42 +950,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
-]
-
-[[package]]
-name = "forge_server"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum",
- "chrono",
- "clap",
- "derive_more",
- "derive_setters",
- "diesel",
- "diesel_migrations",
- "dirs",
- "dotenv",
- "forge_domain",
- "forge_prompt",
- "forge_provider",
- "forge_tool",
- "forge_walker",
- "handlebars",
- "insta",
- "pretty_assertions",
- "pulldown-cmark",
- "r2d2",
- "schemars",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

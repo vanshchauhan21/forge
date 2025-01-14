@@ -1,5 +1,5 @@
 ---
-source: crates/forge_server/src/service/system_prompt.rs
+source: crates/forge_app/src/service/system_prompt.rs
 expression: prompt
 snapshot_kind: text
 ---

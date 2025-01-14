@@ -24,7 +24,7 @@ Code-Forge is a sophisticated AI-powered coding assistant platform built in Rust
      - Code outline generation
      - Thinking framework for complex problem-solving
 
-4. **Server Layer (`forge_server`)**
+4. **Server Layer (`forge_app`)**
    - Provides HTTP API endpoints
    - Manages database operations
    - Handles conversation persistence
