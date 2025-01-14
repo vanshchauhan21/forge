@@ -155,6 +155,12 @@ async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<St
 
     // Apply each block sequentially
     for block in blocks {
+        // For empty search string, append the replacement text at the end of file.
+        if block.search.is_empty() {
+            result.push_str(&block.replace);
+            continue;
+        }
+
         // For exact matching, first try to find the exact string
         if let Some(start_idx) = result.find(&block.search) {
             let end_idx = start_idx + block.search.len();
@@ -562,5 +568,65 @@ mod test {
             .unwrap();
 
         assert_eq!(result.content, "fn main() { let x = 42; let y = x * 2; }\n");
+    }
+
+    #[tokio::test]
+    async fn test_replace_curly_brace_with_double_curly_brace() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.md");
+        // Create test file with content
+        let file_content = "fn test(){\n    let x = 42;\n    {\n        // test block-1    }\n }\n";
+        write_test_file(&file_path, file_content).await.unwrap();
+
+        // want to replace '}' with '}}'.
+        let diff = format!("{}\n}}{}\n}}}}\n{}", SEARCH, DIVIDER, REPLACE);
+        let res = FSReplace
+            .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
+            .await
+            .unwrap();
+        let expected = "fn test(){\n    let x = 42;\n    {\n        // test block-1    }}\n\n }\n";
+        assert_eq!(res.content, expected);
+    }
+
+    #[tokio::test]
+    async fn test_empty_search_block() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.md");
+        // Create test file with content
+        let file_content =
+            r#"fn test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\n"#;
+        write_test_file(&file_path, file_content).await.unwrap();
+
+        // want to replace '' with 'empty-space-replaced'.
+        let diff = format!("{}\n{}\nempty-space-replaced{}", SEARCH, DIVIDER, REPLACE);
+
+        let res = FSReplace
+            .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
+            .await
+            .unwrap();
+
+        let expected = r#"fn test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\nempty-space-replaced"#;
+        assert_eq!(res.content, expected);
+    }
+
+    #[tokio::test]
+    async fn test_match_empty_white_space() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.md");
+        // Create test file with content
+        let file_content =
+            r#"fn test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\n"#;
+        write_test_file(&file_path, file_content).await.unwrap();
+
+        // want to replace ' ' with '--'.
+        let diff = format!("{}\n {}\n--{}", SEARCH, DIVIDER, REPLACE);
+
+        let res = FSReplace
+            .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
+            .await
+            .unwrap();
+
+        let expected = r#"fn--test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\n"#;
+        assert_eq!(res.content, expected);
     }
 }
