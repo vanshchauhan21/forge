@@ -1,10 +1,17 @@
+use std::fmt;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LearningId(pub Uuid);
+
+impl Default for LearningId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl LearningId {
     pub fn new() -> Self {
