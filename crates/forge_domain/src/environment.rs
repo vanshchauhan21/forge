@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use derive_setters::Setters;
 use serde::Serialize;
 
@@ -22,4 +23,15 @@ pub struct Environment {
     pub large_model_id: String,
     /// The small model ID.
     pub small_model_id: String,
+}
+
+/// Repository for accessing system environment information
+#[async_trait]
+pub trait EnvironmentRepository {
+    /// Get the current environment information including:
+    /// - Operating system
+    /// - Current working directory
+    /// - Home directory
+    /// - Default shell
+    async fn get_environment(&self) -> anyhow::Result<Environment>;
 }

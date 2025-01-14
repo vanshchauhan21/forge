@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 use super::ModelId;
 
@@ -47,4 +48,13 @@ pub struct Config {
     pub permissions: Permissions,
     pub max_requests: u32,
     pub notifications: bool,
+}
+
+#[async_trait]
+pub trait ConfigurationRepository {
+    /// Get the current configuration
+    async fn get_configuration(&self) -> anyhow::Result<Config>;
+
+    /// Save a new configuration
+    async fn save_configuration(&self, config: &Config) -> anyhow::Result<()>;
 }
