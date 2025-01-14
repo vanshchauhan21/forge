@@ -9,8 +9,8 @@ use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
-use super::system_prompt_service::SystemPromptService;
-use super::user_prompt_service::UserPromptService;
+use super::system_prompt::SystemPromptService;
+use super::user_prompt::UserPromptService;
 use super::Service;
 use crate::{Error, Result};
 
@@ -226,10 +226,9 @@ mod tests {
     use serde_json::{json, Value};
     use tokio_stream::StreamExt;
 
-    use super::{ChatRequest, Live};
-    use crate::service::chat_service::ChatService;
+    use super::{ChatRequest, ChatService, Live};
     use crate::service::tests::{TestProvider, TestSystemPrompt};
-    use crate::service::user_prompt_service::tests::TestUserPrompt;
+    use crate::service::user_prompt::tests::TestUserPrompt;
 
     struct TestToolService {
         result: Mutex<Vec<Value>>,

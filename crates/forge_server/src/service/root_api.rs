@@ -6,8 +6,8 @@ use forge_domain::{
 };
 use forge_provider::ProviderService;
 
-use super::chat_service::ConversationHistory;
-use super::completion_service::CompletionService;
+use super::chat::ConversationHistory;
+use super::completion::CompletionService;
 use super::{File, Service, UIService};
 use crate::{ConfigRepository, ConversationRepository, Error, Result};
 

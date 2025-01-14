@@ -4,8 +4,8 @@ use forge_domain::{ChatRequest, ChatResponse, Context, ResultStream};
 use tokio_stream::{once, StreamExt};
 use tracing::debug;
 
-use super::workflow_title_service::TitleService;
-use super::ChatService;
+use super::chat::ChatService;
+use super::workflow_title::TitleService;
 use crate::{ConversationRepository, Error, Service};
 
 #[async_trait::async_trait]

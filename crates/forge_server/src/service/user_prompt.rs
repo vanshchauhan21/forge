@@ -4,7 +4,7 @@ use forge_prompt::Prompt;
 use handlebars::Handlebars;
 use serde::Serialize;
 
-use super::file_read_service::FileReadService;
+use super::file_read::FileReadService;
 use super::Service;
 use crate::Result;
 
@@ -62,7 +62,7 @@ pub mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::service::file_read_service::tests::TestFileReadService;
+    use crate::service::file_read::tests::TestFileReadService;
 
     pub struct TestUserPrompt;
 
