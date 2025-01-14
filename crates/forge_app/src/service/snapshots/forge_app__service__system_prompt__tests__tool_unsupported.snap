@@ -324,10 +324,11 @@ Usage:
 </user_options>
 
 11. write_file
-Request to write content to a file at the specified path. If the file
- exists, it will be overwritten with the provided content. If the file
- doesn\'t exist, it will be created. This tool will automatically create any
- directories needed to write the file.
+Use it to create a new file at a specified path with the provided content.
+ If the file already exists, the tool will return an error to prevent
+ overwriting. The tool automatically handles the creation of any missing
+ directories in the specified path, ensuring that the new file can be created
+ seamlessly. Use this tool only when creating files that do not yet exist.
 
 Parameters:
 - content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.

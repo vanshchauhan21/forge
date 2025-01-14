@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
-use forge_domain::{ChatRequest, ChatResponse, Context, ContextMessage, ResultStream};
+use forge_domain::{
+    ChatRequest, ChatResponse, Context, ContextMessage, ResultStream, ToolCall, ToolCallFull,
+    ToolChoice, ToolDefinition,
+};
 use forge_provider::ProviderService;
 use handlebars::Handlebars;
-use serde::Serialize;
+use schemars::{schema_for, JsonSchema};
+use serde::{Deserialize, Serialize};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
@@ -11,13 +15,20 @@ use super::Service;
 use crate::{Error, Result};
 
 impl Service {
+    /// Creates a new title service with the specified provider
     pub fn title_service(provider: Arc<dyn ProviderService>) -> impl TitleService {
         Live::new(provider)
     }
 }
 
+/// Represents a service for generating titles for chat requests
+///
+/// This trait defines an asynchronous method for extracting or generating
+/// a descriptive title from a given chat request. The service supports
+/// streaming responses and handles context-aware title generation.
 #[async_trait::async_trait]
 pub trait TitleService: Send + Sync {
+    /// Generates a title for the given chat request
     async fn get_title(&self, content: ChatRequest) -> ResultStream<ChatResponse, Error>;
 }
 
@@ -53,42 +64,44 @@ impl Live {
         Ok(hb.render_template(template, &ctx)?)
     }
 
-    fn extract_title(&self, content: &str) -> Option<String> {
-        if let (Some(start), Some(end)) = (content.find("<title>"), content.find("</title>")) {
-            if start < end {
-                return Some(content[start + 7..end].trim().to_string());
-            }
-        }
-        None
-    }
-
     async fn execute(
         &self,
         request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
     ) -> Result<()> {
         let mut response = self.provider.chat(request).await?;
-        let mut full_response = String::new();
+        let mut parts = Vec::new();
 
         while let Some(chunk) = response.next().await {
             let message = chunk?;
-            if let Some(ref content) = message.content {
-                if !content.is_empty() {
-                    full_response.push_str(content.as_str());
-                }
+            if let Some(ToolCall::Part(args)) = message.tool_call.first() {
+                parts.push(args.clone());
             }
         }
 
-        // Extract title from tags if present, otherwise use full response
-        let title = self
-            .extract_title(&full_response)
-            .unwrap_or_else(|| full_response.trim().to_string());
+        // Extract title from parts if present
+        let tool_call = ToolCallFull::try_from_parts(&parts)?;
+        let title: Title = serde_json::from_value(tool_call.arguments)?;
 
-        tx.send(Ok(ChatResponse::CompleteTitle(title)))
+        tx.send(Ok(ChatResponse::CompleteTitle(title.text)))
             .await
             .unwrap();
 
         Ok(())
+    }
+}
+
+#[derive(JsonSchema, Deserialize, Debug)]
+struct Title {
+    /// The title selected for the provided text
+    text: String,
+}
+
+impl Title {
+    fn definition() -> ToolDefinition {
+        ToolDefinition::new("generate_title")
+            .description("Generate a concise, descriptive title that captures the essence of the task or conversation")
+            .input_schema(schema_for!(Title))
     }
 }
 
@@ -97,10 +110,16 @@ impl TitleService for Live {
     async fn get_title(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
         let system_prompt = self.system_prompt()?;
         let user_prompt = self.user_prompt(&chat.content)?;
+
+        let tool = Title::definition();
+
         let request = Context::default()
             .set_system_message(system_prompt)
             .add_message(ContextMessage::user(user_prompt))
+            .add_tool(tool.clone())
+            .tool_choice(ToolChoice::Call(tool.name))
             .model(chat.model);
+
         let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         let that = self.clone();
@@ -119,11 +138,13 @@ mod tests {
     use std::sync::Arc;
     use std::vec;
 
-    use forge_domain::{ChatCompletionMessage, ChatResponse, ConversationId, FinishReason};
+    use forge_domain::{ChatCompletionMessage, ChatResponse, ConversationId, ToolCallPart};
+    // Remove unused import
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, Live, TitleService};
     use crate::service::tests::TestProvider;
+    use crate::service::workflow_title::Title;
 
     #[derive(Default)]
     struct Fixture(Vec<Vec<ChatCompletionMessage>>);
@@ -145,39 +166,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_title_generation() {
-        let mock_llm_responses = vec![vec![ChatCompletionMessage::default()
-            .content_part("<title>Fibonacci Sequence in Rust</title>")
-            .finish_reason(FinishReason::Stop)]];
-
-        let actual = Fixture(mock_llm_responses)
-            .run(
-                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
-                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
-                ),
-            )
-            .await;
-
-        assert_eq!(
-            actual,
-            vec![ChatResponse::CompleteTitle(
-                "Fibonacci Sequence in Rust".to_string()
-            )]
-        );
-    }
-
-    #[tokio::test]
-    async fn test_title_generation_chunked() {
+    async fn test_title_tool_processing() {
         let mock_llm_responses = vec![vec![
-            ChatCompletionMessage::default()
-                .content_part("<tit")
-                .finish_reason(FinishReason::Length),
-            ChatCompletionMessage::default()
-                .content_part("le>Fibonacci")
-                .finish_reason(FinishReason::Length),
-            ChatCompletionMessage::default()
-                .content_part(" Sequence in Rust</title>")
-                .finish_reason(FinishReason::Stop),
+            ChatCompletionMessage::default().add_tool_call(
+                ToolCallPart::default()
+                    .arguments_part(r#"{"text": "Rust Fib"#)
+                    .name(Title::definition().name),
+            ),
+            ChatCompletionMessage::default().add_tool_call(
+                ToolCallPart::default().arguments_part(r#"onacci Implementation"}"#),
+            ),
         ]];
 
         let actual = Fixture(mock_llm_responses)
@@ -191,29 +189,7 @@ mod tests {
         assert_eq!(
             actual,
             vec![ChatResponse::CompleteTitle(
-                "Fibonacci Sequence in Rust".to_string()
-            )]
-        );
-    }
-
-    #[tokio::test]
-    async fn test_title_generation_without_tags() {
-        let mock_llm_responses = vec![vec![ChatCompletionMessage::default()
-            .content_part("Fibonacci Sequence in Rust")
-            .finish_reason(FinishReason::Stop)]];
-
-        let actual = Fixture(mock_llm_responses)
-            .run(
-                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
-                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
-                ),
-            )
-            .await;
-
-        assert_eq!(
-            actual,
-            vec![ChatResponse::CompleteTitle(
-                "Fibonacci Sequence in Rust".to_string()
+                "Rust Fibonacci Implementation".to_string()
             )]
         );
     }

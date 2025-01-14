@@ -1,6 +1,7 @@
 ---
 source: crates/forge_tool/src/tool_service.rs
 expression: "serde_json::to_string_pretty(&tools).unwrap()"
+snapshot_kind: text
 ---
 [
   {
@@ -420,7 +421,7 @@ expression: "serde_json::to_string_pretty(&tools).unwrap()"
   },
   {
     "name": "write_file",
-    "description": "Request to write content to a file at the specified path. If the file\n exists, it will be overwritten with the provided content. If the file\n doesn\\'t exist, it will be created. This tool will automatically create any\n directories needed to write the file.\n\nParameters:\n- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.\n- path (required): The path of the file to write to (relative to the current working directory)",
+    "description": "Use it to create a new file at a specified path with the provided content.\n If the file already exists, the tool will return an error to prevent\n overwriting. The tool automatically handles the creation of any missing\n directories in the specified path, ensuring that the new file can be created\n seamlessly. Use this tool only when creating files that do not yet exist.\n\nParameters:\n- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.\n- path (required): The path of the file to write to (relative to the current working directory)",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "FSWriteInput",

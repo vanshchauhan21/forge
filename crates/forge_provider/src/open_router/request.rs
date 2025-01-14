@@ -215,11 +215,7 @@ impl From<Context> for OpenRouterRequest {
             stream: Default::default(),
             max_tokens: Default::default(),
             temperature: Default::default(),
-            tool_choice: request.tool_choice.map(|tc| match tc {
-                forge_domain::ToolChoice::None => ToolChoice::None,
-                forge_domain::ToolChoice::Auto => ToolChoice::Auto,
-                forge_domain::ToolChoice::Call(tool_name) => ToolChoice::Function { name: tool_name.into_string() },
-            }),
+            tool_choice: request.tool_choice.map(|tc| tc.into()),
             seed: Default::default(),
             top_p: Default::default(),
             top_k: Default::default(),
@@ -299,6 +295,18 @@ pub enum OpenRouterRole {
     User,
     Assistant,
     Tool,
+}
+
+impl From<forge_domain::ToolChoice> for ToolChoice {
+    fn from(value: forge_domain::ToolChoice) -> Self {
+        match value {
+            forge_domain::ToolChoice::None => ToolChoice::None,
+            forge_domain::ToolChoice::Auto => ToolChoice::Auto,
+            forge_domain::ToolChoice::Call(tool_name) => {
+                ToolChoice::Function { name: tool_name.into_string() }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

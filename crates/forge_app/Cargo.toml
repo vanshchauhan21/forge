@@ -30,9 +30,9 @@ handlebars = "6.2.0"
 r2d2 = "0.8.10"
 forge_domain = { path = "../forge_domain" }
 dirs = "6.0.0"
+schemars = "0.8.21"
 
 [dev-dependencies]
 insta = "1.41.1"
 pretty_assertions = "1.4.1"
-schemars = "0.8.21"
 tempfile = "3.10.1"
