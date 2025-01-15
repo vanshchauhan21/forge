@@ -7,7 +7,7 @@ use serde_json::Value;
 use crate::{ToolCallFull, ToolCallId, ToolName};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
-#[setters(strip_option)]
+#[setters(strip_option, into)]
 pub struct ToolResult {
     pub name: ToolName,
     pub call_id: Option<ToolCallId>,
@@ -61,28 +61,10 @@ impl Display for ToolResult {
 
         // First serialize to string
         let mut out = String::new();
-        {
-            let ser = quick_xml::se::Serializer::new(&mut out);
-            xml.serialize(ser).unwrap();
-        }
+        let ser = quick_xml::se::Serializer::new(&mut out);
+        xml.serialize(ser).unwrap();
 
-        // Now reformat with pretty printing
-        let mut writer = quick_xml::Writer::new_with_indent(Vec::new(), b' ', 0);
-        let mut reader = quick_xml::reader::Reader::from_reader(out.as_bytes());
-        let mut buf = Vec::new();
-
-        loop {
-            match reader.read_event_into(&mut buf) {
-                Ok(quick_xml::events::Event::Eof) => break,
-                Ok(event) => writer.write_event(event).unwrap(),
-                Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
-            }
-        }
-
-        let result = writer.into_inner();
-        let xml = String::from_utf8(result).unwrap();
-        let xml = html_escape::decode_html_entities(&xml);
-        write!(f, "{}", xml)
+        write!(f, "{}", out)
     }
 }
 

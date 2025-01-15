@@ -5,7 +5,7 @@ snapshot_kind: text
 ---
 {
   "role": "tool",
-  "content": "<tool_result>\n<tool_name>html_tool</tool_name>\n<success>\n<attributes>\n<data-test><test>&value</test></data-test>\n<style>color: blue; font-size: 12px;</style>\n</attributes>\n<elements><span></elements>\n<elements><br/></elements>\n<elements><hr></elements>\n<html><div class=\"container\"><p>Hello <World></p></div></html>\n</success>\n</tool_result>",
+  "content": "<tool_result><tool_name>html_tool</tool_name><success>{\n                \"html\": \"&lt;div class=\\\"container\\\"&gt;&lt;p&gt;Hello &lt;World&gt;&lt;/p&gt;&lt;/div&gt;\",\n                \"elements\": [\"&lt;span&gt;\", \"&lt;br/&gt;\", \"&lt;hr&gt;\"],\n                \"attributes\": {\n                    \"style\": \"color: blue; font-size: 12px;\",\n                    \"data-test\": \"&lt;test&gt;&amp;value&lt;/test&gt;\"\n                }\n            }</success></tool_result>",
   "name": "html_tool",
   "tool_call_id": "456"
 }

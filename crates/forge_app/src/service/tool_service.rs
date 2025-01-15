@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult};
-use serde_json::Value;
 use tracing::debug;
 
 use super::Service;
@@ -57,7 +56,7 @@ impl ToolService for Live {
 
         match output {
             Ok(output) => ToolResult::from(call).content(output),
-            Err(error) => ToolResult::from(call).content(Value::from(format!("<e>{}</e>", error))),
+            Err(output) => ToolResult::from(call).content(output).is_error(true),
         }
     }
 
@@ -93,7 +92,97 @@ impl ToolService for Live {
 
 #[cfg(test)]
 mod test {
+    use forge_domain::{Tool, ToolCallId, ToolDefinition};
+    use serde_json::{json, Value};
+
     use super::*;
+
+    // Mock tool that always succeeds
+    struct SuccessTool;
+    #[async_trait::async_trait]
+    impl forge_domain::ToolCallService for SuccessTool {
+        type Input = Value;
+        type Output = Value;
+
+        async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+            Ok(Value::from(format!("Success with input: {}", input)))
+        }
+    }
+
+    // Mock tool that always fails
+    struct FailureTool;
+    #[async_trait::async_trait]
+    impl forge_domain::ToolCallService for FailureTool {
+        type Input = Value;
+        type Output = Value;
+
+        async fn call(&self, _input: Self::Input) -> Result<Self::Output, String> {
+            Err("Tool execution failed".to_string())
+        }
+    }
+
+    fn new_tool_service() -> impl ToolService {
+        let success_tool = Tool {
+            definition: ToolDefinition {
+                name: ToolName::new("success_tool"),
+                description: "A test tool that always succeeds".to_string(),
+                input_schema: schemars::schema_for!(serde_json::Value),
+                output_schema: Some(schemars::schema_for!(String)),
+            },
+            executable: Box::new(SuccessTool),
+        };
+
+        let failure_tool = Tool {
+            definition: ToolDefinition {
+                name: ToolName::new("failure_tool"),
+                description: "A test tool that always fails".to_string(),
+                input_schema: schemars::schema_for!(serde_json::Value),
+                output_schema: Some(schemars::schema_for!(String)),
+            },
+            executable: Box::new(FailureTool),
+        };
+
+        Live::from_iter(vec![success_tool, failure_tool])
+    }
+
+    #[tokio::test]
+    async fn test_successful_tool_call() {
+        let service = new_tool_service();
+        let call = ToolCallFull {
+            name: ToolName::new("success_tool"),
+            arguments: json!("test input"),
+            call_id: Some(ToolCallId::new("test")),
+        };
+
+        let result = service.call(call).await;
+        insta::assert_snapshot!(result);
+    }
+
+    #[tokio::test]
+    async fn test_failed_tool_call() {
+        let service = new_tool_service();
+        let call = ToolCallFull {
+            name: ToolName::new("failure_tool"),
+            arguments: json!("test input"),
+            call_id: Some(ToolCallId::new("test")),
+        };
+
+        let result = service.call(call).await;
+        insta::assert_snapshot!(result);
+    }
+
+    #[tokio::test]
+    async fn test_tool_not_found() {
+        let service = new_tool_service();
+        let call = ToolCallFull {
+            name: ToolName::new("nonexistent_tool"),
+            arguments: json!("test input"),
+            call_id: Some(ToolCallId::new("test")),
+        };
+
+        let result = service.call(call).await;
+        insta::assert_snapshot!(result);
+    }
 
     #[test]
     fn test_tool_ids() {

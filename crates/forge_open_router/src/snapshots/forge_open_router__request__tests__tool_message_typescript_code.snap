@@ -5,7 +5,7 @@ snapshot_kind: text
 ---
 {
   "role": "tool",
-  "content": "<tool_result>\n<tool_name>rust_tool</tool_name>\n<success>\n<code>fn main<T>(gt: T) {let b = &gt; }</code>\n</success>\n</tool_result>",
+  "content": "<tool_result><tool_name>rust_tool</tool_name><success>{ \"code\": \"fn main&lt;T&gt;(gt: T) {let b = &amp;gt; }\"}</success></tool_result>",
   "name": "rust_tool",
   "tool_call_id": "456"
 }
