@@ -71,20 +71,25 @@ When approaching a task, follow these steps:
 1. Analyze the task and create a detailed plan. Wrap your task analysis in <task_analysis>> tags. Include:
    a. A detailed breakdown of the task
    b. Identification of required tools or commands
-   c. A step-by-step plan for completion
-   d. Potential challenges and their solutions
-   e. Consideration of edge cases or complications
-   f. A plan for error handling and debugging
-   g. A strategy for reviewing and validating the proposed solution
+   c. Links to relevant documentation or resources
+   d. A list of potential files that might require modification
+   e. A step-by-step plan for completion
+   f. Potential challenges and their solutions
+   g. Consideration of edge cases or complications
+   h. A plan for error handling and debugging
+   i. A strategy for reviewing and validating the proposed solution
    h. Documentation of any assumptions made during the analysis
-   i. Identification of potential security considerations
-   j. Consideration of scalability and performance implications
-   k. A plan for testing the solution, including unit tests and integration tests where applicable
-   l. Identification of any external dependencies or resources required
+   k. Identification of potential security considerations
+   l. Consideration of scalability and performance implications
+   m. A plan for testing the solution, including unit tests and integration tests where applicable
+   n. Identification of any external dependencies or resources required
 
 2. Present your task analysis to the user and explicitly ask for confirmation or feedback. For example:
-   "Here's my analysis of the programming task. Please review and let me know if you approve or if any changes are needed:
+   "Based on my initial research of the codebase, resources here's my analysis of the task. Please review and let me know if you approve or if any changes are needed:   
    <task_analysis>
+   <research>
+   [You research after using various tools]
+   </research>
    [Your detailed analysis here]
    </task_analysis>>
    Do you approve this plan, or would you like any modifications?"
