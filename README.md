@@ -36,7 +36,7 @@ code-forge/
 ├── crates/
 │   ├── forge_main/        # CLI and main application logic
 │   ├── forge_domain/      # Core domain models and interfaces
-│   ├── forge_provider/    # AI provider integration
+│   ├── forge_open_router/    # AI provider integration
 │   ├── forge_app/      # HTTP API and database management
 │   ├── forge_tool/        # Tool implementations
 │   └── forge_walker/      # File system operations
@@ -45,7 +45,7 @@ code-forge/
 ## 🛠️ Core Components
 
 - **Domain Layer** (`forge_domain`) - Core business logic and interfaces
-- **Provider Layer** (`forge_provider`) - AI model integration
+- **Provider Layer** (`forge_open_router`) - AI model integration
 - **Tool Layer** (`forge_tool`) - Development tools implementation
 - **Server Layer** (`forge_app`) - API endpoints and persistence
 - **Main Application** (`forge_main`) - CLI and application coordination

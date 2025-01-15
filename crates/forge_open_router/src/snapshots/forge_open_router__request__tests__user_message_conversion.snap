@@ -1,5 +1,5 @@
 ---
-source: crates/forge_provider/src/open_router/request.rs
+source: crates/forge_open_router/src/request.rs
 expression: router_message
 snapshot_kind: text
 ---

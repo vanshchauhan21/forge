@@ -3,7 +3,7 @@ use forge_domain::{
     ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ProviderService,
     ResultStream,
 };
-use forge_provider::OpenRouter;
+use forge_open_router::OpenRouter;
 use moka2::future::Cache;
 
 use super::Service;

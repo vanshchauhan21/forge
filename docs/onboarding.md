@@ -12,7 +12,7 @@ Code-Forge is a sophisticated AI-powered coding assistant platform built in Rust
    - Manages tool definitions and executions
    - Provides conversation management
 
-2. **Provider Layer (`forge_provider`)**
+2. **Provider Layer (`forge_open_router`)**
    - Implements AI model integration (OpenRouter)
    - Handles API communication
    - Manages model parameters and configurations

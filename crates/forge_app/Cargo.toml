@@ -17,7 +17,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1.83"
 forge_tool = { path = "../forge_tool" }
-forge_provider = { path = "../forge_provider" }
+forge_open_router = { path = "../forge_open_router" }
 forge_walker = { path = "../forge_walker" }
 forge_prompt = { path = "../forge_prompt" }
 serde = { version = "1.0", features = ["derive"] }

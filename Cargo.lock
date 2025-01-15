@@ -845,8 +845,8 @@ dependencies = [
  "dirs",
  "dotenv",
  "forge_domain",
+ "forge_open_router",
  "forge_prompt",
- "forge_provider",
  "forge_tool",
  "forge_walker",
  "handlebars",
@@ -928,15 +928,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "forge_prompt"
-version = "0.1.0"
-dependencies = [
- "nom",
- "pretty_assertions",
-]
-
-[[package]]
-name = "forge_provider"
+name = "forge_open_router"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -957,6 +949,14 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
+]
+
+[[package]]
+name = "forge_prompt"
+version = "0.1.0"
+dependencies = [
+ "nom",
+ "pretty_assertions",
 ]
 
 [[package]]
