@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ResultStream, Role, ToolCall,
     ToolCallFull, ToolService,
@@ -12,7 +13,6 @@ use tokio_stream::StreamExt;
 use super::system_prompt::SystemPromptService;
 use super::user_prompt::UserPromptService;
 use super::Service;
-use crate::{Error, Result};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
@@ -20,7 +20,7 @@ pub trait ChatService: Send + Sync {
         &self,
         prompt: ChatRequest,
         context: Context,
-    ) -> ResultStream<ChatResponse, Error>;
+    ) -> ResultStream<ChatResponse, anyhow::Error>;
 }
 
 impl Service {
@@ -151,7 +151,7 @@ impl ChatService for Live {
         &self,
         chat: forge_domain::ChatRequest,
         request: Context,
-    ) -> ResultStream<ChatResponse, Error> {
+    ) -> ResultStream<ChatResponse, anyhow::Error> {
         let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
         let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
         let (tx, rx) = tokio::sync::mpsc::channel(1);

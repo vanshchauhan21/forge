@@ -1,12 +1,15 @@
-use forge_domain::{ChatCompletionMessage, Context, Model, ModelId, Parameters, ResultStream};
+use anyhow::Result;
+use forge_domain::{
+    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ResultStream,
+};
 use moka2::future::Cache;
-
-use super::error::Result;
-use crate::Error;
 
 #[async_trait::async_trait]
 pub trait ProviderService: Send + Sync + 'static {
-    async fn chat(&self, request: Context) -> ResultStream<ChatCompletionMessage, Error>;
+    async fn chat(
+        &self,
+        request: ChatContext,
+    ) -> ResultStream<ChatCompletionMessage, anyhow::Error>;
     async fn models(&self) -> Result<Vec<Model>>;
     async fn parameters(&self, model: &ModelId) -> Result<Parameters>;
 }
@@ -24,7 +27,10 @@ impl Live {
 
 #[async_trait::async_trait]
 impl ProviderService for Live {
-    async fn chat(&self, request: Context) -> ResultStream<ChatCompletionMessage, Error> {
+    async fn chat(
+        &self,
+        request: ChatContext,
+    ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
         self.provider.chat(request).await
     }
 
@@ -33,11 +39,13 @@ impl ProviderService for Live {
     }
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
-        let parameters = self
+        match self
             .cache
             .try_get_with_by_ref(model, self.provider.parameters(model))
-            .await;
-
-        Ok(parameters?)
+            .await
+        {
+            Ok(parameters) => Ok(parameters),
+            Err(e) => anyhow::bail!("Failed to get parameters from cache: {}", e),
+        }
     }
 }

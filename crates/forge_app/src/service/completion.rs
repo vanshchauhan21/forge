@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
+use anyhow::Result;
 use forge_walker::Walker;
 use serde::Serialize;
 
 use super::Service;
-use crate::Result;
 
 #[derive(Serialize)]
 pub struct File {

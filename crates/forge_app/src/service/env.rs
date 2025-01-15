@@ -1,9 +1,9 @@
+use anyhow::Result;
 use forge_domain::Environment;
 use forge_walker::Walker;
 use tokio::sync::Mutex;
 
 use super::Service;
-use crate::Result;
 
 #[async_trait::async_trait]
 pub trait EnvironmentService {

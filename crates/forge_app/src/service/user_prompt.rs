@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use forge_prompt::Prompt;
 use handlebars::Handlebars;
 use serde::Serialize;
 
 use super::file_read::FileReadService;
 use super::Service;
-use crate::Result;
 
 #[async_trait::async_trait]
 pub trait UserPromptService: Send + Sync {

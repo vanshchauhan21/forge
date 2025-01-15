@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sqlite::SqliteConnection;
@@ -5,7 +6,6 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use tracing::debug;
 
 use super::Service;
-use crate::Result;
 
 type SQLConnection = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -34,7 +34,10 @@ impl Live {
         // Run migrations first
 
         let mut conn = SqliteConnection::establish(&db_path)?;
-        let migrations = conn.run_pending_migrations(MIGRATIONS)?;
+        let migrations = conn
+            .run_pending_migrations(MIGRATIONS)
+            .map_err(|e| anyhow::anyhow!(e))
+            .with_context(|| "Failed to run database migrations")?;
 
         debug!(
             "Running {} migrations for database: {}",

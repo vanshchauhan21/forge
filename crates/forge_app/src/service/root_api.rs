@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
     ResultStream, ToolDefinition, ToolService,
@@ -9,7 +10,7 @@ use forge_provider::ProviderService;
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;
 use super::{File, Service, UIService};
-use crate::{ConfigRepository, ConversationRepository, Error, Result};
+use crate::{ConfigRepository, ConversationRepository};
 
 #[async_trait::async_trait]
 pub trait RootAPIService: Send + Sync {
@@ -17,7 +18,7 @@ pub trait RootAPIService: Send + Sync {
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self, conversation_id: ConversationId) -> Result<Context>;
     async fn models(&self) -> Result<Vec<Model>>;
-    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error>;
+    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error>;
     async fn conversations(&self) -> Result<Vec<Conversation>>;
     async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory>;
     async fn get_config(&self) -> Result<Config>;
@@ -109,7 +110,7 @@ impl RootAPIService for Live {
         Ok(self.provider.models().await?)
     }
 
-    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
+    async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
         Ok(self.ui_service.chat(chat).await?)
     }
 

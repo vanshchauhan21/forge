@@ -18,6 +18,8 @@ moka2 = "0.13.0"
 strum = "0.26.3"
 strum_macros = "0.26.4"
 forge_domain = { path = "../forge_domain" }
+anyhow = "1.0.75"
+thiserror = "2.0.11"
 
 [dev-dependencies]
 insta = { version = "1.36.1", features = ["json"] }

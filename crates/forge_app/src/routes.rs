@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 const SERVER_PORT: u16 = 8080;
 
+use anyhow::Result;
 use axum::extract::{Json, State};
 use axum::response::sse::{Event, Sse};
 use axum::response::Html;
@@ -18,7 +19,7 @@ use tracing::debug;
 
 use crate::context::ContextEngine;
 use crate::service::{ConversationHistory, EnvironmentService, File};
-use crate::{Error, Result, RootAPIService, Service};
+use crate::{RootAPIService, Service};
 
 pub struct API {
     api: Arc<dyn RootAPIService>,
@@ -47,7 +48,7 @@ impl API {
         &self.env
     }
 
-    pub async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
+    pub async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
         self.api.chat(chat).await
     }
 

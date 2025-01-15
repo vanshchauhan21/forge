@@ -1,8 +1,8 @@
 use std::pin::Pin;
 
-use derive_more::derive::{Display, From};
+use derive_more::derive::{Display, Error, From};
 
-#[derive(From, Debug, Display)]
+#[derive(From, Debug, Display, Error)]
 pub enum Error {
     ToolCallMissingName,
     Serde(serde_json::Error),

@@ -1,9 +1,9 @@
+use anyhow::Result;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable, Text, Timestamp};
 use forge_domain::{Context, Conversation, ConversationId, ConversationMeta};
 
-use crate::error::Result;
 use crate::schema::conversations;
 use crate::service::Service;
 use crate::sqlite::Sqlite;
@@ -26,9 +26,9 @@ struct RawConversation {
 }
 
 impl TryFrom<RawConversation> for Conversation {
-    type Error = crate::error::Error;
+    type Error = forge_domain::Error;
 
-    fn try_from(raw: RawConversation) -> Result<Self> {
+    fn try_from(raw: RawConversation) -> Result<Self, Self::Error> {
         Ok(Conversation {
             id: ConversationId::parse(raw.id)?,
             meta: Some(ConversationMeta {
@@ -41,7 +41,6 @@ impl TryFrom<RawConversation> for Conversation {
         })
     }
 }
-
 #[async_trait::async_trait]
 pub trait ConversationRepository: Send + Sync {
     async fn set_conversation(
@@ -103,7 +102,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .find(id.into_string())
             .first(&mut conn)?;
 
-        Conversation::try_from(raw)
+        Ok(Conversation::try_from(raw)?)
     }
 
     async fn get_conversation(&self, id: ConversationId) -> Result<Conversation> {
@@ -113,7 +112,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .find(id.into_string())
             .first(&mut conn)?;
 
-        Conversation::try_from(raw)
+        Ok(Conversation::try_from(raw)?)
     }
 
     async fn list_conversations(&self) -> Result<Vec<Conversation>> {
@@ -123,7 +122,10 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .filter(conversations::archived.eq(false))
             .load(&mut conn)?;
 
-        raw.into_iter().map(Conversation::try_from).collect()
+        Ok(raw
+            .into_iter()
+            .map(Conversation::try_from)
+            .collect::<Result<Vec<_>, _>>()?)
     }
 
     async fn archive_conversation(&self, id: ConversationId) -> Result<Conversation> {
@@ -138,7 +140,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .find(id.into_string())
             .first(&mut conn)?;
 
-        Conversation::try_from(raw)
+        Ok(Conversation::try_from(raw)?)
     }
 
     async fn set_conversation_title(
@@ -157,7 +159,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .find(id.into_string())
             .first(&mut conn)?;
 
-        raw.try_into()
+        Ok(raw.try_into()?)
     }
 }
 

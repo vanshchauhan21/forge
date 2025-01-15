@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
 use ignore::WalkBuilder;
 use tokio::task::spawn_blocking;
-
-use crate::{Error, Result};
 
 pub struct File {
     pub path: String,
@@ -27,10 +26,9 @@ impl Walker {
     pub async fn get(&self) -> Result<Vec<File>> {
         let cwd = self.cwd.clone();
         let max_depth = self.max_depth;
-        match spawn_blocking(move || Self::get_blocking(cwd, max_depth)).await {
-            Ok(result) => result,
-            Err(e) => Err(Error::JoinError(e)),
-        }
+        spawn_blocking(move || Self::get_blocking(cwd, max_depth))
+            .await
+            .context("Failed to spawn blocking task")?
     }
 
     /// Internal function to scan filesystem
@@ -48,7 +46,7 @@ impl Walker {
             let path = entry.path();
             let relative_path = path
                 .strip_prefix(&cwd)
-                .map_err(|_| Error::InvalidPath(path.to_string_lossy().to_string()))?;
+                .with_context(|| format!("Failed to strip prefix from path: {}", path.display()))?;
             let path_string = relative_path.to_string_lossy().to_string();
 
             files.push(File { path: path_string, is_dir: path.is_dir() });

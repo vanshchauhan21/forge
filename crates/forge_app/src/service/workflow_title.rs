@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, ResultStream, ToolCall, ToolCallFull,
     ToolChoice, ToolDefinition,
@@ -12,7 +13,6 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::Service;
-use crate::{Error, Result};
 
 impl Service {
     /// Creates a new title service with the specified provider
@@ -29,7 +29,7 @@ impl Service {
 #[async_trait::async_trait]
 pub trait TitleService: Send + Sync {
     /// Generates a title for the given chat request
-    async fn get_title(&self, content: ChatRequest) -> ResultStream<ChatResponse, Error>;
+    async fn get_title(&self, content: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error>;
 }
 
 #[derive(Clone)]
@@ -102,7 +102,7 @@ impl Title {
 
 #[async_trait::async_trait]
 impl TitleService for Live {
-    async fn get_title(&self, chat: ChatRequest) -> ResultStream<ChatResponse, Error> {
+    async fn get_title(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
         let user_prompt = self.prompt(&chat.content)?;
         let tool = Title::definition();
 

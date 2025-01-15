@@ -5,7 +5,6 @@ use diesel::sql_types::{Text, Timestamp};
 use forge_domain::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Result;
 use crate::schema::configuration_table::{self};
 use crate::service::Service;
 use crate::sqlite::Sqlite;
@@ -37,8 +36,9 @@ struct RawConfig {
 }
 
 impl TryFrom<RawConfig> for Config {
-    type Error = crate::error::Error;
-    fn try_from(raw: RawConfig) -> Result<Self> {
+    type Error = forge_domain::Error;
+
+    fn try_from(raw: RawConfig) -> Result<Self, Self::Error> {
         // TODO: currently we don't need id and created_at.
         Ok(serde_json::from_str(&raw.data)?)
     }
@@ -46,8 +46,8 @@ impl TryFrom<RawConfig> for Config {
 
 #[async_trait::async_trait]
 pub trait ConfigRepository: Send + Sync {
-    async fn get(&self) -> Result<Config>;
-    async fn set(&self, config: Config) -> Result<Config>;
+    async fn get(&self) -> anyhow::Result<Config>;
+    async fn set(&self, config: Config) -> anyhow::Result<Config>;
 }
 
 pub struct Live<P> {
@@ -62,7 +62,7 @@ impl<P: Sqlite> Live<P> {
 
 #[async_trait::async_trait]
 impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
-    async fn get(&self) -> Result<Config> {
+    async fn get(&self) -> anyhow::Result<Config> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
 
@@ -80,7 +80,7 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
         Ok(Config::try_from(result)?)
     }
 
-    async fn set(&self, data: Config) -> Result<Config> {
+    async fn set(&self, data: Config) -> anyhow::Result<Config> {
         let pool: r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>> =
             self.pool_service.pool().await?;
         let mut conn = pool.get()?;
@@ -101,7 +101,7 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
 }
 
 impl Service {
-    pub fn config_service(database_url: &str) -> Result<impl ConfigRepository> {
+    pub fn config_service(database_url: &str) -> anyhow::Result<impl ConfigRepository> {
         Ok(Live::new(Service::db_pool_service(database_url)?))
     }
 }
@@ -116,13 +116,13 @@ pub mod tests {
     pub struct TestStorage;
 
     impl TestStorage {
-        pub fn in_memory() -> Result<impl ConfigRepository> {
+        pub fn in_memory() -> anyhow::Result<impl ConfigRepository> {
             let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
         }
     }
 
-    async fn setup_storage() -> Result<impl ConfigRepository> {
+    async fn setup_storage() -> anyhow::Result<impl ConfigRepository> {
         TestStorage::in_memory()
     }
 
@@ -151,7 +151,7 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_config_can_be_stored_and_retrieved() -> Result<()> {
+    async fn test_config_can_be_stored_and_retrieved() -> anyhow::Result<()> {
         let storage = setup_storage().await?;
         let config = test_config();
 
@@ -162,7 +162,7 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_always_get_latest_config() -> Result<()> {
+    async fn test_always_get_latest_config() -> anyhow::Result<()> {
         let storage = setup_storage().await?;
         let mut config = test_config();
 
