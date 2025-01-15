@@ -43,7 +43,7 @@ struct Live {
 impl Live {
     fn new(env: Environment) -> Self {
         let cwd: String = env.cwd.clone();
-        let provider = Arc::new(forge_provider::Service::open_router(env.api_key.clone()));
+        let provider = Arc::new(Service::provider_service(env.api_key.clone()));
         let tool = Arc::new(forge_tool::Service::tool_service());
         let file_read = Arc::new(Service::file_read_service());
 

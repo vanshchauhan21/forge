@@ -2,6 +2,7 @@ mod chat;
 mod completion;
 mod env;
 mod file_read;
+mod provider;
 mod root_api;
 mod system_prompt;
 mod ui;
