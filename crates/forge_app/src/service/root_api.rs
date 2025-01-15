@@ -3,9 +3,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
-    ResultStream, ToolDefinition, ToolService,
+    ProviderService, ResultStream, ToolDefinition, ToolService,
 };
-use forge_provider::ProviderService;
 
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;

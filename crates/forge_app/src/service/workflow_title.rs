@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use forge_domain::{
-    ChatRequest, ChatResponse, Context, ContextMessage, ResultStream, ToolCall, ToolCallFull,
-    ToolChoice, ToolDefinition,
+    ChatRequest, ChatResponse, Context, ContextMessage, ProviderService, ResultStream, ToolCall,
+    ToolCallFull, ToolChoice, ToolDefinition,
 };
-use forge_provider::ProviderService;
 use handlebars::Handlebars;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};

@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use forge_domain::{
-    ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ResultStream, Role, ToolCall,
-    ToolCallFull, ToolService,
+    ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ProviderService,
+    ResultStream, Role, ToolCall, ToolCallFull, ToolService,
 };
-use forge_provider::ProviderService;
 use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;

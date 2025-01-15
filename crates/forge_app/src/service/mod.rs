@@ -22,8 +22,9 @@ mod tests {
 
     use anyhow::{bail, Result};
     use derive_setters::Setters;
-    use forge_domain::{ChatCompletionMessage, Context, Model, ModelId, Parameters, ResultStream};
-    use forge_provider::ProviderService;
+    use forge_domain::{
+        ChatCompletionMessage, Context, Model, ModelId, Parameters, ProviderService, ResultStream,
+    };
     use tokio_stream::StreamExt;
 
     use super::system_prompt::SystemPromptService;

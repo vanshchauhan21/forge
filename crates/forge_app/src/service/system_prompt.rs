@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_domain::{Environment, ModelId, ToolService};
-use forge_provider::ProviderService;
+use forge_domain::{Environment, ModelId, ProviderService, ToolService};
 use handlebars::Handlebars;
 use serde::Serialize;
 use tracing::debug;

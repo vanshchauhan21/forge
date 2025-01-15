@@ -1,18 +1,9 @@
 use anyhow::Result;
 use forge_domain::{
-    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ResultStream,
+    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters,
+    ProviderService, ResultStream,
 };
 use moka2::future::Cache;
-
-#[async_trait::async_trait]
-pub trait ProviderService: Send + Sync + 'static {
-    async fn chat(
-        &self,
-        request: ChatContext,
-    ) -> ResultStream<ChatCompletionMessage, anyhow::Error>;
-    async fn models(&self) -> Result<Vec<Model>>;
-    async fn parameters(&self, model: &ModelId) -> Result<Parameters>;
-}
 
 pub(crate) struct Live {
     provider: Box<dyn ProviderService>,

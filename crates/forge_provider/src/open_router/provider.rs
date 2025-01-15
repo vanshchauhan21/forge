@@ -1,6 +1,7 @@
 use anyhow::{Context as _, Result};
 use forge_domain::{
-    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ResultStream,
+    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters,
+    ProviderService, ResultStream,
 };
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
@@ -11,8 +12,7 @@ use super::model::{ListModelResponse, OpenRouterModel};
 use super::parameters::ParameterResponse;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
-use crate::provider::ProviderService;
-use crate::{Live, Service};
+use crate::provider::Live;
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -40,18 +40,24 @@ impl Config {
 }
 
 #[derive(Clone)]
-struct OpenRouter {
+pub(crate) struct OpenRouter {
     client: Client,
     config: Config,
 }
 
 impl OpenRouter {
-    fn new(api_key: impl ToString) -> Self {
+    pub(crate) fn new(api_key: impl ToString) -> Self {
         let config = Config { api_key: api_key.to_string() };
 
         let client = Client::builder().build().unwrap();
 
         Self { client, config }
+    }
+}
+
+impl OpenRouter {
+    pub(crate) fn into_provider(self) -> impl ProviderService {
+        Live::new(self)
     }
 }
 
@@ -149,12 +155,6 @@ impl ProviderService for OpenRouter {
                 .flat_map(|parameter| parameter.iter())
                 .any(|parameter| parameter == "tools"),
         })
-    }
-}
-
-impl Service {
-    pub fn open_router(api_key: impl ToString) -> impl ProviderService {
-        Live::new(OpenRouter::new(api_key))
     }
 }
 

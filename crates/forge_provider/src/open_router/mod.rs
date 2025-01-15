@@ -1,6 +1,6 @@
 mod model;
 mod parameters;
-mod provider;
+pub(crate) mod provider;
 mod request;
 mod response;
 mod tool_choice;
