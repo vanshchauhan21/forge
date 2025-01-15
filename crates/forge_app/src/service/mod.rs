@@ -5,6 +5,7 @@ mod file_read;
 mod provider;
 mod root_api;
 mod system_prompt;
+mod tool_service;
 mod ui;
 mod user_prompt;
 mod workflow_title;

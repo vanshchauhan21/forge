@@ -3,11 +3,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
-    ProviderService, ResultStream, ToolDefinition, ToolService,
+    ProviderService, ResultStream, ToolDefinition,
 };
 
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;
+use super::tool_service::ToolService;
 use super::{File, Service, UIService};
 use crate::{ConfigRepository, ConversationRepository};
 
@@ -44,7 +45,7 @@ impl Live {
     fn new(env: Environment) -> Self {
         let cwd: String = env.cwd.clone();
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
-        let tool = Arc::new(forge_tool::Service::tool_service());
+        let tool = Arc::new(Service::tool_service());
         let file_read = Arc::new(Service::file_read_service());
 
         let system_prompt = Arc::new(Service::system_prompt(

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_domain::{Environment, ModelId, ProviderService, ToolService};
+use forge_domain::{Environment, ModelId, ProviderService};
 use handlebars::Handlebars;
 use serde::Serialize;
 use tracing::debug;
 
+use super::tool_service::ToolService;
 use super::Service;
 
 #[async_trait::async_trait]
@@ -92,7 +93,7 @@ mod tests {
     #[tokio::test]
     async fn test_tool_supported() {
         let env = test_env();
-        let tools = Arc::new(forge_tool::Service::tool_service());
+        let tools = Arc::new(Service::tool_service());
         let provider = Arc::new(
             TestProvider::default().parameters(vec![(ModelId::default(), Parameters::new(true))]),
         );
@@ -106,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_tool_unsupported() {
         let env = test_env();
-        let tools = Arc::new(forge_tool::Service::tool_service());
+        let tools = Arc::new(Service::tool_service());
         let provider = Arc::new(
             TestProvider::default().parameters(vec![(ModelId::default(), Parameters::new(false))]),
         );

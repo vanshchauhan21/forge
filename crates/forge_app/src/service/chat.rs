@@ -3,13 +3,14 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ProviderService,
-    ResultStream, Role, ToolCall, ToolCallFull, ToolService,
+    ResultStream, Role, ToolCall, ToolCallFull,
 };
 use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::system_prompt::SystemPromptService;
+use super::tool_service::ToolService;
 use super::user_prompt::UserPromptService;
 use super::Service;
 
@@ -219,7 +220,6 @@ mod tests {
     use forge_domain::{
         ChatCompletionMessage, ChatResponse, Content, Context, ContextMessage, ConversationId,
         FinishReason, ToolCallFull, ToolCallId, ToolCallPart, ToolDefinition, ToolName, ToolResult,
-        ToolService,
     };
     use pretty_assertions::assert_eq;
     use serde_json::{json, Value};
@@ -227,6 +227,7 @@ mod tests {
 
     use super::{ChatRequest, ChatService, Live};
     use crate::service::tests::{TestProvider, TestSystemPrompt};
+    use crate::service::tool_service::ToolService;
     use crate::service::user_prompt::tests::TestUserPrompt;
 
     struct TestToolService {

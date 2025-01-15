@@ -32,13 +32,13 @@ pub struct Tool {
     pub definition: ToolDefinition,
 }
 
-impl Tool {
-    pub fn new<T>(tool: T) -> Tool
-    where
-        T: ToolCallService + ToolDescription + NamedTool + Send + Sync + 'static,
-        T::Input: serde::de::DeserializeOwned + JsonSchema,
-        T::Output: serde::Serialize + JsonSchema,
-    {
+impl<T> From<T> for Tool
+where
+    T: ToolCallService + ToolDescription + NamedTool + Send + Sync + 'static,
+    T::Input: serde::de::DeserializeOwned + JsonSchema,
+    T::Output: serde::Serialize + JsonSchema,
+{
+    fn from(tool: T) -> Self {
         let definition = ToolDefinition::from(&tool);
         let executable = Box::new(JsonTool::new(tool));
 

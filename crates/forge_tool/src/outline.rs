@@ -134,7 +134,7 @@ pub struct OutlineInput {
 /// │impl Repository<User> for UserRepository
 /// ```
 #[derive(ToolDescription)]
-pub(crate) struct Outline;
+pub struct Outline;
 
 impl NamedTool for Outline {
     fn tool_name(&self) -> ToolName {

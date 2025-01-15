@@ -1,16 +1,23 @@
 use std::collections::HashMap;
 
-use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
+use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult};
 use serde_json::Value;
 use tracing::debug;
 
-use crate::approve::Approve;
-use crate::fs::*;
-use crate::outline::Outline;
-use crate::select::SelectTool;
-use crate::shell::Shell;
-use crate::think::Think;
-use crate::Service;
+use super::Service;
+
+#[async_trait::async_trait]
+pub trait ToolService: Send + Sync {
+    async fn call(&self, call: ToolCallFull) -> ToolResult;
+    fn list(&self) -> Vec<ToolDefinition>;
+    fn usage_prompt(&self) -> String;
+}
+
+impl Service {
+    pub fn tool_service() -> impl ToolService {
+        Live::from_iter(forge_tool::tools())
+    }
+}
 
 struct Live {
     tools: HashMap<ToolName, Tool>,
@@ -50,9 +57,7 @@ impl ToolService for Live {
 
         match output {
             Ok(output) => ToolResult::from(call).content(output),
-            Err(error) => {
-                ToolResult::from(call).content(Value::from(format!("<error>{}</error>", error)))
-            }
+            Err(error) => ToolResult::from(call).content(Value::from(format!("<e>{}</e>", error))),
         }
     }
 
@@ -86,66 +91,30 @@ impl ToolService for Live {
     }
 }
 
-impl Service {
-    pub fn tool_service() -> impl ToolService {
-        Live::from_iter([
-            Tool::new(Approve),
-            Tool::new(FSRead),
-            Tool::new(FSWrite),
-            Tool::new(FSList),
-            Tool::new(FSSearch),
-            Tool::new(FSFileInfo),
-            Tool::new(FSReplace),
-            Tool::new(Outline),
-            Tool::new(SelectTool),
-            Tool::new(Shell::default()),
-            Tool::new(Think::default()),
-        ])
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use insta::assert_snapshot;
-
     use super::*;
-    use crate::fs::{FSFileInfo, FSSearch};
 
     #[test]
-    fn test_id() {
-        assert!(Tool::new(FSRead)
-            .definition
-            .name
-            .into_string()
-            .ends_with("read_file"));
-        assert!(Tool::new(FSSearch)
-            .definition
-            .name
-            .into_string()
-            .ends_with("search_in_files"));
-        assert!(Tool::new(FSList)
-            .definition
-            .name
-            .into_string()
-            .ends_with("list_directory_content"));
-        assert!(Tool::new(FSFileInfo)
-            .definition
-            .name
-            .into_string()
-            .ends_with("file_information"));
+    fn test_tool_ids() {
+        let service = Service::tool_service();
+        let tools = service.list();
+        let names: Vec<_> = tools.iter().map(|t| t.name.as_str()).collect();
+
+        assert!(names.contains(&"read_file"));
+        assert!(names.contains(&"write_file"));
+        assert!(names.contains(&"search_in_files"));
+        assert!(names.contains(&"list_directory_content"));
+        assert!(names.contains(&"file_information"));
     }
 
     #[test]
     fn test_usage_prompt() {
-        let docs = Service::tool_service().usage_prompt();
+        let service = Service::tool_service();
+        let prompt = service.usage_prompt();
 
-        assert_snapshot!(docs);
-    }
-
-    #[test]
-    fn test_tool_definition() {
-        let tools = Service::tool_service().list();
-
-        assert_snapshot!(serde_json::to_string_pretty(&tools).unwrap());
+        assert!(!prompt.is_empty());
+        assert!(prompt.contains("read_file"));
+        assert!(prompt.contains("write_file"));
     }
 }

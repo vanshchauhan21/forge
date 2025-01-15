@@ -63,3 +63,5 @@ pub mod tests {
     }
 }
 ```
+
+- Nomenclature: File names should match the service name for example ChatService should be in chat.rs (Don't use postfixes such as Service)
