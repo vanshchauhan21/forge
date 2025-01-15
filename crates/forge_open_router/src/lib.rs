@@ -5,5 +5,5 @@ mod request;
 mod response;
 mod tool_choice;
 
-mod provider;
-pub use provider::OpenRouter;
+mod open_router;
+pub use open_router::OpenRouter;
