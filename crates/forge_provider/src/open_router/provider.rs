@@ -5,9 +5,9 @@ use reqwest_eventsource::{Event, EventSource};
 use tokio_stream::StreamExt;
 
 use super::model::{ListModelResponse, OpenRouterModel};
+use super::parameters::ParameterResponse;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
-use super::ParameterResponse;
 use crate::error::Result;
 use crate::provider::ProviderService;
 use crate::{Error, Live, Service};
