@@ -72,6 +72,7 @@ impl ProviderService for OpenRouter {
         let es = EventSource::new(rb).unwrap();
 
         let stream = es
+            .take_while(|message| !matches!(message, Err(reqwest_eventsource::Error::StreamEnded)))
             .filter_map(|event| match event {
                 Ok(ref event) => match event {
                     Event::Open => None,
@@ -89,17 +90,9 @@ impl ProviderService for OpenRouter {
                         Some(message)
                     }
                 },
-                Err(err) => Some(Err(anyhow::anyhow!("EventSource error: {}", err))),
-            })
-            .take_while(
-                |message: &Result<ChatCompletionMessage, anyhow::Error>| match message {
-                    Err(e) => !e
-                        .downcast_ref::<reqwest_eventsource::Error>()
-                        .map(|e| matches!(e, reqwest_eventsource::Error::StreamEnded))
-                        .unwrap_or(false),
-                    _ => true,
-                },
-            );
+                Err(reqwest_eventsource::Error::StreamEnded) => None,
+                Err(err) => Some(Err(err.into())),
+            });
 
         Ok(Box::pin(Box::new(stream)))
     }
