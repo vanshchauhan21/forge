@@ -21,6 +21,7 @@ mod tool_name;
 mod tool_result;
 mod tool_service;
 mod tool_usage;
+mod user;
 mod user_interaction;
 
 pub use chat_request::*;
@@ -46,4 +47,5 @@ pub use tool_name::*;
 pub use tool_result::*;
 pub use tool_service::*;
 pub use tool_usage::*;
+pub use user::*;
 pub use user_interaction::*;

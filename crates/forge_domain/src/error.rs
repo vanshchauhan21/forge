@@ -1,12 +1,21 @@
 use std::pin::Pin;
 
-use derive_more::derive::{Display, Error, From};
+use derive_more::derive::From;
+use thiserror::Error;
 
-#[derive(From, Debug, Display, Error)]
+#[derive(From, Debug, Error)]
 pub enum Error {
+    #[error("Tool name was not provided")]
     ToolCallMissingName,
+
+    #[error("Serde Error: {0}")]
     Serde(serde_json::Error),
-    Uuid(uuid::Error),
+
+    #[error("Invalid UUID: {0}")]
+    InvalidUuid(uuid::Error),
+
+    #[error("Invalid user command: {0}")]
+    InvalidUserCommand(String),
 }
 
 pub type Result<A> = std::result::Result<A, Error>;

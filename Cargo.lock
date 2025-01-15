@@ -895,6 +895,7 @@ dependencies = [
  "serde_json",
  "strum",
  "strum_macros",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-stream",
  "uuid",
@@ -905,6 +906,7 @@ name = "forge_main"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "clap",
  "colored",
