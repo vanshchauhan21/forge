@@ -1,42 +1,185 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use forge_domain::{
     self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters,
     ProviderService, ResultStream,
 };
-use moka2::future::Cache;
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::Client;
+use reqwest_eventsource::{Event, EventSource};
+use tokio_stream::StreamExt;
 
-pub(crate) struct Live {
-    provider: Box<dyn ProviderService>,
-    cache: Cache<ModelId, Parameters>,
+use super::model::{ListModelResponse, OpenRouterModel};
+use super::parameters::ParameterResponse;
+use super::request::OpenRouterRequest;
+use super::response::OpenRouterResponse;
+#[derive(Debug, Clone)]
+struct Config {
+    api_key: String,
 }
 
-impl Live {
-    pub(crate) fn new(provider: impl ProviderService + 'static) -> Self {
-        Self { provider: Box::new(provider), cache: Cache::new(1024) }
+impl Config {
+    fn api_base(&self) -> &str {
+        "https://openrouter.ai/api/v1"
+    }
+
+    fn headers(&self) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", self.api_key)).unwrap(),
+        );
+        headers.insert("X-Title", HeaderValue::from_static("Code Forge"));
+        headers
+    }
+
+    fn url(&self, path: &str) -> String {
+        format!("{}{}", self.api_base(), path)
+    }
+}
+
+#[derive(Clone)]
+pub struct OpenRouter {
+    client: Client,
+    config: Config,
+}
+
+impl OpenRouter {
+    pub fn new(api_key: impl ToString) -> Self {
+        let config = Config { api_key: api_key.to_string() };
+
+        let client = Client::builder().build().unwrap();
+
+        Self { client, config }
     }
 }
 
 #[async_trait::async_trait]
-impl ProviderService for Live {
+impl ProviderService for OpenRouter {
     async fn chat(
         &self,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        self.provider.chat(request).await
+        let mut request = OpenRouterRequest::from(request);
+        request.stream = Some(true);
+        let request = serde_json::to_string(&request)?;
+
+        let rb = self
+            .client
+            .post(self.config.url("/chat/completions"))
+            .headers(self.config.headers())
+            .body(request);
+
+        let es = EventSource::new(rb).unwrap();
+
+        let stream = es
+            .filter_map(|event| match event {
+                Ok(ref event) => match event {
+                    Event::Open => None,
+                    Event::Message(event) => {
+                        // Ignoring wasteful events
+                        if ["[DONE]", ""].contains(&event.data.as_str()) {
+                            return None;
+                        }
+
+                        let message = serde_json::from_str::<OpenRouterResponse>(&event.data)
+                            .with_context(|| "Failed to parse OpenRouter response")
+                            .and_then(|message| {
+                                Ok(ChatCompletionMessage::try_from(message.clone())?)
+                            });
+                        Some(message)
+                    }
+                },
+                Err(err) => Some(Err(anyhow::anyhow!("EventSource error: {}", err))),
+            })
+            .take_while(
+                |message: &Result<ChatCompletionMessage, anyhow::Error>| match message {
+                    Err(e) => !e
+                        .downcast_ref::<reqwest_eventsource::Error>()
+                        .map(|e| matches!(e, reqwest_eventsource::Error::StreamEnded))
+                        .unwrap_or(false),
+                    _ => true,
+                },
+            );
+
+        Ok(Box::pin(Box::new(stream)))
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
-        self.provider.models().await
+        let text = self
+            .client
+            .get(self.config.url("/models"))
+            .headers(self.config.headers())
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        let response: ListModelResponse = serde_json::from_str(&text)?;
+
+        Ok(response
+            .data
+            .iter()
+            .map(|r| r.clone().into())
+            .collect::<Vec<Model>>())
     }
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
-        match self
-            .cache
-            .try_get_with_by_ref(model, self.provider.parameters(model))
-            .await
-        {
-            Ok(parameters) => Ok(parameters),
-            Err(e) => anyhow::bail!("Failed to get parameters from cache: {}", e),
+        // https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
+        let path = format!("/parameters/{}", model.as_str());
+        let text = self
+            .client
+            .get(self.config.url(&path))
+            .headers(self.config.headers())
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        let response: ParameterResponse = serde_json::from_str(&text)?;
+
+        Ok(Parameters {
+            tool_supported: response
+                .data
+                .supported_parameters
+                .iter()
+                .flat_map(|parameter| parameter.iter())
+                .any(|parameter| parameter == "tools"),
+        })
+    }
+}
+
+impl From<OpenRouterModel> for Model {
+    fn from(value: OpenRouterModel) -> Self {
+        Model {
+            id: value.id,
+            name: value.name,
+            description: value.description,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Context;
+
+    use super::*;
+
+    #[test]
+    fn test_error_deserialization() -> Result<()> {
+        let content = serde_json::to_string(&serde_json::json!({
+          "error": {
+            "message": "This endpoint's maximum context length is 16384 tokens",
+            "code": 400
+          }
+        }))
+        .unwrap();
+        let message = serde_json::from_str::<OpenRouterResponse>(&content)
+            .context("Failed to parse response")?;
+        let message = ChatCompletionMessage::try_from(message.clone());
+
+        assert!(message.is_err());
+        Ok(())
     }
 }

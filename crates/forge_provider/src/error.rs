@@ -13,5 +13,3 @@ pub enum Error {
     SerdeJson(serde_json::Error),
     ToolCallMissingName,
 }
-
-pub type Result<T> = std::result::Result<T, Error>;

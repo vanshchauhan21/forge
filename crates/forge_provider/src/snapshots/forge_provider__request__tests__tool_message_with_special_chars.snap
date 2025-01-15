@@ -1,0 +1,11 @@
+---
+source: crates/forge_provider/src/request.rs
+expression: router_message
+snapshot_kind: text
+---
+{
+  "role": "tool",
+  "content": "<tool_result>\n<tool_name>html_tool</tool_name>\n<success>\n<attributes>\n<data-test><test>&value</test></data-test>\n<style>color: blue; font-size: 12px;</style>\n</attributes>\n<elements><span></elements>\n<elements><br/></elements>\n<elements><hr></elements>\n<html><div class=\"container\"><p>Hello <World></p></div></html>\n</success>\n</tool_result>",
+  "name": "html_tool",
+  "tool_call_id": "456"
+}
