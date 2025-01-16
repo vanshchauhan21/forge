@@ -9,7 +9,16 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::{Context, ContextMessage, ModelId};
+use crate::{Context, ContextMessage, Environment, ModelId};
+
+/// Represents which model (primary/secondary) should be used for the agent
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum ModelType {
+    #[default]
+    Primary,
+    Secondary,
+}
 
 /// Represents the contents of a prompt, which can either be direct text or a
 /// file reference
@@ -70,9 +79,9 @@ pub struct Agent<C> {
     #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Optional model ID to use for this agent
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_id: Option<ModelId>,
+    /// Which model to use for this agent (primary/secondary)
+    #[serde(default)]
+    pub model: ModelType,
 
     /// The system prompt that defines the agent's behavior
     #[serde(rename = "systemPrompt", skip_serializing_if = "Option::is_none")]
@@ -96,7 +105,7 @@ where
         Self {
             name: name.into(),
             description: None,
-            model_id: None,
+            model: ModelType::Primary,
             system_prompt: None,
             user_prompt: None,
             _context: PhantomData,
@@ -139,7 +148,7 @@ where
     /// };
     /// let context = agent.to_context(&binding)?;
     /// ```
-    pub fn to_context(&self, binding: &C) -> Result<Context> {
+    pub fn to_context(&self, binding: &C, env: &Environment) -> Result<Context> {
         let mut messages = Vec::new();
 
         // Add system message if present
@@ -152,7 +161,10 @@ where
             messages.push(ContextMessage::user(user_message));
         }
 
-        let model_id = self.model_id.clone().unwrap_or_default();
+        let model_id = match self.model {
+            ModelType::Secondary => ModelId::new(&env.small_model_id),
+            ModelType::Primary => ModelId::new(&env.large_model_id),
+        };
 
         Ok(Context::new(model_id.clone()).extend_messages(messages))
     }
@@ -191,21 +203,21 @@ mod tests {
 
         assert_eq!(agent.name, "Coder");
         assert_eq!(agent.description, None);
-        assert_eq!(agent.model_id, None);
+        assert_eq!(agent.model, ModelType::Primary);
         assert_eq!(agent.system_prompt, None);
         assert_eq!(agent.user_prompt, None);
     }
 
     #[test]
-    fn test_create_with_prompts_and_model() {
+    fn test_create_with_prompts() {
         let agent: Agent<CodeContext> = Agent::new("Coder")
             .description("A coding assistant")
             .system_prompt("You are a helpful coding assistant")
-            .model_id(ModelId::new("gpt-4"));
+            .model(ModelType::Secondary);
 
         assert_eq!(agent.name, "Coder");
         assert_eq!(agent.description, Some("A coding assistant".to_string()));
-        assert_eq!(agent.model_id, Some(ModelId::new("gpt-4")));
+        assert_eq!(agent.model, ModelType::Secondary);
         assert_eq!(
             agent.system_prompt,
             Some(PromptContent::Text(
@@ -241,8 +253,7 @@ mod tests {
         let agent: Agent<CodeContext> = Agent::new("Coder")
             .description("A coding assistant")
             .system_prompt("You are a {{role}} coding assistant")
-            .user_prompt("How can I help with {{language}} code today?")
-            .model_id(ModelId::new("gpt-4"));
+            .user_prompt("How can I help with {{language}} code today?");
 
         let binding = CodeContext { role: "helpful".to_string(), language: "Rust".to_string() };
 
@@ -257,19 +268,19 @@ mod tests {
     }
 
     #[test]
-    fn test_to_context_with_model() {
+    fn test_to_context_with_messages() {
+        let env = test_env();
         let agent: Agent<CodeContext> = Agent::new("Coder")
             .description("A coding assistant")
             .system_prompt("You are a {{role}} coding assistant")
             .user_prompt("How can I help with {{language}} code today?")
-            .model_id(ModelId::new("gpt-4"));
+            .model(ModelType::Secondary);
 
         let binding = CodeContext { role: "helpful".to_string(), language: "Rust".to_string() };
 
-        let result = agent.to_context(&binding).unwrap();
-        assert_eq!(result.model, ModelId::new("gpt-4"));
+        let result = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(result.model, ModelId::new(&env.small_model_id));
         assert_eq!(result.messages.len(), 2);
-        assert_eq!(result.model, ModelId::new("gpt-4"));
         assert_eq!(
             result.messages[0],
             ContextMessage::system("You are a helpful coding assistant")
@@ -281,17 +292,16 @@ mod tests {
     }
 
     #[test]
-    fn test_to_context_default_model() {
-        let agent: Agent<CodeContext> = Agent::new("Coder")
-            .system_prompt("You are a {{role}} coding assistant")
-            // No model specified, should use default
-            ;
+    fn test_to_context_primary_model_with_messages() {
+        let env = test_env();
+        let agent: Agent<CodeContext> =
+            Agent::new("Coder").system_prompt("You are a {{role}} coding assistant");
 
         let binding = CodeContext { role: "helpful".to_string(), language: "Rust".to_string() };
 
-        let result = agent.to_context(&binding).unwrap();
+        let result = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(result.model, ModelId::new(&env.large_model_id));
         assert_eq!(result.messages.len(), 1);
-        assert_eq!(result.model, ModelId::default());
         assert_eq!(
             result.messages[0],
             ContextMessage::system("You are a helpful coding assistant")
@@ -300,12 +310,14 @@ mod tests {
 
     #[test]
     fn test_to_context_user_only() {
+        let env = test_env();
         let agent: Agent<CodeContext> =
             Agent::new("Coder").user_prompt("How can I help with {{language}} code today?");
 
         let binding = CodeContext { role: "helpful".to_string(), language: "Rust".to_string() };
 
-        let result = agent.to_context(&binding).unwrap();
+        let result = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(result.model, ModelId::new(&env.large_model_id));
         assert_eq!(result.messages.len(), 1);
         assert_eq!(
             result.messages[0],
@@ -315,12 +327,53 @@ mod tests {
 
     #[test]
     fn test_to_context_no_prompts() {
+        let env = test_env();
         let agent: Agent<CodeContext> = Agent::new("Coder");
 
         let binding = CodeContext { role: "helpful".to_string(), language: "Rust".to_string() };
 
-        let result = agent.to_context(&binding).unwrap();
+        let result = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(result.model, ModelId::new(&env.large_model_id));
         assert_eq!(result.messages.len(), 0);
+    }
+
+    fn test_env() -> Environment {
+        Environment {
+            os: "linux".to_string(),
+            cwd: "/home/user/project".to_string(),
+            shell: "/bin/bash".to_string(),
+            home: Some("/home/user".to_string()),
+            files: vec!["file1.txt".to_string(), "file2.txt".to_string()],
+            api_key: "test".to_string(),
+            large_model_id: "gpt-4".to_string(),
+            small_model_id: "gpt-3.5-turbo".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_primary_model_selection() {
+        let env = test_env();
+        let agent: Agent<CodeContext> = Agent::new("Coder")
+            .system_prompt("Test prompt")
+            .model(ModelType::Primary);
+
+        let binding = CodeContext { role: "test".to_string(), language: "Rust".to_string() };
+
+        let context = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(context.model, ModelId::new(&env.large_model_id));
+    }
+
+    #[test]
+    fn test_secondary_model_selection() {
+        let env = test_env();
+        let agent: Agent<CodeContext> = Agent::new("Coder")
+            .system_prompt("Test prompt")
+            .model(ModelType::Secondary);
+
+        let binding = CodeContext { role: "test".to_string(), language: "Rust".to_string() };
+
+        let context = agent.to_context(&binding, &env).unwrap();
+        assert_eq!(context.model, ModelId::new(&env.small_model_id));
     }
 
     #[test]

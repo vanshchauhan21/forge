@@ -105,11 +105,10 @@ impl TitleService for Live {
         let user_prompt = self.prompt(&chat.content)?;
         let tool = Title::definition();
 
-        let request = Context::default()
+        let request = Context::new(chat.model.clone())
             .add_message(ContextMessage::user(user_prompt))
             .add_tool(tool.clone())
-            .tool_choice(ToolChoice::Call(tool.name))
-            .model(chat.model);
+            .tool_choice(ToolChoice::Call(tool.name));
 
         let (tx, rx) = tokio::sync::mpsc::channel(1);
 
@@ -129,7 +128,9 @@ mod tests {
     use std::sync::Arc;
     use std::vec;
 
-    use forge_domain::{ChatCompletionMessage, ChatResponse, ConversationId, ToolCallPart};
+    use forge_domain::{
+        ChatCompletionMessage, ChatResponse, ConversationId, ModelId, ToolCallPart,
+    };
     // Remove unused import
     use tokio_stream::StreamExt;
 
@@ -171,7 +172,11 @@ mod tests {
 
         let actual = Fixture(mock_llm_responses)
             .run(
-                ChatRequest::new("write an rust program to generate an fibo seq.").conversation_id(
+                ChatRequest::new(
+                    ModelId::new("gpt-3.5-turbo"),
+                    "write an rust program to generate an fibo seq.",
+                )
+                .conversation_id(
                     ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
                 ),
             )

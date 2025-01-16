@@ -194,7 +194,7 @@ pub mod tests {
         storage: &impl ConversationRepository,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
-        let request = Context::new(ModelId::default());
+        let request = Context::new(ModelId::new("gpt-3.5-turbo"));
         storage.set_conversation(&request, id).await
     }
 

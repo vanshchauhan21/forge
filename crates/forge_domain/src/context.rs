@@ -80,7 +80,7 @@ pub enum Role {
 
 /// Represents a request being made to the LLM provider. By default the request
 /// is created with assuming the model supports use of external tools.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Setters)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Setters)]
 #[setters(into, strip_option)]
 pub struct Context {
     pub messages: Vec<ContextMessage>,
@@ -91,13 +91,8 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(id: ModelId) -> Self {
-        Context {
-            messages: vec![],
-            tools: vec![],
-            model: id,
-            tool_choice: None,
-        }
+    pub fn new(model: ModelId) -> Self {
+        Context { messages: vec![], tools: vec![], model, tool_choice: None }
     }
 
     pub fn add_tool(mut self, tool: impl Into<ToolDefinition>) -> Self {
@@ -164,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_override_system_message() {
-        let request = Context::new(ModelId::default())
+        let request = Context::new(ModelId::new("gpt-3.5-turbo"))
             .add_message(ContextMessage::system("Initial system message"))
             .set_system_message("Updated system message");
 
@@ -176,7 +171,8 @@ mod tests {
 
     #[test]
     fn test_set_system_message() {
-        let request = Context::new(ModelId::default()).set_system_message("A system message");
+        let request =
+            Context::new(ModelId::new("gpt-3.5-turbo")).set_system_message("A system message");
 
         assert_eq!(
             request.messages[0],
@@ -186,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_insert_system_message() {
-        let request = Context::new(ModelId::default())
+        let request = Context::new(ModelId::new("gpt-3.5-turbo"))
             .add_message(ContextMessage::user("Do something"))
             .set_system_message("A system message");
 

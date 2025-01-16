@@ -49,9 +49,10 @@ impl UIService for Live {
                 .await?;
             (context, false)
         } else {
+            let model = request.model.clone();
             let conversation = self
                 .conversation_service
-                .set_conversation(&Context::default(), None)
+                .set_conversation(&Context::new(model), None)
                 .await?;
             (conversation, true)
         };
@@ -107,6 +108,7 @@ impl UIService for Live {
 
 #[cfg(test)]
 mod tests {
+    use forge_domain::ModelId;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -167,12 +169,13 @@ mod tests {
             Arc::new(TestTitleService::single()),
         );
 
+        let model_id = ModelId::new("gpt-3.5-turbo");
         let conversation = conversation_service
-            .set_conversation(&Context::default(), None)
+            .set_conversation(&Context::new(model_id.clone()), None)
             .await
             .unwrap();
 
-        let request = ChatRequest::new("test").conversation_id(conversation.id);
+        let request = ChatRequest::new(model_id, "test").conversation_id(conversation.id);
         let mut responses = service.chat(request).await.unwrap();
 
         if let Some(Ok(ChatResponse::Text(content))) = responses.next().await {

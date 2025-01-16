@@ -11,11 +11,7 @@ pub struct ChatRequest {
 }
 
 impl ChatRequest {
-    pub fn new(content: impl ToString) -> Self {
-        Self {
-            content: content.to_string(),
-            model: ModelId::default(),
-            conversation_id: None,
-        }
+    pub fn new(model: ModelId, content: impl ToString) -> Self {
+        Self { model, content: content.to_string(), conversation_id: None }
     }
 }
