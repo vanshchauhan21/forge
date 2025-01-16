@@ -1,4 +1,5 @@
 use std::io;
+
 use colored::Colorize;
 
 const BANNER: &str = include_str!("banner");

@@ -19,7 +19,7 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     // Display the banner in dimmed colors
     forge_main::banner::display()?;
 
