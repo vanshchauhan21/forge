@@ -1,3 +1,4 @@
+pub mod banner;
 pub mod console;
 pub mod input;
 mod normalize;
