@@ -6,6 +6,13 @@ use forge_domain::{ChatRequest, ChatResponse, Input, ModelId, UserInput};
 use forge_main::{Console, StatusDisplay, CONSOLE};
 use tokio_stream::StreamExt;
 
+fn context_reset_message(_: &Input) -> String {
+    "All context was cleared, and we're starting fresh. Please re-add files and details so we can get started.".to_string()
+        .yellow()
+        .bold()
+        .to_string()
+}
+
 /// Command line arguments for the application
 #[derive(Parser)]
 struct Cli {
@@ -44,14 +51,14 @@ async fn main() -> Result<()> {
         match input {
             Input::End => break,
             Input::New => {
-                CONSOLE.writeln("Starting fresh conversation...")?;
+                CONSOLE.writeln(context_reset_message(&input))?;
                 current_conversation_id = None;
                 current_title = None;
                 input = console.prompt(None, None).await?;
                 continue;
             }
             Input::Reload => {
-                CONSOLE.writeln("Reloading conversation with original prompt...")?;
+                CONSOLE.writeln(context_reset_message(&input))?;
                 current_conversation_id = None;
                 current_title = None;
                 input = match cli.exec {

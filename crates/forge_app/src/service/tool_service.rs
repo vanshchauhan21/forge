@@ -39,18 +39,19 @@ impl ToolService for Live {
         let name = call.name.clone();
         let input = call.arguments.clone();
         debug!("Calling tool: {}", name.as_str());
-        let available_tools = self
+        let mut available_tools = self
             .tools
             .keys()
             .map(|name| name.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
+            .collect::<Vec<_>>();
+
+        available_tools.sort();
         let output = match self.tools.get(&name) {
             Some(tool) => tool.executable.call(input).await,
             None => Err(format!(
                 "No tool with name '{}' was found. Please try again with one of these tools {}",
                 name.as_str(),
-                available_tools
+                available_tools.join(", ")
             )),
         };
 

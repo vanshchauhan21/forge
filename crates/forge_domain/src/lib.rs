@@ -1,3 +1,4 @@
+mod agent;
 mod chat_request;
 mod chat_response;
 mod chat_stream_ext;
@@ -24,6 +25,7 @@ mod tool_usage;
 mod user;
 mod user_interaction;
 
+pub use agent::*;
 pub use chat_request::*;
 pub use chat_response::*;
 pub use chat_stream_ext::*;

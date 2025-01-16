@@ -849,7 +849,7 @@ dependencies = [
  "forge_prompt",
  "forge_tool",
  "forge_walker",
- "handlebars",
+ "handlebars 6.3.0",
  "insta",
  "moka2",
  "pretty_assertions",
@@ -886,6 +886,7 @@ dependencies = [
  "derive_more",
  "derive_setters",
  "futures",
+ "handlebars 4.5.0",
  "html-escape",
  "insta",
  "nom",
@@ -1252,6 +1253,20 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+]
+
+[[package]]
+name = "handlebars"
+version = "4.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faa67bab9ff362228eb3d00bd024a4965d8231bbb7921167f0cfa66c6626b225"
+dependencies = [
+ "log",
+ "pest",
+ "pest_derive",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

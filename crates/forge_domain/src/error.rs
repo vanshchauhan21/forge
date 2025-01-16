@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error("Invalid user command: {0}")]
     InvalidUserCommand(String),
+
+    #[error("Template rendering error: {0}")]
+    Template(handlebars::RenderError),
 }
 
 pub type Result<A> = std::result::Result<A, Error>;
