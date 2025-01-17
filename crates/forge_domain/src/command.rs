@@ -24,6 +24,9 @@ pub enum Command {
     /// A regular text message from the user to be processed by the chat system.
     /// Any input that doesn't start with '/' is treated as a message.
     Message(String),
+    /// Display system environment information.
+    /// This can be triggered with the '/info' command.
+    Info,
 }
 
 impl Command {
@@ -38,6 +41,7 @@ impl Command {
             "/end".to_string(),
             "/new".to_string(),
             "/reload".to_string(),
+            "/info".to_string(),
         ]
     }
 
