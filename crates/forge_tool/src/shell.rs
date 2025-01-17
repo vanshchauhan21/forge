@@ -181,7 +181,7 @@ mod tests {
     #[cfg(target_family = "unix")]
     const COMMAND_NOT_FOUND_PATTERNS: [&str; 3] = [
         "command not found",            // bash/sh
-        "nonexistentcommand not found", // bash/sh (Alternative Unix error)
+        "nonexistentcommand: not found", // bash/sh (Alternative Unix error)
         "No such file or directory",    // Alternative Unix error
     ];
 
