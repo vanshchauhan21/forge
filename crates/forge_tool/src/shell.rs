@@ -174,16 +174,15 @@ mod tests {
     /// Platform-specific error message patterns for command not found errors
     #[cfg(target_os = "windows")]
     const COMMAND_NOT_FOUND_PATTERNS: [&str; 2] = [
-        "is not recognized",             // cmd.exe
-        "'nonexistentcommand' is not",   // PowerShell
+        "is not recognized",           // cmd.exe
+        "'nonexistentcommand' is not", // PowerShell
     ];
 
     #[cfg(target_family = "unix")]
     const COMMAND_NOT_FOUND_PATTERNS: [&str; 2] = [
-        "command not found",             // bash/sh
-        "No such file or directory",     // Alternative Unix error
+        "command not found",         // bash/sh
+        "No such file or directory", // Alternative Unix error
     ];
-
 
     #[tokio::test]
     async fn test_shell_echo() {
@@ -244,7 +243,7 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        
+
         // Check if any of the platform-specific patterns match
         let matches_pattern = COMMAND_NOT_FOUND_PATTERNS
             .iter()
@@ -253,15 +252,14 @@ mod tests {
         assert!(
             matches_pattern,
             "Error message '{}' did not match any expected patterns for this platform: {:?}",
-            err,
-            COMMAND_NOT_FOUND_PATTERNS
+            err, COMMAND_NOT_FOUND_PATTERNS
         );
     }
 
     #[tokio::test]
     async fn test_shell_invalid_command_different_shells() {
         let shell = Shell::default();
-        
+
         // Test with explicit shell
         #[cfg(target_family = "unix")]
         {
@@ -275,7 +273,11 @@ mod tests {
 
             assert!(result.is_err());
             let err = result.unwrap_err();
-            assert!(err.contains("command not found"), "Unexpected bash error: {}", err);
+            assert!(
+                err.contains("command not found"),
+                "Unexpected bash error: {}",
+                err
+            );
 
             // Test with sh
             let result = shell
@@ -287,7 +289,11 @@ mod tests {
 
             assert!(result.is_err());
             let err = result.unwrap_err();
-            assert!(err.contains("command not found"), "Unexpected sh error: {}", err);
+            assert!(
+                err.contains("command not found"),
+                "Unexpected sh error: {}",
+                err
+            );
         }
 
         #[cfg(target_os = "windows")]
@@ -302,7 +308,11 @@ mod tests {
 
             assert!(result.is_err());
             let err = result.unwrap_err();
-            assert!(err.contains("is not recognized"), "Unexpected cmd.exe error: {}", err);
+            assert!(
+                err.contains("is not recognized"),
+                "Unexpected cmd.exe error: {}",
+                err
+            );
 
             // Test with PowerShell if available
             let result = shell
