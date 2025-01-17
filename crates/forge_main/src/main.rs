@@ -110,10 +110,14 @@ async fn main() -> Result<()> {
                                         CONSOLE.writeln(format!("{}", json.dimmed()))?;
                                     }
                                     ChatResponse::ToolCallEnd(tool_result) => {
-                                        if cli.verbose {
-                                            CONSOLE.writeln(tool_result.to_string())?;
-                                        }
                                         let tool_name = tool_result.name.as_str();
+                                        // Always show result content for errors, or in verbose mode
+                                        if tool_result.is_error || cli.verbose {
+                                            CONSOLE.writeln(format!(
+                                                "{}",
+                                                tool_result.to_string().dimmed()
+                                            ))?;
+                                        }
                                         let status = if tool_result.is_error {
                                             StatusDisplay::failed(tool_name)
                                         } else {
