@@ -27,9 +27,8 @@ impl NamedTool for FSRead {
 #[async_trait::async_trait]
 impl ToolCallService for FSRead {
     type Input = FSReadInput;
-    type Output = String;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let content = tokio::fs::read_to_string(&input.path)
             .await
             .map_err(|e| e.to_string())?;

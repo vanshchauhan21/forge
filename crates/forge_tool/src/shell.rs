@@ -142,11 +142,24 @@ impl NamedTool for Shell {
 #[async_trait::async_trait]
 impl ToolCallService for Shell {
     type Input = ShellInput;
-    type Output = ShellOutput;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         self.validate_command(&input.command)?;
-        self.execute_command(&input.command, input.cwd).await
+        let output = self.execute_command(&input.command, input.cwd).await?;
+
+        // Return error if stderr is present
+        if let Some(stderr) = output.stderr {
+            return Err(stderr);
+        }
+
+        // Handle stdout
+        if let Some(stdout) = output.stdout {
+            Ok(stdout)
+        } else if output.success {
+            Ok("Command executed successfully with no output.".to_string())
+        } else {
+            Ok("Command failed with no output.".to_string())
+        }
     }
 }
 
@@ -169,9 +182,8 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.success);
-        assert!(result.stdout.as_ref().unwrap().contains("Hello, World!"));
-        assert!(result.stderr.is_none());
+        assert!(result.contains("Hello, World!"));
+        assert!(!result.contains("Error:"));
     }
 
     #[tokio::test]
@@ -191,8 +203,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.success);
-        let output_path = PathBuf::from(result.stdout.as_ref().unwrap().trim());
+        let output_path = PathBuf::from(result.trim());
         let actual_path = match fs::canonicalize(output_path.clone()) {
             Ok(path) => path,
             Err(_) => output_path,
@@ -204,7 +215,7 @@ mod tests {
             "\nExpected path: {:?}\nActual path: {:?}",
             expected_path, actual_path
         );
-        assert!(result.stderr.is_none());
+        assert!(!result.contains("Error"));
     }
 
     #[tokio::test]
@@ -215,11 +226,11 @@ mod tests {
                 command: "nonexistentcommand".to_string(),
                 cwd: env::current_dir().unwrap(),
             })
-            .await
-            .unwrap();
+            .await;
 
-        assert!(!result.success);
-        assert!(result.stderr.is_some());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("command not found") || err.contains("not recognized"));
     }
 
     #[tokio::test]
@@ -263,14 +274,13 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.success);
-        let output_path = PathBuf::from(result.stdout.as_ref().unwrap().trim());
+        let output_path = PathBuf::from(result.trim());
         let actual_path = match fs::canonicalize(output_path.clone()) {
             Ok(path) => path,
             Err(_) => output_path,
         };
         assert_eq!(actual_path, current_dir);
-        assert!(result.stderr.is_none());
+        assert!(!result.contains("Error:"));
     }
 
     #[tokio::test]
@@ -284,10 +294,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.success);
-        assert!(result.stdout.as_ref().unwrap().contains("first"));
-        assert!(result.stdout.as_ref().unwrap().contains("second"));
-        assert!(result.stderr.is_none());
+        assert!(result.contains("first"));
+        assert!(result.contains("second"));
+        assert!(!result.contains("Error:"));
     }
 
     #[tokio::test]
@@ -301,9 +310,8 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.success);
-        assert!(result.stdout.is_some());
-        assert!(result.stderr.is_none());
+        assert!(!result.is_empty());
+        assert!(!result.contains("Error:"));
     }
 
     #[tokio::test(start_paused = true)]

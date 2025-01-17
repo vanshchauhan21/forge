@@ -36,9 +36,8 @@ impl NamedTool for FSSearch {
 #[async_trait::async_trait]
 impl ToolCallService for FSSearch {
     type Input = FSSearchInput;
-    type Output = Vec<String>;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let dir = Path::new(&input.path);
         if !dir.exists() {
             return Err(format!("Directory '{}' does not exist", input.path));
@@ -103,12 +102,12 @@ impl ToolCallService for FSSearch {
         }
 
         if matches.is_empty() {
-            Ok(vec![format!(
+            Ok(format!(
                 "No matches found for pattern '{}' in path '{}'",
                 input.regex, input.path
-            )])
+            ))
         } else {
-            Ok(matches)
+            Ok(matches.join("\n"))
         }
     }
 }
@@ -145,9 +144,10 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 2);
-        assert!(result.iter().any(|p| p.contains("test1.txt")));
-        assert!(result.iter().any(|p| p.contains("test2.txt")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(result.contains("test1.txt"));
+        assert!(result.contains("test2.txt"));
     }
 
     #[tokio::test]
@@ -171,8 +171,9 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert!(result.iter().any(|p| p.contains("test2.rs")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 1);
+        assert!(result.contains("test2.rs"));
     }
 
     #[tokio::test]
@@ -194,8 +195,9 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert!(result[0].contains("test line"));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 1);
+        assert!(result.contains("test line"));
     }
 
     #[tokio::test]
@@ -225,10 +227,11 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 3);
-        assert!(result.iter().any(|p| p.contains("test1.txt")));
-        assert!(result.iter().any(|p| p.contains("test2.txt")));
-        assert!(result.iter().any(|p| p.contains("best.txt")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 3);
+        assert!(result.contains("test1.txt"));
+        assert!(result.contains("test2.txt"));
+        assert!(result.contains("best.txt"));
     }
 
     #[tokio::test]
@@ -252,9 +255,10 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 2);
-        assert!(result.iter().any(|p| p.contains("TEST CONTENT")));
-        assert!(result.iter().any(|p| p.contains("test content")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(result.contains("TEST CONTENT"));
+        assert!(result.contains("test content"));
     }
 
     #[tokio::test]
@@ -275,8 +279,7 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert!(result[0].contains("No matches found"));
+        assert!(result.contains("No matches found"));
     }
 
     #[tokio::test]

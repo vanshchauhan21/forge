@@ -34,9 +34,8 @@ impl NamedTool for FSList {
 #[async_trait::async_trait]
 impl ToolCallService for FSList {
     type Input = FSListInput;
-    type Output = Vec<String>;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let dir = Path::new(&input.path);
         if !dir.exists() {
             return Err("Directory does not exist".to_string());
@@ -61,7 +60,11 @@ impl ToolCallService for FSList {
             }
         }
 
-        Ok(paths)
+        if paths.is_empty() {
+            Ok("No files found".to_string())
+        } else {
+            Ok(paths.join("\n"))
+        }
     }
 }
 
@@ -86,7 +89,7 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.is_empty());
+        assert_eq!(result, "No files found");
     }
 
     #[tokio::test]
@@ -111,18 +114,19 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 4);
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 4);
 
-        let files: Vec<_> = result.iter().filter(|p| p.starts_with("[FILE]")).collect();
-        let dirs: Vec<_> = result.iter().filter(|p| p.starts_with("[DIR]")).collect();
+        let files: Vec<_> = lines.iter().filter(|p| p.starts_with("[FILE]")).collect();
+        let dirs: Vec<_> = lines.iter().filter(|p| p.starts_with("[DIR]")).collect();
 
         assert_eq!(files.len(), 2);
         assert_eq!(dirs.len(), 2);
 
-        assert!(result.iter().any(|p| p.contains("file1.txt")));
-        assert!(result.iter().any(|p| p.contains("file2.txt")));
-        assert!(result.iter().any(|p| p.contains("dir1")));
-        assert!(result.iter().any(|p| p.contains("dir2")));
+        assert!(result.contains("file1.txt"));
+        assert!(result.contains("file2.txt"));
+        assert!(result.contains("dir1"));
+        assert!(result.contains("dir2"));
     }
 
     #[tokio::test]
@@ -164,8 +168,9 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert!(result.iter().any(|p| p.contains("regular.txt")));
+        assert!(result.contains("regular.txt"));
+        assert!(!result.contains(".hidden"));
+        assert!(!result.contains(".hidden_dir"));
     }
 
     #[tokio::test]
@@ -198,12 +203,13 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 5); // root.txt, dir1, file1.txt, subdir, file2.txt
-        assert!(result.iter().any(|p| p.contains("root.txt")));
-        assert!(result.iter().any(|p| p.contains("dir1")));
-        assert!(result.iter().any(|p| p.contains("file1.txt")));
-        assert!(result.iter().any(|p| p.contains("subdir")));
-        assert!(result.iter().any(|p| p.contains("file2.txt")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 5); // root.txt, dir1, file1.txt, subdir, file2.txt
+        assert!(result.contains("root.txt"));
+        assert!(result.contains("dir1"));
+        assert!(result.contains("file1.txt"));
+        assert!(result.contains("subdir"));
+        assert!(result.contains("file2.txt"));
 
         // Test non-recursive listing of same structure
         let result = fs_list
@@ -214,11 +220,12 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 2); // Only root.txt and dir1
-        assert!(result.iter().any(|p| p.contains("root.txt")));
-        assert!(result.iter().any(|p| p.contains("dir1")));
-        assert!(!result.iter().any(|p| p.contains("file1.txt")));
-        assert!(!result.iter().any(|p| p.contains("subdir")));
-        assert!(!result.iter().any(|p| p.contains("file2.txt")));
+        let lines: Vec<_> = result.lines().collect();
+        assert_eq!(lines.len(), 2); // Only root.txt and dir1
+        assert!(result.contains("root.txt"));
+        assert!(result.contains("dir1"));
+        assert!(!result.contains("file1.txt"));
+        assert!(!result.contains("subdir"));
+        assert!(!result.contains("file2.txt"));
     }
 }

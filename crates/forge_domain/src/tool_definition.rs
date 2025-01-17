@@ -61,11 +61,10 @@ impl<T> From<&T> for ToolDefinition
 where
     T: NamedTool + ToolCallService + ToolDescription + Send + Sync + 'static,
     T::Input: serde::de::DeserializeOwned + JsonSchema,
-    T::Output: serde::Serialize + JsonSchema,
 {
     fn from(t: &T) -> Self {
         let input: RootSchema = schemars::schema_for!(T::Input);
-        let output: RootSchema = schemars::schema_for!(T::Output);
+        let output: RootSchema = schemars::schema_for!(String);
         let mut full_description = t.description();
 
         full_description.push_str("\n\nParameters:");

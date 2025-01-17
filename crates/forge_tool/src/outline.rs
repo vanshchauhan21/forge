@@ -145,9 +145,8 @@ impl NamedTool for Outline {
 #[async_trait::async_trait]
 impl ToolCallService for Outline {
     type Input = OutlineInput;
-    type Output = String;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let extensions_to_languages = HashMap::from([
             ("rs", "rust"),
             ("js", "javascript"),

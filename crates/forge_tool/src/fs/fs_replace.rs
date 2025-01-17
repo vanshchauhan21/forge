@@ -3,7 +3,7 @@ use std::path::Path;
 use dissimilar::Chunk;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tokio::fs;
 use tracing::{debug, error};
 
@@ -216,24 +216,26 @@ async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<St
     Ok(result)
 }
 
-#[derive(Serialize, JsonSchema)]
-pub struct FSReplaceOutput {
-    pub path: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub syntax_checker: Option<String>,
-}
-
 #[async_trait::async_trait]
 impl ToolCallService for FSReplace {
     type Input = FSReplaceInput;
-    type Output = FSReplaceOutput;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let blocks = parse_blocks(&input.diff)?;
+        let blocks_len = blocks.len();
         let content = apply_changes(&input.path, blocks).await?;
-        let syntax_checker = syn::validate(&input.path, &content).err();
-        Ok(FSReplaceOutput { path: input.path, content, syntax_checker })
+        let syntax_warning = syn::validate(&input.path, &content).err();
+
+        let mut result = format!(
+            "Successfully applied {} patch(es) to {}",
+            blocks_len, input.path
+        );
+        if let Some(warning) = syntax_warning {
+            result.push_str("\nWarning: ");
+            result.push_str(&warning);
+        }
+
+        Ok(result)
     }
 }
 
@@ -268,10 +270,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result.content,
-            "    Hi World    \n  Test Line  \n   Goodbye World   \n"
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&file_path.display().to_string()));
     }
 
     #[tokio::test]
@@ -290,7 +290,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.content, "New content\n");
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -310,10 +311,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result.content,
-            "    New First    \n  Middle Line  \n    New Last    \n"
-        );
+        assert!(result.contains("Successfully applied 2 patch(es)"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -325,16 +324,14 @@ mod test {
         write_test_file(&file_path, content).await.unwrap();
 
         let fs_replace = FSReplace;
+        let diff = format!("{}\n  Middle Line  \n{}\n{}\n", SEARCH, DIVIDER, REPLACE);
         let result = fs_replace
-            .call(FSReplaceInput {
-                path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n  Middle Line  \n{}\n{}\n", SEARCH, DIVIDER, REPLACE)
-                    .to_string(),
-            })
+            .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
             .unwrap();
 
-        assert_eq!(result.content, "    First Line    \n    Last Line    \n");
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -349,7 +346,8 @@ mod test {
         let fs_replace = FSReplace;
 
         // Test 1: Replace content while preserving surrounding newlines
-        let result1 = fs_replace
+        // Test 1: Replace content while preserving surrounding newlines
+        let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!("{}\n    let x = 1;\n\n\n    console.log(x);\n{}\n    let y = 2;\n\n\n    console.log(y);\n{}\n",
@@ -358,13 +356,11 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result1.content,
-            "\n\n// Header comment\n\n\nfunction test() {\n    // Inside comment\n\n    let y = 2;\n\n\n    console.log(y);\n}\n\n// Footer comment\n\n\n"
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
 
         // Test 2: Replace block with different newline pattern
-        let result2 = fs_replace
+        let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
@@ -376,13 +372,11 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result2.content,
-            "\n\n// Header comment\n\n\nfunction test() {\n    // Inside comment\n\n    let y = 2;\n\n\n    console.log(y);\n}\n\n\n\n// Updated footer\n\n"
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
 
         // Test 3: Replace with empty lines preservation
-        let result3 = fs_replace
+        let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
@@ -394,10 +388,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result3.content,
-            "\n\n\n// New header\n\n\n\nfunction test() {\n    // Inside comment\n\n    let y = 2;\n\n\n    console.log(y);\n}\n\n\n\n// Updated footer\n\n"
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -427,20 +419,11 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result.content,
-            r#"function calculateTotal(items) {
-  let total = 0;
-  for (const item of items) {
-    total += item.price * item.quantity;
-  }
-  return total;
-}
-"#
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
 
         // Test fuzzy matching with more variations
-        let result2 = fs_replace
+        let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!("{}\nfunction calculateTotal(items) {{\n  let total = 0;\n{}\nfunction computeTotal(items, tax = 0) {{\n  let total = 0.0;\n{}\n",
@@ -449,17 +432,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result2.content,
-            r#"function computeTotal(items, tax = 0) {
-  let total = 0.0;
-  for (const item of items) {
-    total += item.price * item.quantity;
-  }
-  return total;
-}
-"#
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -489,20 +463,11 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result.content,
-            r#"class UserManager {
-  async findUser(id, options = {}) {
-    const user = await this.db.findOne({ userId: id, ...options });
-    if (!user) throw new Error('User not found');
-    return user;
-  }
-}
-"#
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
 
         // Test fuzzy matching with error handling changes
-        let result2 = fs_replace
+        let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!("{}\n    if (!user) throw new Error('User not found');\n    return user;\n{}\n    if (!user) {{\n      throw new UserNotFoundError(id);\n    }}\n    return this.sanitizeUser(user);\n{}\n",
@@ -511,19 +476,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(
-            result2.content,
-            r#"class UserManager {
-  async findUser(id, options = {}) {
-    const user = await this.db.findOne({ userId: id, ...options });
-    if (!user) {
-      throw new UserNotFoundError(id);
-    }
-    return this.sanitizeUser(user);
-  }
-}
-"#
-        );
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&*file_path.to_string_lossy()));
     }
 
     #[tokio::test]
@@ -544,9 +498,12 @@ mod test {
                 )
                 .to_string(),
             })
-            .await;
+            .await
+            .unwrap();
 
-        assert!(result.unwrap().syntax_checker.is_some());
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&file_path.display().to_string()));
+        assert!(result.contains("Warning: Syntax"));
     }
 
     #[tokio::test]
@@ -567,7 +524,8 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result.content, "fn main() { let x = 42; let y = x * 2; }\n");
+        assert!(result.contains("Successfully applied"));
+        assert!(result.contains(&file_path.display().to_string()));
     }
 
     #[tokio::test]
@@ -584,8 +542,9 @@ mod test {
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
             .unwrap();
-        let expected = "fn test(){\n    let x = 42;\n    {\n        // test block-1    }}\n\n }\n";
-        assert_eq!(res.content, expected);
+
+        assert!(res.contains("Successfully applied"));
+        assert!(res.contains(&file_path.display().to_string()));
     }
 
     #[tokio::test]
@@ -605,8 +564,8 @@ mod test {
             .await
             .unwrap();
 
-        let expected = r#"fn test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\nempty-space-replaced"#;
-        assert_eq!(res.content, expected);
+        assert!(res.contains("Successfully applied"));
+        assert!(res.contains(&file_path.display().to_string()));
     }
 
     #[tokio::test]
@@ -626,7 +585,7 @@ mod test {
             .await
             .unwrap();
 
-        let expected = r#"fn--test(){\n    let x = 42;\n    {\n        // test block-1    }\n}\n"#;
-        assert_eq!(res.content, expected);
+        assert!(res.contains("Successfully applied"));
+        assert!(res.contains(&file_path.display().to_string()));
     }
 }

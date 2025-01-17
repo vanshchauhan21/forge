@@ -15,20 +15,17 @@ impl<T> JsonTool<T> {
 impl<T: ToolCallService + Sync> ToolCallService for JsonTool<T>
 where
     T::Input: serde::de::DeserializeOwned + JsonSchema,
-    T::Output: serde::Serialize + JsonSchema,
 {
     type Input = Value;
-    type Output = Value;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let input: T::Input = serde_json::from_value(input).map_err(|e| e.to_string())?;
-        let output: T::Output = self.0.call(input).await?;
-        Ok(serde_json::to_value(output).map_err(|e| e.to_string())?)
+        self.0.call(input).await
     }
 }
 
 pub struct Tool {
-    pub executable: Box<dyn ToolCallService<Input = Value, Output = Value> + Send + Sync + 'static>,
+    pub executable: Box<dyn ToolCallService<Input = Value> + Send + Sync + 'static>,
     pub definition: ToolDefinition,
 }
 
@@ -36,7 +33,6 @@ impl<T> From<T> for Tool
 where
     T: ToolCallService + ToolDescription + NamedTool + Send + Sync + 'static,
     T::Input: serde::de::DeserializeOwned + JsonSchema,
-    T::Output: serde::Serialize + JsonSchema,
 {
     fn from(tool: T) -> Self {
         let definition = ToolDefinition::from(&tool);

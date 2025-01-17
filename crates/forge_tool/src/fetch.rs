@@ -137,9 +137,8 @@ impl Fetch {
 #[async_trait::async_trait]
 impl ToolCallService for Fetch {
     type Input = FetchInput;
-    type Output = String;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         let url = Url::parse(&input.url).map_err(|e| format!("Failed to parse URL: {}", e))?;
 
         let (content, prefix) = self

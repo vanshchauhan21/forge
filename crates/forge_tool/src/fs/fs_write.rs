@@ -1,7 +1,7 @@
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::fs::syn;
 
@@ -33,9 +33,8 @@ impl NamedTool for FSWrite {
 #[async_trait::async_trait]
 impl ToolCallService for FSWrite {
     type Input = FSWriteInput;
-    type Output = FSWriteOutput;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         // Check if file already exists
         if tokio::fs::metadata(&input.path).await.is_ok() {
             return Err(format!(
@@ -45,23 +44,25 @@ impl ToolCallService for FSWrite {
         }
 
         // Validate file content if it's a supported language file
-        let syntax_checker = syn::validate(&input.path, &input.content).err();
+        let syntax_warning = syn::validate(&input.path, &input.content).err();
 
         // Write file only after validation passes
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
 
-        Ok(FSWriteOutput { path: input.path, syntax_checker, content: input.content })
-    }
-}
+        let mut result = format!(
+            "Successfully wrote {} bytes to {}",
+            input.content.len(),
+            input.path
+        );
+        if let Some(warning) = syntax_warning {
+            result.push_str("\nWarning: ");
+            result.push_str(&warning);
+        }
 
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct FSWriteOutput {
-    pub path: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub syntax_checker: Option<String>,
+        Ok(result)
+    }
 }
 
 #[cfg(test)]
@@ -76,17 +77,20 @@ mod test {
     async fn test_fs_write_success() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
+        let content = "Hello, World!";
 
         let fs_write = FSWrite;
         let output = fs_write
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
-                content: "Hello, World!".to_string(),
+                content: content.to_string(),
             })
             .await
             .unwrap();
-        assert_eq!(output.path, file_path.to_string_lossy().to_string());
-        assert_eq!(output.content, "Hello, World!");
+
+        assert!(output.contains("Successfully wrote"));
+        assert!(output.contains(&file_path.display().to_string()));
+        assert!(output.contains(&content.len().to_string()));
 
         // Verify file was actually written
         let content = fs::read_to_string(&file_path).await.unwrap();
@@ -106,7 +110,8 @@ mod test {
             })
             .await;
 
-        assert!(result.unwrap().syntax_checker.is_some());
+        let output = result.unwrap();
+        assert!(output.contains("Warning:"));
     }
 
     #[tokio::test]
@@ -115,14 +120,19 @@ mod test {
         let file_path = temp_dir.path().join("test.rs");
 
         let fs_write = FSWrite;
+        let content = "fn main() { let x = 42; }";
         let result = fs_write
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
-                content: "fn main() { let x = 42; }".to_string(),
+                content: content.to_string(),
             })
             .await;
 
-        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(output.contains("Successfully wrote"));
+        assert!(output.contains(&file_path.display().to_string()));
+        assert!(output.contains(&content.len().to_string()));
+        assert!(!output.contains("Warning:"));
         // Verify file contains valid Rust code
         let content = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(content, "fn main() { let x = 42; }");

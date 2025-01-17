@@ -26,9 +26,8 @@ impl NamedTool for AskFollowUpQuestion {
 #[async_trait::async_trait]
 impl ToolCallService for AskFollowUpQuestion {
     type Input = AskFollowUpQuestionInput;
-    type Output = String;
 
-    async fn call(&self, input: Self::Input) -> Result<Self::Output, String> {
+    async fn call(&self, input: Self::Input) -> Result<String, String> {
         Ok(format!("Question: {}", input.question))
     }
 }

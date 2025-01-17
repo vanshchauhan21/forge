@@ -38,13 +38,13 @@ impl NamedTool for Approve {
 
 #[async_trait::async_trait]
 impl ToolCallService for Approve {
-    async fn call(&self, input: ApproveInput) -> Result<bool, String> {
+    type Input = ApproveInput;
+
+    async fn call(&self, input: ApproveInput) -> Result<String, String> {
         let ans = Confirm::new(&input.message)
             .with_default(true)
             .prompt()
             .map_err(|e| e.to_string())?;
-        Ok(ans)
+        Ok(ans.to_string())
     }
-    type Input = ApproveInput;
-    type Output = bool;
 }
