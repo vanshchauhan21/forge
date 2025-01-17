@@ -36,7 +36,7 @@ pub struct SelectTool;
 
 impl NamedTool for SelectTool {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("user_options")
+        ToolName::new("tool.forge.ui.select")
     }
 }
 

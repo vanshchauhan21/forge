@@ -135,7 +135,7 @@ impl Shell {
 
 impl NamedTool for Shell {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("execute_command")
+        ToolName::new("tool.forge.process.shell")
     }
 }
 

@@ -195,7 +195,7 @@ impl Think {
 
 impl NamedTool for Think {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("think_step")
+        ToolName::new("tool.forge.process.think")
     }
 }
 

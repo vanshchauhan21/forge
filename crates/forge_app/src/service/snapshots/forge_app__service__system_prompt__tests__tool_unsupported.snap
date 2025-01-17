@@ -64,114 +64,7 @@ You have access to a set of tools that can be executed upon user approval. Use o
 Available tools:
 <tool_list>
 
-1. apply_patch
-Replace sections in a file using SEARCH/REPLACE blocks for precise
-modifications.
-
-<<<<<<< SEARCH
-[exact content to find]
-=======
-[new content to replace with]
->>>>>>> REPLACE
-
-Rules:
-1. SEARCH must match exactly (whitespace, indentation, line endings)
-2. Each block replaces first match only
-3. Keep blocks minimal - include only changing lines plus needed context
-4. Complete lines only - no truncation
-5. For moves: use 2 blocks (delete + insert)
-6. For deletes: use empty REPLACE section
-
-Example:
-<<<<<<< SEARCH
-def old_function(x):
-    return x + 1
-=======
-def new_function(x, y=0):
-    return x + y
->>>>>>> REPLACE
-
-Parameters:
-- diff (required): SEARCH/REPLACE blocks defining changes
-- path (required): File path relative to the current working directory
-
-Usage:
-<apply_patch>
-<diff>...</diff>
-<path>...</path>
-</apply_patch>
-
-2. execute_command
-Execute shell commands with safety checks and validation. This tool provides
- controlled access to system shell commands while preventing dangerous
- operations through a comprehensive blacklist and validation system.
- The tool also enforces a timeout to prevent long-running commands from
- blocking the system.
-
-Parameters:
-- command (required): The shell command to execute.
-- cwd (required): The working directory where the command should be executed.
-
-Usage:
-<execute_command>
-<command>...</command>
-<cwd>...</cwd>
-</execute_command>
-
-3. fetch
-Fetches a URL from the internet and optionally extracts its contents as
- markdown. Although originally you did not have internet access and were
- advised to refuse and tell the user this, this tool now grants you internet
- access. Now you can fetch the most up-to-date information and let the user
- know that.
-
-Parameters:
-- max_length: Maximum number of characters to return (default: 5000)
-- raw: Get raw content without any markdown conversion (default: false)
-- start_index: Start content from this character index (default: 0), On return output starting at this character index, useful if a previous fetch was truncated and more context is required.
-- url (required): URL to fetch
-
-Usage:
-<fetch>
-<max_length>...</max_length>
-<raw>...</raw>
-<start_index>...</start_index>
-<url>...</url>
-</fetch>
-
-4. file_information
-Request to retrieve detailed metadata about a file or directory at the
- specified path. Returns comprehensive information including size, creation
- time, last modified time, permissions, and type. Use this when you need to
- understand file characteristics without reading the actual content.
-
-Parameters:
-- path (required): The path of the file or directory to inspect (relative to the current working directory)
-
-Usage:
-<file_information>
-<path>...</path>
-</file_information>
-
-5. list_directory_content
-Request to list files and directories within the specified directory. If
- recursive is true, it will list all files and directories recursively. If
- recursive is false or not provided, it will only list the top-level
- contents. Do not use this tool to confirm the existence of files you may
- have created, as the user will let you know if the files were created
- successfully or not.
-
-Parameters:
-- path (required): The path of the directory to list contents for (relative to the current working directory)
-- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
-
-Usage:
-<list_directory_content>
-<path>...</path>
-<recursive>...</recursive>
-</list_directory_content>
-
-6. outline
+1. tool.forge.code.outline
 List definition names (classes, functions, methods, etc.) in source code
  files. This tool is particularly useful when you need to:
  - Map relationships between types, traits, and interfaces
@@ -208,11 +101,43 @@ Parameters:
 - path (required): The path to the directory containing the source code files to analyze.
 
 Usage:
-<outline>
+<tool.forge.code.outline>
 <path>...</path>
-</outline>
+</tool.forge.code.outline>
 
-7. read_file
+2. tool.forge.fs.info
+Request to retrieve detailed metadata about a file or directory at the
+ specified path. Returns comprehensive information including size, creation
+ time, last modified time, permissions, and type. Use this when you need to
+ understand file characteristics without reading the actual content.
+
+Parameters:
+- path (required): The path of the file or directory to inspect (relative to the current working directory)
+
+Usage:
+<tool.forge.fs.info>
+<path>...</path>
+</tool.forge.fs.info>
+
+3. tool.forge.fs.list
+Request to list files and directories within the specified directory. If
+ recursive is true, it will list all files and directories recursively. If
+ recursive is false or not provided, it will only list the top-level
+ contents. Do not use this tool to confirm the existence of files you may
+ have created, as the user will let you know if the files were created
+ successfully or not.
+
+Parameters:
+- path (required): The path of the directory to list contents for (relative to the current working directory)
+- recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
+
+Usage:
+<tool.forge.fs.list>
+<path>...</path>
+<recursive>...</recursive>
+</tool.forge.fs.list>
+
+4. tool.forge.fs.read
 Request to read the contents of a file at the specified path. Use this when
  you need to examine the contents of an existing file you do not know the
  contents of, for example to analyze code, review text files, or extract
@@ -224,11 +149,48 @@ Parameters:
 - path (required): The path of the file to read (relative to the current working directory)
 
 Usage:
-<read_file>
+<tool.forge.fs.read>
 <path>...</path>
-</read_file>
+</tool.forge.fs.read>
 
-8. search_in_files
+5. tool.forge.fs.replace
+Replace sections in a file using SEARCH/REPLACE blocks for precise
+modifications.
+
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+
+Rules:
+1. SEARCH must match exactly (whitespace, indentation, line endings)
+2. Each block replaces first match only
+3. Keep blocks minimal - include only changing lines plus needed context
+4. Complete lines only - no truncation
+5. For moves: use 2 blocks (delete + insert)
+6. For deletes: use empty REPLACE section
+
+Example:
+<<<<<<< SEARCH
+def old_function(x):
+    return x + 1
+=======
+def new_function(x, y=0):
+    return x + y
+>>>>>>> REPLACE
+
+Parameters:
+- diff (required): SEARCH/REPLACE blocks defining changes
+- path (required): File path relative to the current working directory
+
+Usage:
+<tool.forge.fs.replace>
+<diff>...</diff>
+<path>...</path>
+</tool.forge.fs.replace>
+
+6. tool.forge.fs.search
 Request to perform a regex search across files in a specified directory,
  providing context-rich results. This tool searches for patterns or specific
  content across multiple files, displaying each match with encapsulating
@@ -240,13 +202,68 @@ Parameters:
 - regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
 
 Usage:
-<search_in_files>
+<tool.forge.fs.search>
 <file_pattern>...</file_pattern>
 <path>...</path>
 <regex>...</regex>
-</search_in_files>
+</tool.forge.fs.search>
 
-9. think_step
+7. tool.forge.fs.write
+Use it to create a new file at a specified path with the provided content.
+ If the file already exists, the tool will return an error to prevent
+ overwriting. The tool automatically handles the creation of any missing
+ directories in the specified path, ensuring that the new file can be created
+ seamlessly. Use this tool only when creating files that do not yet exist.
+
+Parameters:
+- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
+- path (required): The path of the file to write to (relative to the current working directory)
+
+Usage:
+<tool.forge.fs.write>
+<content>...</content>
+<path>...</path>
+</tool.forge.fs.write>
+
+8. tool.forge.net.fetch
+Fetches a URL from the internet and optionally extracts its contents as
+ markdown. Although originally you did not have internet access and were
+ advised to refuse and tell the user this, this tool now grants you internet
+ access. Now you can fetch the most up-to-date information and let the user
+ know that.
+
+Parameters:
+- max_length: Maximum number of characters to return (default: 5000)
+- raw: Get raw content without any markdown conversion (default: false)
+- start_index: Start content from this character index (default: 0), On return output starting at this character index, useful if a previous fetch was truncated and more context is required.
+- url (required): URL to fetch
+
+Usage:
+<tool.forge.net.fetch>
+<max_length>...</max_length>
+<raw>...</raw>
+<start_index>...</start_index>
+<url>...</url>
+</tool.forge.net.fetch>
+
+9. tool.forge.process.shell
+Execute shell commands with safety checks and validation. This tool provides
+ controlled access to system shell commands while preventing dangerous
+ operations through a comprehensive blacklist and validation system.
+ The tool also enforces a timeout to prevent long-running commands from
+ blocking the system.
+
+Parameters:
+- command (required): The shell command to execute.
+- cwd (required): The working directory where the command should be executed.
+
+Usage:
+<tool.forge.process.shell>
+<command>...</command>
+<cwd>...</cwd>
+</tool.forge.process.shell>
+
+10. tool.forge.process.think
 A framework for iterative reasoning in problem-solving.
  Purpose:
  Tracks reasoning steps (\"thoughts\") to solve complex problems:
@@ -283,7 +300,7 @@ Parameters:
 - total_thoughts (required): The total number of thoughts or reasoning steps expected to reach a solution.
 
 Usage:
-<think_step>
+<tool.forge.process.think>
 <branch_from_thought>...</branch_from_thought>
 <branch_id>...</branch_id>
 <is_revision>...</is_revision>
@@ -294,9 +311,9 @@ Usage:
 <thought>...</thought>
 <thought_number>...</thought_number>
 <total_thoughts>...</total_thoughts>
-</think_step>
+</tool.forge.process.think>
 
-10. user_confirmation
+11. tool.forge.ui.approve
 The approve tool provides an interactive confirmation dialog for critical
  operations. Use this tool when a simple yes/no answer is sufficient for
  to proceed with its decision-making.
@@ -315,11 +332,11 @@ Parameters:
 - message (required): The message to display when asking for confirmation
 
 Usage:
-<user_confirmation>
+<tool.forge.ui.approve>
 <message>...</message>
-</user_confirmation>
+</tool.forge.ui.approve>
 
-11. user_options
+12. tool.forge.ui.select
 The select tool provides an interactive selection dialog for choosing from
  multiple options. Use this tool when you need the user to choose one item
  from a list of possibilities.
@@ -340,27 +357,10 @@ Parameters:
 - options (required): The list of options to choose from. Intended for multiple options (2 or more) to provide meaningful choices to the user.
 
 Usage:
-<user_options>
+<tool.forge.ui.select>
 <message>...</message>
 <options>...</options>
-</user_options>
-
-12. write_file
-Use it to create a new file at a specified path with the provided content.
- If the file already exists, the tool will return an error to prevent
- overwriting. The tool automatically handles the creation of any missing
- directories in the specified path, ensuring that the new file can be created
- seamlessly. Use this tool only when creating files that do not yet exist.
-
-Parameters:
-- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
-- path (required): The path of the file to write to (relative to the current working directory)
-
-Usage:
-<write_file>
-<content>...</content>
-<path>...</path>
-</write_file>
+</tool.forge.ui.select>
 
 </tool_list>
 

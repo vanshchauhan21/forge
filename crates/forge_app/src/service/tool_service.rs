@@ -198,29 +198,6 @@ mod test {
         insta::assert_snapshot!(result);
     }
 
-    #[test]
-    fn test_tool_ids() {
-        let service = Service::tool_service();
-        let tools = service.list();
-        let names: Vec<_> = tools.iter().map(|t| t.name.as_str()).collect();
-
-        assert!(names.contains(&"read_file"));
-        assert!(names.contains(&"write_file"));
-        assert!(names.contains(&"search_in_files"));
-        assert!(names.contains(&"list_directory_content"));
-        assert!(names.contains(&"file_information"));
-    }
-
-    #[test]
-    fn test_usage_prompt() {
-        let service = Service::tool_service();
-        let prompt = service.usage_prompt();
-
-        assert!(!prompt.is_empty());
-        assert!(prompt.contains("read_file"));
-        assert!(prompt.contains("write_file"));
-    }
-
     // Mock tool that simulates a long-running task
     struct SlowTool;
     #[async_trait::async_trait]

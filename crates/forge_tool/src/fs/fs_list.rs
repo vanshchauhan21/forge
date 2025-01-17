@@ -27,7 +27,7 @@ pub struct FSList;
 
 impl NamedTool for FSList {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("list_directory_content")
+        ToolName::new("tool.forge.fs.list")
     }
 }
 

@@ -138,7 +138,7 @@ pub struct Outline;
 
 impl NamedTool for Outline {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("outline")
+        ToolName::new("tool.forge.code.outline")
     }
 }
 

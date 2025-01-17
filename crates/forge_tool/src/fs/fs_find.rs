@@ -29,7 +29,7 @@ pub struct FSSearch;
 
 impl NamedTool for FSSearch {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("search_in_files")
+        ToolName::new("tool.forge.fs.search")
     }
 }
 
