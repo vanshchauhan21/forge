@@ -8,12 +8,13 @@ use forge_domain::{
 
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;
+use super::env::EnvironmentService;
 use super::tool_service::ToolService;
 use super::{File, Service, UIService};
 use crate::{ConfigRepository, ConversationRepository};
 
 #[async_trait::async_trait]
-pub trait RootAPIService: Send + Sync {
+pub trait APIService: Send + Sync {
     async fn completions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self, conversation_id: ConversationId) -> Result<Context>;
@@ -23,11 +24,12 @@ pub trait RootAPIService: Send + Sync {
     async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory>;
     async fn get_config(&self) -> Result<Config>;
     async fn set_config(&self, request: Config) -> Result<Config>;
+    async fn environment(&self) -> Result<Environment>;
 }
 
 impl Service {
-    pub fn root_api_service(env: Environment) -> impl RootAPIService {
-        Live::new(env)
+    pub async fn api_service() -> Result<impl APIService> {
+        Live::new().await
     }
 }
 
@@ -39,10 +41,13 @@ struct Live {
     ui_service: Arc<dyn UIService>,
     storage: Arc<dyn ConversationRepository>,
     config_storage: Arc<dyn ConfigRepository>,
+    environment: Environment,
 }
 
 impl Live {
-    fn new(env: Environment) -> Self {
+    async fn new() -> Result<Self> {
+        let env = Service::environment_service().get().await?;
+
         let cwd: String = env.cwd.clone();
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
         let tool = Arc::new(Service::tool_service());
@@ -53,10 +58,9 @@ impl Live {
             tool.clone(),
             provider.clone(),
         ));
-        let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));
 
-        let storage =
-            Arc::new(Service::storage_service(&cwd).expect("Failed to create storage service"));
+        let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));
+        let storage = Arc::new(Service::storage_service(&cwd)?);
 
         let chat_service = Arc::new(Service::chat_service(
             provider.clone(),
@@ -73,23 +77,22 @@ impl Live {
             chat_service,
             title_service,
         ));
-        let config_storage = Arc::new(
-            Service::config_service(&cwd).expect("Failed to create config storage service"),
-        );
+        let config_storage = Arc::new(Service::config_service(&cwd)?);
 
-        Self {
+        Ok(Self {
             provider,
             tool,
             completions,
             ui_service: chat_service,
             storage,
             config_storage,
-        }
+            environment: env,
+        })
     }
 }
 
 #[async_trait::async_trait]
-impl RootAPIService for Live {
+impl APIService for Live {
     async fn completions(&self) -> Result<Vec<File>> {
         self.completions.list().await
     }
@@ -133,5 +136,9 @@ impl RootAPIService for Live {
 
     async fn set_config(&self, request: Config) -> Result<Config> {
         self.config_storage.set(request).await
+    }
+
+    async fn environment(&self) -> Result<Environment> {
+        Ok(self.environment.clone())
     }
 }

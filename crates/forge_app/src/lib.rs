@@ -7,5 +7,5 @@ mod service;
 mod sqlite;
 
 pub use repo::*;
-pub use routes::API;
-pub use service::{RootAPIService, Service};
+pub use routes::Routes;
+pub use service::{APIService, Service};

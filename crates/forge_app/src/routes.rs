@@ -18,16 +18,15 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::debug;
 
 use crate::context::ContextEngine;
-use crate::service::{ConversationHistory, EnvironmentService, File};
-use crate::{RootAPIService, Service};
+use crate::service::{ConversationHistory, File};
+use crate::{APIService, Service};
 
-pub struct API {
-    api: Arc<dyn RootAPIService>,
-    env: Environment,
+pub struct Routes {
+    api: Arc<dyn APIService>,
 }
 
 async fn context_html_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
     axum::extract::Path(id): axum::extract::Path<ConversationId>,
 ) -> Html<String> {
     let context = state.context(id).await.unwrap();
@@ -35,17 +34,15 @@ async fn context_html_handler(
     Html(engine.render_html())
 }
 
-impl API {
+impl Routes {
     pub async fn init() -> Result<Self> {
         crate::log::init_logger();
-        let env = Service::environment_service().get().await?;
-        let api = Arc::new(Service::root_api_service(env.clone()));
-
-        Ok(Self { api, env })
+        let api = Arc::new(Service::api_service().await?);
+        Ok(Self { api })
     }
 
-    pub fn env(&self) -> &Environment {
-        &self.env
+    pub async fn environment(&self) -> Result<Environment> {
+        self.api.environment().await
     }
 
     pub async fn chat(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
@@ -97,9 +94,7 @@ impl API {
     }
 }
 
-async fn completions_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
-) -> axum::Json<Vec<File>> {
+async fn completions_handler(State(state): State<Arc<dyn APIService>>) -> axum::Json<Vec<File>> {
     let files = state
         .completions()
         .await
@@ -109,7 +104,7 @@ async fn completions_handler(
 
 #[axum::debug_handler]
 async fn conversation_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
     Json(request): Json<ChatRequest>,
 ) -> Sse<impl Stream<Item = std::result::Result<Event, std::convert::Infallible>>> {
     let stream = state
@@ -126,7 +121,7 @@ async fn conversation_handler(
 }
 
 #[axum::debug_handler]
-async fn tools_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ToolResponse> {
+async fn tools_handler(State(state): State<Arc<dyn APIService>>) -> Json<ToolResponse> {
     let tools = state.tools().await;
     Json(ToolResponse { tools })
 }
@@ -138,20 +133,20 @@ async fn health_handler() -> axum::response::Response {
         .unwrap()
 }
 
-async fn models_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<ModelResponse> {
+async fn models_handler(State(state): State<Arc<dyn APIService>>) -> Json<ModelResponse> {
     let models = state.models().await.unwrap_or_default();
     Json(ModelResponse { models })
 }
 
 async fn conversations_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
 ) -> Json<ConversationsResponse> {
     let conversations = state.conversations().await.unwrap_or_default();
     Json(ConversationsResponse { conversations })
 }
 
 async fn history_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
     axum::extract::Path(id): axum::extract::Path<ConversationId>,
 ) -> Json<ConversationHistory> {
     Json(state.conversation(id).await.unwrap_or_default())
@@ -159,7 +154,7 @@ async fn history_handler(
 
 #[axum::debug_handler]
 async fn context_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
     axum::extract::Path(id): axum::extract::Path<ConversationId>,
 ) -> Json<ContextResponse> {
     let context = state.context(id).await.unwrap();
@@ -167,14 +162,14 @@ async fn context_handler(
 }
 
 #[axum::debug_handler]
-async fn get_config_handler(State(state): State<Arc<dyn RootAPIService>>) -> Json<Config> {
+async fn get_config_handler(State(state): State<Arc<dyn APIService>>) -> Json<Config> {
     let config = state.get_config().await.unwrap();
     Json(config)
 }
 
 #[axum::debug_handler]
 async fn set_config_handler(
-    State(state): State<Arc<dyn RootAPIService>>,
+    State(state): State<Arc<dyn APIService>>,
     Json(request): Json<Config>,
 ) -> Json<Config> {
     let config = state.set_config(request).await.unwrap();
