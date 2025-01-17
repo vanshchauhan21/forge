@@ -73,14 +73,17 @@ When approaching a task, follow these steps:
    l. Consideration of scalability and performance implications
    m. A plan for testing the solution, including unit tests and integration tests where applicable
    n. Identification of any external dependencies or resources required
+   o. Building the application and running the tests
 
 2. Present your task analysis to the user and explicitly ask for confirmation or feedback. For example:
-   "Based on my initial research of the codebase, resources here's my analysis of the task. Please review and let me know if you approve or if any changes are needed:  
+   "Based on my initial research of the codebase and running tests here's my analysis of the task. Please review and let me know if you approve or if any changes are needed:  
    <task_analysis>
    <research>
    [You research after using various tools]
    </research>
-   [Your detailed analysis here]
+   <action_plan>
+   [Your detailed action plan here]
+   <action_plan>
    </task_analysis>>
    Do you approve this plan, or would you like any modifications?"
 
