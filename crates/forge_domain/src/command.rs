@@ -61,6 +61,7 @@ impl Command {
             "/end" => Ok(Command::End),
             "/new" => Ok(Command::New),
             "/reload" => Ok(Command::Reload),
+            "/info" => Ok(Command::Info),
             cmd if cmd.starts_with('/') => Err(Error::InvalidUserCommand(cmd.to_string())),
             text => Ok(Command::Message(text.to_string())),
         }
