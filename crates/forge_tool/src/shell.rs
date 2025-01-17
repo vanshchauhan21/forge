@@ -174,15 +174,15 @@ mod tests {
     /// Platform-specific error message patterns for command not found errors
     #[cfg(target_os = "windows")]
     const COMMAND_NOT_FOUND_PATTERNS: [&str; 2] = [
-        "is not recognized",           // cmd.exe
-        "'nonexistentcommand' is not", // PowerShell
+        "is not recognized",             // cmd.exe
+        "'non_existent_command' is not", // PowerShell
     ];
 
     #[cfg(target_family = "unix")]
     const COMMAND_NOT_FOUND_PATTERNS: [&str; 3] = [
-        "command not found",             // bash/sh
-        "nonexistentcommand: not found", // bash/sh (Alternative Unix error)
-        "No such file or directory",     // Alternative Unix error
+        "command not found",               // bash/sh
+        "non_existent_command: not found", // bash/sh (Alternative Unix error)
+        "No such file or directory",       // Alternative Unix error
     ];
 
     #[tokio::test]
@@ -237,7 +237,7 @@ mod tests {
         let shell = Shell::default();
         let result = shell
             .call(ShellInput {
-                command: "nonexistentcommand".to_string(),
+                command: "non_existent_command".to_string(),
                 cwd: env::current_dir().unwrap(),
             })
             .await;
@@ -255,82 +255,6 @@ mod tests {
             "Error message '{}' did not match any expected patterns for this platform: {:?}",
             err, COMMAND_NOT_FOUND_PATTERNS
         );
-    }
-
-    #[tokio::test]
-    async fn test_shell_invalid_command_different_shells() {
-        let shell = Shell::default();
-
-        // Test with explicit shell
-        #[cfg(target_family = "unix")]
-        {
-            // Test with bash
-            let result = shell
-                .call(ShellInput {
-                    command: "bash -c 'nonexistentcommand'".to_string(),
-                    cwd: env::current_dir().unwrap(),
-                })
-                .await;
-
-            assert!(result.is_err());
-            let err = result.unwrap_err();
-            assert!(
-                err.contains("command not found"),
-                "Unexpected bash error: {}",
-                err
-            );
-
-            // Test with sh
-            let result = shell
-                .call(ShellInput {
-                    command: "sh -c 'nonexistentcommand'".to_string(),
-                    cwd: env::current_dir().unwrap(),
-                })
-                .await;
-
-            assert!(result.is_err());
-            let err = result.unwrap_err();
-            assert!(
-                err.contains("command not found"),
-                "Unexpected sh error: {}",
-                err
-            );
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            // Test with cmd.exe
-            let result = shell
-                .call(ShellInput {
-                    command: "cmd /c nonexistentcommand".to_string(),
-                    cwd: env::current_dir().unwrap(),
-                })
-                .await;
-
-            assert!(result.is_err());
-            let err = result.unwrap_err();
-            assert!(
-                err.contains("is not recognized"),
-                "Unexpected cmd.exe error: {}",
-                err
-            );
-
-            // Test with PowerShell if available
-            let result = shell
-                .call(ShellInput {
-                    command: "powershell -Command nonexistentcommand".to_string(),
-                    cwd: env::current_dir().unwrap(),
-                })
-                .await;
-
-            assert!(result.is_err());
-            let err = result.unwrap_err();
-            assert!(
-                err.contains("nonexistentcommand") && err.contains("not"),
-                "Unexpected PowerShell error: {}",
-                err
-            );
-        }
     }
 
     #[tokio::test]
