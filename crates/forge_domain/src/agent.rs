@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use derive_setters::Setters;
 use handlebars::Handlebars;
+use schemars::schema::RootSchema;
+use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -69,9 +71,8 @@ impl PromptContent {
 /// Represents an AI agent with specific system and user prompts, templated with
 /// a context type
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Setters)]
-#[serde(rename_all = "camelCase")]
 #[setters(into, strip_option)]
-pub struct Agent<C> {
+pub struct Agent<S: JsonSchema> {
     /// Name of the agent
     pub name: String,
 
@@ -84,21 +85,32 @@ pub struct Agent<C> {
     pub model: ModelType,
 
     /// The system prompt that defines the agent's behavior
-    #[serde(rename = "systemPrompt", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "system", skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<PromptContent>,
 
     /// Optional user prompt template for consistent interactions
-    #[serde(rename = "userPrompt", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "user", skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<PromptContent>,
 
-    /// Phantom data for the context type
-    #[serde(skip)]
-    _context: PhantomData<C>,
+    /// Schema defining the expected arguments or configuration for the agent
+    arguments: Schema<S>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Setters)]
+pub struct Schema<A> {
+    _schema: PhantomData<A>,
+    schema: RootSchema,
+}
+
+impl<A: JsonSchema> Default for Schema<A> {
+    fn default() -> Self {
+        Self { _schema: PhantomData, schema: schema_for!(A) }
+    }
 }
 
 impl<C> Agent<C>
 where
-    C: Serialize + DeserializeOwned,
+    C: Serialize + DeserializeOwned + JsonSchema,
 {
     /// Creates a new agent
     pub fn new(name: impl Into<String>) -> Self {
@@ -108,7 +120,7 @@ where
             model: ModelType::Primary,
             system_prompt: None,
             user_prompt: None,
-            _context: PhantomData,
+            arguments: Schema::default(),
         }
     }
 
@@ -175,7 +187,7 @@ where
 #[async_trait]
 pub trait AgentLoader<C>
 where
-    C: Send + Sync + DeserializeOwned,
+    C: Send + Sync + DeserializeOwned + JsonSchema,
 {
     /// Load all available agents. Returns a Vec of agents in the order they
     /// were defined in the source.
@@ -189,7 +201,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize, JsonSchema)]
     struct CodeContext {
         role: String,
         language: String,
