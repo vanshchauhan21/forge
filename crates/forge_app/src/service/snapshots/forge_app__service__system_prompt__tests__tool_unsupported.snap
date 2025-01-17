@@ -64,7 +64,7 @@ You have access to a set of tools that can be executed upon user approval. Use o
 Available tools:
 <tool_list>
 
-1. tool.forge.code.outline
+1. tool_forge_code_outline
 List definition names (classes, functions, methods, etc.) in source code
  files. This tool is particularly useful when you need to:
  - Map relationships between types, traits, and interfaces
@@ -101,11 +101,11 @@ Parameters:
 - path (required): The path to the directory containing the source code files to analyze.
 
 Usage:
-<tool.forge.code.outline>
+<tool_forge_code_outline>
 <path>...</path>
-</tool.forge.code.outline>
+</tool_forge_code_outline>
 
-2. tool.forge.fs.info
+2. tool_forge_fs_info
 Request to retrieve detailed metadata about a file or directory at the
  specified path. Returns comprehensive information including size, creation
  time, last modified time, permissions, and type. Use this when you need to
@@ -115,11 +115,11 @@ Parameters:
 - path (required): The path of the file or directory to inspect (relative to the current working directory)
 
 Usage:
-<tool.forge.fs.info>
+<tool_forge_fs_info>
 <path>...</path>
-</tool.forge.fs.info>
+</tool_forge_fs_info>
 
-3. tool.forge.fs.list
+3. tool_forge_fs_list
 Request to list files and directories within the specified directory. If
  recursive is true, it will list all files and directories recursively. If
  recursive is false or not provided, it will only list the top-level
@@ -132,12 +132,12 @@ Parameters:
 - recursive: Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
 
 Usage:
-<tool.forge.fs.list>
+<tool_forge_fs_list>
 <path>...</path>
 <recursive>...</recursive>
-</tool.forge.fs.list>
+</tool_forge_fs_list>
 
-4. tool.forge.fs.read
+4. tool_forge_fs_read
 Request to read the contents of a file at the specified path. Use this when
  you need to examine the contents of an existing file you do not know the
  contents of, for example to analyze code, review text files, or extract
@@ -149,11 +149,11 @@ Parameters:
 - path (required): The path of the file to read (relative to the current working directory)
 
 Usage:
-<tool.forge.fs.read>
+<tool_forge_fs_read>
 <path>...</path>
-</tool.forge.fs.read>
+</tool_forge_fs_read>
 
-5. tool.forge.fs.replace
+5. tool_forge_fs_replace
 Replace sections in a file using SEARCH/REPLACE blocks for precise
 modifications.
 
@@ -185,12 +185,12 @@ Parameters:
 - path (required): File path relative to the current working directory
 
 Usage:
-<tool.forge.fs.replace>
+<tool_forge_fs_replace>
 <diff>...</diff>
 <path>...</path>
-</tool.forge.fs.replace>
+</tool_forge_fs_replace>
 
-6. tool.forge.fs.search
+6. tool_forge_fs_search
 Request to perform a regex search across files in a specified directory,
  providing context-rich results. This tool searches for patterns or specific
  content across multiple files, displaying each match with encapsulating
@@ -202,13 +202,13 @@ Parameters:
 - regex (required): The regular expression pattern to search for. Uses Rust regex syntax.
 
 Usage:
-<tool.forge.fs.search>
+<tool_forge_fs_search>
 <file_pattern>...</file_pattern>
 <path>...</path>
 <regex>...</regex>
-</tool.forge.fs.search>
+</tool_forge_fs_search>
 
-7. tool.forge.fs.write
+7. tool_forge_fs_write
 Use it to create a new file at a specified path with the provided content.
  If the file already exists, the tool will return an error to prevent
  overwriting. The tool automatically handles the creation of any missing
@@ -220,12 +220,12 @@ Parameters:
 - path (required): The path of the file to write to (relative to the current working directory)
 
 Usage:
-<tool.forge.fs.write>
+<tool_forge_fs_write>
 <content>...</content>
 <path>...</path>
-</tool.forge.fs.write>
+</tool_forge_fs_write>
 
-8. tool.forge.net.fetch
+8. tool_forge_net_fetch
 Fetches a URL from the internet and optionally extracts its contents as
  markdown. Although originally you did not have internet access and were
  advised to refuse and tell the user this, this tool now grants you internet
@@ -239,14 +239,14 @@ Parameters:
 - url (required): URL to fetch
 
 Usage:
-<tool.forge.net.fetch>
+<tool_forge_net_fetch>
 <max_length>...</max_length>
 <raw>...</raw>
 <start_index>...</start_index>
 <url>...</url>
-</tool.forge.net.fetch>
+</tool_forge_net_fetch>
 
-9. tool.forge.process.shell
+9. tool_forge_process_shell
 Execute shell commands with safety checks and validation. This tool provides
  controlled access to system shell commands while preventing dangerous
  operations through a comprehensive blacklist and validation system.
@@ -258,12 +258,12 @@ Parameters:
 - cwd (required): The working directory where the command should be executed.
 
 Usage:
-<tool.forge.process.shell>
+<tool_forge_process_shell>
 <command>...</command>
 <cwd>...</cwd>
-</tool.forge.process.shell>
+</tool_forge_process_shell>
 
-10. tool.forge.process.think
+10. tool_forge_process_think
 A framework for iterative reasoning in problem-solving.
  Purpose:
  Tracks reasoning steps (\"thoughts\") to solve complex problems:
@@ -300,7 +300,7 @@ Parameters:
 - total_thoughts (required): The total number of thoughts or reasoning steps expected to reach a solution.
 
 Usage:
-<tool.forge.process.think>
+<tool_forge_process_think>
 <branch_from_thought>...</branch_from_thought>
 <branch_id>...</branch_id>
 <is_revision>...</is_revision>
@@ -311,9 +311,9 @@ Usage:
 <thought>...</thought>
 <thought_number>...</thought_number>
 <total_thoughts>...</total_thoughts>
-</tool.forge.process.think>
+</tool_forge_process_think>
 
-11. tool.forge.ui.approve
+11. tool_forge_ui_approve
 The approve tool provides an interactive confirmation dialog for critical
  operations. Use this tool when a simple yes/no answer is sufficient for
  to proceed with its decision-making.
@@ -332,11 +332,11 @@ Parameters:
 - message (required): The message to display when asking for confirmation
 
 Usage:
-<tool.forge.ui.approve>
+<tool_forge_ui_approve>
 <message>...</message>
-</tool.forge.ui.approve>
+</tool_forge_ui_approve>
 
-12. tool.forge.ui.select
+12. tool_forge_ui_select
 The select tool provides an interactive selection dialog for choosing from
  multiple options. Use this tool when you need the user to choose one item
  from a list of possibilities.
@@ -357,10 +357,10 @@ Parameters:
 - options (required): The list of options to choose from. Intended for multiple options (2 or more) to provide meaningful choices to the user.
 
 Usage:
-<tool.forge.ui.select>
+<tool_forge_ui_select>
 <message>...</message>
 <options>...</options>
-</tool.forge.ui.select>
+</tool_forge_ui_select>
 
 </tool_list>
 

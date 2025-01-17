@@ -22,7 +22,7 @@ pub struct FSReplace;
 
 impl NamedTool for FSReplace {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("tool.forge.fs.replace")
+        ToolName::new("tool_forge_fs_replace")
     }
 }
 

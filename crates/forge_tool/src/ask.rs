@@ -19,7 +19,7 @@ pub struct AskFollowUpQuestion;
 
 impl NamedTool for AskFollowUpQuestion {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("tool.forge.ui.ask")
+        ToolName::new("tool_forge_ui_ask")
     }
 }
 

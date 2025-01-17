@@ -32,7 +32,7 @@ pub struct Approve;
 
 impl NamedTool for Approve {
     fn tool_name(&self) -> ToolName {
-        ToolName::new("tool.forge.ui.approve")
+        ToolName::new("tool_forge_ui_approve")
     }
 }
 
