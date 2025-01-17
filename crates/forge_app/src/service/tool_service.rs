@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
 use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult};
+use tokio::time::{timeout, Duration};
 use tracing::debug;
 
 use super::Service;
+
+// Timeout duration for tool calls
+const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[async_trait::async_trait]
 pub trait ToolService: Send + Sync {
@@ -47,7 +51,17 @@ impl ToolService for Live {
 
         available_tools.sort();
         let output = match self.tools.get(&name) {
-            Some(tool) => tool.executable.call(input).await,
+            Some(tool) => {
+                // Wrap tool call with timeout
+                match timeout(TOOL_CALL_TIMEOUT, tool.executable.call(input)).await {
+                    Ok(result) => result,
+                    Err(_) => Err(format!(
+                        "Tool '{}' timed out after {} seconds",
+                        name.as_str(),
+                        TOOL_CALL_TIMEOUT.as_secs()
+                    )),
+                }
+            }
             None => Err(format!(
                 "No tool with name '{}' was found. Please try again with one of these tools {}",
                 name.as_str(),
@@ -95,6 +109,7 @@ impl ToolService for Live {
 mod test {
     use forge_domain::{Tool, ToolCallId, ToolDefinition};
     use serde_json::{json, Value};
+    use tokio::time;
 
     use super::*;
 
@@ -206,5 +221,55 @@ mod test {
         assert!(!prompt.is_empty());
         assert!(prompt.contains("read_file"));
         assert!(prompt.contains("write_file"));
+    }
+
+    // Mock tool that simulates a long-running task
+    struct SlowTool;
+    #[async_trait::async_trait]
+    impl forge_domain::ToolCallService for SlowTool {
+        type Input = Value;
+        type Output = Value;
+
+        async fn call(&self, _input: Self::Input) -> Result<Self::Output, String> {
+            // Simulate a long-running task that exceeds the timeout
+            tokio::time::sleep(Duration::from_secs(40)).await;
+            Ok(Value::from("Slow tool completed"))
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_tool_timeout() {
+        test::time::pause();
+
+        let slow_tool = Tool {
+            definition: ToolDefinition {
+                name: ToolName::new("slow_tool"),
+                description: "A test tool that takes too long".to_string(),
+                input_schema: schemars::schema_for!(serde_json::Value),
+                output_schema: Some(schemars::schema_for!(String)),
+            },
+            executable: Box::new(SlowTool),
+        };
+
+        let service = Live::from_iter(vec![slow_tool]);
+        let call = ToolCallFull {
+            name: ToolName::new("slow_tool"),
+            arguments: json!("test input"),
+            call_id: Some(ToolCallId::new("test")),
+        };
+
+        // Advance time to trigger timeout
+        test::time::advance(Duration::from_secs(35)).await;
+
+        let result = service.call(call).await;
+
+        // Assert that the result contains a timeout error message
+        let content_str = result.content.as_str().unwrap_or("");
+
+        assert!(
+            content_str.contains("timed out"),
+            "Expected timeout error message"
+        );
+        assert!(result.is_error, "Expected error result for timeout");
     }
 }
