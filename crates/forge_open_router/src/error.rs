@@ -5,7 +5,7 @@ use thiserror::Error;
 pub enum Error {
     EmptyContent,
     #[from(ignore)]
-    #[display("Upstream: {}", 1)]
+    #[display("Upstream: {message}")]
     Upstream {
         code: u32,
         message: String,
