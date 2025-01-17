@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use forge_domain::{Input, UserInput};
+use forge_domain::{Command, UserInput};
 use inquire::Autocomplete;
 use tokio::fs;
 
@@ -25,7 +25,7 @@ pub struct Console;
 impl CommandCompleter {
     /// Creates a new command completer with the list of available commands
     fn new() -> Self {
-        Self { commands: Input::available_commands() }
+        Self { commands: Command::available_commands() }
     }
 }
 
@@ -70,24 +70,24 @@ impl Autocomplete for CommandCompleter {
 
 #[async_trait]
 impl UserInput for Console {
-    async fn upload<P: Into<PathBuf> + Send>(&self, path: P) -> anyhow::Result<Input> {
+    async fn upload<P: Into<PathBuf> + Send>(&self, path: P) -> anyhow::Result<Command> {
         let path = path.into();
         let content = fs::read_to_string(&path).await?.trim().to_string();
 
         CONSOLE.writeln(content.clone())?;
-        Ok(Input::Message(content))
+        Ok(Command::Message(content))
     }
 
     async fn prompt(
         &self,
         help_text: Option<&str>,
         initial_text: Option<&str>,
-    ) -> anyhow::Result<Input> {
+    ) -> anyhow::Result<Command> {
         loop {
             CONSOLE.writeln("")?;
             let help = help_text.map(|a| a.to_string()).unwrap_or(format!(
                 "How can I help? Available commands: {}",
-                Input::available_commands().join(", ")
+                Command::available_commands().join(", ")
             ));
 
             let mut text = inquire::Text::new("")
@@ -99,7 +99,7 @@ impl UserInput for Console {
             }
 
             let text = text.prompt()?;
-            match Input::parse(&text) {
+            match Command::parse(&text) {
                 Ok(input) => return Ok(input),
                 Err(e) => {
                     CONSOLE.writeln(StatusDisplay::failed(e.to_string()).format())?;

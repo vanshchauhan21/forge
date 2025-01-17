@@ -1,9 +1,9 @@
 pub mod banner;
+pub mod command;
 pub mod console;
-pub mod input;
 mod normalize;
 pub mod status;
 
+pub use command::Console;
 pub use console::CONSOLE;
-pub use input::Console;
 pub use status::StatusDisplay;
