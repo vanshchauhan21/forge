@@ -179,9 +179,10 @@ mod tests {
     ];
 
     #[cfg(target_family = "unix")]
-    const COMMAND_NOT_FOUND_PATTERNS: [&str; 2] = [
-        "command not found",         // bash/sh
-        "No such file or directory", // Alternative Unix error
+    const COMMAND_NOT_FOUND_PATTERNS: [&str; 3] = [
+        "command not found",            // bash/sh
+        "nonexistentcommand not found", // bash/sh (Alternative Unix error)
+        "No such file or directory",    // Alternative Unix error
     ];
 
     #[tokio::test]
