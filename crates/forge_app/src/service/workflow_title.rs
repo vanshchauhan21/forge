@@ -62,8 +62,9 @@ impl Live {
         &self,
         request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
+        chat: ChatRequest,
     ) -> Result<()> {
-        let mut response = self.provider.chat(request).await?;
+        let mut response = self.provider.chat(&chat.model, request.clone()).await?;
         let mut parts = Vec::new();
 
         while let Some(chunk) = response.next().await {
@@ -105,7 +106,7 @@ impl TitleService for Live {
         let user_prompt = self.prompt(&chat.content)?;
         let tool = Title::definition();
 
-        let request = Context::new(chat.model.clone())
+        let request = Context::default()
             .add_message(ContextMessage::user(user_prompt))
             .add_tool(tool.clone())
             .tool_choice(ToolChoice::Call(tool.name));
@@ -114,7 +115,7 @@ impl TitleService for Live {
 
         let that = self.clone();
         tokio::spawn(async move {
-            if let Err(e) = that.execute(request, tx.clone()).await {
+            if let Err(e) = that.execute(request, tx.clone(), chat.clone()).await {
                 tx.send(Err(e)).await.unwrap();
             }
             drop(tx);

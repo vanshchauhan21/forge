@@ -118,7 +118,8 @@ pub struct OpenRouterRequest {
     pub messages: Option<Vec<OpenRouterMessage>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
-    pub model: ModelId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<ModelId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_format: Option<ResponseFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -202,7 +203,7 @@ impl From<Context> for OpenRouterRequest {
                     Some(tools)
                 }
             },
-            model: request.model,
+            model: None,
             prompt: Default::default(),
             response_format: Default::default(),
             stop: Default::default(),

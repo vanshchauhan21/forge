@@ -57,6 +57,7 @@ impl Live {
         &self,
         mut request: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
+        chat: ChatRequest,
     ) -> Result<()> {
         loop {
             let mut tool_call_parts = Vec::new();
@@ -64,7 +65,7 @@ impl Live {
             let mut some_tool_result = None;
             let mut assistant_message_content = String::new();
 
-            let mut response = self.provider.chat(request.clone()).await?;
+            let mut response = self.provider.chat(&chat.model, request.clone()).await?;
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
@@ -159,14 +160,13 @@ impl ChatService for Live {
         let request = request
             .set_system_message(system_prompt)
             .add_message(ContextMessage::user(user_prompt))
-            .tools(self.tool.list())
-            .model(chat.model);
+            .tools(self.tool.list());
 
         let that = self.clone();
 
         tokio::spawn(async move {
             // TODO: simplify this match.
-            match that.chat_workflow(request, tx.clone()).await {
+            match that.chat_workflow(request, tx.clone(), chat.clone()).await {
                 Ok(_) => {}
                 Err(e) => tx.send(Err(e)).await.unwrap(),
             };
@@ -297,9 +297,8 @@ mod tests {
                 user_prompt.clone(),
             );
 
-            let model_id = ModelId::new("gpt-3.5-turbo");
             let messages = chat
-                .chat(request, Context::new(model_id))
+                .chat(request, Context::default())
                 .await
                 .unwrap()
                 .collect::<Vec<_>>()
@@ -426,7 +425,7 @@ mod tests {
 
         let expected = vec![
             //
-            Context::new(model_id)
+            Context::default()
                 .add_message(ContextMessage::system("Do everything that the user says"))
                 .add_message(ContextMessage::user("<task>Hello can you help me?</task>")),
         ];
@@ -571,7 +570,7 @@ mod tests {
             .await
             .llm_calls;
 
-        let expected_llm_request_1 = Context::new(model_id)
+        let expected_llm_request_1 = Context::default()
             .set_system_message("Do everything that the user says")
             .add_message(ContextMessage::user(
                 "<task>Hello can you use foo tool?</task>",

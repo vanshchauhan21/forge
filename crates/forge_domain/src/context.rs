@@ -3,7 +3,7 @@ use derive_more::derive::{Display, From};
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use super::{ModelId, ToolCallFull, ToolResult};
+use super::{ToolCallFull, ToolResult};
 use crate::{ToolChoice, ToolDefinition};
 
 /// Represents a message being sent to the LLM provider
@@ -80,21 +80,16 @@ pub enum Role {
 
 /// Represents a request being made to the LLM provider. By default the request
 /// is created with assuming the model supports use of external tools.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Setters)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Setters, Default)]
 #[setters(into, strip_option)]
 pub struct Context {
     pub messages: Vec<ContextMessage>,
-    pub model: ModelId,
     pub tools: Vec<ToolDefinition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
 }
 
 impl Context {
-    pub fn new(model: ModelId) -> Self {
-        Context { messages: vec![], tools: vec![], model, tool_choice: None }
-    }
-
     pub fn add_tool(mut self, tool: impl Into<ToolDefinition>) -> Self {
         let tool: ToolDefinition = tool.into();
         self.tools.push(tool);
@@ -159,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_override_system_message() {
-        let request = Context::new(ModelId::new("gpt-3.5-turbo"))
+        let request = Context::default()
             .add_message(ContextMessage::system("Initial system message"))
             .set_system_message("Updated system message");
 
@@ -171,8 +166,7 @@ mod tests {
 
     #[test]
     fn test_set_system_message() {
-        let request =
-            Context::new(ModelId::new("gpt-3.5-turbo")).set_system_message("A system message");
+        let request = Context::default().set_system_message("A system message");
 
         assert_eq!(
             request.messages[0],
@@ -182,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_insert_system_message() {
-        let request = Context::new(ModelId::new("gpt-3.5-turbo"))
+        let request = Context::default()
             .add_message(ContextMessage::user("Do something"))
             .set_system_message("A system message");
 

@@ -172,7 +172,7 @@ impl Service {
 
 #[cfg(test)]
 pub mod tests {
-    use forge_domain::ModelId;
+
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -194,7 +194,7 @@ pub mod tests {
         storage: &impl ConversationRepository,
         id: Option<ConversationId>,
     ) -> Result<Conversation> {
-        let request = Context::new(ModelId::new("gpt-3.5-turbo"));
+        let request = Context::default();
         storage.set_conversation(&request, id).await
     }
 

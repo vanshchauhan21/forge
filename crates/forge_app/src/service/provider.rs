@@ -30,9 +30,10 @@ impl Live {
 impl ProviderService for Live {
     async fn chat(
         &self,
+        model_id: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        self.provider.chat(request).await
+        self.provider.chat(model_id, request).await
     }
 
     async fn models(&self) -> Result<Vec<Model>> {

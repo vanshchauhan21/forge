@@ -49,10 +49,9 @@ impl UIService for Live {
                 .await?;
             (context, false)
         } else {
-            let model = request.model.clone();
             let conversation = self
                 .conversation_service
-                .set_conversation(&Context::new(model), None)
+                .set_conversation(&Context::default(), None)
                 .await?;
             (conversation, true)
         };
@@ -171,7 +170,7 @@ mod tests {
 
         let model_id = ModelId::new("gpt-3.5-turbo");
         let conversation = conversation_service
-            .set_conversation(&Context::new(model_id.clone()), None)
+            .set_conversation(&Context::default(), None)
             .await
             .unwrap();
 

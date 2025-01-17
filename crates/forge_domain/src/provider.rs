@@ -8,6 +8,7 @@ use crate::{
 pub trait ProviderService: Send + Sync + 'static {
     async fn chat(
         &self,
+        model_id: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error>;
     async fn models(&self) -> Result<Vec<Model>>;
