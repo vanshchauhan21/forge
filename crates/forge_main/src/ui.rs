@@ -6,11 +6,16 @@ use tokio_stream::StreamExt;
 
 use crate::{Console, StatusDisplay, CONSOLE};
 
-pub struct UI {
+#[derive(Default)]
+struct UIState {
     current_conversation_id: Option<ConversationId>,
     current_title: Option<String>,
     current_content: Option<String>,
     usage: Usage,
+}
+
+pub struct UI {
+    state: UIState,
     api: Routes,
     console: Console,
     verbose: bool,
@@ -24,10 +29,7 @@ impl UI {
             .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
 
         Ok(Self {
-            current_conversation_id: None,
-            current_title: None,
-            current_content: None,
-            usage: Default::default(),
+            state: Default::default(),
             api,
             console: Console,
             verbose,
@@ -56,40 +58,37 @@ impl UI {
                 Command::End => break,
                 Command::New => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
-                    self.current_conversation_id = None;
-                    self.current_title = None;
-                    self.usage = Default::default();
+                    self.state = Default::default();
                     input = self.console.prompt(None, None).await?;
                     continue;
                 }
                 Command::Reload => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
-                    self.current_conversation_id = None;
-                    self.current_title = None;
+                    self.state = Default::default();
                     input = match &self.exec {
                         Some(ref path) => self.console.upload(path).await?,
                         None => {
                             self.console
-                                .prompt(None, self.current_content.as_deref())
+                                .prompt(None, self.state.current_content.as_deref())
                                 .await?
                         }
                     };
                     continue;
                 }
                 Command::Info => {
-                    crate::display_info(&self.api.environment().await?, &self.usage)?;
+                    crate::display_info(&self.api.environment().await?, &self.state.usage)?;
                     input = self
                         .console
-                        .prompt(self.current_title().as_deref(), None)
+                        .prompt(self.format_title().as_deref(), None)
                         .await?;
                     continue;
                 }
                 Command::Message(ref content) => {
-                    self.current_content = Some(content.clone());
+                    self.state.current_content = Some(content.clone());
                     self.handle_message(content.clone(), &model).await?;
                     input = self
                         .console
-                        .prompt(self.current_title().as_deref(), None)
+                        .prompt(self.format_title().as_deref(), None)
                         .await?;
                 }
             }
@@ -102,7 +101,7 @@ impl UI {
         let chat = ChatRequest {
             content,
             model: model.clone(),
-            conversation_id: self.current_conversation_id,
+            conversation_id: self.state.current_conversation_id,
         };
 
         match self.api.chat(chat).await {
@@ -112,7 +111,8 @@ impl UI {
                         Ok(message) => self.handle_chat_response(message)?,
                         Err(err) => {
                             CONSOLE.writeln(
-                                StatusDisplay::failed(err.to_string(), self.usage.clone()).format(),
+                                StatusDisplay::failed(err.to_string(), self.state.usage.clone())
+                                    .format(),
                             )?;
                         }
                     }
@@ -123,7 +123,7 @@ impl UI {
                     StatusDisplay::failed_with(
                         err.to_string().as_str(),
                         "Failed to establish chat stream",
-                        self.usage.clone(),
+                        self.state.usage.clone(),
                     )
                     .format(),
                 )?;
@@ -147,7 +147,9 @@ impl UI {
             ChatResponse::ToolCallStart(tool_call_full) => {
                 let tool_name = tool_call_full.name.as_str();
                 CONSOLE.newline()?;
-                CONSOLE.writeln(StatusDisplay::execute(tool_name, self.usage.clone()).format())?;
+                CONSOLE.writeln(
+                    StatusDisplay::execute(tool_name, self.state.usage.clone()).format(),
+                )?;
 
                 // Convert to JSON and apply dimmed style
                 let json = serde_json::to_string_pretty(&tool_call_full.arguments)
@@ -162,37 +164,39 @@ impl UI {
                     CONSOLE.writeln(format!("{}", tool_result.to_string().dimmed()))?;
                 }
                 let status = if tool_result.is_error {
-                    StatusDisplay::failed(tool_name, self.usage.clone())
+                    StatusDisplay::failed(tool_name, self.state.usage.clone())
                 } else {
-                    StatusDisplay::success(tool_name, self.usage.clone())
+                    StatusDisplay::success(tool_name, self.state.usage.clone())
                 };
 
                 CONSOLE.write(status.format())?;
             }
             ChatResponse::ConversationStarted(conversation_id) => {
-                self.current_conversation_id = Some(conversation_id);
+                self.state.current_conversation_id = Some(conversation_id);
             }
             ChatResponse::ModifyContext(_) => {}
             ChatResponse::Complete => {}
             ChatResponse::Error(err) => {
-                CONSOLE
-                    .writeln(StatusDisplay::failed(err.to_string(), self.usage.clone()).format())?;
+                CONSOLE.writeln(
+                    StatusDisplay::failed(err.to_string(), self.state.usage.clone()).format(),
+                )?;
             }
             ChatResponse::PartialTitle(_) => {}
             ChatResponse::CompleteTitle(title) => {
-                self.current_title = Some(title);
+                self.state.current_title = Some(title);
             }
             ChatResponse::FinishReason(_) => {}
             ChatResponse::Usage(u) => {
-                self.usage = u;
+                self.state.usage = u;
             }
         }
         Ok(())
     }
 
-    fn current_title(&self) -> Option<String> {
-        self.current_title
+    fn format_title(&self) -> Option<String> {
+        self.state
+            .current_title
             .as_ref()
-            .map(|title| StatusDisplay::task(title, self.usage.clone()).format())
+            .map(|title| StatusDisplay::task(title, self.state.usage.clone()).format())
     }
 }
