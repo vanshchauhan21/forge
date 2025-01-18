@@ -250,8 +250,6 @@ Usage:
 Execute shell commands with safety checks and validation. This tool provides
  controlled access to system shell commands while preventing dangerous
  operations through a comprehensive blacklist and validation system.
- The tool also enforces a timeout to prevent long-running commands from
- blocking the system.
 
 Parameters:
 - command (required): The shell command to execute.
