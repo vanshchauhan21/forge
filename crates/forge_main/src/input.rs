@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use forge_domain::{Command, UserInput};
+use forge_domain::{Command, Usage, UserInput};
 use inquire::Autocomplete;
 use tokio::fs;
 
@@ -102,7 +102,8 @@ impl UserInput for Console {
             match Command::parse(&text) {
                 Ok(input) => return Ok(input),
                 Err(e) => {
-                    CONSOLE.writeln(StatusDisplay::failed(e.to_string()).format())?;
+                    CONSOLE
+                        .writeln(StatusDisplay::failed(e.to_string(), Usage::default()).format())?;
                 }
             }
         }

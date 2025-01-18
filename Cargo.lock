@@ -948,6 +948,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored 3.0.0",
+ "derive_setters",
  "forge_app",
  "forge_domain",
  "inquire",

@@ -5,6 +5,13 @@ use strum_macros::EnumString;
 
 use super::ToolCall;
 
+#[derive(Default, Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct Usage {
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub total_tokens: u64,
+}
+
 /// Represents a message that was received from the LLM provider
 /// NOTE: Tool call messages are part of the larger Response object and not part
 /// of the message.
@@ -14,6 +21,7 @@ pub struct ChatCompletionMessage {
     pub content: Option<Content>,
     pub tool_call: Vec<ToolCall>,
     pub finish_reason: Option<FinishReason>,
+    pub usage: Option<Usage>,
 }
 
 /// Represents partial or full content of a message

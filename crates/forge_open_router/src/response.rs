@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use forge_domain::{
     ChatCompletionMessage as ModelResponse, Content, FinishReason, ToolCallFull, ToolCallId,
-    ToolCallPart, ToolName,
+    ToolCallPart, ToolName, Usage,
 };
 use serde::{Deserialize, Serialize};
 
@@ -100,14 +100,24 @@ pub struct FunctionCall {
     pub arguments: String,
 }
 
+impl From<ResponseUsage> for Usage {
+    fn from(usage: ResponseUsage) -> Self {
+        Usage {
+            prompt_tokens: usage.prompt_tokens,
+            completion_tokens: usage.completion_tokens,
+            total_tokens: usage.total_tokens,
+        }
+    }
+}
+
 impl TryFrom<OpenRouterResponse> for ModelResponse {
     type Error = Error;
 
     fn try_from(res: OpenRouterResponse) -> Result<Self, Self::Error> {
         match res {
-            OpenRouterResponse::Success { choices, .. } => {
+            OpenRouterResponse::Success { choices, usage, .. } => {
                 if let Some(choice) = choices.first() {
-                    let response = match choice {
+                    let mut response = match choice {
                         Choice::NonChat { text, finish_reason, .. } => {
                             ModelResponse::assistant(Content::full(text)).finish_reason_opt(
                                 finish_reason
@@ -163,6 +173,9 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
                         }
                     };
 
+                    if let Some(usage) = usage {
+                        response.usage = Some(usage.into());
+                    }
                     Ok(response)
                 } else {
                     Err(Error::EmptyContent)

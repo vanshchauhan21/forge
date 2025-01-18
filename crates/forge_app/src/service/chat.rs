@@ -123,6 +123,12 @@ impl Live {
                         .await
                         .unwrap();
                 }
+
+                if let Some(usage) = &message.usage {
+                    tx.send(Ok(ChatResponse::Usage(usage.clone())))
+                        .await
+                        .unwrap();
+                }
             }
 
             request = request.add_message(ContextMessage::assistant(
