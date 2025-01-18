@@ -58,6 +58,7 @@ impl UI {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
                     self.current_conversation_id = None;
                     self.current_title = None;
+                    self.usage = Default::default();
                     input = self.console.prompt(None, None).await?;
                     continue;
                 }
