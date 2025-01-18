@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -19,8 +21,8 @@ pub struct FSWriteInput {
 /// Use it to create a new file at a specified path with the provided content.
 /// If the file already exists, the tool will return an error to prevent
 /// overwriting. The tool automatically handles the creation of any missing
-/// directories in the specified path, ensuring that the new file can be created
-/// seamlessly. Use this tool only when creating files that do not yet exist.
+/// intermediary directories in the specified path. Use this tool only when
+/// creating files that do not yet exist.
 #[derive(ToolDescription)]
 pub struct FSWrite;
 
@@ -46,7 +48,14 @@ impl ToolCallService for FSWrite {
         // Validate file content if it's a supported language file
         let syntax_warning = syn::validate(&input.path, &input.content);
 
-        // Write file only after validation passes
+        // Create parent directories if they don't exist
+        if let Some(parent) = Path::new(&input.path).parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| format!("Failed to create directories: {}", e))?;
+        }
+
+        // Write file only after validation passes and directories are created
         tokio::fs::write(&input.path, &input.content)
             .await
             .map_err(|e| e.to_string())?;
@@ -67,11 +76,17 @@ impl ToolCallService for FSWrite {
 
 #[cfg(test)]
 mod test {
+    use std::path::Path;
+
     use pretty_assertions::assert_eq;
     use tempfile::TempDir;
     use tokio::fs;
 
     use super::*;
+
+    async fn assert_path_exists(path: impl AsRef<Path>) {
+        assert!(fs::metadata(path).await.is_ok(), "Path should exist");
+    }
 
     #[tokio::test]
     async fn test_fs_write_success() {
@@ -161,5 +176,94 @@ mod test {
         // Verify original content remains unchanged
         let content = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(content, "Existing content");
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_single_directory_creation() {
+        let temp_dir = TempDir::new().unwrap();
+        let nested_path = temp_dir.path().join("new_dir").join("test.txt");
+        let content = "Hello from nested file!";
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput {
+                path: nested_path.to_string_lossy().to_string(),
+                content: content.to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully wrote"));
+        // Verify both directory and file were created
+        assert_path_exists(&nested_path).await;
+        assert_path_exists(nested_path.parent().unwrap()).await;
+
+        // Verify content
+        let written_content = fs::read_to_string(&nested_path).await.unwrap();
+        assert_eq!(written_content, content);
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_deep_directory_creation() {
+        let temp_dir = TempDir::new().unwrap();
+        let deep_path = temp_dir
+            .path()
+            .join("level1")
+            .join("level2")
+            .join("level3")
+            .join("deep.txt");
+        let content = "Deep in the directory structure";
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput {
+                path: deep_path.to_string_lossy().to_string(),
+                content: content.to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully wrote"));
+
+        // Verify entire path was created
+        assert_path_exists(&deep_path).await;
+        let mut current = deep_path.parent().unwrap();
+        while current != temp_dir.path() {
+            assert_path_exists(current).await;
+            current = current.parent().unwrap();
+        }
+
+        // Verify content
+        let written_content = fs::read_to_string(&deep_path).await.unwrap();
+        assert_eq!(written_content, content);
+    }
+
+    #[tokio::test]
+    async fn test_fs_write_with_different_separators() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // Use forward slashes regardless of platform
+        let path_str = format!("{}/dir_a/dir_b/file.txt", temp_dir.path().to_string_lossy());
+        let content = "Testing path separators";
+
+        let fs_write = FSWrite;
+        let result = fs_write
+            .call(FSWriteInput { path: path_str, content: content.to_string() })
+            .await
+            .unwrap();
+
+        assert!(result.contains("Successfully wrote"));
+
+        // Convert to platform path and verify
+        let platform_path = Path::new(&temp_dir.path())
+            .join("dir_a")
+            .join("dir_b")
+            .join("file.txt");
+
+        assert_path_exists(&platform_path).await;
+
+        // Verify content
+        let written_content = fs::read_to_string(&platform_path).await.unwrap();
+        assert_eq!(written_content, content);
     }
 }

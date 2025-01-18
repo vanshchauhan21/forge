@@ -212,8 +212,8 @@ Usage:
 Use it to create a new file at a specified path with the provided content.
  If the file already exists, the tool will return an error to prevent
  overwriting. The tool automatically handles the creation of any missing
- directories in the specified path, ensuring that the new file can be created
- seamlessly. Use this tool only when creating files that do not yet exist.
+ intermediary directories in the specified path. Use this tool only when
+ creating files that do not yet exist.
 
 Parameters:
 - content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
