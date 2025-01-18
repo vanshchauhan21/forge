@@ -154,8 +154,8 @@ Usage:
 </tool_forge_fs_read>
 
 5. tool_forge_fs_replace
-Replace sections in a file using SEARCH/REPLACE blocks for precise
-modifications.
+Replace sections in a file using multiple SEARCH/REPLACE blocks for precise
+modifications. Multiple blocks are supported and recommended for complex changes.
 
 <<<<<<< SEARCH
 [exact content to find]
@@ -168,10 +168,11 @@ Rules:
 2. Each block replaces first match only
 3. Keep blocks minimal - include only changing lines plus needed context
 4. Complete lines only - no truncation
-5. For moves: use 2 blocks (delete + insert)
-6. For deletes: use empty REPLACE section
+5. Use multiple blocks for multiple changes in the same file
+6. For moves: use 2 blocks (delete block + insert block)
+7. For deletes: use empty REPLACE section
 
-Example:
+Example with multiple blocks:
 <<<<<<< SEARCH
 def old_function(x):
     return x + 1
@@ -179,9 +180,14 @@ def old_function(x):
 def new_function(x, y=0):
     return x + y
 >>>>>>> REPLACE
+<<<<<<< SEARCH
+# Old comment
+=======
+# Updated documentation - now supports multiple parameters
+>>>>>>> REPLACE
 
 Parameters:
-- diff (required): SEARCH/REPLACE blocks defining changes
+- diff (required): Multiple SEARCH/REPLACE blocks defining changes to make to the file. Using multiple blocks is recommended for making related changes in a single operation. This allows for coordinated changes across different parts of the file.
 - path (required): File path relative to the current working directory
 
 Usage:

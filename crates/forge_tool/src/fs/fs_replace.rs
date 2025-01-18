@@ -34,11 +34,15 @@ pub enum Error {
     MissingReplaceMarker,
 }
 
+/// Input parameters for the fs_replace tool.
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReplaceInput {
     /// File path relative to the current working directory
     pub path: String,
-    /// SEARCH/REPLACE blocks defining changes
+    /// Multiple SEARCH/REPLACE blocks defining changes to make to the file.
+    /// Using multiple blocks is recommended for making related changes in a
+    /// single operation. This allows for coordinated changes across
+    /// different parts of the file.
     pub diff: String,
 }
 
@@ -60,33 +64,38 @@ impl ToolDescription for FSReplace {
     fn description(&self) -> String {
         format!(
             r#"        
-Replace sections in a file using SEARCH/REPLACE blocks for precise
-modifications.
+Replace sections in a file using multiple SEARCH/REPLACE blocks for precise
+modifications. Multiple blocks are supported and recommended for complex changes.
 
-{}
+{SEARCH}
 [exact content to find]
-{}
+{DIVIDER}
 [new content to replace with]
-{}
+{REPLACE}
 
 Rules:
 1. SEARCH must match exactly (whitespace, indentation, line endings)
 2. Each block replaces first match only
 3. Keep blocks minimal - include only changing lines plus needed context
 4. Complete lines only - no truncation
-5. For moves: use 2 blocks (delete + insert)
-6. For deletes: use empty REPLACE section
+5. Use multiple blocks for multiple changes in the same file
+6. For moves: use 2 blocks (delete block + insert block)
+7. For deletes: use empty REPLACE section
 
-Example:
-{}
+Example with multiple blocks:
+{SEARCH}
 def old_function(x):
     return x + 1
-{}
+{DIVIDER}
 def new_function(x, y=0):
     return x + y
-{}
-        "#,
-            SEARCH, DIVIDER, REPLACE, SEARCH, DIVIDER, REPLACE
+{REPLACE}
+{SEARCH}
+# Old comment
+{DIVIDER}
+# Updated documentation - now supports multiple parameters
+{REPLACE}
+        "#
         )
         .trim()
         .to_string()
@@ -250,8 +259,9 @@ impl ToolCallService for FSReplace {
             let syntax_warning = syn::validate(&input.path, &modified);
 
             let mut output = format!(
-                "Successfully applied {} patch(es) to {}",
-                blocks_len, input.path
+                "Successfully applied {blocks_len} patch(es) to {path}",
+                blocks_len = blocks_len,
+                path = input.path
             );
             if let Some(warning) = syntax_warning {
                 output.push_str("\nWarning: ");
@@ -278,21 +288,21 @@ mod test {
 
     #[test]
     fn test_parse_blocks_missing_separator() {
-        let diff = format!("{}\nsearch content\n", SEARCH);
+        let diff = format!("{SEARCH}\nsearch content\n");
         let result = parse_blocks(&diff);
         assert!(matches!(result.unwrap_err(), Error::MissingSeparator));
     }
 
     #[test]
     fn test_parse_blocks_missing_newline() {
-        let diff = format!("{}search content", SEARCH);
+        let diff = format!("{SEARCH}search content");
         let result = parse_blocks(&diff);
         assert!(matches!(result.unwrap_err(), Error::MissingSearchNewline));
     }
 
     #[test]
     fn test_parse_blocks_missing_separator_newline() {
-        let diff = format!("{}\nsearch content\n{}content", SEARCH, DIVIDER);
+        let diff = format!("{SEARCH}\nsearch content\n{DIVIDER}content");
         let result = parse_blocks(&diff);
         assert!(matches!(
             result.unwrap_err(),
@@ -302,7 +312,7 @@ mod test {
 
     #[test]
     fn test_parse_blocks_missing_replace_marker() {
-        let diff = format!("{}\nsearch content\n{}\nreplace content\n", SEARCH, DIVIDER);
+        let diff = format!("{SEARCH}\nsearch content\n{DIVIDER}\nreplace content\n");
         let result = parse_blocks(&diff);
         assert!(matches!(result.unwrap_err(), Error::MissingReplaceMarker));
     }
@@ -323,7 +333,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: "nonexistent.txt".to_string(),
-                diff: format!("{}\nHello\n{}\nWorld\n{}\n", SEARCH, DIVIDER, REPLACE),
+                diff: format!("{SEARCH}\nHello\n{DIVIDER}\nWorld\n{REPLACE}\n"),
             })
             .await;
 
@@ -344,8 +354,7 @@ mod test {
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
-                    "{}\n    Hello World    \n{}\n    Hi World    \n{}\n",
-                    SEARCH, DIVIDER, REPLACE
+                    "{SEARCH}\n    Hello World    \n{DIVIDER}\n    Hi World    \n{REPLACE}\n"
                 )
                 .to_string(),
             })
@@ -367,7 +376,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n{}\nNew content\n{}\n", SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\n{DIVIDER}\nNew content\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -385,8 +394,7 @@ mod test {
         write_test_file(&file_path, content).await.unwrap();
 
         let fs_replace = FSReplace;
-        let diff = format!("{}\n    First Line    \n{}\n    New First    \n{}\n{}\n    Last Line    \n{}\n    New Last    \n{}\n",
-            SEARCH, DIVIDER, REPLACE, SEARCH, DIVIDER, REPLACE).to_string();
+        let diff = format!("{SEARCH}\n    First Line    \n{DIVIDER}\n    New First    \n{REPLACE}\n{SEARCH}\n    Last Line    \n{DIVIDER}\n    New Last    \n{REPLACE}\n").to_string();
 
         let result = fs_replace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
@@ -406,7 +414,7 @@ mod test {
         write_test_file(&file_path, content).await.unwrap();
 
         let fs_replace = FSReplace;
-        let diff = format!("{}\n  Middle Line  \n{}\n{}\n", SEARCH, DIVIDER, REPLACE);
+        let diff = format!("{SEARCH}\n  Middle Line  \n{DIVIDER}\n{REPLACE}\n");
         let result = fs_replace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
@@ -428,12 +436,10 @@ mod test {
         let fs_replace = FSReplace;
 
         // Test 1: Replace content while preserving surrounding newlines
-        // Test 1: Replace content while preserving surrounding newlines
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n    let x = 1;\n\n\n    console.log(x);\n{}\n    let y = 2;\n\n\n    console.log(y);\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\n    let x = 1;\n\n\n    console.log(x);\n{DIVIDER}\n    let y = 2;\n\n\n    console.log(y);\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -446,8 +452,7 @@ mod test {
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
-                    "{}\n\n// Footer comment\n\n\n{}\n\n\n\n// Updated footer\n\n{}\n",
-                    SEARCH, DIVIDER, REPLACE
+                    "{SEARCH}\n\n// Footer comment\n\n\n{DIVIDER}\n\n\n\n// Updated footer\n\n{REPLACE}\n"
                 )
                 .to_string(),
             })
@@ -462,8 +467,7 @@ mod test {
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
-                    "{}\n\n\n// Header comment\n\n\n{}\n\n\n\n// New header\n\n\n\n{}\n",
-                    SEARCH, DIVIDER, REPLACE
+                    "{SEARCH}\n\n\n// Header comment\n\n\n{DIVIDER}\n\n\n\n// New header\n\n\n\n{REPLACE}\n"
                 )
                 .to_string(),
             })
@@ -495,8 +499,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n  for (const itm of items) {{\n    total += itm.price;\n{}\n  for (const item of items) {{\n    total += item.price * item.quantity;\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\n  for (const itm of items) {{\n    total += itm.price;\n{DIVIDER}\n  for (const item of items) {{\n    total += item.price * item.quantity;\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -508,8 +511,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\nfunction calculateTotal(items) {{\n  let total = 0;\n{}\nfunction computeTotal(items, tax = 0) {{\n  let total = 0.0;\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\nfunction calculateTotal(items) {{\n  let total = 0;\n{DIVIDER}\nfunction computeTotal(items, tax = 0) {{\n  let total = 0.0;\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -539,8 +541,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n  async getUserById(userId) {{\n    const user = await db.findOne({{ id: userId }});\n{}\n  async findUser(id, options = {{}}) {{\n    const user = await this.db.findOne({{ userId: id, ...options }});\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\n  async getUserById(userId) {{\n    const user = await db.findOne({{ id: userId }});\n{DIVIDER}\n  async findUser(id, options = {{}}) {{\n    const user = await this.db.findOne({{ userId: id, ...options }});\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -552,8 +553,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\n    if (!user) throw new Error('User not found');\n    return user;\n{}\n    if (!user) {{\n      throw new UserNotFoundError(id);\n    }}\n    return this.sanitizeUser(user);\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\n    if (!user) throw new Error('User not found');\n    return user;\n{DIVIDER}\n    if (!user) {{\n      throw new UserNotFoundError(id);\n    }}\n    return this.sanitizeUser(user);\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -575,8 +575,7 @@ mod test {
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
                 diff: format!(
-                    "{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = \n{}\n",
-                    SEARCH, DIVIDER, REPLACE
+                    "{SEARCH}\nfn main() {{ let x = 42; }}\n{DIVIDER}\nfn main() {{ let x = \n{REPLACE}\n"
                 )
                 .to_string(),
             })
@@ -600,8 +599,7 @@ mod test {
         let result = fs_replace
             .call(FSReplaceInput {
                 path: file_path.to_string_lossy().to_string(),
-                diff: format!("{}\nfn main() {{ let x = 42; }}\n{}\nfn main() {{ let x = 42; let y = x * 2; }}\n{}\n",
-                    SEARCH, DIVIDER, REPLACE).to_string(),
+                diff: format!("{SEARCH}\nfn main() {{ let x = 42; }}\n{DIVIDER}\nfn main() {{ let x = 42; let y = x * 2; }}\n{REPLACE}\n").to_string(),
             })
             .await
             .unwrap();
@@ -619,7 +617,7 @@ mod test {
         write_test_file(&file_path, file_content).await.unwrap();
 
         // want to replace '}' with '}}'.
-        let diff = format!("{}\n}}{}\n}}}}\n{}", SEARCH, DIVIDER, REPLACE);
+        let diff = format!("{SEARCH}\n}}{DIVIDER}\n}}}}\n{REPLACE}");
         let res = FSReplace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
             .await
@@ -639,7 +637,7 @@ mod test {
         write_test_file(&file_path, file_content).await.unwrap();
 
         // want to replace '' with 'empty-space-replaced'.
-        let diff = format!("{}\n{}\nempty-space-replaced{}", SEARCH, DIVIDER, REPLACE);
+        let diff = format!("{SEARCH}\n{DIVIDER}\nempty-space-replaced{REPLACE}");
 
         let res = FSReplace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
@@ -660,7 +658,7 @@ mod test {
         write_test_file(&file_path, file_content).await.unwrap();
 
         // want to replace ' ' with '--'.
-        let diff = format!("{}\n {}\n--{}", SEARCH, DIVIDER, REPLACE);
+        let diff = format!("{SEARCH}\n {DIVIDER}\n--{REPLACE}");
 
         let res = FSReplace
             .call(FSReplaceInput { path: file_path.to_string_lossy().to_string(), diff })
