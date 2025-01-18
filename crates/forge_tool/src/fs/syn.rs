@@ -1,19 +1,19 @@
 use std::path::Path;
 
-use derive_more::Display;
+use thiserror::Error;
 use tree_sitter::{Language, LanguageError, Parser};
 
 /// Represents possible errors that can occur during syntax validation
-#[derive(Debug, PartialEq, Display)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
     /// The file has no extension
-    #[display("File has no extension")]
+    #[error("File has no extension")]
     Extension,
     /// Failed to initialize the parser with the specified language
-    #[display("Parser initialization error: {_0}")]
-    Language(LanguageError),
+    #[error("Parser initialization error: {0}")]
+    Language(#[from] LanguageError),
     /// Failed to parse the content
-    #[display("Syntax error found in {file_path} as {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
+    #[error("Syntax error found in {file_path} as {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
     Parse {
         file_path: String,
         extension: String,

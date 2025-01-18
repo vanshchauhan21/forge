@@ -1,14 +1,38 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use dissimilar::Chunk;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use thiserror::Error;
 use tokio::fs;
-use tracing::{debug, error};
 
 use super::fs_replace_marker::{DIVIDER, REPLACE, SEARCH};
 use crate::fs::syn;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("File not found at path: {0}")]
+    FileNotFound(PathBuf),
+
+    #[error("File operation failed: {0}")]
+    FileRead(#[from] std::io::Error),
+
+    #[error("No search/replace blocks found in diff")]
+    NoBlocks,
+
+    #[error("Invalid diff: missing newline after SEARCH marker")]
+    MissingSearchNewline,
+
+    #[error("Invalid diff: missing separator between search and replace content")]
+    MissingSeparator,
+
+    #[error("Invalid diff: missing newline after separator")]
+    MissingSeparatorNewline,
+
+    #[error("Invalid diff: missing REPLACE marker")]
+    MissingReplaceMarker,
+}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReplaceInput {
@@ -26,6 +50,7 @@ impl NamedTool for FSReplace {
     }
 }
 
+#[derive(Debug)]
 struct Block {
     search: String,
     replace: String,
@@ -84,7 +109,7 @@ fn normalize_line_endings(text: &str) -> String {
     result
 }
 
-fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
+fn parse_blocks(diff: &str) -> Result<Vec<Block>, Error> {
     let mut blocks = Vec::new();
     let mut pos = 0;
 
@@ -97,13 +122,11 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
         // Include the newline after SEARCH marker in the position
         let search_start = match diff[search_start..].find('\n') {
             Some(nl) => search_start + nl + 1,
-            None => {
-                return Err("Invalid diff format: Missing newline after SEARCH marker".to_string())
-            }
+            None => return Err(Error::MissingSearchNewline),
         };
 
         let Some(separator) = diff[search_start..].find(DIVIDER) else {
-            return Err("Invalid diff format: Missing separator".to_string());
+            return Err(Error::MissingSeparator);
         };
         let separator = search_start + separator;
 
@@ -111,11 +134,11 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
         let separator_end = separator + DIVIDER.len();
         let separator_end = match diff[separator_end..].find('\n') {
             Some(nl) => separator_end + nl + 1,
-            None => return Err("Invalid diff format: Missing newline after separator".to_string()),
+            None => return Err(Error::MissingSeparatorNewline),
         };
 
         let Some(replace_end) = diff[separator_end..].find(REPLACE) else {
-            return Err("Invalid diff format: Missing end marker".to_string());
+            return Err(Error::MissingReplaceMarker);
         };
         let replace_end = separator_end + replace_end;
 
@@ -132,7 +155,7 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
     }
 
     if blocks.is_empty() {
-        return Err("Invalid diff format: No valid blocks found".to_string());
+        return Err(Error::NoBlocks);
     }
 
     Ok(blocks)
@@ -140,18 +163,8 @@ fn parse_blocks(diff: &str) -> Result<Vec<Block>, String> {
 
 /// Apply changes to file content based on search/replace blocks.
 /// Changes are only written to disk if all replacements are successful.
-async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<String, String> {
-    // Initialize content based on whether file exists
-    let mut result = if path.as_ref().exists() {
-        fs::read_to_string(&path).await.map_err(|e| {
-            error!("Failed to read file content: {}", e);
-            e.to_string()
-        })?
-    } else if !blocks[0].search.is_empty() {
-        return Err("File does not exist and search pattern is not empty".to_string());
-    } else {
-        String::new()
-    };
+async fn apply_changes(content: String, blocks: Vec<Block>) -> Result<String, Error> {
+    let mut result = content;
 
     // Apply each block sequentially
     for block in blocks {
@@ -206,13 +219,6 @@ async fn apply_changes<P: AsRef<Path>>(path: P, blocks: Vec<Block>) -> Result<St
         }
     }
 
-    // Write the modified content
-    fs::write(&path, &result).await.map_err(|e| {
-        error!("Failed to write file: {}", e);
-        e.to_string()
-    })?;
-    debug!("Successfully wrote changes to {:?}", path.as_ref());
-
     Ok(result)
 }
 
@@ -221,21 +227,42 @@ impl ToolCallService for FSReplace {
     type Input = FSReplaceInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
-        let blocks = parse_blocks(&input.diff)?;
-        let blocks_len = blocks.len();
-        let content = apply_changes(&input.path, blocks).await?;
-        let syntax_warning = syn::validate(&input.path, &content);
-
-        let mut result = format!(
-            "Successfully applied {} patch(es) to {}",
-            blocks_len, input.path
-        );
-        if let Some(warning) = syntax_warning {
-            result.push_str("\nWarning: ");
-            result.push_str(&warning.to_string());
+        let path = Path::new(&input.path);
+        if !path.exists() {
+            return Err(Error::FileNotFound(path.to_path_buf()).to_string());
         }
 
-        Ok(result)
+        // Use proper Error types internally and convert to string only at the boundary
+        let blocks = parse_blocks(&input.diff).map_err(|e| e.to_string())?;
+        let blocks_len = blocks.len();
+
+        let result: Result<_, Error> = async {
+            let content = fs::read_to_string(&input.path)
+                .await
+                .map_err(Error::FileRead)?;
+
+            let modified = apply_changes(content, blocks).await?;
+
+            fs::write(&input.path, &modified)
+                .await
+                .map_err(Error::FileRead)?;
+
+            let syntax_warning = syn::validate(&input.path, &modified);
+
+            let mut output = format!(
+                "Successfully applied {} patch(es) to {}",
+                blocks_len, input.path
+            );
+            if let Some(warning) = syntax_warning {
+                output.push_str("\nWarning: ");
+                output.push_str(&warning.to_string());
+            }
+
+            Ok(output)
+        }
+        .await;
+
+        result.map_err(|e| e.to_string())
     }
 }
 
@@ -245,8 +272,63 @@ mod test {
 
     use super::*;
 
-    async fn write_test_file(path: impl AsRef<Path>, content: &str) -> Result<(), String> {
-        fs::write(&path, content).await.map_err(|e| e.to_string())
+    async fn write_test_file(path: impl AsRef<Path>, content: &str) -> Result<(), Error> {
+        fs::write(&path, content).await.map_err(Error::FileRead)
+    }
+
+    #[test]
+    fn test_parse_blocks_missing_separator() {
+        let diff = format!("{}\nsearch content\n", SEARCH);
+        let result = parse_blocks(&diff);
+        assert!(matches!(result.unwrap_err(), Error::MissingSeparator));
+    }
+
+    #[test]
+    fn test_parse_blocks_missing_newline() {
+        let diff = format!("{}search content", SEARCH);
+        let result = parse_blocks(&diff);
+        assert!(matches!(result.unwrap_err(), Error::MissingSearchNewline));
+    }
+
+    #[test]
+    fn test_parse_blocks_missing_separator_newline() {
+        let diff = format!("{}\nsearch content\n{}content", SEARCH, DIVIDER);
+        let result = parse_blocks(&diff);
+        assert!(matches!(
+            result.unwrap_err(),
+            Error::MissingSeparatorNewline
+        ));
+    }
+
+    #[test]
+    fn test_parse_blocks_missing_replace_marker() {
+        let diff = format!("{}\nsearch content\n{}\nreplace content\n", SEARCH, DIVIDER);
+        let result = parse_blocks(&diff);
+        assert!(matches!(result.unwrap_err(), Error::MissingReplaceMarker));
+    }
+
+    #[test]
+    fn test_parse_blocks_no_blocks() {
+        // Test both an empty string and random content
+        let empty_result = parse_blocks("");
+        assert!(matches!(empty_result.unwrap_err(), Error::NoBlocks));
+
+        let random_result = parse_blocks("some random content");
+        assert!(matches!(random_result.unwrap_err(), Error::NoBlocks));
+    }
+
+    #[tokio::test]
+    async fn test_file_not_found() {
+        let fs_replace = FSReplace;
+        let result = fs_replace
+            .call(FSReplaceInput {
+                path: "nonexistent.txt".to_string(),
+                diff: format!("{}\nHello\n{}\nWorld\n{}\n", SEARCH, DIVIDER, REPLACE),
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("File not found"));
     }
 
     #[tokio::test]
