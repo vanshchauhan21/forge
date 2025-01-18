@@ -255,9 +255,10 @@ mod tests {
             let mut result = self.result.lock().unwrap();
 
             if let Some(value) = result.pop() {
-                ToolResult::from(call).content(value)
+                ToolResult::from(call).success(value.to_string())
             } else {
-                ToolResult::from(call).content(json!({"error": "No tool call is available"}))
+                ToolResult::from(call)
+                    .failure(json!({"error": "No tool call is available"}).to_string())
             }
         }
 
@@ -482,7 +483,7 @@ mod tests {
             ),
             ChatResponse::ToolCallEnd(
                 ToolResult::new(ToolName::new("foo"))
-                    .content(json!({"a": 100, "b": 200}))
+                    .success(json!({"a": 100, "b": 200}).to_string())
                     .call_id(ToolCallId::new("too_call_001")),
             ),
             ChatResponse::FinishReason(FinishReason::ToolCalls),
@@ -589,7 +590,7 @@ mod tests {
                 ))
                 .add_message(ContextMessage::ToolMessage(
                     ToolResult::new(ToolName::new("foo"))
-                        .content(json!({"a": 100, "b": 200}))
+                        .success(json!({"a": 100, "b": 200}).to_string())
                         .call_id(ToolCallId::new("too_call_001")),
                 )),
         ];

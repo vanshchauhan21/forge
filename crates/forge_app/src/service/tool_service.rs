@@ -70,8 +70,8 @@ impl ToolService for Live {
         };
 
         match output {
-            Ok(output) => ToolResult::from(call).content(output),
-            Err(output) => ToolResult::from(call).content(output).is_error(true),
+            Ok(output) => ToolResult::from(call).success(output),
+            Err(output) => ToolResult::from(call).failure(output),
         }
     }
 
@@ -238,7 +238,7 @@ mod test {
         let result = service.call(call).await;
 
         // Assert that the result contains a timeout error message
-        let content_str = result.content.as_str().unwrap_or("");
+        let content_str = &result.content;
 
         assert!(
             content_str.contains("timed out"),

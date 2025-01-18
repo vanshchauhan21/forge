@@ -3,4 +3,4 @@ source: crates/forge_domain/src/tool_result.rs
 expression: result
 snapshot_kind: text
 ---
-<tool_result><tool_name>complex_tool</tool_name><error><key>value</key><number>42</number></error></tool_result>
+<tool_result><tool_name>complex_tool</tool_name><error>{"key":"value","number":42}</error></tool_result>

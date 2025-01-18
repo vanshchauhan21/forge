@@ -3,4 +3,4 @@ source: crates/forge_domain/src/tool_result.rs
 expression: result.to_string()
 snapshot_kind: text
 ---
-<tool_result><tool_name>complex_tool</tool_name><success><address><city>New York</city></address><address><city>Los Angeles</city></address><age>42</age><user>John Doe</user></success></tool_result>
+<tool_result><tool_name>complex_tool</tool_name><success>{"address":[{"city":"New York"},{"city":"Los Angeles"}],"age":42,"user":"John Doe"}</success></tool_result>
