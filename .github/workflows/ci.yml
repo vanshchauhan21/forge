@@ -18,6 +18,7 @@
 name: ci
 env:
   RUSTFLAGS: -Dwarnings
+  FORGE_KEY: ${{secrets.FORGE_KEY}}
 on:
   pull_request:
     types:

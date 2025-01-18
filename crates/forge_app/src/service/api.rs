@@ -142,3 +142,52 @@ impl APIService for Live {
         Ok(self.environment.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use forge_domain::ModelId;
+    use tokio_stream::StreamExt;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_e2e() {
+        let api = Live::new().await.unwrap();
+        let task = include_str!("./api_task.md");
+        let request = ChatRequest::new(ModelId::new("anthropic/claude-3.5-sonnet"), task);
+        let response = api
+            .chat(request)
+            .await
+            .unwrap()
+            .filter_map(|message| match message.unwrap() {
+                ChatResponse::Text(text) => Some(text),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .await
+            .join("")
+            .trim()
+            .to_string();
+
+        // Check for expected crates
+        let expected_crates = [
+            "forge_app",
+            "forge_ci",
+            "forge_domain",
+            "forge_main",
+            "forge_open_router",
+            "forge_prompt",
+            "forge_tool",
+            "forge_tool_macros",
+            "forge_walker",
+        ];
+
+        for crate_name in expected_crates {
+            assert!(
+                response.contains(&format!("<crate>{}</crate>", crate_name)),
+                "Missing crate: {}",
+                crate_name
+            );
+        }
+    }
+}
