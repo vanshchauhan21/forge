@@ -224,7 +224,7 @@ impl ToolCallService for FSReplace {
         let blocks = parse_blocks(&input.diff)?;
         let blocks_len = blocks.len();
         let content = apply_changes(&input.path, blocks).await?;
-        let syntax_warning = syn::validate(&input.path, &content).err();
+        let syntax_warning = syn::validate(&input.path, &content);
 
         let mut result = format!(
             "Successfully applied {} patch(es) to {}",
@@ -232,7 +232,7 @@ impl ToolCallService for FSReplace {
         );
         if let Some(warning) = syntax_warning {
             result.push_str("\nWarning: ");
-            result.push_str(&warning);
+            result.push_str(&warning.to_string());
         }
 
         Ok(result)

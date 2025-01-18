@@ -44,7 +44,7 @@ impl ToolCallService for FSWrite {
         }
 
         // Validate file content if it's a supported language file
-        let syntax_warning = syn::validate(&input.path, &input.content).err();
+        let syntax_warning = syn::validate(&input.path, &input.content);
 
         // Write file only after validation passes
         tokio::fs::write(&input.path, &input.content)
@@ -58,7 +58,7 @@ impl ToolCallService for FSWrite {
         );
         if let Some(warning) = syntax_warning {
             result.push_str("\nWarning: ");
-            result.push_str(&warning);
+            result.push_str(&warning.to_string());
         }
 
         Ok(result)

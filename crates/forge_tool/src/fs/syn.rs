@@ -1,6 +1,24 @@
 use std::path::Path;
 
-use tree_sitter::{Language, Parser};
+use derive_more::Display;
+use tree_sitter::{Language, LanguageError, Parser};
+
+/// Represents possible errors that can occur during syntax validation
+#[derive(Debug, PartialEq, Display)]
+pub enum Error {
+    /// The file has no extension
+    #[display("File has no extension")]
+    Extension,
+    /// Failed to initialize the parser with the specified language
+    #[display("Parser initialization error: {_0}")]
+    Language(LanguageError),
+    /// Failed to parse the content
+    #[display("Syntax error found in {file_path} as {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
+    Parse {
+        file_path: String,
+        extension: String,
+    },
+}
 
 /// Maps file extensions to their corresponding Tree-sitter language parsers.
 ///
@@ -44,42 +62,39 @@ pub fn extension(ext: &str) -> Option<Language> {
 /// # Note
 /// Files with unsupported extensions are considered valid and will return
 /// Ok(()). Files with no extension will return an error.
-pub fn validate(path: impl AsRef<Path>, content: &str) -> Result<(), String> {
+pub fn validate(path: impl AsRef<Path>, content: &str) -> Option<Error> {
     let path = path.as_ref();
 
     // Get file extension
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .ok_or_else(|| "File has no extension".to_string())?;
+    let ext = match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) => ext,
+        None => return Some(Error::Extension),
+    };
 
     // Get language for the extension
-    let language = if let Some(lang) = extension(ext) {
-        lang
-    } else {
-        // If we don't support the language, consider it valid
-        return Ok(());
-    };
+    // If we don't support the language, consider it valid
+    let language = extension(ext)?;
 
     // Initialize parser
     let mut parser = Parser::new();
-    parser.set_language(&language).map_err(|e| e.to_string())?;
+    if let Err(e) = parser.set_language(&language) {
+        return Some(Error::Language(e));
+    }
 
     // Try parsing the content
-    let tree = parser
-        .parse(content, None)
-        .ok_or_else(|| format!("Failed to parse {} as {}", path.display(), ext))?;
+    let Some(tree) = parser.parse(content, None) else {
+        return Some(Error::Parse {
+            file_path: path.display().to_string(),
+            extension: ext.to_string(),
+        });
+    };
 
     // Find syntax errors in the tree
     let root_node = tree.root_node();
-    if root_node.has_error() || root_node.is_error() {
-        Err(format!(
-            "Syntax error found in {} while parsing",
-            path.display(),
-        ))
-    } else {
-        Ok(())
-    }
+    (root_node.has_error() || root_node.is_error()).then(|| Error::Parse {
+        file_path: path.display().to_string(),
+        extension: ext.to_string(),
+    })
 }
 
 #[cfg(test)]
@@ -99,50 +114,68 @@ mod tests {
     #[test]
     fn test_rust_valid() {
         let path = PathBuf::from("test.rs");
-        assert!(validate(&path, RUST_VALID).is_ok());
+        assert!(validate(&path, RUST_VALID).is_none());
     }
 
     #[test]
     fn test_rust_invalid() {
         let path = PathBuf::from("test.rs");
-        assert!(validate(&path, RUST_INVALID).is_err());
+        let result = validate(&path, RUST_INVALID);
+        assert!(matches!(result, Some(Error::Parse { .. })));
     }
 
     #[test]
     fn test_javascript_valid() {
         let path = PathBuf::from("test.js");
-        assert!(validate(&path, JAVASCRIPT_VALID).is_ok());
+        assert!(validate(&path, JAVASCRIPT_VALID).is_none());
     }
 
     #[test]
     fn test_javascript_invalid() {
         let path = PathBuf::from("test.js");
-        assert!(validate(&path, JAVASCRIPT_INVALID).is_err());
+        let result = validate(&path, JAVASCRIPT_INVALID);
+        assert!(matches!(result, Some(Error::Parse { .. })));
     }
 
     #[test]
     fn test_python_valid() {
         let path = PathBuf::from("test.py");
-        assert!(validate(&path, PYTHON_VALID).is_ok());
+        assert!(validate(&path, PYTHON_VALID).is_none());
     }
 
     #[test]
     fn test_python_invalid() {
         let path = PathBuf::from("test.py");
-        assert!(validate(&path, PYTHON_INVALID).is_err());
+        let result = validate(&path, PYTHON_INVALID);
+        assert!(matches!(result, Some(Error::Parse { .. })));
     }
 
     #[test]
     fn test_unsupported_extension() {
         let content = "Some random content";
         let path = PathBuf::from("test.txt");
-        assert!(validate(&path, content).is_ok());
+        assert!(validate(&path, content).is_none());
     }
 
     #[test]
     fn test_no_extension() {
         let content = "Some random content";
         let path = PathBuf::from("test");
-        assert!(validate(&path, content).is_err());
+        let result = validate(&path, content);
+        assert!(matches!(result, Some(Error::Extension)));
+    }
+
+    #[test]
+    fn test_error_messages() {
+        let path = PathBuf::from("test");
+        let error = validate(&path, "").unwrap();
+        assert_eq!(error.to_string(), "File has no extension");
+
+        let path = PathBuf::from("test.rs");
+        let error = validate(&path, "fn main() { let x = ").unwrap();
+        assert_eq!(
+            error.to_string(),
+            "Syntax error found in test.rs as rs. Hint: Please retry in raw mode without HTML-encoding angle brackets."
+        );
     }
 }

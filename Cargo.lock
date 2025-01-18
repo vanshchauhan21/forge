@@ -1004,6 +1004,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "colorize",
+ "derive_more",
  "dissimilar",
  "forge_domain",
  "forge_tool_macros",
