@@ -27,9 +27,9 @@ impl Live {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
         let large_model_id =
-            std::env::var("FORGE_LARGE_MODEL").expect("FORGE_LARGE_MODEL must be set");
+            std::env::var("FORGE_LARGE_MODEL").unwrap_or("anthropic/claude-3.5-sonnet".to_owned());
         let small_model_id =
-            std::env::var("FORGE_SMALL_MODEL").expect("FORGE_SMALL_MODEL must be set");
+            std::env::var("FORGE_SMALL_MODEL").unwrap_or("anthropic/claude-3.5-haiku".to_owned());
 
         let cwd = std::env::current_dir()?;
         let files = match Walker::new(cwd.clone())
