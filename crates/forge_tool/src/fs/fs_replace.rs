@@ -45,10 +45,8 @@ struct SearchReplaceBlock {
 pub struct FSReplaceInput {
     /// File path relative to the current working directory
     pub path: String,
-    /// Multiple SEARCH/REPLACE blocks defining changes to make to the file.
-    /// Using multiple blocks is recommended for making related changes in a
-    /// single operation. This allows for coordinated changes across
-    /// different parts of the file.
+    /// Multiple SEARCH/REPLACE blocks separated by newlines, defining changes
+    /// to make to the file.
     pub diff: String,
 }
 
@@ -63,10 +61,7 @@ impl NamedTool for FSReplace {
 impl ToolDescription for FSReplace {
     fn description(&self) -> String {
         format!(
-            r#"        
-Replace sections in a file using multiple SEARCH/REPLACE blocks for precise
-modifications. Multiple blocks are supported and recommended for complex changes.
-
+            r#"Replace sections in a file using multiple SEARCH/REPLACE blocks. Example:
 {SEARCH}
 [exact content to find]
 {DIVIDER}
@@ -74,10 +69,10 @@ modifications. Multiple blocks are supported and recommended for complex changes
 {REPLACE}
 
 Rules:
-1. SEARCH must match exactly (whitespace, indentation, line endings)
+1. SEARCH must exactly match whitespace, indentation & line endings
 2. Each block replaces first match only
 3. Keep blocks minimal - include only changing lines plus needed context
-4. Complete lines only - no truncation
+4. Provide complete lines only - no truncation
 5. Use multiple blocks for multiple changes in the same file
 6. For moves: use 2 blocks (delete block + insert block)
 7. For deletes: use empty REPLACE section

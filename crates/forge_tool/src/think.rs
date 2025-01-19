@@ -7,32 +7,8 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// A framework for iterative reasoning in problem-solving.
-///
-/// Purpose:
-/// Tracks reasoning steps ("thoughts") to solve complex problems:
-/// - Breaks tasks into steps
-/// - Supports revisions and branching
-/// - Tracks confidence and verifies solutions
-///
-/// Key Features:
-/// - Adjust `total_thoughts` for complexity
-/// - Link revisions with `revises_thought`
-/// - Branch paths via `branch_from_thought`
-/// - Update `solution_confidence`
-/// - Mark completion with `solution_reached`
-///
-/// Workflow:
-/// 1. Initialize `Think` with `total_thoughts`.
-/// 2. Add steps to `thought_history`.
-/// 3. Revise or branch as needed.
-/// 4. Update confidence and validate.
-/// 5. Mark `solution_reached` when done.
-///
-/// Fields:
-/// - `thought_history`: Steps taken.
-/// - `branches`: Alternate paths.
-/// - `solution_reached`: Final solution.
+/// Problem-solving framework that breaks down tasks into tracked "thoughts".
+/// Supports revisions, alternative branches, and solution confidence tracking.
 #[derive(Clone, Default, ToolDescription)]
 pub struct Think {
     thought_history: Vec<ThoughtInput>,

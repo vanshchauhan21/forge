@@ -99,33 +99,10 @@ pub struct OutlineInput {
     pub path: String,
 }
 
-/// List definition names (classes, functions, methods, etc.) in source code
-/// files. This tool is particularly useful when you need to:
-///
-/// - Map relationships between types, traits, and interfaces
-///   - See inheritance hierarchies in object-oriented code
-///   - Identify trait implementations in Rust
-///   - Understand class composition patterns
-/// - Analyze architectural patterns:
-///   - Discover service/component dependencies
-///   - Find implementation details of interfaces
-///   - Track type usage across modules
-/// - Navigate large codebases:
-///   - Quickly find relevant type definitions
-///   - Understand module organization
-///   - Locate specific implementations
-///
-/// Supports multiple programming languages:
-/// - Rust (.rs files): structs, traits, impls
-/// - JavaScript (.js files): classes, methods, prototypes
-/// - Python (.py files): classes, decorators, inheritance
-/// - TypeScript (.ts, .tsx files): interfaces, classes, methods
-/// - Scala (.scala files): traits, classes, objects
-/// - Java (.java files): classes, methods, interfaces
-/// - CSS (.css files): classes, ids, pseudo-classes
-///
-/// Returns a formatted string showing file names and their definitions in a
-/// tree-like structure. Example output:
+/// List definitions (classes, functions, methods, types etc.) in source code
+/// with their relationships. Helps navigate and understand code structure
+/// within a folder across multiple files. Returns a formatted string showing
+/// file names and their definitions in a tree-like structure. Example output:
 /// ```text
 /// models.rs
 /// │trait Repository<T>

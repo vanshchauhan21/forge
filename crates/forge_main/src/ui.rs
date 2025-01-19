@@ -164,7 +164,7 @@ impl UI {
                     StatusDisplay::success(tool_name, self.state.usage.clone())
                 };
 
-                CONSOLE.write(status.format())?;
+                CONSOLE.writeln(status.format())?;
             }
             ChatResponse::ConversationStarted(conversation_id) => {
                 self.state.current_conversation_id = Some(conversation_id);
