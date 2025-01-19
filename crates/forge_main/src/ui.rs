@@ -138,24 +138,19 @@ impl UI {
             ChatResponse::Text(text) => {
                 CONSOLE.write(&text)?;
             }
-            ChatResponse::ToolCallDetected(_) => {}
-            ChatResponse::ToolCallArgPart(arg) => {
-                if self.verbose {
-                    CONSOLE.write(&arg)?;
-                }
-            }
-            ChatResponse::ToolCallStart(tool_call_full) => {
-                let tool_name = tool_call_full.name.as_str();
+            ChatResponse::ToolCallDetected(tool_name) => {
                 CONSOLE.newline()?;
                 CONSOLE.writeln(
-                    StatusDisplay::execute(tool_name, self.state.usage.clone()).format(),
+                    StatusDisplay::execute(tool_name.as_str(), self.state.usage.clone()).format(),
                 )?;
-
-                // Convert to JSON and apply dimmed style
-                let json = serde_json::to_string_pretty(&tool_call_full.arguments)
-                    .unwrap_or_else(|_| "Failed to serialize arguments".to_string());
-
-                CONSOLE.writeln(format!("{}", json.dimmed()))?;
+                CONSOLE.newline()?;
+            }
+            ChatResponse::ToolCallArgPart(arg) => {
+                CONSOLE.write(format!("{}", arg.dimmed()))?;
+            }
+            ChatResponse::ToolCallStart(_) => {
+                CONSOLE.newline()?;
+                CONSOLE.newline()?;
             }
             ChatResponse::ToolCallEnd(tool_result) => {
                 let tool_name = tool_result.name.as_str();
