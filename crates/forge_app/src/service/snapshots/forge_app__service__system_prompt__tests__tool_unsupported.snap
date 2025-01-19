@@ -151,18 +151,20 @@ Usage:
 
 7. tool_forge_fs_write
 Use it to create a new file at a specified path with the provided content.
- If the file already exists, the tool will return an error to prevent
- overwriting. The tool automatically handles the creation of any missing
- intermediary directories in the specified path. Use this tool only when
- creating files that do not yet exist.
+ By default, if the file already exists, the tool will return an error to
+ prevent overwriting. Set overwrite=true to allow overwriting existing files.
+ The tool automatically handles the creation of any missing
+ intermediary directories in the specified path.
 
 Parameters:
 - content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
+- overwrite: When set to true, allows overwriting of existing files. Defaults to false.
 - path (required): The path of the file to write to (relative to the current working directory)
 
 Usage:
 <tool_forge_fs_write>
 <content>...</content>
+<overwrite>...</overwrite>
 <path>...</path>
 </tool_forge_fs_write>
 
