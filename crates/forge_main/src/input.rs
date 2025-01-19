@@ -86,7 +86,7 @@ impl UserInput for Console {
         loop {
             CONSOLE.writeln("")?;
             let help = help_text.map(|a| a.to_string()).unwrap_or(format!(
-                "How can I help? Available commands: {}",
+                "Available commands: {}",
                 Command::available_commands().join(", ")
             ));
 
