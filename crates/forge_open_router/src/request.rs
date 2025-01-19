@@ -261,16 +261,22 @@ impl From<ContextMessage> for OpenRouterMessage {
     }
 }
 
-/// Inserts cache control information into system messages
-/// NOTE: We need to add more caching as the context grows larger
-fn insert_cache(mut message: Vec<OpenRouterMessage>) -> Vec<OpenRouterMessage> {
-    for message in message.iter_mut() {
-        if message.role == OpenRouterRole::System {
-            message.content = message.content.clone().map(|a| a.cached());
-        }
+/// Inserts cache control information into the last system or user message
+/// NOTE: This helps reduce context window usage by caching only the most recent
+/// system/user message
+fn insert_cache(mut messages: Vec<OpenRouterMessage>) -> Vec<OpenRouterMessage> {
+    if let Some(last_system_or_user) = messages
+        .iter_mut()
+        .rev()
+        .find(|msg| msg.role == OpenRouterRole::System || msg.role == OpenRouterRole::User)
+    {
+        // Avoid cloning the entire content - take ownership and transform
+        last_system_or_user.content = last_system_or_user
+            .content
+            .take()
+            .map(|content| content.cached());
     }
-
-    message
+    messages
 }
 
 impl From<Role> for OpenRouterRole {
@@ -397,5 +403,97 @@ mod tests {
         let tool_message = ContextMessage::ToolMessage(tool_result);
         let router_message = OpenRouterMessage::from(tool_message);
         assert_json_snapshot!(router_message);
+    }
+
+    #[test]
+    fn test_message_caching() {
+        let context = Context {
+            messages: vec![
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::System,
+                    content: "First system message".to_string(),
+                    tool_call: None,
+                }),
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::User,
+                    content: "Last user message".to_string(),
+                    tool_call: None,
+                }),
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::Assistant,
+                    content: "Assistant message".to_string(),
+                    tool_call: None,
+                }),
+            ],
+            tools: vec![],
+            tool_choice: None,
+        };
+
+        let request = OpenRouterRequest::from(context);
+        let messages = request.messages.unwrap();
+
+        // Verify first system message is NOT cached (it's not the last system/user
+        // message)
+        if let Some(MessageContent::Text(_)) = &messages[0].content {
+            // System message should be plain text (not cached)
+        } else {
+            panic!("First system message should not be cached");
+        }
+
+        // Verify last user message IS cached
+        if let Some(MessageContent::Parts(parts)) = &messages[1].content {
+            assert!(matches!(
+                parts[0],
+                ContentPart::Text { cache_control: Some(_), .. }
+            ));
+        } else {
+            panic!("Last user message should be cached");
+        }
+
+        // Verify assistant message is not cached
+        if let Some(MessageContent::Text(_)) = &messages[2].content {
+            // Assistant message remains as Text, not converted to Parts with
+            // caching
+        } else {
+            panic!("Assistant message should not be cached");
+        }
+
+        // Test with only system messages
+        let context_system_only = Context {
+            messages: vec![
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::System,
+                    content: "First system message".to_string(),
+                    tool_call: None,
+                }),
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::System,
+                    content: "Last system message".to_string(),
+                    tool_call: None,
+                }),
+            ],
+            tools: vec![],
+            tool_choice: None,
+        };
+
+        let request = OpenRouterRequest::from(context_system_only);
+        let messages = request.messages.unwrap();
+
+        // Verify first system message is NOT cached
+        if let Some(MessageContent::Text(_)) = &messages[0].content {
+            // First system message should be plain text (not cached)
+        } else {
+            panic!("First system message should not be cached");
+        }
+
+        // Verify last system message IS cached
+        if let Some(MessageContent::Parts(parts)) = &messages[1].content {
+            assert!(matches!(
+                parts[0],
+                ContentPart::Text { cache_control: Some(_), .. }
+            ));
+        } else {
+            panic!("Last system message should be cached");
+        }
     }
 }
