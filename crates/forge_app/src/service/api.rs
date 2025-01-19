@@ -197,7 +197,10 @@ mod tests {
             let match_percentage = found_crates.len() as f64 / expected_crates.len() as f64;
 
             if match_percentage >= MATCH_THRESHOLD {
-                println!("Successfully found {:.2}% of expected crates", match_percentage * 100.0);
+                println!(
+                    "Successfully found {:.2}% of expected crates",
+                    match_percentage * 100.0
+                );
                 return;
             }
 
@@ -213,8 +216,10 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
 
-        panic!("Failed after {} attempts. Last error: {}", 
-               MAX_RETRIES, 
-               last_error.unwrap_or_default());
+        panic!(
+            "Failed after {} attempts. Last error: {}",
+            MAX_RETRIES,
+            last_error.unwrap_or_default()
+        );
     }
 }
