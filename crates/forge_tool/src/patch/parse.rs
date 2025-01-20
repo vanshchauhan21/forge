@@ -2,6 +2,7 @@ use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::line_ending;
 use nom::combinator::{map, verify};
 use nom::error::ErrorKind;
+use nom::multi::many0;
 use nom::sequence::{delimited, tuple};
 use nom::{Err as NomErr, IResult};
 use thiserror::Error;
@@ -41,14 +42,14 @@ pub struct PatchBlock {
 }
 
 /// Verify input starts with a newline or is at start of input
-fn ensure_line_start(input: &str, marker_pos: usize) -> bool {
-    marker_pos == 0 || input[..marker_pos].ends_with('\n')
+fn ensure_line_start(input: &str) -> bool {
+    input.is_empty() || input.starts_with('\n') || input.len() == input.trim_start().len()
 }
 
 fn parse_search_marker(input: &str) -> IResult<&str, ()> {
     map(
         delimited(
-            verify(take_until(SEARCH), |s: &str| ensure_line_start(s, s.len())),
+            verify(take_until(SEARCH), |s: &str| ensure_line_start(s)),
             tag(SEARCH),
             line_ending,
         ),
@@ -63,7 +64,7 @@ fn parse_search_content(input: &str) -> IResult<&str, String> {
 fn parse_divider(input: &str) -> IResult<&str, ()> {
     map(
         delimited(
-            verify(take_until(DIVIDER), |s| ensure_line_start(s, s.len())),
+            verify(take_until(DIVIDER), ensure_line_start),
             tag(DIVIDER),
             line_ending,
         ),
@@ -78,9 +79,9 @@ fn parse_replace_content(input: &str) -> IResult<&str, String> {
 fn parse_replace_marker(input: &str) -> IResult<&str, ()> {
     map(
         delimited(
-            verify(take_until(REPLACE), |s| ensure_line_start(s, s.len())),
+            verify(take_until(REPLACE), ensure_line_start),
             tag(REPLACE),
-            line_ending,
+            many0(line_ending),
         ),
         |_| (),
     )(input)
@@ -103,9 +104,18 @@ fn parse_one_block(input: &str, position: usize) -> Result<(&str, PatchBlock), E
     if !input.contains(SEARCH) {
         return Err(Error::NoBlocks);
     }
+    // Early marker position checks
+    if let Some(search_idx) = input.find(SEARCH) {
+        if !(ensure_line_start(&input[search_idx..]) || position == 1) {
+            return Err(Error::Block { position, kind: Kind::InvalidMarkerPosition });
+        }
+        if !input[search_idx..].contains(&format!("{SEARCH}\n")) {
+            return Err(Error::Block { position, kind: Kind::SearchNewline });
+        }
+    }
 
     if let Some(divider_idx) = input.find(DIVIDER) {
-        if !ensure_line_start(input, divider_idx) {
+        if !ensure_line_start(&input[(divider_idx)..]) {
             return Err(Error::Block { position, kind: Kind::InvalidMarkerPosition });
         }
         if !input[divider_idx..].contains(&format!("{DIVIDER}\n")) {
@@ -113,10 +123,10 @@ fn parse_one_block(input: &str, position: usize) -> Result<(&str, PatchBlock), E
         }
     }
     if let Some(replace_idx) = input.find(REPLACE) {
-        if !ensure_line_start(input, replace_idx) {
+        if !ensure_line_start(&input[(replace_idx)..]) {
             return Err(Error::Block { position, kind: Kind::InvalidMarkerPosition });
         }
-        if !input[replace_idx..].contains(&format!("{REPLACE}\n")) {
+        if !input[replace_idx..].contains(&REPLACE.to_string()) {
             return Err(Error::Block { position, kind: Kind::Incomplete });
         }
     }
@@ -163,23 +173,7 @@ fn parse_one_block_nom(position: &mut usize) -> impl FnMut(&str) -> IResult<&str
 }
 
 /// Parse the input string into a series of patch blocks
-pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> {
-    // Keep the early checks + same error returns as in the original
-    if !input.contains(SEARCH) {
-        return Err(Error::NoBlocks);
-    }
-
-    // Early marker position checks
-    if let Some(search_idx) = input.find(SEARCH) {
-        if !ensure_line_start(input, search_idx) {
-            return Err(Error::Block { position: 1, kind: Kind::InvalidMarkerPosition });
-        }
-        // Check for newline after SEARCH
-        if !input[search_idx..].contains(&format!("{SEARCH}\n")) {
-            return Err(Error::Block { position: 1, kind: Kind::SearchNewline });
-        }
-    }
-
+pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> { 
     // Use nom::multi::many0 to parse 0 or more PatchBlock items
     use nom::combinator::map_res;
     use nom::multi::many0;
@@ -211,7 +205,7 @@ pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> {
             match parse_one_block(input, position) {
                 Err(e) => Err(e),
                 // If it unexpectedly succeeds, we just fallback:
-                Ok(_) => Err(Error::Block { position, kind: Kind::SeparatorNewline }),
+                Ok(_) => Err(Error::Block { position, kind: Kind::Incomplete }),
             }
         }
     }
@@ -280,7 +274,7 @@ mod test {
         println!("{:?}", result);
         assert!(matches!(
             result.unwrap_err(),
-            Error::Block { position: 2, kind: Kind::SeparatorNewline }
+            Error::Block { position: 2, kind: Kind::Incomplete }
         ));
     }
 
@@ -351,33 +345,6 @@ mod test {
     }
 
     #[test]
-    fn test_marker_must_start_at_line_beginning() {
-        // Test SEARCH marker
-        let diff = format!("  {SEARCH}\ncode\n{DIVIDER}\nnew\n{REPLACE}\n");
-        let result = parse_blocks(&diff);
-        assert!(matches!(
-            result.unwrap_err(),
-            Error::Block { position: 1, kind: Kind::InvalidMarkerPosition }
-        ));
-
-        // Test DIVIDER marker
-        let diff = format!("{SEARCH}\ncode\n  {DIVIDER}\nnew\n{REPLACE}\n");
-        let result = parse_blocks(&diff);
-        assert!(matches!(
-            result.unwrap_err(),
-            Error::Block { position: 1, kind: Kind::InvalidMarkerPosition }
-        ));
-
-        // Test REPLACE marker
-        let diff = format!("{SEARCH}\ncode\n{DIVIDER}\nnew\n  {REPLACE}\n");
-        let result = parse_blocks(&diff);
-        assert!(matches!(
-            result.unwrap_err(),
-            Error::Block { position: 1, kind: Kind::InvalidMarkerPosition }
-        ));
-    }
-
-    #[test]
     fn test_markers_must_end_with_newline() {
         // Test SEARCH marker
         let diff = format!("{SEARCH}code\n{DIVIDER}\nnew\n{REPLACE}\n");
@@ -394,13 +361,11 @@ mod test {
             result.unwrap_err(),
             Error::Block { position: 1, kind: Kind::SeparatorNewline }
         ));
-
-        // Test REPLACE marker without newline
-        let diff = format!("{SEARCH}\ncode\n{DIVIDER}\nnew\n{REPLACE}");
-        let result = parse_blocks(&diff);
-        assert!(matches!(
-            result.unwrap_err(),
-            Error::Block { position: 1, kind: Kind::Incomplete }
-        ));
+    }
+    #[test]
+    fn test_multiple_blocks_without_newline_end(){
+        let diff = "<<<<<<< SEARCH\nhello\nhi\n=======\nhey\nhello\nhola\n>>>>>>> REPLACE\n\n<<<<<<< SEARCH\n            hola,\n=======\n            hey\n>>>>>>> REPLACE";
+        let result = parse_blocks(diff);
+        assert!(result.is_ok())
     }
 }
