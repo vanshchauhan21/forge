@@ -173,7 +173,7 @@ fn parse_one_block_nom(position: &mut usize) -> impl FnMut(&str) -> IResult<&str
 }
 
 /// Parse the input string into a series of patch blocks
-pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> { 
+pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> {
     // Use nom::multi::many0 to parse 0 or more PatchBlock items
     use nom::combinator::map_res;
     use nom::multi::many0;
@@ -363,7 +363,7 @@ mod test {
         ));
     }
     #[test]
-    fn test_multiple_blocks_without_newline_end(){
+    fn test_multiple_blocks_without_newline_end() {
         let diff = "<<<<<<< SEARCH\nhello\nhi\n=======\nhey\nhello\nhola\n>>>>>>> REPLACE\n\n<<<<<<< SEARCH\n            hola,\n=======\n            hey\n>>>>>>> REPLACE";
         let result = parse_blocks(diff);
         assert!(result.is_ok())
