@@ -1,9 +1,18 @@
 use derive_more::derive::Display;
+use derive_setters::Setters;
 use forge_domain::{Context, ContextMessage, ModelId, Role, ToolCallId, ToolDefinition, ToolName};
 use serde::{Deserialize, Serialize};
 
 use super::response::{FunctionCall, OpenRouterToolCall};
 use super::tool_choice::{FunctionType, ToolChoice};
+
+// NOTE: only some of the anthropic models support caching.
+const CLAUDE_CACHE_SUPPORTED_MODELS: &[&str] = &[
+    "anthropic/claude-3.5-sonnet",
+    "anthropic/claude-3.5-haiku",
+    "anthropic/claude-3-haiku",
+    "anthropic/claude-3-opus",
+];
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TextContent {
@@ -112,7 +121,8 @@ pub struct ProviderPreferences {
     // Define fields as necessary
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Setters)]
+#[setters(strip_option)]
 pub struct OpenRouterRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub messages: Option<Vec<OpenRouterMessage>>,
@@ -189,7 +199,7 @@ impl From<Context> for OpenRouterRequest {
                     .map(OpenRouterMessage::from)
                     .collect::<Vec<_>>();
 
-                Some(insert_cache(messages))
+                Some(messages)
             },
             tools: {
                 let tools = request
@@ -261,22 +271,34 @@ impl From<ContextMessage> for OpenRouterMessage {
     }
 }
 
-/// Inserts cache control information into the last system or user message
-/// NOTE: This helps reduce context window usage by caching only the most recent
-/// system/user message
-fn insert_cache(mut messages: Vec<OpenRouterMessage>) -> Vec<OpenRouterMessage> {
-    if let Some(last_system_or_user) = messages
-        .iter_mut()
-        .rev()
-        .find(|msg| msg.role == OpenRouterRole::System || msg.role == OpenRouterRole::User)
-    {
-        // Avoid cloning the entire content - take ownership and transform
-        last_system_or_user.content = last_system_or_user
-            .content
-            .take()
-            .map(|content| content.cached());
+impl OpenRouterRequest {
+    /// Inserts cache control information into the last system or user message
+    /// if model supports it.
+    /// NOTE: This helps reduce context window usage
+    /// by caching only the most recent system/user message
+    pub fn cache(mut self) -> Self {
+        if let (Some(mut messages), Some(model)) = (self.messages.take(), self.model.take()) {
+            let model_id = model.as_str();
+            let should_cache = !model_id.contains("anthropic")
+                || CLAUDE_CACHE_SUPPORTED_MODELS
+                    .iter()
+                    .any(|m| model_id.contains(m));
+
+            if should_cache {
+                if let Some(msg) = messages
+                    .iter_mut()
+                    .rev()
+                    .find(|msg| matches!(msg.role, OpenRouterRole::System | OpenRouterRole::User))
+                {
+                    msg.content = msg.content.take().map(|content| content.cached());
+                }
+            }
+
+            self.messages = Some(messages);
+            self.model = Some(model);
+        }
+        self
     }
-    messages
 }
 
 impl From<Role> for OpenRouterRole {
@@ -429,7 +451,9 @@ mod tests {
             tool_choice: None,
         };
 
-        let request = OpenRouterRequest::from(context);
+        let request = OpenRouterRequest::from(context)
+            .model(ModelId::new("anthropic/claude-3.5-sonnet"))
+            .cache();
         let messages = request.messages.unwrap();
 
         // Verify first system message is NOT cached (it's not the last system/user
@@ -476,7 +500,9 @@ mod tests {
             tool_choice: None,
         };
 
-        let request = OpenRouterRequest::from(context_system_only);
+        let request = OpenRouterRequest::from(context_system_only)
+            .model(ModelId::new("anthropic/claude-3.5-sonnet"))
+            .cache();
         let messages = request.messages.unwrap();
 
         // Verify first system message is NOT cached
@@ -494,6 +520,35 @@ mod tests {
             ));
         } else {
             panic!("Last system message should be cached");
+        }
+    }
+
+    #[test]
+    fn test_should_not_cache_when_model_doesnt_support() {
+        let context = Context {
+            messages: vec![
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::System,
+                    content: "First system message".to_string(),
+                    tool_call: None,
+                }),
+                ContextMessage::ContentMessage(ContentMessage {
+                    role: Role::User,
+                    content: "Last user message".to_string(),
+                    tool_call: None,
+                }),
+            ],
+            tools: vec![],
+            tool_choice: None,
+        };
+
+        let request = OpenRouterRequest::from(context)
+            .model(ModelId::new("anthropic/claude-3-sonnet"))
+            .cache();
+
+        let messages = request.messages.unwrap();
+        for msg in messages {
+            assert!(matches!(msg.content, Some(MessageContent::Text(_))));
         }
     }
 }

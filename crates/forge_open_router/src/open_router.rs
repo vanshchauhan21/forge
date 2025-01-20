@@ -60,12 +60,11 @@ impl ProviderService for OpenRouter {
         model_id: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        let mut request = OpenRouterRequest::from(request);
+        let request = OpenRouterRequest::from(request)
+            .model(model_id.clone())
+            .stream(true)
+            .cache();
 
-        // Use the passed model_id
-        request.model = Some(model_id.clone());
-
-        request.stream = Some(true);
         let request = serde_json::to_string(&request)?;
 
         let rb = self
