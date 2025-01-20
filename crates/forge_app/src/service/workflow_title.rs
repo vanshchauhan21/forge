@@ -5,9 +5,8 @@ use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, ProviderService, ResultStream, ToolCall,
     ToolCallFull, ToolChoice, ToolDefinition,
 };
-use handlebars::Handlebars;
 use schemars::{schema_for, JsonSchema};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
@@ -36,26 +35,18 @@ struct Live {
     provider: Arc<dyn ProviderService>,
 }
 
-#[derive(Serialize)]
-struct UserPromptContext {
-    task: String,
-}
-
 impl Live {
     fn new(provider: Arc<dyn ProviderService>) -> Self {
         Self { provider }
     }
 
-    fn prompt(&self, task: &str) -> Result<String> {
+    fn system_prompt(&self) -> String {
         let template = include_str!("../prompts/title.md");
+        template.to_owned()
+    }
 
-        let mut hb = Handlebars::new();
-        hb.set_strict_mode(true);
-        hb.register_escape_fn(|str| str.to_string());
-
-        let ctx = UserPromptContext { task: task.to_string() };
-
-        Ok(hb.render_template(template, &ctx)?)
+    fn user_prompt(&self, content: &str) -> String {
+        format!("<technical_content>{}</technical_content>", content)
     }
 
     async fn execute(
@@ -88,7 +79,8 @@ impl Live {
 
 #[derive(JsonSchema, Deserialize, Debug)]
 struct Title {
-    /// Actual title content
+    /// The generated title text should be clear, concise and technically
+    /// accurate
     text: String,
 }
 
@@ -103,10 +95,12 @@ impl Title {
 #[async_trait::async_trait]
 impl TitleService for Live {
     async fn get_title(&self, chat: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
-        let user_prompt = self.prompt(&chat.content)?;
+        let system_prompt = self.system_prompt();
+        let user_prompt = self.user_prompt(&chat.content);
         let tool = Title::definition();
 
         let request = Context::default()
+            .add_message(ContextMessage::system(system_prompt))
             .add_message(ContextMessage::user(user_prompt))
             .add_tool(tool.clone())
             .tool_choice(ToolChoice::Call(tool.name));
@@ -195,9 +189,9 @@ mod tests {
     async fn test_user_prompt() {
         let provider = Arc::new(TestProvider::default());
         let chat = Live::new(provider);
-
-        insta::assert_snapshot!(chat
-            .prompt("write an rust program to generate an fibo seq.")
-            .unwrap());
+        assert_eq!(
+            chat.user_prompt("write an rust program to generate an fibo seq."),
+            "<technical_content>write an rust program to generate an fibo seq.</technical_content>"
+        );
     }
 }
