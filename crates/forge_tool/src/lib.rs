@@ -3,8 +3,10 @@ mod ask;
 mod fetch;
 mod fs;
 mod outline;
+mod patch;
 mod select;
 mod shell;
+mod syn;
 mod think;
 
 use approve::Approve;
@@ -12,6 +14,7 @@ use fetch::Fetch;
 use forge_domain::Tool;
 use fs::*;
 use outline::Outline;
+use patch::ApplyPatch;
 use select::SelectTool;
 use shell::Shell;
 use think::Think;
@@ -24,7 +27,7 @@ pub fn tools() -> Vec<Tool> {
         FSList.into(),
         FSSearch.into(),
         FSFileInfo.into(),
-        FSReplace.into(),
+        ApplyPatch.into(),
         Outline.into(),
         SelectTool.into(),
         Shell::default().into(),

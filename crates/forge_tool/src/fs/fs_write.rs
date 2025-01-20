@@ -5,7 +5,7 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::fs::syn;
+use crate::syn;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
