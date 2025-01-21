@@ -148,7 +148,6 @@ impl ToolCallService for ApplyPatch {
         }
 
         let blocks = parse::parse_blocks(&input.diff).map_err(|e| e.to_string())?;
-        let blocks_len = blocks.len();
 
         let result: Result<_, Error> = async {
             let content = fs::read_to_string(&input.path)
@@ -163,15 +162,21 @@ impl ToolCallService for ApplyPatch {
 
             let syntax_warning = syn::validate(&input.path, &modified);
 
-            let mut output = format!(
-                "Successfully applied {blocks_len} patch(es) to {path}",
-                blocks_len = blocks_len,
-                path = input.path
-            );
-            if let Some(warning) = syntax_warning {
-                output.push_str("\nWarning: ");
-                output.push_str(&warning.to_string());
-            }
+            // Handle syntax warning and build output
+            let output = if let Some(warning) = syntax_warning {
+                format!(
+                    "<file_content\n  path=\"{}\"\n  syntax_checker_warning=\"{}\">\n{}</file_content>\n",
+                    input.path,
+                    warning,
+                    modified
+                )
+            } else {
+                format!(
+                    "<file_content path=\"{}\">\n{}\n</file_content>\n",
+                    input.path,
+                    modified.trim_end()
+                )
+            };
 
             Ok(output)
         }
@@ -189,6 +194,32 @@ mod test {
 
     use super::*;
 
+    /// Normalize paths in snapshot content by replacing temporary directory
+    /// paths with [TEMP_DIR]
+    fn normalize_path(content: &str) -> String {
+        let path_attribute = regex::Regex::new(r#"[a-zA-Z]*\.([a-z]*)""#).unwrap();
+        let file_name = path_attribute
+            .find(content)
+            .unwrap()
+            .as_str()
+            .replace("\"", "");
+
+        let new_path = format!("path=\"[TEMP_DIR]/{}\"", file_name);
+        let pattern = regex::Regex::new(r#"path="[a-zA-Z0-9_/.]*""#).unwrap();
+        let content = pattern.replace_all(content, &new_path);
+        content.to_string()
+    }
+
+    #[test]
+    fn test_normalize_path() {
+        let input = "<file_content path=\"/var/folders/xy/1234567890/T/.tmpABCDEF/test.txt\">Some test content</file_content>";
+        let normalized = normalize_path(input);
+        assert_eq!(
+            normalized,
+            "<file_content path=\"[TEMP_DIR]/test.txt\">Some test content</file_content>"
+        );
+    }
+
     async fn write_test_file(path: impl AsRef<Path>, content: &str) -> Result<(), Error> {
         fs::write(&path, content)
             .await
@@ -199,17 +230,14 @@ mod test {
     fn test_error_messages() {
         // Test file not found error
         let err = Error::FileNotFound(PathBuf::from("nonexistent.txt"));
-        assert_eq!(err.to_string(), "File not found at path: nonexistent.txt");
+        insta::assert_snapshot!(err.to_string());
 
         // Test file operation error
         let io_err = Error::FileOperation(IoError::new(
             IoErrorKind::NotFound,
             "No such file or directory (os error 2)",
         ));
-        assert_eq!(
-            io_err.to_string(),
-            "File operation failed: No such file or directory (os error 2)"
-        );
+        insta::assert_snapshot!(io_err.to_string());
     }
 
     #[tokio::test]
@@ -222,8 +250,7 @@ mod test {
             })
             .await;
 
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("File not found"));
+        insta::assert_snapshot!(result.unwrap_err());
     }
 
     #[tokio::test]
@@ -246,8 +273,11 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+
+        // Also snapshot the final file content to verify whitespace preservation
+        let final_content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(final_content);
     }
 
     #[tokio::test]
@@ -266,8 +296,11 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&*file_path.to_string_lossy()));
+        insta::assert_snapshot!(normalize_path(&result));
+
+        // Also snapshot the final file content
+        let final_content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(final_content);
     }
 
     #[tokio::test]
@@ -286,8 +319,11 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied 2 patch(es)"));
-        assert!(result.contains(&*file_path.to_string_lossy()));
+        insta::assert_snapshot!(normalize_path(&result));
+
+        // Also snapshot the final file content to verify both replacements
+        let final_content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(final_content);
     }
 
     #[tokio::test]
@@ -305,8 +341,11 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&*file_path.to_string_lossy()));
+        insta::assert_snapshot!(normalize_path(&result));
+
+        // Also snapshot the final file content to verify the line was removed
+        let final_content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(final_content);
     }
 
     #[tokio::test]
@@ -329,8 +368,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content1 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content1);
 
         // Test 2: Replace block with different newline pattern
         let result = fs_replace
@@ -344,8 +384,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content2 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content2);
 
         // Test 3: Replace with empty lines preservation
         let result = fs_replace
@@ -359,8 +400,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content3 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content3);
     }
 
     #[tokio::test]
@@ -389,8 +431,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content1 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content1);
 
         // Test fuzzy matching with more variations
         let result = fs_replace
@@ -401,8 +444,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content2 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content2);
     }
 
     #[tokio::test]
@@ -431,8 +475,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content1 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content1);
 
         // Test fuzzy matching with error handling changes
         let result = fs_replace
@@ -443,8 +488,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content2 = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content2);
     }
 
     #[tokio::test]
@@ -467,9 +513,9 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
-        assert!(result.contains("Warning: Syntax"));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content);
     }
 
     #[tokio::test]
@@ -489,7 +535,8 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("Successfully applied"));
-        assert!(result.contains(&file_path.display().to_string()));
+        insta::assert_snapshot!(normalize_path(&result));
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        insta::assert_snapshot!(content);
     }
 }

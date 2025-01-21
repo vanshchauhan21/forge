@@ -1,0 +1,22 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: normalize_path(&result)
+snapshot_kind: text
+---
+<file_content path="[TEMP_DIR]/test.txt">
+
+
+// Header comment
+
+
+function test() {
+    // Inside comment
+
+    let y = 2;
+
+
+    console.log(y);
+}
+
+// Footer comment
+</file_content>

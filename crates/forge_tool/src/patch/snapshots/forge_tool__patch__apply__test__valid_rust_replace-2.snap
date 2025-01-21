@@ -1,0 +1,6 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: content
+snapshot_kind: text
+---
+fn main() { let x = 42; let y = x * 2; }

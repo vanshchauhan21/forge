@@ -13,7 +13,7 @@ pub enum Error {
     #[error("Parser initialization error: {0}")]
     Language(#[from] LanguageError),
     /// Failed to parse the content
-    #[error("Syntax error found in {file_path} as {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
+    #[error("Syntax error found in file with extension {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
     Parse {
         file_path: String,
         extension: String,
@@ -175,7 +175,7 @@ mod tests {
         let error = validate(&path, "fn main() { let x = ").unwrap();
         assert_eq!(
             error.to_string(),
-            "Syntax error found in test.rs as rs. Hint: Please retry in raw mode without HTML-encoding angle brackets."
+            "Syntax error found in file with extension rs. Hint: Please retry in raw mode without HTML-encoding angle brackets."
         );
     }
 }

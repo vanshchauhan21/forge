@@ -1,0 +1,21 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: content3
+snapshot_kind: text
+---
+// New header
+
+
+
+function test() {
+    // Inside comment
+
+    let y = 2;
+
+
+    console.log(y);
+}
+
+
+
+// Updated footer

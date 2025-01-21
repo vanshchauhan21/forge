@@ -1,0 +1,10 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: normalize_path(&result)
+snapshot_kind: text
+---
+<file_content
+  path="[TEMP_DIR]/test.rs"
+  syntax_checker_warning="Syntax error found in file with extension rs. Hint: Please retry in raw mode without HTML-encoding angle brackets.">
+fn main() { let x = 
+</file_content>

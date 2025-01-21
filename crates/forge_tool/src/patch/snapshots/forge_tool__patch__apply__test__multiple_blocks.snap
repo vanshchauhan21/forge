@@ -1,0 +1,10 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: normalize_path(&result)
+snapshot_kind: text
+---
+<file_content path="[TEMP_DIR]/test.txt">
+    New First    
+  Middle Line  
+    New Last
+</file_content>

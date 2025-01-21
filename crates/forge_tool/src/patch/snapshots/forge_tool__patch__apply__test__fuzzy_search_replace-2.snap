@@ -1,0 +1,12 @@
+---
+source: crates/forge_tool/src/patch/apply.rs
+expression: content1
+snapshot_kind: text
+---
+function calculateTotal(items) {
+  let total = 0;
+  for (const item of items) {
+    total += item.price * item.quantity;
+  }
+  return total;
+}
