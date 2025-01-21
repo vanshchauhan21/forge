@@ -886,6 +886,7 @@ dependencies = [
  "forge_prompt",
  "forge_tool",
  "forge_walker",
+ "futures",
  "handlebars",
  "insta",
  "moka2",

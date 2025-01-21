@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -29,7 +30,7 @@ pub trait APIService: Send + Sync {
 
 impl Service {
     pub async fn api_service() -> Result<impl APIService> {
-        Live::new().await
+        Live::new(std::env::current_dir()?).await
     }
 }
 
@@ -45,8 +46,8 @@ struct Live {
 }
 
 impl Live {
-    async fn new() -> Result<Self> {
-        let env = Service::environment_service().get().await?;
+    async fn new(cwd: PathBuf) -> Result<Self> {
+        let env = Service::environment_service(cwd).get().await?;
 
         let cwd: String = env.cwd.clone();
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
@@ -146,81 +147,114 @@ impl APIService for Live {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use forge_domain::ModelId;
+    use futures::future::join_all;
     use tokio_stream::StreamExt;
 
     use super::*;
 
     #[tokio::test]
     async fn test_e2e() {
+        let api = Live::new(Path::new("../../").to_path_buf()).await.unwrap();
+        let task = include_str!("./api_task.md");
+
         const MAX_RETRIES: usize = 3;
         const MATCH_THRESHOLD: f64 = 0.7; // 70% of crates must be found
-
-        let api = Live::new().await.unwrap();
-        let task = include_str!("./api_task.md");
-        let request = ChatRequest::new(ModelId::new("anthropic/claude-3.5-sonnet"), task);
-
-        let expected_crates = [
-            "forge_app",
-            "forge_ci",
-            "forge_domain",
-            "forge_main",
-            "forge_open_router",
-            "forge_prompt",
-            "forge_tool",
-            "forge_tool_macros",
-            "forge_walker",
+        const SUPPORTED_MODELS: &[&str] = &[
+            "anthropic/claude-3.5-sonnet:beta",
+            "openai/gpt-4o-2024-11-20",
+            "anthropic/claude-3.5-sonnet",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "google/gemini-flash-1.5",
+            "anthropic/claude-3-sonnet",
         ];
 
-        let mut last_error = None;
+        let test_futures = SUPPORTED_MODELS.iter().map(|&model| {
+            let api = api.clone();
+            let task = task.to_string();
 
-        for attempt in 0..MAX_RETRIES {
-            let response = api
-                .chat(request.clone())
-                .await
-                .unwrap()
-                .filter_map(|message| match message.unwrap() {
-                    ChatResponse::Text(text) => Some(text),
-                    _ => None,
-                })
-                .collect::<Vec<_>>()
-                .await
-                .join("")
-                .trim()
-                .to_string();
+            async move {
+                let request = ChatRequest::new(ModelId::new(model), task);
+                let expected_crates = [
+                    "forge_app",
+                    "forge_ci",
+                    "forge_domain",
+                    "forge_main",
+                    "forge_open_router",
+                    "forge_prompt",
+                    "forge_tool",
+                    "forge_tool_macros",
+                    "forge_walker",
+                ];
 
-            let found_crates: Vec<&str> = expected_crates
-                .iter()
-                .filter(|&crate_name| response.contains(&format!("<crate>{}</crate>", crate_name)))
-                .cloned()
-                .collect();
+                for attempt in 0..MAX_RETRIES {
+                    let response = api
+                        .chat(request.clone())
+                        .await
+                        .unwrap()
+                        .filter_map(|message| match message.unwrap() {
+                            ChatResponse::Text(text) => Some(text),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>()
+                        .await
+                        .join("")
+                        .trim()
+                        .to_string();
 
-            let match_percentage = found_crates.len() as f64 / expected_crates.len() as f64;
+                    let found_crates: Vec<&str> = expected_crates
+                        .iter()
+                        .filter(|&crate_name| {
+                            response.contains(&format!("<crate>{}</crate>", crate_name))
+                        })
+                        .cloned()
+                        .collect();
 
-            if match_percentage >= MATCH_THRESHOLD {
-                println!(
-                    "Successfully found {:.2}% of expected crates",
-                    match_percentage * 100.0
-                );
-                return;
+                    let match_percentage = found_crates.len() as f64 / expected_crates.len() as f64;
+
+                    if match_percentage >= MATCH_THRESHOLD {
+                        println!(
+                            "[{}] Successfully found {:.2}% of expected crates",
+                            model,
+                            match_percentage * 100.0
+                        );
+                        return Ok::<_, String>(());
+                    }
+
+                    if attempt < MAX_RETRIES - 1 {
+                        println!(
+                            "[{}] Attempt {}/{}: Found {}/{} crates: {:?}",
+                            model,
+                            attempt + 1,
+                            MAX_RETRIES,
+                            found_crates.len(),
+                            expected_crates.len(),
+                            found_crates
+                        );
+                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    } else {
+                        return Err(format!(
+                            "[{}] Failed: Found only {}/{} crates: {:?}",
+                            model,
+                            found_crates.len(),
+                            expected_crates.len(),
+                            found_crates
+                        ));
+                    }
+                }
+
+                unreachable!()
             }
+        });
 
-            last_error = Some(format!(
-                "Attempt {}: Only found {}/{} crates: {:?}",
-                attempt + 1,
-                found_crates.len(),
-                expected_crates.len(),
-                found_crates
-            ));
+        let results = join_all(test_futures).await;
+        let errors: Vec<_> = results.into_iter().filter_map(Result::err).collect();
 
-            // Add a small delay between retries to allow for different LLM generations
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        if !errors.is_empty() {
+            panic!("Test failures:\n{}", errors.join("\n"));
         }
-
-        panic!(
-            "Failed after {} attempts. Last error: {}",
-            MAX_RETRIES,
-            last_error.unwrap_or_default()
-        );
     }
 }

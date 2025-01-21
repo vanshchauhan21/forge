@@ -48,7 +48,6 @@ Example output structure:
 8. Potential objections: [List any weaknesses for each title]
 9. SEO alignment: [Reflect on SEO best practices for each title]
 10. Selected title: [Explain your choice and its alignment]
-11. Tool call preparation: generate_title(title: "Selected Title")
 
 </title_generation_process>
 

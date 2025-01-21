@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use forge_domain::Environment;
 use forge_walker::Walker;
@@ -11,19 +13,22 @@ pub trait EnvironmentService {
 }
 
 impl Service {
-    pub fn environment_service() -> impl EnvironmentService {
-        Live::new()
+    pub fn environment_service(base_dir: PathBuf) -> impl EnvironmentService {
+        Live::new(base_dir)
     }
 }
 
-struct Live(Mutex<Option<Environment>>);
+struct Live {
+    env: Mutex<Option<Environment>>,
+    base_dir: PathBuf,
+}
 
 impl Live {
-    pub fn new() -> Self {
-        Self(Mutex::new(None))
+    pub fn new(base_dir: PathBuf) -> Self {
+        Self { env: Mutex::new(None), base_dir }
     }
 
-    async fn from_env() -> Result<Environment> {
+    async fn from_env(cwd: Option<PathBuf>) -> Result<Environment> {
         dotenv::dotenv().ok();
         let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
         let large_model_id =
@@ -31,7 +36,11 @@ impl Live {
         let small_model_id =
             std::env::var("FORGE_SMALL_MODEL").unwrap_or("anthropic/claude-3.5-haiku".to_owned());
 
-        let cwd = std::env::current_dir()?;
+        let cwd = if let Some(cwd) = cwd {
+            cwd
+        } else {
+            std::env::current_dir()?
+        };
         let files = match Walker::new(cwd.clone())
             .with_max_depth(usize::MAX)
             .get()
@@ -65,12 +74,12 @@ impl Live {
 #[async_trait::async_trait]
 impl EnvironmentService for Live {
     async fn get(&self) -> Result<Environment> {
-        let mut guard = self.0.lock().await;
+        let mut guard = self.env.lock().await;
 
         if let Some(env) = guard.as_ref() {
             return Ok(env.clone());
         } else {
-            *guard = Some(Live::from_env().await?);
+            *guard = Some(Live::from_env(Some(self.base_dir.clone())).await?);
             Ok(guard.as_ref().unwrap().clone())
         }
     }
