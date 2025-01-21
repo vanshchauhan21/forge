@@ -1,10 +1,12 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 
 use super::Service;
 
 #[async_trait::async_trait]
 pub trait FileReadService: Send + Sync {
-    async fn read(&self, path: String) -> Result<String>;
+    async fn read(&self, path: PathBuf) -> Result<String>;
 }
 
 impl Service {
@@ -17,7 +19,7 @@ struct Live;
 
 #[async_trait::async_trait]
 impl FileReadService for Live {
-    async fn read(&self, path: String) -> Result<String> {
+    async fn read(&self, path: PathBuf) -> Result<String> {
         Ok(tokio::fs::read_to_string(path).await?)
     }
 }
@@ -32,20 +34,20 @@ pub mod tests {
     pub struct TestFileReadService(HashMap<String, String>);
 
     impl TestFileReadService {
-        pub fn new(s: HashMap<String, String>) -> Self {
-            let mut default_file_read = Self::default();
-            default_file_read.0.extend(s);
-            default_file_read
+        pub fn add(mut self, path: impl ToString, content: impl ToString) -> Self {
+            self.0.insert(path.to_string(), content.to_string());
+            self
         }
     }
 
     #[async_trait::async_trait]
     impl FileReadService for TestFileReadService {
-        async fn read(&self, path: String) -> Result<String> {
-            self.0.get(&path).cloned().ok_or_else(|| {
+        async fn read(&self, path: PathBuf) -> Result<String> {
+            let path_str = path.to_string_lossy().to_string();
+            self.0.get(&path_str).cloned().ok_or_else(|| {
                 std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("File not found: {}", path),
+                    format!("File not found: {}", path_str),
                 )
                 .into()
             })

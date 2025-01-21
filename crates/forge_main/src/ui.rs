@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use colored::Colorize;
 use forge_app::Routes;
@@ -20,10 +22,15 @@ pub struct UI {
     console: Console,
     verbose: bool,
     exec: Option<String>,
+    custom_instructions: Option<PathBuf>,
 }
 
 impl UI {
-    pub async fn new(verbose: bool, exec: Option<String>) -> Result<Self> {
+    pub async fn new(
+        verbose: bool,
+        exec: Option<String>,
+        custom_instructions: Option<PathBuf>,
+    ) -> Result<Self> {
         let api = Routes::init()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
@@ -34,6 +41,7 @@ impl UI {
             console: Console,
             verbose,
             exec,
+            custom_instructions,
         })
     }
 
@@ -102,6 +110,7 @@ impl UI {
             content,
             model: model.clone(),
             conversation_id: self.state.current_conversation_id,
+            custom_instructions: self.custom_instructions.clone(),
         };
 
         match self.api.chat(chat).await {

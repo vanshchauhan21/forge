@@ -1,7 +1,6 @@
 ---
 source: crates/forge_app/src/service/user_prompt.rs
 expression: rendered_prompt
-snapshot_kind: text
 ---
 <task>read this file content from @foo.txt and @bar.txt</task>
 

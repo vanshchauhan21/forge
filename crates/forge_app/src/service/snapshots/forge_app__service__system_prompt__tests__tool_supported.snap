@@ -15,8 +15,8 @@ First, let's establish the current system information:
 <file_list>
  - file1.txt
  - file2.txt
-  </file_list>
-  </system_info>
+</file_list>
+</system_info>
 
 <tool_information>
 </tool_information>

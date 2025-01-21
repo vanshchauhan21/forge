@@ -9,9 +9,9 @@ First, let's establish the current system information:
 <home_directory>{{env.home}}</home_directory>
 <file_list>
 {{#each env.files}} - {{this}}
-  {{/each}}
-  </file_list>
-  </system_info>
+{{/each}}
+</file_list>
+</system_info>
 
 <tool_information>
 {{#if (not tool_supported)}}
@@ -34,6 +34,11 @@ Critical Rules:
 7. Always validate your changes by compiling and running tests.
 8. Execute shell commands in non-interactive mode to ensure fail-fast behavior, preventing any user input prompts or execution delays.
 9. Use feedback from the user to improve your responses.
+{{#if custom_instructions}}
+<custom_user_instructions>
+{{custom_instructions}}
+</custom_user_instructions>
+{{/if}}
 
 Approach to Tasks:
 

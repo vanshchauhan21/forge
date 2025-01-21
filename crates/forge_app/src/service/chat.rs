@@ -9,10 +9,8 @@ use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
-use super::system_prompt::SystemPromptService;
 use super::tool_service::ToolService;
-use super::user_prompt::UserPromptService;
-use super::Service;
+use super::{PromptService, Service};
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
@@ -26,9 +24,9 @@ pub trait ChatService: Send + Sync {
 impl Service {
     pub fn chat_service(
         provider: Arc<dyn ProviderService>,
-        system_prompt: Arc<dyn SystemPromptService>,
+        system_prompt: Arc<dyn PromptService>,
         tool: Arc<dyn ToolService>,
-        user_prompt: Arc<dyn UserPromptService>,
+        user_prompt: Arc<dyn PromptService>,
     ) -> impl ChatService {
         Live::new(provider, system_prompt, tool, user_prompt)
     }
@@ -37,17 +35,17 @@ impl Service {
 #[derive(Clone)]
 struct Live {
     provider: Arc<dyn ProviderService>,
-    system_prompt: Arc<dyn SystemPromptService>,
+    system_prompt: Arc<dyn PromptService>,
     tool: Arc<dyn ToolService>,
-    user_prompt: Arc<dyn UserPromptService>,
+    user_prompt: Arc<dyn PromptService>,
 }
 
 impl Live {
     fn new(
         provider: Arc<dyn ProviderService>,
-        system_prompt: Arc<dyn SystemPromptService>,
+        system_prompt: Arc<dyn PromptService>,
         tool: Arc<dyn ToolService>,
-        user_prompt: Arc<dyn UserPromptService>,
+        user_prompt: Arc<dyn PromptService>,
     ) -> Self {
         Self { provider, system_prompt, tool, user_prompt }
     }
@@ -159,8 +157,8 @@ impl ChatService for Live {
         chat: forge_domain::ChatRequest,
         request: Context,
     ) -> ResultStream<ChatResponse, anyhow::Error> {
-        let system_prompt = self.system_prompt.get_system_prompt(&chat.model).await?;
-        let user_prompt = self.user_prompt.get_user_prompt(&chat.content).await?;
+        let system_prompt = self.system_prompt.get(&chat).await?;
+        let user_prompt = self.user_prompt.get(&chat).await?;
         let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         let request = request
@@ -233,9 +231,8 @@ mod tests {
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, ChatService, Live};
-    use crate::service::tests::{TestProvider, TestSystemPrompt};
+    use crate::service::tests::{TestPrompt, TestProvider};
     use crate::service::tool_service::ToolService;
-    use crate::service::user_prompt::tests::TestUserPrompt;
 
     struct TestToolService {
         result: Mutex<Vec<Value>>,
@@ -294,9 +291,9 @@ mod tests {
             } else {
                 self.system_prompt.as_str()
             };
-            let system_prompt = Arc::new(TestSystemPrompt::new(system_prompt_message));
+            let system_prompt = Arc::new(TestPrompt::default().system(system_prompt_message));
             let tool = Arc::new(TestToolService::new(self.tools.clone()));
-            let user_prompt = Arc::new(TestUserPrompt);
+            let user_prompt = Arc::new(TestPrompt::default());
             let chat = Live::new(
                 provider.clone(),
                 system_prompt.clone(),

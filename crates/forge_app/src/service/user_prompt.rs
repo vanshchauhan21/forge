@@ -1,20 +1,16 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use forge_domain::ChatRequest;
 use forge_prompt::Prompt;
 use handlebars::Handlebars;
 use serde::Serialize;
 
 use super::file_read::FileReadService;
-use super::Service;
-
-#[async_trait::async_trait]
-pub trait UserPromptService: Send + Sync {
-    async fn get_user_prompt(&self, task: &str) -> Result<String>;
-}
+use super::{PromptService, Service};
 
 impl Service {
-    pub fn user_prompt_service(file_read: Arc<dyn FileReadService>) -> impl UserPromptService {
+    pub fn user_prompt_service(file_read: Arc<dyn FileReadService>) -> impl PromptService {
         Live { file_read }
     }
 }
@@ -36,22 +32,22 @@ struct FileRead {
 }
 
 #[async_trait::async_trait]
-impl UserPromptService for Live {
-    async fn get_user_prompt(&self, task: &str) -> Result<String> {
+impl PromptService for Live {
+    async fn get(&self, request: &ChatRequest) -> Result<String> {
         let template = include_str!("../prompts/coding/user_task.md");
-        let parsed_task = Prompt::parse(task.to_string());
+        let parsed_task = Prompt::parse(request.content.to_string());
 
         let mut file_contents = vec![];
-        for file in parsed_task.files() {
-            let content = self.file_read.read(file.clone()).await?;
-            file_contents.push(FileRead { path: file, content });
+        for file_path in parsed_task.files() {
+            let content = self.file_read.read(file_path.clone().into()).await?;
+            file_contents.push(FileRead { path: file_path, content });
         }
 
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
         hb.register_escape_fn(|str| str.to_string());
 
-        let ctx = Context { task: task.to_string(), files: file_contents };
+        let ctx = Context { task: request.content.to_string(), files: file_contents };
 
         Ok(hb.render_template(template, &ctx)?)
     }
@@ -59,29 +55,24 @@ impl UserPromptService for Live {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashMap;
 
     use super::*;
     use crate::service::file_read::tests::TestFileReadService;
 
-    pub struct TestUserPrompt;
-
-    #[async_trait::async_trait]
-    impl UserPromptService for TestUserPrompt {
-        async fn get_user_prompt(&self, task: &str) -> Result<String> {
-            Ok(format!("<task>{}</task>", task))
-        }
-    }
-
     #[tokio::test]
     async fn test_render_user_prompt() {
-        let mut file_map = HashMap::new();
-        file_map.insert("foo.txt".to_string(), "Hello World - Foo".to_string());
-        file_map.insert("bar.txt".to_string(), "Hello World - Bar".to_string());
+        let file_read = Arc::new(
+            TestFileReadService::default()
+                .add("foo.txt", "Hello World - Foo")
+                .add("bar.txt", "Hello World - Bar"),
+        );
 
-        let file_read = Arc::new(TestFileReadService::new(file_map));
+        let request = ChatRequest::new(
+            forge_domain::ModelId::new("gpt-3.5-turbo"),
+            "read this file content from @foo.txt and @bar.txt",
+        );
         let rendered_prompt = Service::user_prompt_service(file_read)
-            .get_user_prompt("read this file content from @foo.txt and @bar.txt")
+            .get(&request)
             .await
             .unwrap();
         insta::assert_snapshot!(rendered_prompt);

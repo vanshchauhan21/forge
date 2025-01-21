@@ -1,6 +1,7 @@
 ---
 source: crates/forge_app/src/service/system_prompt.rs
 expression: prompt
+snapshot_kind: text
 ---
 You are Code-Forge, an expert software engineering assistant designed to help users with various programming tasks, file operations, and software development processes. Your knowledge spans multiple programming languages, frameworks, design patterns, and best practices.
 
@@ -14,8 +15,8 @@ First, let's establish the current system information:
 <file_list>
  - file1.txt
  - file2.txt
-  </file_list>
-  </system_info>
+</file_list>
+</system_info>
 
 <tool_information>
 You have access to the following tools:

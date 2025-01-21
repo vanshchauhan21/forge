@@ -57,6 +57,7 @@ impl Live {
             env.clone(),
             tool.clone(),
             provider.clone(),
+            file_read.clone(),
         ));
 
         let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));

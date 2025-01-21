@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use clap::Parser;
 use forge_main::{banner, UI};
@@ -10,6 +12,9 @@ struct Cli {
     /// Enable verbose output, showing additional tool information
     #[arg(long, default_value_t = false)]
     verbose: bool,
+    /// Path to runtime configuration file for AI customization
+    #[arg(long, short)]
+    custom_instructions: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -20,7 +25,7 @@ async fn main() -> Result<()> {
     banner::display()?;
 
     // Initialize and run the UI
-    let mut ui = UI::new(cli.verbose, cli.exec).await?;
+    let mut ui = UI::new(cli.verbose, cli.exec, cli.custom_instructions).await?;
     ui.run().await?;
 
     Ok(())

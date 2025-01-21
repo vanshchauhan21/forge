@@ -13,9 +13,16 @@ mod workflow_title;
 pub use api::*;
 pub use chat::*;
 pub use completion::*;
+use forge_domain::ChatRequest;
 pub use ui::*;
 
 pub struct Service;
+
+#[async_trait::async_trait]
+pub trait PromptService: Send + Sync {
+    /// Generate prompt from a ChatRequest
+    async fn get(&self, request: &ChatRequest) -> anyhow::Result<String>;
+}
 
 #[cfg(test)]
 mod tests {
@@ -24,26 +31,28 @@ mod tests {
     use anyhow::{bail, Result};
     use derive_setters::Setters;
     use forge_domain::{
-        ChatCompletionMessage, Context, Model, ModelId, Parameters, ProviderService, ResultStream,
+        ChatCompletionMessage, ChatRequest, Context, Model, ModelId, Parameters, ProviderService,
+        ResultStream,
     };
     use tokio_stream::StreamExt;
 
-    use super::system_prompt::SystemPromptService;
+    use super::PromptService;
 
-    pub struct TestSystemPrompt {
-        prompt: String,
-    }
-
-    impl TestSystemPrompt {
-        pub fn new(s: impl ToString) -> Self {
-            Self { prompt: s.to_string() }
-        }
+    #[derive(Default, Setters)]
+    #[setters(into, strip_option)]
+    pub struct TestPrompt {
+        system: Option<String>,
     }
 
     #[async_trait::async_trait]
-    impl SystemPromptService for TestSystemPrompt {
-        async fn get_system_prompt(&self, _: &ModelId) -> Result<String> {
-            Ok(self.prompt.to_string())
+    impl PromptService for TestPrompt {
+        async fn get(&self, request: &ChatRequest) -> Result<String> {
+            let content = match self.system.clone() {
+                None => format!("<task>{}</task>", request.content),
+                Some(prompt) => prompt,
+            };
+
+            Ok(content)
         }
     }
 
