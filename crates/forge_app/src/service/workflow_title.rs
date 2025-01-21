@@ -130,7 +130,7 @@ mod tests {
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, Live, TitleService};
-    use crate::service::tests::TestProvider;
+    use crate::service::test::TestProvider;
     use crate::service::workflow_title::Title;
 
     #[derive(Default)]

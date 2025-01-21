@@ -96,8 +96,7 @@ mod tests {
     use insta::assert_snapshot;
 
     use super::*;
-    use crate::service::file_read::tests::TestFileReadService;
-    use crate::service::tests::TestProvider;
+    use crate::service::test::{TestFileReadService, TestProvider};
 
     fn test_env() -> Environment {
         Environment {

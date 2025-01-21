@@ -231,7 +231,7 @@ mod tests {
     use tokio_stream::StreamExt;
 
     use super::{ChatRequest, ChatService, Live};
-    use crate::service::tests::{TestPrompt, TestProvider};
+    use crate::service::test::{TestPrompt, TestProvider};
     use crate::service::tool_service::ToolService;
 
     struct TestToolService {

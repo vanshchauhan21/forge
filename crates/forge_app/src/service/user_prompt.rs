@@ -57,7 +57,7 @@ impl PromptService for Live {
 pub mod tests {
 
     use super::*;
-    use crate::service::file_read::tests::TestFileReadService;
+    use crate::service::test::TestFileReadService;
 
     #[tokio::test]
     async fn test_render_user_prompt() {
