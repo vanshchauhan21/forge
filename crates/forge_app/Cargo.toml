@@ -8,8 +8,6 @@ diesel = { version = "2.1.0", features = ["sqlite", "r2d2", "chrono", "uuid"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 diesel_migrations = "2.1.0"
-axum = { version = "^0.8.0", features = ["macros"] }
-tower-http = { version = "0.6", features = ["cors"] }
 tokio = { version = "1", features = ["full", "test-util"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 clap = { version = "4.5.23", features = ["derive"] }

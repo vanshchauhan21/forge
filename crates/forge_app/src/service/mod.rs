@@ -11,7 +11,6 @@ mod user_prompt;
 mod workflow_title;
 
 pub use api::*;
-pub use chat::*;
 pub use completion::*;
 use forge_domain::ChatRequest;
 pub use ui::*;

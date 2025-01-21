@@ -1,8 +1,9 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use colored::Colorize;
-use forge_app::Routes;
+use forge_app::{APIService, Service};
 use forge_domain::{ChatRequest, ChatResponse, Command, ConversationId, ModelId, Usage, UserInput};
 use tokio_stream::StreamExt;
 
@@ -18,7 +19,7 @@ struct UIState {
 
 pub struct UI {
     state: UIState,
-    api: Routes,
+    api: Arc<dyn APIService>,
     console: Console,
     verbose: bool,
     exec: Option<String>,
@@ -31,9 +32,7 @@ impl UI {
         exec: Option<String>,
         custom_instructions: Option<PathBuf>,
     ) -> Result<Self> {
-        let api = Routes::init()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to initialize API: {}", e))?;
+        let api = Arc::new(Service::api_service().await?);
 
         Ok(Self {
             state: Default::default(),
