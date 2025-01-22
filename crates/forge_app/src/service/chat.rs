@@ -289,7 +289,7 @@ mod tests {
             } else {
                 self.system_prompt.as_str()
             };
-            let system_prompt = Arc::new(TestPrompt::default().system(system_prompt_message));
+            let system_prompt = Arc::new(TestPrompt::new(system_prompt_message));
             let tool = Arc::new(TestToolService::new(self.tools.clone()));
             let user_prompt = Arc::new(TestPrompt::default());
             let chat = Live::new(

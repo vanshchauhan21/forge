@@ -37,10 +37,15 @@ impl FileReadService for TestFileReadService {
     }
 }
 
-#[derive(Default, Setters)]
-#[setters(into, strip_option)]
+#[derive(Default)]
 pub struct TestPrompt {
     system: Option<String>,
+}
+
+impl TestPrompt {
+    pub fn new(system: impl Into<String>) -> Self {
+        Self { system: Some(system.into()) }
+    }
 }
 
 #[async_trait::async_trait]
