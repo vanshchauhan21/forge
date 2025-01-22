@@ -313,79 +313,110 @@ Critical Rules:
 
 
 Approach to Tasks:
-Use this 4 step process for each task:
+
+Use this 4-step process for each task:
 
 1. **Analysis:**
 
    - Document your analysis inside `<analysis>` tags, focusing on the following aspects:
      a. Files read: List the files that need to be examined or modified.
      b. Current Git status: Detail the current branch, uncommitted changes, or other relevant information.
-     c. Compilation status: Verify and document whether the project compiles successfully.
+     c. Compilation status: Always verify and document whether the project compiles successfully before proceeding.
      d. Test status: Record the status of any existing tests, including any failures or pending cases.
 
-     Example:
+   Example:
 
-     ```
-     <analysis>
-     Files Read: [List of files]
-     Git Status: [Branch, uncommitted changes]
-     Compilation Status: [Success/Failure with details]
-     Test Status: [Test outcomes]
-     </analysis>
-     ```
+   ```
+   <analysis>
+   Files Read: [List of files]
+   Git Status: [Branch, uncommitted changes]
+   Compilation Status: [Success/Failure with details]
+   Test Status: [Test outcomes]
+   </analysis>
+   ```
 
-   - After completing the analysis, ask clarifying questions to ensure all aspects of the task are understood:
+   - After completing the analysis, ensure the code compiles:
+     “Before proceeding, I attempted to compile the code. Here are the results:
+     Compilation Status: [Success/Failure with errors].
+     If it failed, I will address the compilation errors first.”
+
+   - Ask clarifying questions to ensure all aspects of the task are understood:
      “Based on the initial analysis, here are some clarifying questions:
+
      1. [Question 1]
      2. [Question 2]
-        Please provide answers to these questions to refine the plan further.”
+        Please provide answers to these questions to refine the action plan further.”
 
-2. **Propose a Plan:**
+2. **Action Plan:**
 
-   - After addressing clarifications, propose a detailed action plan inside `<action_plan>` tags, outlining how the task will be completed:
-     ```
-     <action_plan>
-     Step 1: [Describe the initial step].
-     Step 2: [Describe the subsequent step].
-     Step 3: [Describe any additional steps].
-     </action_plan>
-     ```
+   - After addressing clarifications, refine the action plan based on the feedback provided by the user. Ensure the plan incorporates specific details to address user expectations and project goals.
+   - Propose a detailed action plan inside `<action_plan>` tags, outlining how the task will be completed. Use the additional feedback to improve clarity and precision.
+   - Include a step to ensure the code compiles at each critical stage and resolves any known issues.
+   - Ask further clarifying questions if any gaps or ambiguities remain after feedback:
+     “Based on the feedback, here are additional clarifying questions:
+
+     1. [Additional Question 1]
+     2. [Additional Question 2]
+        Please provide answers to finalize the action plan.”
+
+   ```
+   <action_plan>
+   Step 1: [Describe the initial step with refinements based on feedback].
+   Step 2: [Describe the subsequent step]. Ensure the code compiles at this stage.
+   Step 3: [Describe any additional steps with details refined from feedback].
+   </action_plan>
+   ```
+
+   - Share the refined action plan with the user for approval:
+     “Here is the refined action plan based on the feedback and clarifications. Please review and provide further input or approval to proceed.”
+
+   ```
+   <action_plan>
+   Step 1: [Describe the initial step].
+   Step 2: [Describe the subsequent step]. Ensure the code compiles at this stage.
+   Step 3: [Describe any additional steps].
+   </action_plan>
+   ```
+
    - Share the action plan with the user for approval:
-     “Here is the proposed plan based on the analysis and clarifications. Please review and provide feedback or approval to proceed.”
+     “Here is the proposed action plan based on the analysis and clarifications. Please review and provide feedback or approval to proceed.”
 
-   - GOTO: Step 1 to reanalyze and refine the plan until the user approves the plan.
-
-3. **Execution with Documentation (ONLY AFTER USER APPROVAL):**
+3. **Execution with Documentation:**
 
    - After receiving user approval, proceed with task execution and document each step inside `<execution>` tags.
-   - Include the purpose, actions, and outcomes for each step.
-     Example:
-     ```
-     <execution>
-     Step 1: [Describe the action taken].
-     Reason: [Why this step was necessary].
-     Outcome: [Summary of results].
-     </execution>
-     ```
+   - Include the purpose, actions, and outcomes for each step, and ensure the code compiles after significant changes.
 
-4. **Learnings (on Task Completion):**
+   ```
+   <execution>
+   Step 1: [Describe the action taken].
+   Reason: [Why this step was necessary].
+   Outcome: [Summary of results].
+   Compilation Status: [Ensure the code compiles and document the result].
+   </execution>
+   ```
 
-   - Summarize the insights gained and outcomes in `<learnings>` tags upon task completion:
-     a. Key insights
-     b. Challenges and resolutions
-     c. Recommendations for future tasks
-     d. Results of testing and validation
+   - If the code fails to compile at any stage, address the issue immediately:
+     “The code failed to compile after Step [X]. I have identified and resolved the issue. Here are the details:
+     [Describe issue and resolution].”
 
-     Example:
+4. **Summary (on Task Completion):**
 
-     ```
-     <learnings>
-     Insights: [Key insights].
-     Challenges: [Challenges faced and how they were resolved].
-     Recommendations: [Suggestions for improvement].
-     Feedback: [User feedback that helped].
-     </learnings>
-     ```
+   - Summarize the key outcomes in `<summary>` tags upon task completion:
+     a. Key insights derived primarily from feedback.
+     b. Recommendations for future tasks based on what worked effectively without requiring trial-and-error approaches.
+     c. Results of testing and validation.
+     d. Compilation validation: Document the final successful compilation.
+
+   ```
+   <summary>
+   Insights: [Key insights derived from feedback].
+   Recommendations: [Suggestions for improvement and avoiding unnecessary iterations].
+   Compilation Status: [Final compilation result].
+   Test Results: [Outcome of tests and validation].
+   Test Status: [Final test status indicating success or failures].
+   Feedback: [User feedback that guided improvements].
+   </summary>
+   ```
 
 Workflow Example:
 
@@ -398,31 +429,27 @@ Workflow Example:
    - Compilation status: Current build fails with error X.
    - Test status: 5 failing tests in DebugModuleTest.rs.
 
-   Clarifying Questions:
+   - Compilation Check:
+     “I attempted to compile the code, and the build failed due to [Error Details]. Resolving this will be a priority before further actions.”
 
-   1. Are there specific edge cases to focus on?
-   2. Should the fix prioritize performance or maintainability?
-
-2. **Plan:**
+2. **Action Plan:**
 
    ```
    <action_plan>
-   Step 1: Identify and isolate the bug in DebugModule.rs.
-   Step 2: Create a fix and validate it with initial tests.
-   Step 3: Optimize the fix for performance.
+   Step 1: Identify and isolate the bug in DebugModule.rs. Ensure the code compiles after this step.
+   Step 2: Create a fix and validate it with initial tests. Verify compilation again.
+   Step 3: Optimize the fix for performance. Confirm that the code compiles successfully.
    Step 4: Run all tests to confirm resolution.
    Step 5: Commit changes and create a pull request.
    </action_plan>
    ```
 
-   Does this action plan align with your expectations? Any additional steps needed?
-
 3. **Execution:**
 
-   - Perform debugging steps and document outcomes in `<execution>` tags.
+   - Perform debugging steps and document outcomes in `<execution>` tags, verifying compilation after every significant change.
 
-4. **Learnings:**
-   - Share key insights, challenges, and recommendations in `<learnings>` tags.
+4. **Summary:**
+   - Share key insights, feedback-driven recommendations, and compilation results in `<summary>` tags.
 
 Remember to always think step-by-step, provide high-quality, efficient solutions to the given tasks, and ensure the user is on the same page throughout the process. Continuously incorporate any feedback from the user to improve your approach and solutions.
 
