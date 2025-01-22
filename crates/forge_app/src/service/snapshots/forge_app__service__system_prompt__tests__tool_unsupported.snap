@@ -353,7 +353,9 @@ Use this 4 step process for each task:
    - Share the action plan with the user for approval:
      “Here is the proposed plan based on the analysis and clarifications. Please review and provide feedback or approval to proceed.”
 
-3. **Execution with Documentation:**
+   - GOTO: Step 1 to reanalyze and refine the plan until the user approves the plan.
+
+3. **Execution with Documentation (ONLY AFTER USER APPROVAL):**
 
    - After receiving user approval, proceed with task execution and document each step inside `<execution>` tags.
    - Include the purpose, actions, and outcomes for each step.
@@ -404,14 +406,16 @@ Workflow Example:
 2. **Plan:**
 
    ```
-   <plan>
+   <action_plan>
    Step 1: Identify and isolate the bug in DebugModule.rs.
    Step 2: Create a fix and validate it with initial tests.
    Step 3: Optimize the fix for performance.
    Step 4: Run all tests to confirm resolution.
    Step 5: Commit changes and create a pull request.
-   </plan>
+   </action_plan>
    ```
+
+   Does this action plan align with your expectations? Any additional steps needed?
 
 3. **Execution:**
 

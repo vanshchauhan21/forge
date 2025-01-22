@@ -52,13 +52,29 @@ pub use tool_service::*;
 pub use tool_usage::*;
 pub use user_interaction::*;
 
-/// Trait for accessing tool service instances.
-/// This trait provides a clean architecture approach to accessing tool services
-/// across the application.
+/// Core domain trait providing access to services and repositories.
+/// This trait follows clean architecture principles for dependency management
+/// and service/repository composition.
 pub trait ForgeDomain {
     /// The concrete type implementing tool service capabilities
     type ToolService: ToolService;
+    /// The concrete type implementing provider service capabilities
+    type ProviderService: ProviderService;
+    /// The concrete type implementing conversation repository
+    type ConversationRepo: ConversationRepository;
+    /// The concrete type implementing configuration repository
+    type ConfigRepo: ConfigurationRepository;
+    /// The concrete type implementing environment repository
+    type EnvironmentRepo: EnvironmentRepository;
 
     /// Get a reference to the tool service instance
     fn tool_service(&self) -> &Self::ToolService;
+    /// Get a reference to the provider service instance
+    fn provider_service(&self) -> &Self::ProviderService;
+    /// Get a reference to the conversation repository instance
+    fn conversation_repository(&self) -> &Self::ConversationRepo;
+    /// Get a reference to the configuration repository instance
+    fn config_repository(&self) -> &Self::ConfigRepo;
+    /// Get a reference to the environment repository instance
+    fn environment_repository(&self) -> &Self::EnvironmentRepo;
 }
