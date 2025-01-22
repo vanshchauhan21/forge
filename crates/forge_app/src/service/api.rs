@@ -149,108 +149,97 @@ mod tests {
     use std::path::Path;
 
     use forge_domain::ModelId;
-    use futures::future::join_all;
     use tokio_stream::StreamExt;
 
     use super::*;
 
-    #[tokio::test]
-    async fn test_e2e() {
-        let api = Live::new(Path::new("../../").to_path_buf()).await.unwrap();
-        let task = include_str!("./api_task.md");
+    const MAX_RETRIES: usize = 3;
+    const SUPPORTED_MODELS: &[&str] = &[
+        "anthropic/claude-3.5-sonnet:beta",
+        "openai/gpt-4o-2024-11-20",
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini",
+        "google/gemini-flash-1.5",
+        "anthropic/claude-3-sonnet",
+    ];
 
-        const MAX_RETRIES: usize = 3;
-        const MATCH_THRESHOLD: f64 = 0.7; // 70% of crates must be found
-        const SUPPORTED_MODELS: &[&str] = &[
-            "anthropic/claude-3.5-sonnet:beta",
-            "openai/gpt-4o-2024-11-20",
-            "anthropic/claude-3.5-sonnet",
-            "openai/gpt-4o",
-            "openai/gpt-4o-mini",
-            "google/gemini-flash-1.5",
-            "anthropic/claude-3-sonnet",
-        ];
+    // Helper function for testing model responses
+    async fn test_model_responses<T>(
+        api: &Live,
+        task: String,
+        check_response: impl Fn(&str) -> Result<T, String> + Send + Sync + Copy + 'static,
+    ) -> Vec<String>
+    where
+        T: Send + 'static,
+    {
+        let mut errors = Vec::new();
 
-        let test_futures = SUPPORTED_MODELS.iter().map(|&model| {
-            let api = api.clone();
-            let task = task.to_string();
+        for &model in SUPPORTED_MODELS {
+            let request = ChatRequest::new(ModelId::new(model), task.clone());
 
-            async move {
-                let request = ChatRequest::new(ModelId::new(model), task);
-                let expected_crates = [
-                    "forge_app",
-                    "forge_ci",
-                    "forge_domain",
-                    "forge_main",
-                    "forge_open_router",
-                    "forge_prompt",
-                    "forge_tool",
-                    "forge_tool_macros",
-                    "forge_walker",
-                ];
+            for attempt in 0..MAX_RETRIES {
+                let response = api
+                    .chat(request.clone())
+                    .await
+                    .unwrap()
+                    .filter_map(|message| match message.unwrap() {
+                        ChatResponse::Text(text) => Some(text),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .await
+                    .join("")
+                    .trim()
+                    .to_string();
 
-                for attempt in 0..MAX_RETRIES {
-                    let response = api
-                        .chat(request.clone())
-                        .await
-                        .unwrap()
-                        .filter_map(|message| match message.unwrap() {
-                            ChatResponse::Text(text) => Some(text),
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>()
-                        .await
-                        .join("")
-                        .trim()
-                        .to_string();
-
-                    let found_crates: Vec<&str> = expected_crates
-                        .iter()
-                        .filter(|&crate_name| {
-                            response.contains(&format!("<crate>{}</crate>", crate_name))
-                        })
-                        .cloned()
-                        .collect();
-
-                    let match_percentage = found_crates.len() as f64 / expected_crates.len() as f64;
-
-                    if match_percentage >= MATCH_THRESHOLD {
-                        println!(
-                            "[{}] Successfully found {:.2}% of expected crates",
-                            model,
-                            match_percentage * 100.0
-                        );
-                        return Ok::<_, String>(());
+                match check_response(&response) {
+                    Ok(_) => {
+                        println!("[{}] Successfully checked response", model);
+                        break;
                     }
-
-                    if attempt < MAX_RETRIES - 1 {
-                        println!(
-                            "[{}] Attempt {}/{}: Found {}/{} crates: {:?}",
-                            model,
-                            attempt + 1,
-                            MAX_RETRIES,
-                            found_crates.len(),
-                            expected_crates.len(),
-                            found_crates
-                        );
-                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    } else {
-                        return Err(format!(
-                            "[{}] Failed: Found only {}/{} crates: {:?}",
-                            model,
-                            found_crates.len(),
-                            expected_crates.len(),
-                            found_crates
-                        ));
+                    Err(err) => {
+                        if attempt < MAX_RETRIES - 1 {
+                            println!(
+                                "[{}] Attempt {}/{}: {}",
+                                model,
+                                attempt + 1,
+                                MAX_RETRIES,
+                                err
+                            );
+                        } else {
+                            errors.push(format!(
+                                "[{}] Failed: {} after {} attempts",
+                                model, err, MAX_RETRIES
+                            ));
+                        }
                     }
                 }
-
-                unreachable!()
             }
-        });
+        }
 
-        let results = join_all(test_futures).await;
-        let errors: Vec<_> = results.into_iter().filter_map(Result::err).collect();
+        errors
+    }
+
+    #[tokio::test]
+    async fn test_find_cat_name() {
+        let api = Live::new(Path::new("../../").to_path_buf()).await.unwrap();
+        let task = "There is a cat hidden in the codebase. What is its name?".to_string();
+
+        let errors = test_model_responses(&api, task, move |response| {
+            let response_lower = response.to_lowercase();
+            if !response_lower.contains("cat") {
+                return Err("Response doesn't mention the cat".to_string());
+            }
+            if !response_lower.contains("juniper") {
+                return Err("Cat's name 'Juniper' not found in response".to_string());
+            }
+            if !response_lower.contains("code-forge") && !response_lower.contains("codeforge") {
+                return Err("Response doesn't mention Code-Forge context".to_string());
+            }
+            Ok(())
+        })
+        .await;
 
         if !errors.is_empty() {
             panic!("Test failures:\n{}", errors.join("\n"));
