@@ -7,6 +7,7 @@ use forge_app::{APIService, Service};
 use forge_domain::{ChatRequest, ChatResponse, Command, ConversationId, ModelId, Usage, UserInput};
 use tokio_stream::StreamExt;
 
+use crate::keyboard::{KeyEvent, KeyboardEvents};
 use crate::{Console, StatusDisplay, CONSOLE};
 
 #[derive(Default)]
@@ -92,7 +93,7 @@ impl UI {
                 }
                 Command::Message(ref content) => {
                     self.state.current_content = Some(content.clone());
-                    self.handle_message(content.clone(), &model).await?;
+                    self.chat(content.clone(), &model).await?;
                     input = self
                         .console
                         .prompt(self.format_title().as_deref(), None)
@@ -104,7 +105,7 @@ impl UI {
         Ok(())
     }
 
-    async fn handle_message(&mut self, content: String, model: &ModelId) -> Result<()> {
+    async fn chat(&mut self, content: String, model: &ModelId) -> Result<()> {
         let chat = ChatRequest {
             content,
             model: model.clone(),
@@ -112,33 +113,46 @@ impl UI {
             custom_instructions: self.custom_instructions.clone(),
         };
 
+        self.process_chat(chat).await
+    }
+
+    async fn process_chat(&mut self, chat: ChatRequest) -> Result<()> {
+        // Register the ESC key for keyboard events
+        let mut keyboard = KeyboardEvents::new();
+        keyboard.register(KeyEvent::Esc);
         match self.api.chat(chat).await {
-            Ok(mut stream) => {
-                while let Some(message) = stream.next().await {
-                    match message {
-                        Ok(message) => self.handle_chat_response(message)?,
-                        Err(err) => {
+            Ok(mut stream) => self.handle_chat_stream(&mut stream, &mut keyboard).await,
+            Err(err) => Err(err),
+        }
+    }
+
+    async fn handle_chat_stream(
+        &mut self,
+        stream: &mut (impl StreamExt<Item = Result<ChatResponse>> + Unpin),
+        keyboard: &mut KeyboardEvents,
+    ) -> Result<()> {
+        loop {
+            tokio::select! {
+                maybe_key_pressed = keyboard.is_pressed() => {
+                    if maybe_key_pressed {
+                        return Ok(());
+                    }
+                }
+                maybe_message = stream.next() => {
+                    match maybe_message {
+                        Some(Ok(message)) => self.handle_chat_response(message)?,
+                        Some(Err(err)) => {
                             CONSOLE.writeln(
                                 StatusDisplay::failed(err.to_string(), self.state.usage.clone())
                                     .format(),
                             )?;
+                            return Err(err);
                         }
+                        None => return Ok(()),
                     }
                 }
             }
-            Err(err) => {
-                CONSOLE.writeln(
-                    StatusDisplay::failed_with(
-                        err.to_string().as_str(),
-                        "Failed to establish chat stream",
-                        self.state.usage.clone(),
-                    )
-                    .format(),
-                )?;
-            }
         }
-
-        Ok(())
     }
 
     fn handle_chat_response(&mut self, message: ChatResponse) -> Result<()> {

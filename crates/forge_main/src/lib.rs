@@ -2,6 +2,7 @@ pub mod banner;
 pub mod console;
 pub mod info;
 pub mod input;
+mod keyboard;
 mod normalize;
 pub mod status;
 pub mod ui;

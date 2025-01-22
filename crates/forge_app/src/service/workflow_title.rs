@@ -69,9 +69,7 @@ impl Live {
         let tool_call = ToolCallFull::try_from_parts(&parts)?;
         let title: Title = serde_json::from_value(tool_call.arguments)?;
 
-        tx.send(Ok(ChatResponse::CompleteTitle(title.text)))
-            .await
-            .unwrap();
+        let _ = tx.send(Ok(ChatResponse::CompleteTitle(title.text))).await;
 
         Ok(())
     }
@@ -110,7 +108,7 @@ impl TitleService for Live {
         let that = self.clone();
         tokio::spawn(async move {
             if let Err(e) = that.execute(request, tx.clone(), chat.clone()).await {
-                tx.send(Err(e)).await.unwrap();
+                let _ = tx.send(Err(e)).await;
             }
             drop(tx);
         });
