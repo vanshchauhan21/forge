@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult};
+use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
 use tokio::time::{timeout, Duration};
 use tracing::debug;
 
@@ -8,13 +8,6 @@ use super::Service;
 
 // Timeout duration for tool calls
 const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
-
-#[async_trait::async_trait]
-pub trait ToolService: Send + Sync {
-    async fn call(&self, call: ToolCallFull) -> ToolResult;
-    fn list(&self) -> Vec<ToolDefinition>;
-    fn usage_prompt(&self) -> String;
-}
 
 impl Service {
     pub fn tool_service() -> impl ToolService {

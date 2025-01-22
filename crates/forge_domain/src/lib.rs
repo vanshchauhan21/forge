@@ -17,11 +17,11 @@ mod stream_ext;
 mod tool;
 mod tool_call;
 mod tool_call_parser;
-mod tool_call_service;
 mod tool_choice;
 mod tool_definition;
 mod tool_name;
 mod tool_result;
+mod tool_service;
 mod tool_usage;
 mod user_interaction;
 
@@ -44,10 +44,21 @@ pub use stream_ext::*;
 pub use tool::*;
 pub use tool_call::*;
 pub use tool_call_parser::*;
-pub use tool_call_service::*;
 pub use tool_choice::*;
 pub use tool_definition::*;
 pub use tool_name::*;
 pub use tool_result::*;
+pub use tool_service::*;
 pub use tool_usage::*;
 pub use user_interaction::*;
+
+/// Trait for accessing tool service instances.
+/// This trait provides a clean architecture approach to accessing tool services
+/// across the application.
+pub trait ForgeDomain {
+    /// The concrete type implementing tool service capabilities
+    type ToolService: ToolService;
+
+    /// Get a reference to the tool service instance
+    fn tool_service(&self) -> &Self::ToolService;
+}

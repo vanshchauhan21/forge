@@ -4,13 +4,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
-    ProviderService, ResultStream, ToolDefinition,
+    ProviderService, ResultStream, ToolDefinition, ToolService,
 };
 
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;
 use super::env::EnvironmentService;
-use super::tool_service::ToolService;
 use super::{File, Service, UIService};
 use crate::{ConfigRepository, ConversationRepository};
 
