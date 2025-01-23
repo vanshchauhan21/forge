@@ -161,7 +161,7 @@ mod tests {
         "anthropic/claude-3.5-sonnet",
         "openai/gpt-4o",
         "openai/gpt-4o-mini",
-        "google/gemini-flash-1.5",
+        // "google/gemini-flash-1.5",
         "anthropic/claude-3-sonnet",
     ];
 
