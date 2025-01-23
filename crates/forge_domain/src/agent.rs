@@ -5,8 +5,6 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use derive_setters::Setters;
 use handlebars::Handlebars;
-use schemars::schema::RootSchema;
-use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -80,7 +78,7 @@ impl PromptContent {
 /// a context type
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Setters)]
 #[setters(into, strip_option)]
-pub struct Agent<S: JsonSchema> {
+pub struct Agent<S> {
     /// Name of the agent
     pub name: String,
 
@@ -100,25 +98,14 @@ pub struct Agent<S: JsonSchema> {
     #[serde(rename = "user", skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<PromptContent>,
 
-    /// Schema defining the expected arguments or configuration for the agent
-    arguments: Schema<S>,
+    /// Phantom data to track the type parameter
+    #[serde(skip)]
+    _marker: PhantomData<S>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Setters)]
-pub struct Schema<A> {
-    _schema: PhantomData<A>,
-    schema: RootSchema,
-}
-
-impl<A: JsonSchema> Default for Schema<A> {
-    fn default() -> Self {
-        Self { _schema: PhantomData, schema: schema_for!(A) }
-    }
-}
-
-impl<C> Agent<C>
+impl<S> Agent<S>
 where
-    C: Serialize + DeserializeOwned + JsonSchema,
+    S: Serialize + DeserializeOwned,
 {
     /// Creates a new agent
     pub fn new(name: impl Into<String>) -> Self {
@@ -128,11 +115,11 @@ where
             model: ModelType::Primary,
             system_prompt: None,
             user_prompt: None,
-            arguments: Schema::default(),
+            _marker: PhantomData,
         }
     }
 
-    fn render_system_prompt(&self, binding: &C) -> Result<Option<String>> {
+    fn render_system_prompt(&self, binding: &S) -> Result<Option<String>> {
         if let Some(system_prompt) = &self.system_prompt {
             let handlebars = Handlebars::new();
             let prompt = system_prompt.to_string();
@@ -142,7 +129,7 @@ where
         }
     }
 
-    fn render_user_prompt(&self, binding: &C) -> Result<Option<String>> {
+    fn render_user_prompt(&self, binding: &S) -> Result<Option<String>> {
         if let Some(user_prompt) = &self.user_prompt {
             let handlebars = Handlebars::new();
             let prompt = user_prompt.to_string();
@@ -168,7 +155,7 @@ where
     /// };
     /// let context = agent.to_context(&binding)?;
     /// ```
-    pub fn to_context(&self, binding: &C) -> Result<Context> {
+    pub fn to_context(&self, binding: &S) -> Result<Context> {
         let mut messages = Vec::new();
 
         // Add system message if present
@@ -188,13 +175,13 @@ where
 /// Loader trait for loading Agent definitions. The loader should be able to
 /// load all available agents from a source (e.g., configuration files).
 #[async_trait]
-pub trait AgentLoader<C>
+pub trait AgentLoader<S>
 where
-    C: Send + Sync + DeserializeOwned + JsonSchema,
+    S: Send + Sync + DeserializeOwned,
 {
     /// Load all available agents. Returns a Vec of agents in the order they
     /// were defined in the source.
-    async fn load_agents(&self) -> anyhow::Result<Vec<Agent<C>>>;
+    async fn load_agents(&self) -> anyhow::Result<Vec<Agent<S>>>;
 }
 
 #[cfg(test)]
@@ -204,7 +191,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+    #[derive(Debug, Default, Serialize, Deserialize)]
     struct CodeContext {
         role: String,
         language: String,
