@@ -73,6 +73,10 @@ impl TestProvider {
         self.messages(Mutex::new(messages))
     }
 
+    pub fn message(&self) -> usize {
+        self.messages.lock().unwrap().len()
+    }
+
     pub fn get_calls(&self) -> Vec<Context> {
         self.calls.lock().unwrap().clone()
     }

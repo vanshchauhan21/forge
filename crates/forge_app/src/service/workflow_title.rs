@@ -60,16 +60,24 @@ impl Live {
 
         while let Some(chunk) = response.next().await {
             let message = chunk?;
+            if tx.is_closed() {
+                // If the receiver is closed, we should stop processing messages.
+                drop(response);
+                break;
+            }
             if let Some(ToolCall::Part(args)) = message.tool_call.first() {
                 parts.push(args.clone());
             }
         }
 
         // Extract title from parts if present
-        let tool_call = ToolCallFull::try_from_parts(&parts)?;
-        let title: Title = serde_json::from_value(tool_call.arguments)?;
+        if !tx.is_closed() {
+            // if receiver is closed, we should not send any more messages
+            let tool_call = ToolCallFull::try_from_parts(&parts)?;
+            let title: Title = serde_json::from_value(tool_call.arguments)?;
 
-        let _ = tx.send(Ok(ChatResponse::CompleteTitle(title.text))).await;
+            let _ = tx.send(Ok(ChatResponse::CompleteTitle(title.text))).await;
+        }
 
         Ok(())
     }
