@@ -76,9 +76,9 @@ impl Live {
                 if let Some(ref content) = message.content {
                     if !content.is_empty() {
                         assistant_message_content.push_str(content.as_str());
-                        let _ = tx
-                            .send(Ok(ChatResponse::Text(content.as_str().to_string())))
-                            .await;
+                        tx.send(Ok(ChatResponse::Text(content.as_str().to_string())))
+                            .await
+                            .unwrap();
                     }
                 }
 
@@ -87,18 +87,18 @@ impl Live {
                         // Send tool call detection on first part
                         if tool_call_parts.is_empty() {
                             if let Some(tool_name) = &tool_part.name {
-                                let _ = tx
-                                    .send(Ok(ChatResponse::ToolCallDetected(tool_name.clone())))
-                                    .await;
+                                tx.send(Ok(ChatResponse::ToolCallDetected(tool_name.clone())))
+                                    .await
+                                    .unwrap();
                             }
                         }
                         // Add to parts and send the part itself
                         tool_call_parts.push(tool_part.clone());
-                        let _ = tx
-                            .send(Ok(ChatResponse::ToolCallArgPart(
-                                tool_part.arguments_part.clone(),
-                            )))
-                            .await;
+                        tx.send(Ok(ChatResponse::ToolCallArgPart(
+                            tool_part.arguments_part.clone(),
+                        )))
+                        .await
+                        .unwrap();
                     }
                 }
 
@@ -107,26 +107,30 @@ impl Live {
                     let tool_call = ToolCallFull::try_from_parts(&tool_call_parts)?;
                     some_tool_call = Some(tool_call.clone());
 
-                    let _ = tx
-                        .send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
-                        .await;
+                    tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
+                        .await
+                        .unwrap();
 
                     let tool_result = self.tool.call(tool_call).await;
 
                     some_tool_result = Some(tool_result.clone());
 
                     // send the tool use end message.
-                    let _ = tx.send(Ok(ChatResponse::ToolCallEnd(tool_result))).await;
+                    tx.send(Ok(ChatResponse::ToolCallEnd(tool_result)))
+                        .await
+                        .unwrap();
                 }
 
                 if let Some(reason) = &message.finish_reason {
-                    let _ = tx
-                        .send(Ok(ChatResponse::FinishReason(reason.clone())))
-                        .await;
+                    tx.send(Ok(ChatResponse::FinishReason(reason.clone())))
+                        .await
+                        .unwrap();
                 }
 
                 if let Some(usage) = &message.usage {
-                    let _ = tx.send(Ok(ChatResponse::Usage(usage.clone()))).await;
+                    tx.send(Ok(ChatResponse::Usage(usage.clone())))
+                        .await
+                        .unwrap();
                 }
             }
 
@@ -135,15 +139,15 @@ impl Live {
                 some_tool_call,
             ));
 
-            let _ = tx
-                .send(Ok(ChatResponse::ModifyContext(request.clone())))
-                .await;
+            tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                .await
+                .unwrap();
 
             if let Some(tool_result) = some_tool_result {
                 request = request.add_message(ContextMessage::ToolMessage(tool_result));
-                let _ = tx
-                    .send(Ok(ChatResponse::ModifyContext(request.clone())))
-                    .await;
+                tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                    .await
+                    .unwrap();
             } else {
                 break Ok(());
             }
@@ -174,11 +178,11 @@ impl ChatService for Live {
             match that.chat_workflow(request, tx.clone(), chat.clone()).await {
                 Ok(_) => {}
                 Err(e) => {
-                    let _ = tx.send(Err(e)).await;
+                    tx.send(Err(e)).await.unwrap();
                 }
             };
 
-            let _ = tx.send(Ok(ChatResponse::Complete)).await;
+            tx.send(Ok(ChatResponse::Complete)).await.unwrap();
 
             drop(tx);
         });

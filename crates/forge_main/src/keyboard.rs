@@ -75,7 +75,7 @@ impl<S: Stream<Item = std::io::Result<Event>> + Unpin + Send> Drop for KeyboardE
     fn drop(&mut self) {
         // best effort to disable raw mode
         #[cfg(not(test))]
-        let _ = crossterm::terminal::disable_raw_mode();
+        crossterm::terminal::disable_raw_mode().unwrap();
     }
 }
 
