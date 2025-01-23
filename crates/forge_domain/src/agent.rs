@@ -11,7 +11,15 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::{Context, ContextMessage};
+use crate::{Context, ContextMessage, Environment};
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SystemContext {
+    pub env: Environment,
+    pub tool_information: String,
+    pub tool_supported: bool,
+    pub custom_instructions: Option<String>,
+}
 
 /// Represents which model (primary/secondary) should be used for the agent
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]

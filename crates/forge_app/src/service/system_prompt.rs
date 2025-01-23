@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_domain::{ChatRequest, Environment, ProviderService, ToolService};
+use forge_domain::{ChatRequest, Environment, ProviderService, SystemContext, ToolService};
 use handlebars::Handlebars;
-use serde::Serialize;
 use tracing::debug;
 
 use super::file_read::FileReadService;
@@ -18,14 +17,6 @@ impl Service {
     ) -> impl PromptService {
         Live::new(env, tool, provider, file_read)
     }
-}
-
-#[derive(Clone, Serialize)]
-struct SystemContext {
-    env: Environment,
-    tool_information: String,
-    tool_supported: bool,
-    custom_instructions: Option<String>,
 }
 
 #[derive(Clone)]
