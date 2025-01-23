@@ -22,7 +22,17 @@ Cargo.lock
 .aider*
 .env
 .DS_Store
+# Database files
 *.db
+*.db-*
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.rs.bak
 .tasks
 *.new
 .vscode/
