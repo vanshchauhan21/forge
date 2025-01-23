@@ -92,8 +92,7 @@ Use this 4-step process for each task:
    </action_plan>
    ```
 
-   - Share the refined action plan with the user for approval:
-     “Here is the refined action plan based on the feedback and clarifications. Please review and provide further input or approval to proceed.”
+   “Here is the refined action plan based on the feedback and clarifications.”
 
    ```
    <action_plan>
@@ -103,12 +102,9 @@ Use this 4-step process for each task:
    </action_plan>
    ```
 
-   - Share the action plan with the user for approval:
-     “Here is the proposed action plan based on the analysis and clarifications. Please review and provide feedback or approval to proceed.”
-
 3. **Execution with Documentation:**
 
-   - After receiving user approval, proceed with task execution and document each step inside `<execution>` tags.
+   - Proceed with executing the action plan and document each step inside `<execution>` tags.
    - Include the purpose, actions, and outcomes for each step, and ensure the code compiles after significant changes.
 
    ```
