@@ -7,7 +7,7 @@ use forge_app::{APIService, Service};
 use forge_domain::{ChatRequest, ChatResponse, Command, ConversationId, ModelId, Usage, UserInput};
 use tokio_stream::StreamExt;
 
-use crate::keyboard::{KeyEvent, KeyboardEvents};
+use crate::keyboard::{Key, KeyboardEvents};
 use crate::{Console, StatusDisplay, CONSOLE};
 
 #[derive(Default)]
@@ -119,7 +119,9 @@ impl UI {
     async fn process_chat(&mut self, chat: ChatRequest) -> Result<()> {
         // Register the ESC key for keyboard events
         let mut keyboard = KeyboardEvents::new();
-        keyboard.register(KeyEvent::Esc);
+        keyboard.register(Key::Esc);
+        keyboard.register(Key::ControlC);
+
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream, &mut keyboard).await,
             Err(err) => Err(err),
