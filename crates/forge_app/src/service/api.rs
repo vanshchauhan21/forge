@@ -149,6 +149,7 @@ mod tests {
     use std::path::Path;
 
     use forge_domain::ModelId;
+    use futures::future::join_all;
     use tokio_stream::StreamExt;
 
     use super::*;
@@ -164,79 +165,86 @@ mod tests {
         "anthropic/claude-3-sonnet",
     ];
 
-    // Helper function for testing model responses
-    async fn test_model_responses<T>(
-        api: &Live,
+    /// Test fixture for API testing that supports parallel model validation
+    struct Fixture {
         task: String,
-        check_response: impl Fn(&str) -> Result<T, String> + Send + Sync + Copy + 'static,
-    ) -> Vec<String>
-    where
-        T: Send + 'static,
-    {
-        let mut errors = Vec::new();
+    }
 
-        for &model in SUPPORTED_MODELS {
-            let request = ChatRequest::new(ModelId::new(model), task.clone());
-
-            for attempt in 0..MAX_RETRIES {
-                let response = api
-                    .chat(request.clone())
-                    .await
-                    .unwrap()
-                    .filter_map(|message| match message.unwrap() {
-                        ChatResponse::Text(text) => Some(text),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .await
-                    .join("")
-                    .trim()
-                    .to_string();
-
-                match check_response(&response) {
-                    Ok(_) => {
-                        println!("[{}] Successfully checked response", model);
-                        break;
-                    }
-                    Err(err) => {
-                        if attempt < MAX_RETRIES - 1 {
-                            println!(
-                                "[{}] Attempt {}/{}: {}",
-                                model,
-                                attempt + 1,
-                                MAX_RETRIES,
-                                err
-                            );
-                        } else {
-                            errors.push(format!(
-                                "[{}] Failed: {} after {} attempts",
-                                model, err, MAX_RETRIES
-                            ));
-                        }
-                    }
-                }
-            }
+    impl Fixture {
+        /// Create a new test fixture with the given task
+        fn new(task: impl Into<String>) -> Self {
+            Self { task: task.into() }
         }
 
-        errors
+        /// Get the API service, panicking if not validated
+        async fn api(&self) -> Live {
+            Live::new(Path::new("../../").to_path_buf()).await.unwrap()
+        }
+
+        /// Get model response as text
+        async fn get_model_response(&self, model: &str) -> String {
+            let request = ChatRequest::new(ModelId::new(model), self.task.clone());
+            self.api()
+                .await
+                .chat(request)
+                .await
+                .unwrap()
+                .filter_map(|message| match message.unwrap() {
+                    ChatResponse::Text(text) => Some(text),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+                .await
+                .join("")
+                .trim()
+                .to_string()
+        }
+
+        /// Test single model with retries
+        async fn test_single_model(
+            &self,
+            model: &str,
+            check_response: impl Fn(&str) -> bool,
+        ) -> Result<(), String> {
+            for attempt in 0..MAX_RETRIES {
+                let response = self.get_model_response(model).await;
+
+                if check_response(&response) {
+                    println!("[{}] Successfully checked response", model);
+                    return Ok(());
+                }
+
+                if attempt < MAX_RETRIES - 1 {
+                    println!("[{}] Attempt {}/{}", model, attempt + 1, MAX_RETRIES);
+                }
+            }
+            Err(format!("[{}] Failed after {} attempts", model, MAX_RETRIES))
+        }
+
+        /// Run tests for all models in parallel
+        async fn test_models(
+            &self,
+            check_response: impl Fn(&str) -> bool + Send + Sync + Copy + 'static,
+        ) -> Vec<String> {
+            let futures = SUPPORTED_MODELS
+                .iter()
+                .map(|&model| async move { self.test_single_model(model, check_response).await });
+
+            join_all(futures)
+                .await
+                .into_iter()
+                .filter_map(Result::err)
+                .collect()
+        }
     }
 
     #[tokio::test]
-    async fn test_find_cat_name() {
-        let api = Live::new(Path::new("../../").to_path_buf()).await.unwrap();
-        let task = "There is a cat hidden in the codebase. What is its name?".to_string();
+    async fn test_find_cat_name() -> Result<()> {
+        let errors = Fixture::new("There is a cat hidden in the codebase. What is its name?")
+            .test_models(|response| response.to_lowercase().contains("juniper"))
+            .await;
 
-        let errors = test_model_responses(&api, task, move |response| {
-            let response_lower = response.to_lowercase();
-            if !response_lower.contains("juniper") {
-                return Err("Cat's name 'Juniper' not found in response".to_string());
-            }
-            Ok(())
-        })
-        .await;
-
-        if !errors.is_empty() {
-            panic!("Test failures:\n{}", errors.join("\n"));
-        }
+        assert!(errors.is_empty(), "Test failures:\n{}", errors.join("\n"));
+        Ok(())
     }
 }
