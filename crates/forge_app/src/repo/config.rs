@@ -1,3 +1,4 @@
+use anyhow::Context;
 use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::max;
 use diesel::prelude::*;
@@ -26,7 +27,7 @@ impl ConfigId {
 
 #[derive(Debug, Insertable, Queryable, QueryableByName)]
 #[diesel(table_name = configuration_table)]
-struct RawConfig {
+struct ConfigEntity {
     #[diesel(sql_type = Text)]
     id: String,
     #[diesel(sql_type = Text)]
@@ -35,12 +36,12 @@ struct RawConfig {
     created_at: NaiveDateTime,
 }
 
-impl TryFrom<RawConfig> for Config {
-    type Error = forge_domain::Error;
+impl TryFrom<ConfigEntity> for Config {
+    type Error = anyhow::Error;
 
-    fn try_from(raw: RawConfig) -> Result<Self, Self::Error> {
+    fn try_from(raw: ConfigEntity) -> Result<Self, Self::Error> {
         // TODO: currently we don't need id and created_at.
-        Ok(serde_json::from_str(&raw.data)?)
+        serde_json::from_str(&raw.data).with_context(|| "failed to load configuration from store")
     }
 }
 
@@ -72,7 +73,7 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
             .first(&mut conn)?;
 
         // use the max timestamp to get the latest config.
-        let result: RawConfig = configuration_table::table
+        let result: ConfigEntity = configuration_table::table
             .filter(configuration_table::created_at.eq_any(max_ts))
             .limit(1)
             .first(&mut conn)?;
@@ -86,7 +87,7 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
         let mut conn = pool.get()?;
         let now = Utc::now().naive_utc();
 
-        let raw = RawConfig {
+        let raw = ConfigEntity {
             id: ConfigId::generate().to_string(),
             data: serde_json::to_string(&data)?,
             created_at: now,

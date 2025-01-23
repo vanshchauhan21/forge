@@ -1,23 +1,26 @@
 use std::pin::Pin;
 
-use derive_more::derive::From;
 use thiserror::Error;
 
-#[derive(From, Debug, Error)]
+// NOTE: Deriving From for error is a really bad idea. This is because you end
+// up converting errors incorrectly without much context. For eg: You don't want
+// all serde error to be treated as the same. Instead we want to know exactly
+// where that serde failure happened and for what kind of value.
+#[derive(Debug, Error)]
 pub enum Error {
-    #[error("Tool name was not provided")]
+    #[error("Missing tool name")]
     ToolCallMissingName,
 
-    #[error("Serde Error: {0}")]
-    Serde(serde_json::Error),
+    #[error("Invalid tool call arguments: {0}")]
+    ToolCallArgument(serde_json::Error),
 
-    #[error("Invalid UUID: {0}")]
-    InvalidUuid(uuid::Error),
+    #[error("Invalid conversation id: {0}")]
+    ConversationId(uuid::Error),
 
-    #[error("Invalid user command: {0}")]
-    InvalidUserCommand(String),
+    #[error("Invalid input command: {0}")]
+    InputCommand(String),
 
-    #[error("Template rendering error: {0}")]
+    #[error("Invalid template rendering params: {0}")]
     Template(handlebars::RenderError),
 }
 

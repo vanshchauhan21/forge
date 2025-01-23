@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable, Text, Timestamp};
@@ -10,7 +10,7 @@ use crate::sqlite::Sqlite;
 
 #[derive(Debug, Insertable, Queryable, QueryableByName)]
 #[diesel(table_name = conversations)]
-struct RawConversation {
+struct ConversationEntity {
     #[diesel(sql_type = Text)]
     id: String,
     #[diesel(sql_type = Timestamp)]
@@ -25,17 +25,18 @@ struct RawConversation {
     title: Option<String>,
 }
 
-impl TryFrom<RawConversation> for Conversation {
-    type Error = forge_domain::Error;
+impl TryFrom<ConversationEntity> for Conversation {
+    type Error = anyhow::Error;
 
-    fn try_from(raw: RawConversation) -> Result<Self, Self::Error> {
+    fn try_from(raw: ConversationEntity) -> Result<Self, Self::Error> {
         Ok(Conversation {
             id: ConversationId::parse(raw.id)?,
             meta: Some(ConversationMeta {
                 created_at: DateTime::from_naive_utc_and_offset(raw.created_at, Utc),
                 updated_at: DateTime::from_naive_utc_and_offset(raw.updated_at, Utc),
             }),
-            context: serde_json::from_str(&raw.content)?,
+            context: serde_json::from_str(&raw.content)
+                .with_context(|| "failed to load context from store")?,
             archived: raw.archived,
             title: raw.title,
         })
@@ -79,7 +80,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
         let mut conn = pool.get()?;
         let id = id.unwrap_or_else(ConversationId::generate);
 
-        let raw = RawConversation {
+        let raw = ConversationEntity {
             id: id.into_string(),
             created_at: Utc::now().naive_utc(),
             updated_at: Utc::now().naive_utc(),
@@ -98,7 +99,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             ))
             .execute(&mut conn)?;
 
-        let raw: RawConversation = conversations::table
+        let raw: ConversationEntity = conversations::table
             .find(id.into_string())
             .first(&mut conn)?;
 
@@ -108,7 +109,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
     async fn get_conversation(&self, id: ConversationId) -> Result<Conversation> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
-        let raw: RawConversation = conversations::table
+        let raw: ConversationEntity = conversations::table
             .find(id.into_string())
             .first(&mut conn)?;
 
@@ -118,7 +119,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
     async fn list_conversations(&self) -> Result<Vec<Conversation>> {
         let pool = self.pool_service.pool().await?;
         let mut conn = pool.get()?;
-        let raw: Vec<RawConversation> = conversations::table
+        let raw: Vec<ConversationEntity> = conversations::table
             .filter(conversations::archived.eq(false))
             .load(&mut conn)?;
 
@@ -136,7 +137,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .set(conversations::archived.eq(true))
             .execute(&mut conn)?;
 
-        let raw: RawConversation = conversations::table
+        let raw: ConversationEntity = conversations::table
             .find(id.into_string())
             .first(&mut conn)?;
 
@@ -155,7 +156,7 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
             .set(conversations::title.eq(title))
             .execute(&mut conn)?;
 
-        let raw: RawConversation = conversations::table
+        let raw: ConversationEntity = conversations::table
             .find(id.into_string())
             .first(&mut conn)?;
 

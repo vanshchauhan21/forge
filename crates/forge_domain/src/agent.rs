@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::{Context, ContextMessage, Environment};
+use crate::{Context, ContextMessage, Environment, Error};
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SystemContext {
@@ -123,7 +123,11 @@ where
         if let Some(system_prompt) = &self.system_prompt {
             let handlebars = Handlebars::new();
             let prompt = system_prompt.to_string();
-            Ok(Some(handlebars.render_template(&prompt, binding)?))
+            Ok(Some(
+                handlebars
+                    .render_template(&prompt, binding)
+                    .map_err(Error::Template)?,
+            ))
         } else {
             Ok(None)
         }
@@ -133,7 +137,11 @@ where
         if let Some(user_prompt) = &self.user_prompt {
             let handlebars = Handlebars::new();
             let prompt = user_prompt.to_string();
-            Ok(Some(handlebars.render_template(&prompt, binding)?))
+            Ok(Some(
+                handlebars
+                    .render_template(&prompt, binding)
+                    .map_err(Error::Template)?,
+            ))
         } else {
             Ok(None)
         }

@@ -73,7 +73,7 @@ impl ToolCallFull {
             Ok(ToolCallFull {
                 name: tool_name.clone(),
                 call_id: tool_call_id.cloned(),
-                arguments: serde_json::from_str(&input)?,
+                arguments: serde_json::from_str(&input).map_err(Error::ToolCallArgument)?,
             })
         } else {
             Err(Error::ToolCallMissingName)

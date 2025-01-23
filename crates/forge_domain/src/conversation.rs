@@ -21,7 +21,9 @@ impl ConversationId {
     }
 
     pub fn parse(value: impl ToString) -> Result<Self, Error> {
-        Ok(Self(Uuid::parse_str(&value.to_string())?))
+        Ok(Self(
+            Uuid::parse_str(&value.to_string()).map_err(Error::ConversationId)?,
+        ))
     }
 }
 
