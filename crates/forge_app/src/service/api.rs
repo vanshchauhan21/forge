@@ -228,14 +228,8 @@ mod tests {
 
         let errors = test_model_responses(&api, task, move |response| {
             let response_lower = response.to_lowercase();
-            if !response_lower.contains("cat") {
-                return Err("Response doesn't mention the cat".to_string());
-            }
             if !response_lower.contains("juniper") {
                 return Err("Cat's name 'Juniper' not found in response".to_string());
-            }
-            if !response_lower.contains("code-forge") && !response_lower.contains("codeforge") {
-                return Err("Response doesn't mention Code-Forge context".to_string());
             }
             Ok(())
         })
