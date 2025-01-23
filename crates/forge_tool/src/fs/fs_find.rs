@@ -51,7 +51,7 @@ impl ToolCallService for FSSearch {
         let files = walker
             .get()
             .await
-            .map_err(|e| format!("Failed to walk directory: {}", e))?;
+            .map_err(|e| format!("Failed to walk directory '{}': {}", dir.display(), e))?;
 
         let mut matches = Vec::new();
         let mut seen_paths = HashSet::new();
@@ -66,8 +66,14 @@ impl ToolCallService for FSSearch {
 
             // Apply file pattern filter if provided
             if let Some(ref pattern) = input.file_pattern {
-                let glob = glob::Pattern::new(pattern)
-                    .map_err(|e| format!("Invalid glob pattern: {}", e))?;
+                let glob = glob::Pattern::new(pattern).map_err(|e| {
+                    format!(
+                        "Invalid glob pattern '{}' for file '{}': {}",
+                        pattern,
+                        full_path.display(),
+                        e
+                    )
+                })?;
                 if let Some(filename) = path.file_name().unwrap_or(path.as_os_str()).to_str() {
                     if !glob.matches(filename) {
                         continue;

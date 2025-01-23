@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+use anyhow::Context;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -165,7 +166,12 @@ impl ToolCallService for Outline {
                         if !parsers.contains_key(lang_name) {
                             let language = load_language_parser(lang_name)?;
                             let mut parser = Parser::new();
-                            parser.set_language(&language).map_err(|e| e.to_string())?;
+                            parser
+                                .set_language(&language)
+                                .with_context(|| {
+                                    format!("Failed to set language parser for {}", lang_name)
+                                })
+                                .map_err(|e| e.to_string())?;
                             let query = Query::new(&language, queries[lang_name])
                                 .map_err(|e| e.to_string())?;
                             parsers.insert(lang_name, (parser, query));

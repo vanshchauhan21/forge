@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colorize::AnsiColor;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
@@ -62,10 +62,16 @@ pub struct ThoughtResult {
 impl Think {
     fn validate_thought_data(&self, mut input: ThoughtInput) -> Result<ThoughtInput> {
         if input.thought_number <= 0 {
-            return Err(anyhow::anyhow!("Invalid thoughtNumber: must be positive"));
+            return Err(anyhow::anyhow!(
+                "Invalid thought number: {} (must be positive)",
+                input.thought_number
+            ));
         }
         if input.total_thoughts <= 0 {
-            return Err(anyhow::anyhow!("Invalid totalThoughts: must be positive"));
+            return Err(anyhow::anyhow!(
+                "Invalid total thoughts: {} (must be positive)",
+                input.total_thoughts
+            ));
         }
 
         // If no confidence is provided, calculate it based on progress
@@ -180,7 +186,11 @@ impl ToolCallService for Think {
     type Input = ThoughtInput;
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let mut thinker = self.clone();
-        let thought_result = thinker.process_thought(input).map_err(|e| e.to_string())?;
+        let thought_number = input.thought_number;
+        let thought_result = thinker
+            .process_thought(input)
+            .with_context(|| format!("Failed to process thought #{}", thought_number))
+            .map_err(|e| e.to_string())?;
         serde_json::to_string(&thought_result).map_err(|e| e.to_string())
     }
 }

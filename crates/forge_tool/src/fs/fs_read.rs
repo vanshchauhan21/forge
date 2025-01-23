@@ -31,7 +31,7 @@ impl ToolCallService for FSRead {
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let content = tokio::fs::read_to_string(&input.path)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Failed to read file content from {}: {}", input.path, e))?;
         Ok(content)
     }
 }

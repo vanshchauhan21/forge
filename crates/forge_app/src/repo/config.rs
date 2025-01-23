@@ -58,8 +58,14 @@ impl<P: Sqlite> Live<P> {
 #[async_trait::async_trait]
 impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
     async fn get(&self) -> anyhow::Result<Config> {
-        let pool = self.pool_service.pool().await?;
-        let mut conn = pool.get()?;
+        let pool = self
+            .pool_service
+            .pool()
+            .await
+            .context("Failed to get database pool")?;
+        let mut conn = pool
+            .get()
+            .context("Failed to get database connection from pool")?;
 
         // get the max timestamp.
         let max_ts: Option<NaiveDateTime> = configuration_table::table
@@ -89,7 +95,8 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
 
         diesel::insert_into(configuration_table::table)
             .values(&raw)
-            .execute(&mut conn)?;
+            .execute(&mut conn)
+            .with_context(|| format!("Failed to save configuration with id: {}", raw.id))?;
 
         self.get().await
     }

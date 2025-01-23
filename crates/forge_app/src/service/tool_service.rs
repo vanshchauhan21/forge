@@ -124,7 +124,7 @@ mod test {
         type Input = Value;
 
         async fn call(&self, _input: Self::Input) -> Result<String, String> {
-            Err("Tool execution failed".to_string())
+            Err("Tool call failed with simulated failure".to_string())
         }
     }
 

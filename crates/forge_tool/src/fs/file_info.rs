@@ -1,3 +1,4 @@
+use anyhow::Context;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -28,8 +29,10 @@ impl ToolCallService for FSFileInfo {
     type Input = FSFileInfoInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
-        let meta = tokio::fs::metadata(input.path)
+        let path = input.path.clone();
+        let meta = tokio::fs::metadata(&path)
             .await
+            .with_context(|| format!("Failed to get metadata for '{}'", path))
             .map_err(|e| e.to_string())?;
         Ok(format!("{:?}", meta))
     }

@@ -32,13 +32,17 @@ impl TryFrom<ConversationEntity> for Conversation {
 
     fn try_from(raw: ConversationEntity) -> Result<Self, Self::Error> {
         Ok(Conversation {
-            id: ConversationId::parse(raw.id)?,
+            id: {
+                let id_str = raw.id.clone();
+                ConversationId::parse(raw.id)
+                    .with_context(|| format!("Failed to parse conversation ID: {}", id_str))?
+            },
             meta: Some(ConversationMeta {
                 created_at: DateTime::from_naive_utc_and_offset(raw.created_at, Utc),
                 updated_at: DateTime::from_naive_utc_and_offset(raw.updated_at, Utc),
             }),
             context: serde_json::from_str(&raw.content)
-                .with_context(|| "failed to load context from store")?,
+                .with_context(|| "Failed to parse conversation context")?,
             archived: raw.archived,
             title: raw.title,
         })
@@ -57,8 +61,14 @@ impl<P: Sqlite> Live<P> {
 #[async_trait::async_trait]
 impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
     async fn insert(&self, request: &Context, id: Option<ConversationId>) -> Result<Conversation> {
-        let pool = self.pool_service.pool().await?;
-        let mut conn = pool.get()?;
+        let pool = self
+            .pool_service
+            .pool()
+            .await
+            .with_context(|| "Failed to acquire database connection pool")?;
+        let mut conn = pool
+            .get()
+            .with_context(|| "Failed to get connection from pool")?;
         let id = id.unwrap_or_else(ConversationId::generate);
 
         let raw = ConversationEntity {
@@ -78,7 +88,8 @@ impl<P: Sqlite + Send + Sync> ConversationRepository for Live<P> {
                 conversations::content.eq(&raw.content),
                 conversations::updated_at.eq(&raw.updated_at),
             ))
-            .execute(&mut conn)?;
+            .execute(&mut conn)
+            .with_context(|| format!("Failed to save conversation with id: {}", id))?;
 
         let raw: ConversationEntity = conversations::table
             .find(id.into_string())

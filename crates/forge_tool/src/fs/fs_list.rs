@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use anyhow::Context;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
@@ -38,7 +39,7 @@ impl ToolCallService for FSList {
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let dir = Path::new(&input.path);
         if !dir.exists() {
-            return Err("Directory does not exist".to_string());
+            return Err(format!("Directory '{}' does not exist", input.path));
         }
 
         let mut paths = Vec::new();
@@ -46,7 +47,11 @@ impl ToolCallService for FSList {
         let max_depth = if recursive { usize::MAX } else { 1 };
         let walker = Walker::new(dir.to_path_buf()).with_max_depth(max_depth);
 
-        let files = walker.get().await.map_err(|e| e.to_string())?;
+        let files = walker
+            .get()
+            .await
+            .with_context(|| format!("Failed to read directory contents from '{}'", input.path))
+            .map_err(|e| e.to_string())?;
 
         for entry in files {
             // Skip the root directory itself

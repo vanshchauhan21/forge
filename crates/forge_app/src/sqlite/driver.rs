@@ -26,8 +26,8 @@ impl Driver {
         let mut conn = SqliteConnection::establish(&db_path)?;
         let migrations = conn
             .run_pending_migrations(MIGRATIONS)
-            .map_err(|e| anyhow::anyhow!(e))
-            .with_context(|| "Failed to run database migrations")?;
+            .map_err(|e| anyhow::anyhow!("Database initialization failed with error: {}", e))
+            .with_context(|| format!("Failed to run database migrations on {}", db_path))?;
 
         debug!(
             "Running {} migrations for database: {}",
