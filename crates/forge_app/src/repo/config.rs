@@ -3,7 +3,7 @@ use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Timestamp};
-use forge_domain::Config;
+use forge_domain::{Config, ConfigRepository};
 use serde::{Deserialize, Serialize};
 
 use crate::schema::configuration_table::{self};
@@ -43,12 +43,6 @@ impl TryFrom<ConfigEntity> for Config {
         // TODO: currently we don't need id and created_at.
         serde_json::from_str(&raw.data).with_context(|| "failed to load configuration from store")
     }
-}
-
-#[async_trait::async_trait]
-pub trait ConfigRepository: Send + Sync {
-    async fn get(&self) -> anyhow::Result<Config>;
-    async fn set(&self, config: Config) -> anyhow::Result<Config>;
 }
 
 pub struct Live<P> {
@@ -114,9 +108,9 @@ pub mod tests {
     use super::*;
     use crate::sqlite::tests::TestSqlite;
 
-    pub struct TestStorage;
+    pub struct TestConfigStorage;
 
-    impl TestStorage {
+    impl TestConfigStorage {
         pub fn in_memory() -> anyhow::Result<impl ConfigRepository> {
             let pool_service = TestSqlite::new()?;
             Ok(Live::new(pool_service))
@@ -124,7 +118,7 @@ pub mod tests {
     }
 
     async fn setup_storage() -> anyhow::Result<impl ConfigRepository> {
-        TestStorage::in_memory()
+        TestConfigStorage::in_memory()
     }
 
     fn test_config() -> Config {

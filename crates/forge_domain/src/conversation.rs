@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use derive_more::derive::Display;
@@ -56,16 +57,19 @@ pub struct ConversationMeta {
 }
 
 #[async_trait]
-pub trait ConversationRepository {
+pub trait ConversationRepository: Send + Sync {
+    /// Set a new conversation or update an existing one
+    async fn insert(&self, context: &Context, id: Option<ConversationId>) -> Result<Conversation>;
+
     /// Get a conversation by its ID
-    async fn get_conversation(&self, id: ConversationId) -> anyhow::Result<Option<Conversation>>;
+    async fn get(&self, id: ConversationId) -> Result<Conversation>;
 
-    /// Save a new conversation or update an existing one
-    async fn save_conversation(&self, conversation: &Conversation) -> anyhow::Result<()>;
+    /// List all active (non-archived) conversations
+    async fn list(&self) -> Result<Vec<Conversation>>;
 
-    /// List all conversations
-    async fn list_conversations(&self) -> anyhow::Result<Vec<Conversation>>;
+    /// Archive a conversation and return the updated conversation
+    async fn archive(&self, id: ConversationId) -> Result<Conversation>;
 
-    /// Archive a conversation
-    async fn archive_conversation(&self, id: ConversationId) -> anyhow::Result<()>;
+    /// Set the title for a conversation
+    async fn set_title(&self, id: &ConversationId, title: String) -> Result<Conversation>;
 }

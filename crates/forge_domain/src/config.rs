@@ -51,10 +51,10 @@ pub struct Config {
 }
 
 #[async_trait]
-pub trait ConfigurationRepository {
+pub trait ConfigRepository: Send + Sync {
     /// Get the current configuration
-    async fn get_configuration(&self) -> anyhow::Result<Config>;
+    async fn get(&self) -> anyhow::Result<Config>;
 
-    /// Save a new configuration
-    async fn save_configuration(&self, config: &Config) -> anyhow::Result<()>;
+    /// Save a new configuration and return the saved config
+    async fn set(&self, config: Config) -> anyhow::Result<Config>;
 }

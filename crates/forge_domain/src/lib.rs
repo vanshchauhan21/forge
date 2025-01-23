@@ -63,7 +63,7 @@ pub trait ForgeDomain {
     /// The concrete type implementing conversation repository
     type ConversationRepo: ConversationRepository;
     /// The concrete type implementing configuration repository
-    type ConfigRepo: ConfigurationRepository;
+    type ConfigRepo: ConfigRepository;
     /// The concrete type implementing environment repository
     type EnvironmentRepo: EnvironmentRepository;
 

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use forge_domain::{ChatRequest, ChatResponse, Context, ResultStream};
+use forge_domain::{ChatRequest, ChatResponse, Context, ConversationRepository, ResultStream};
 use tokio_stream::{once, StreamExt};
 use tracing::debug;
 
 use super::chat::ChatService;
 use super::workflow_title::TitleService;
-use crate::{ConversationRepository, Service};
+use crate::Service;
 
 #[async_trait::async_trait]
 pub trait UIService: Send + Sync {
@@ -43,15 +43,12 @@ impl Service {
 impl UIService for Live {
     async fn chat(&self, request: ChatRequest) -> ResultStream<ChatResponse, anyhow::Error> {
         let (conversation, is_new) = if let Some(conversation_id) = &request.conversation_id {
-            let context = self
-                .conversation_service
-                .get_conversation(*conversation_id)
-                .await?;
+            let context = self.conversation_service.get(*conversation_id).await?;
             (context, false)
         } else {
             let conversation = self
                 .conversation_service
-                .set_conversation(&Context::default(), None)
+                .insert(&Context::default(), None)
                 .await?;
             (conversation, true)
         };
@@ -85,13 +82,13 @@ impl UIService for Live {
                                 .conversation_id
                                 .expect("`conversation_id` must be set at this point.");
                             conversation_service
-                                .set_conversation_title(&conversation_id, title.to_owned())
+                                .set_title(&conversation_id, title.to_owned())
                                 .await?;
                             message
                         }
                         Ok(ChatResponse::ModifyContext(context)) => {
                             conversation_service
-                                .set_conversation(context, request.conversation_id)
+                                .insert(context, request.conversation_id)
                                 .await?;
                             message
                         }
@@ -111,7 +108,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::repo::tests::TestConversationStorage;
+    use crate::repo::test::TestConversationStorage;
 
     struct TestTitleService {
         events: Vec<ChatResponse>,
@@ -170,7 +167,7 @@ mod tests {
 
         let model_id = ModelId::new("gpt-3.5-turbo");
         let conversation = conversation_service
-            .set_conversation(&Context::default(), None)
+            .insert(&Context::default(), None)
             .await
             .unwrap();
 

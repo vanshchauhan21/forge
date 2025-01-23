@@ -3,15 +3,15 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use forge_domain::{
-    ChatRequest, ChatResponse, Config, Context, Conversation, ConversationId, Environment, Model,
-    ProviderService, ResultStream, ToolDefinition, ToolService,
+    ChatRequest, ChatResponse, Config, ConfigRepository, Context, Conversation, ConversationId,
+    ConversationRepository, Environment, Model, ProviderService, ResultStream, ToolDefinition,
+    ToolService,
 };
 
 use super::chat::ConversationHistory;
 use super::completion::CompletionService;
 use super::env::EnvironmentService;
 use super::{File, Service, UIService};
-use crate::{ConfigRepository, ConversationRepository};
 
 #[async_trait::async_trait]
 pub trait APIService: Send + Sync {
@@ -103,11 +103,7 @@ impl APIService for Live {
     }
 
     async fn context(&self, conversation_id: ConversationId) -> Result<Context> {
-        Ok(self
-            .storage
-            .get_conversation(conversation_id)
-            .await?
-            .context)
+        Ok(self.storage.get(conversation_id).await?.context)
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
@@ -119,16 +115,11 @@ impl APIService for Live {
     }
 
     async fn conversations(&self) -> Result<Vec<Conversation>> {
-        self.storage.list_conversations().await
+        self.storage.list().await
     }
 
     async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory> {
-        Ok(self
-            .storage
-            .get_conversation(conversation_id)
-            .await?
-            .context
-            .into())
+        Ok(self.storage.get(conversation_id).await?.context.into())
     }
 
     async fn get_config(&self) -> Result<Config> {
