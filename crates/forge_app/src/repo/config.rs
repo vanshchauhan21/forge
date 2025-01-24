@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::max;
@@ -45,46 +47,48 @@ impl TryFrom<ConfigEntity> for Config {
     }
 }
 
-pub struct Live<P> {
-    pool_service: P,
+pub struct Live {
+    pool_service: Arc<dyn Sqlite>,
 }
 
-impl<P: Sqlite> Live<P> {
-    pub fn new(pool_service: P) -> Self {
+impl Live {
+    pub fn new(pool_service: Arc<dyn Sqlite>) -> Self {
         Self { pool_service }
     }
 }
 
 #[async_trait::async_trait]
-impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
+impl ConfigRepository for Live {
     async fn get(&self) -> anyhow::Result<Config> {
-        let pool = self
-            .pool_service
-            .pool()
-            .await
-            .context("Failed to get database pool")?;
-        let mut conn = pool
-            .get()
-            .context("Failed to get database connection from pool")?;
+        let mut conn = self.pool_service.connection().await.with_context(|| {
+            "Failed to acquire database connection for retrieving latest configuration".to_string()
+        })?;
 
         // get the max timestamp.
         let max_ts: Option<NaiveDateTime> = configuration_table::table
             .select(max(configuration_table::created_at))
-            .first(&mut conn)?;
+            .first(&mut conn)
+            .with_context(|| {
+                "Failed to retrieve configuration - no configurations found in database"
+            })?;
 
         // use the max timestamp to get the latest config.
         let result: ConfigEntity = configuration_table::table
             .filter(configuration_table::created_at.eq_any(max_ts))
             .limit(1)
-            .first(&mut conn)?;
+            .first(&mut conn)
+            .with_context(|| {
+                format!(
+                    "Failed to retrieve configuration for timestamp: {:?}",
+                    max_ts
+                )
+            })?;
 
         Ok(Config::try_from(result)?)
     }
 
     async fn set(&self, data: Config) -> anyhow::Result<Config> {
-        let pool: r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>> =
-            self.pool_service.pool().await?;
-        let mut conn = pool.get()?;
+        let mut conn = self.pool_service.connection().await?;
         let now = Utc::now().naive_utc();
 
         let raw = ConfigEntity {
@@ -103,8 +107,8 @@ impl<P: Sqlite + Send + Sync> ConfigRepository for Live<P> {
 }
 
 impl Service {
-    pub fn config_service(database_url: &str) -> anyhow::Result<impl ConfigRepository> {
-        Ok(Live::new(Service::db_pool_service(database_url)?))
+    pub fn config_repo(sql: Arc<dyn Sqlite>) -> impl ConfigRepository {
+        Live::new(sql)
     }
 }
 
@@ -113,13 +117,13 @@ pub mod tests {
     use forge_domain::{ApiKey, ModelConfig, ModelId, Permissions, ProviderId};
 
     use super::*;
-    use crate::sqlite::tests::TestSqlite;
+    use crate::sqlite::TestDriver;
 
     pub struct TestConfigStorage;
 
     impl TestConfigStorage {
         pub fn in_memory() -> anyhow::Result<impl ConfigRepository> {
-            let pool_service = TestSqlite::new()?;
+            let pool_service = Arc::new(TestDriver::new()?);
             Ok(Live::new(pool_service))
         }
     }

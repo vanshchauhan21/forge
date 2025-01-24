@@ -39,8 +39,8 @@ struct Live {
     tool: Arc<dyn ToolService>,
     completions: Arc<dyn CompletionService>,
     ui_service: Arc<dyn UIService>,
-    storage: Arc<dyn ConversationRepository>,
-    config_storage: Arc<dyn ConfigRepository>,
+    conversation_repo: Arc<dyn ConversationRepository>,
+    config_repo: Arc<dyn ConfigRepository>,
     environment: Environment,
 }
 
@@ -61,7 +61,12 @@ impl Live {
         ));
 
         let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));
-        let storage = Arc::new(Service::storage_service(&cwd)?);
+
+        let sqlite = Arc::new(Service::db_pool_service(&cwd)?);
+
+        let conversation_repo = Arc::new(Service::conversation_repo(sqlite.clone()));
+
+        let config_repo = Arc::new(Service::config_repo(sqlite.clone()));
 
         let chat_service = Arc::new(Service::chat_service(
             provider.clone(),
@@ -74,19 +79,18 @@ impl Live {
         let title_service = Arc::new(Service::title_service(provider.clone()));
 
         let chat_service = Arc::new(Service::ui_service(
-            storage.clone(),
+            conversation_repo.clone(),
             chat_service,
             title_service,
         ));
-        let config_storage = Arc::new(Service::config_service(&cwd)?);
 
         Ok(Self {
             provider,
             tool,
             completions,
             ui_service: chat_service,
-            storage,
-            config_storage,
+            conversation_repo,
+            config_repo,
             environment: env,
         })
     }
@@ -103,7 +107,7 @@ impl APIService for Live {
     }
 
     async fn context(&self, conversation_id: ConversationId) -> Result<Context> {
-        Ok(self.storage.get(conversation_id).await?.context)
+        Ok(self.conversation_repo.get(conversation_id).await?.context)
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
@@ -115,19 +119,24 @@ impl APIService for Live {
     }
 
     async fn conversations(&self) -> Result<Vec<Conversation>> {
-        self.storage.list().await
+        self.conversation_repo.list().await
     }
 
     async fn conversation(&self, conversation_id: ConversationId) -> Result<ConversationHistory> {
-        Ok(self.storage.get(conversation_id).await?.context.into())
+        Ok(self
+            .conversation_repo
+            .get(conversation_id)
+            .await?
+            .context
+            .into())
     }
 
     async fn get_config(&self) -> Result<Config> {
-        Ok(self.config_storage.get().await?)
+        Ok(self.config_repo.get().await?)
     }
 
-    async fn set_config(&self, request: Config) -> Result<Config> {
-        self.config_storage.set(request).await
+    async fn set_config(&self, config: Config) -> Result<Config> {
+        self.config_repo.set(config).await
     }
 
     async fn environment(&self) -> Result<Environment> {
