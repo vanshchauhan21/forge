@@ -47,7 +47,11 @@ impl ToolCallService for FSSearch {
         let pattern = format!("(?i){}", input.regex);
         let regex = Regex::new(&pattern).map_err(|e| format!("Invalid regex pattern: {}", e))?;
 
-        let walker = Walker::new(dir.to_path_buf());
+        let walker = Walker::builder()
+            .cwd(dir.to_path_buf())
+            .build()
+            .map_err(|e| format!("Failed to create directory walker: {}", e))?;
+
         let files = walker
             .get()
             .await

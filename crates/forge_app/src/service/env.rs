@@ -41,8 +41,11 @@ impl Live {
         } else {
             std::env::current_dir()?
         };
-        let files = match Walker::new(cwd.clone())
-            .with_max_depth(usize::MAX)
+
+        let files = match Walker::builder()
+            .cwd(cwd.clone())
+            .max_depth(3)
+            .build()?
             .get()
             .await
         {

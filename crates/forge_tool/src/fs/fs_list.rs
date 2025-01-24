@@ -45,7 +45,12 @@ impl ToolCallService for FSList {
         let mut paths = Vec::new();
         let recursive = input.recursive.unwrap_or(false);
         let max_depth = if recursive { usize::MAX } else { 1 };
-        let walker = Walker::new(dir.to_path_buf()).with_max_depth(max_depth);
+
+        let walker = Walker::builder()
+            .cwd(dir.to_path_buf())
+            .max_depth(max_depth)
+            .build()
+            .map_err(|e| format!("Failed to create directory walker: {}", e))?;
 
         let files = walker
             .get()

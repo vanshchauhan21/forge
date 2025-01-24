@@ -31,7 +31,7 @@ impl Live {
 impl CompletionService for Live {
     async fn list(&self) -> Result<Vec<File>> {
         let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
-        let walker = Walker::new(cwd);
+        let walker = Walker::builder().cwd(cwd).build()?;
 
         let files = walker.get().await?;
         Ok(files
