@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -5,7 +7,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReadInput {
-    /// The path of the file to read (relative to the current working directory)
+    /// The path of the file to read, always provide absolute paths.
     pub path: String,
 }
 
@@ -29,7 +31,14 @@ impl ToolCallService for FSRead {
     type Input = FSReadInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
-        let content = tokio::fs::read_to_string(&input.path)
+        let path = Path::new(&input.path);
+        if !path.is_absolute() {
+            return Err(format!(
+                "Path '{}' is not absolute, absolute path is required.",
+                input.path
+            ));
+        }
+        let content = tokio::fs::read_to_string(path)
             .await
             .map_err(|e| format!("Failed to read file content from {}: {}", input.path, e))?;
         Ok(content)

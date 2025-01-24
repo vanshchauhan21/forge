@@ -1,6 +1,8 @@
 use derive_more::derive::Display;
 use derive_setters::Setters;
-use forge_domain::{Context, ContextMessage, ModelId, Role, ToolCallId, ToolDefinition, ToolName};
+use forge_domain::{
+    Context, ContextMessage, ModelId, Role, ToolCallFull, ToolCallId, ToolDefinition, ToolName,
+};
 use serde::{Deserialize, Serialize};
 
 use super::response::{FunctionCall, OpenRouterToolCall};
@@ -240,6 +242,19 @@ impl From<Context> for OpenRouterRequest {
     }
 }
 
+impl From<ToolCallFull> for OpenRouterToolCall {
+    fn from(value: ToolCallFull) -> Self {
+        Self {
+            id: value.call_id,
+            r#type: FunctionType,
+            function: FunctionCall {
+                arguments: serde_json::to_string(&value.arguments).unwrap(),
+                name: Some(value.name),
+            },
+        }
+    }
+}
+
 impl From<ContextMessage> for OpenRouterMessage {
     fn from(value: ContextMessage) -> Self {
         match value {
@@ -248,16 +263,11 @@ impl From<ContextMessage> for OpenRouterMessage {
                 content: Some(MessageContent::Text(chat_message.content)),
                 name: None,
                 tool_call_id: None,
-                tool_calls: chat_message.tool_call.map(|tool_call| {
-                    // FIXME: All the tool_calls should be added, instead of just one of them
-                    vec![OpenRouterToolCall {
-                        id: tool_call.call_id,
-                        r#type: FunctionType,
-                        function: FunctionCall {
-                            arguments: serde_json::to_string(&tool_call.arguments).unwrap(),
-                            name: Some(tool_call.name),
-                        },
-                    }]
+                tool_calls: chat_message.tool_calls.map(|tool_calls| {
+                    tool_calls
+                        .into_iter()
+                        .map(OpenRouterToolCall::from)
+                        .collect()
                 }),
             },
             ContextMessage::ToolMessage(tool_result) => OpenRouterMessage {
@@ -335,7 +345,7 @@ mod tests {
         let user_message = ContextMessage::ContentMessage(ContentMessage {
             role: Role::User,
             content: "Hello".to_string(),
-            tool_call: None,
+            tool_calls: None,
         });
         let router_message = OpenRouterMessage::from(user_message);
         assert_json_snapshot!(router_message);
@@ -356,7 +366,7 @@ mod tests {
         let message = ContextMessage::ContentMessage(ContentMessage {
             role: Role::User,
             content: xml_content.to_string(),
-            tool_call: None,
+            tool_calls: None,
         });
         let router_message = OpenRouterMessage::from(message);
         assert_json_snapshot!(router_message);
@@ -373,7 +383,7 @@ mod tests {
         let assistant_message = ContextMessage::ContentMessage(ContentMessage {
             role: Role::Assistant,
             content: "Using tool".to_string(),
-            tool_call: Some(tool_call),
+            tool_calls: Some(vec![tool_call]),
         });
         let router_message = OpenRouterMessage::from(assistant_message);
         assert_json_snapshot!(router_message);
@@ -434,17 +444,17 @@ mod tests {
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::System,
                     content: "First system message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::User,
                     content: "Last user message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::Assistant,
                     content: "Assistant message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
             ],
             tools: vec![],
@@ -488,12 +498,12 @@ mod tests {
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::System,
                     content: "First system message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::System,
                     content: "Last system message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
             ],
             tools: vec![],
@@ -530,12 +540,12 @@ mod tests {
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::System,
                     content: "First system message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
                 ContextMessage::ContentMessage(ContentMessage {
                     role: Role::User,
                     content: "Last user message".to_string(),
-                    tool_call: None,
+                    tool_calls: None,
                 }),
             ],
             tools: vec![],

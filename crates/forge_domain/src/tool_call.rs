@@ -52,29 +52,50 @@ impl ToolCallFull {
     pub fn new(tool_name: ToolName) -> Self {
         Self { name: tool_name, call_id: None, arguments: Value::default() }
     }
-    pub fn try_from_parts(parts: &[ToolCallPart]) -> Result<Self> {
-        let mut tool_name = None;
+
+    pub fn try_from_parts(parts: &[ToolCallPart]) -> Result<Vec<Self>> {
+        let mut tool_name: Option<&ToolName> = None;
         let mut tool_call_id = None;
+
+        let mut tool_calls = Vec::new();
 
         let mut input = String::new();
         for part in parts.iter() {
-            if let Some(value) = &part.name {
-                tool_name = Some(value);
+            if let Some(value) = &part.call_id {
+                if let Some(tool_name) = tool_name {
+                    if !input.is_empty() {
+                        tool_calls.push(ToolCallFull {
+                            name: tool_name.clone(),
+                            call_id: tool_call_id,
+                            arguments: serde_json::from_str(&input)
+                                .map_err(Error::ToolCallArgument)?,
+                        });
+                        input.clear();
+                    }
+                }
+                tool_call_id = Some(value.clone());
             }
 
-            if let Some(value) = &part.call_id {
-                tool_call_id = Some(value);
+            if let Some(value) = &part.name {
+                tool_name = Some(value);
             }
 
             input.push_str(&part.arguments_part);
         }
 
-        if let Some(tool_name) = tool_name {
-            Ok(ToolCallFull {
-                name: tool_name.clone(),
-                call_id: tool_call_id.cloned(),
-                arguments: serde_json::from_str(&input).map_err(Error::ToolCallArgument)?,
-            })
+        if !input.is_empty() {
+            if let Some(tool_name) = tool_name {
+                tool_calls.push(ToolCallFull {
+                    name: tool_name.clone(),
+                    call_id: tool_call_id,
+                    arguments: serde_json::from_str(&input).map_err(Error::ToolCallArgument)?,
+                });
+                input.clear();
+            }
+        }
+
+        if !tool_calls.is_empty() {
+            Ok(tool_calls)
         } else {
             Err(Error::ToolCallMissingName)
         }
@@ -83,5 +104,73 @@ impl ToolCallFull {
     /// Parse multiple tool calls from XML format.
     pub fn try_from_xml(input: &str) -> std::result::Result<Vec<Self>, String> {
         parse(input)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multiple_calls() {
+        let input = [
+            ToolCallPart {
+                call_id: Some(ToolCallId("call_1".to_string())),
+                name: Some(ToolName::new("tool_forge_fs_read")),
+                arguments_part: "{\"path\": \"crates/forge_app/src/fixtures/mascot.md\"}"
+                    .to_string(),
+            },
+            ToolCallPart {
+                call_id: Some(ToolCallId("call_2".to_string())),
+                name: Some(ToolName::new("tool_forge_fs_read")),
+                arguments_part: "{\"path\": \"docs/onboarding.md\"}".to_string(),
+            },
+            ToolCallPart {
+                call_id: Some(ToolCallId("call_3".to_string())),
+                name: Some(ToolName::new("tool_forge_fs_read")),
+                arguments_part: "{\"path\": \"crates/forge_app/src/service/service.md\"}"
+                    .to_string(),
+            },
+        ];
+
+        let actual = ToolCallFull::try_from_parts(&input).unwrap();
+
+        let exepected = vec![
+            ToolCallFull {
+                name: ToolName::new("tool_forge_fs_read"),
+                call_id: Some(ToolCallId("call_1".to_string())),
+                arguments: serde_json::json!({"path": "crates/forge_app/src/fixtures/mascot.md"}),
+            },
+            ToolCallFull {
+                name: ToolName::new("tool_forge_fs_read"),
+                call_id: Some(ToolCallId("call_2".to_string())),
+                arguments: serde_json::json!({"path": "docs/onboarding.md"}),
+            },
+            ToolCallFull {
+                name: ToolName::new("tool_forge_fs_read"),
+                call_id: Some(ToolCallId("call_3".to_string())),
+                arguments: serde_json::json!({"path": "crates/forge_app/src/service/service.md"}),
+            },
+        ];
+
+        assert_eq!(actual, exepected);
+    }
+
+    #[test]
+    fn test_single_tool_call() {
+        let input = [ToolCallPart {
+            call_id: Some(ToolCallId("call_1".to_string())),
+            name: Some(ToolName::new("tool_forge_fs_read")),
+            arguments_part: "{\"path\": \"docs/onboarding.md\"}".to_string(),
+        }];
+
+        let actual = ToolCallFull::try_from_parts(&input).unwrap();
+        let expected = vec![ToolCallFull {
+            call_id: Some(ToolCallId("call_1".to_string())),
+            name: ToolName::new("tool_forge_fs_read"),
+            arguments: serde_json::json!({"path": "docs/onboarding.md"}),
+        }];
+
+        assert_eq!(actual, expected);
     }
 }

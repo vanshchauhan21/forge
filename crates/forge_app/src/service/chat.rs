@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ProviderService,
-    ResultStream, Role, ToolCall, ToolCallFull, ToolService,
+    ResultStream, Role, ToolCall, ToolCallFull, ToolResult, ToolService,
 };
 use serde::Serialize;
 use tokio_stream::wrappers::ReceiverStream;
@@ -39,6 +39,12 @@ struct Live {
     user_prompt: Arc<dyn PromptService>,
 }
 
+/// mapping of tool call request to it's result.
+struct ToolCallEntry {
+    request: ToolCallFull,
+    response: ToolResult,
+}
+
 impl Live {
     fn new(
         provider: Arc<dyn ProviderService>,
@@ -58,9 +64,9 @@ impl Live {
     ) -> Result<()> {
         loop {
             let mut tool_call_parts = Vec::new();
-            let mut some_tool_call = None;
-            let mut some_tool_result = None;
             let mut assistant_message_content = String::new();
+
+            let mut tool_call_entry = Vec::new();
 
             let mut response = self.provider.chat(&chat.model, request.clone()).await?;
 
@@ -103,22 +109,24 @@ impl Live {
                 }
 
                 if let Some(FinishReason::ToolCalls) = message.finish_reason {
-                    // TODO: drop clone from here.
-                    let tool_call = ToolCallFull::try_from_parts(&tool_call_parts)?;
-                    some_tool_call = Some(tool_call.clone());
+                    let tool_calls = ToolCallFull::try_from_parts(&tool_call_parts)?;
+                    tool_call_entry.reserve_exact(tool_calls.len());
 
-                    tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
-                        .await
-                        .unwrap();
-
-                    let tool_result = self.tool.call(tool_call).await;
-
-                    some_tool_result = Some(tool_result.clone());
-
-                    // send the tool use end message.
-                    tx.send(Ok(ChatResponse::ToolCallEnd(tool_result)))
-                        .await
-                        .unwrap();
+                    // TODO: execute these tool calls in parallel.
+                    for tool_call in tool_calls {
+                        tx.send(Ok(ChatResponse::ToolCallStart(tool_call.clone())))
+                            .await
+                            .unwrap();
+                        let tool_result = self.tool.call(tool_call.clone()).await;
+                        tool_call_entry.push(ToolCallEntry {
+                            request: tool_call,
+                            response: tool_result.clone(),
+                        });
+                        // send the tool use end message.
+                        tx.send(Ok(ChatResponse::ToolCallEnd(tool_result)))
+                            .await
+                            .unwrap();
+                    }
                 }
 
                 if let Some(reason) = &message.finish_reason {
@@ -134,17 +142,30 @@ impl Live {
                 }
             }
 
+            let tool_call_requests = tool_call_entry
+                .iter()
+                .map(|t| t.request.clone())
+                .collect::<Vec<_>>();
             request = request.add_message(ContextMessage::assistant(
                 assistant_message_content.clone(),
-                some_tool_call,
+                Some(tool_call_requests),
             ));
 
             tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
                 .await
                 .unwrap();
 
-            if let Some(tool_result) = some_tool_result {
-                request = request.add_message(ContextMessage::ToolMessage(tool_result));
+            let tool_call_results = tool_call_entry
+                .into_iter()
+                .map(|t| t.response)
+                .collect::<Vec<_>>();
+            if !tool_call_results.is_empty() {
+                request = request.extend_messages(
+                    tool_call_results
+                        .into_iter()
+                        .map(ContextMessage::ToolMessage)
+                        .collect(),
+                );
                 tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
                     .await
                     .unwrap();
@@ -208,8 +229,10 @@ impl From<Context> for ConversationHistory {
             .flat_map(|message| match message {
                 ContextMessage::ContentMessage(content) => {
                     let mut messages = vec![ChatResponse::Text(content.content.clone())];
-                    if let Some(tool_call) = &content.tool_call {
-                        messages.push(ChatResponse::ToolCallStart(tool_call.clone()));
+                    if let Some(tool_calls) = &content.tool_calls {
+                        for tool_call in tool_calls {
+                            messages.push(ChatResponse::ToolCallStart(tool_call.clone()));
+                        }
                     }
                     messages
                 }
@@ -614,11 +637,9 @@ mod tests {
             expected_llm_request_1
                 .add_message(ContextMessage::assistant(
                     "Let's use foo tool",
-                    Some(
-                        ToolCallFull::new(ToolName::new("foo"))
-                            .arguments(json!({"foo": 1, "bar": 2}))
-                            .call_id(ToolCallId::new("too_call_001")),
-                    ),
+                    Some(vec![ToolCallFull::new(ToolName::new("foo"))
+                        .arguments(json!({"foo": 1, "bar": 2}))
+                        .call_id(ToolCallId::new("too_call_001"))]),
                 ))
                 .add_message(ContextMessage::ToolMessage(
                     ToolResult::new(ToolName::new("foo"))

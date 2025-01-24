@@ -74,11 +74,13 @@ impl Live {
         if !tx.is_closed() {
             // if receiver is closed, we should not send any more messages
             let tool_call = ToolCallFull::try_from_parts(&parts)?;
-            let title: Title = serde_json::from_value(tool_call.arguments)?;
-
-            tx.send(Ok(ChatResponse::CompleteTitle(title.text)))
-                .await
-                .unwrap();
+            // we expect only one tool call, it's okay to ignore other tool calls.
+            if let Some(tool_call) = tool_call.into_iter().next() {
+                let title: Title = serde_json::from_value(tool_call.arguments)?;
+                tx.send(Ok(ChatResponse::CompleteTitle(title.text)))
+                    .await
+                    .unwrap();
+            }
         }
 
         Ok(())
