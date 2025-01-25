@@ -691,7 +691,7 @@ mod tests {
             .chat(request, Context::default())
             .await
             .unwrap();
-        if let Some(_) = stream.next().await {
+        if stream.next().await.is_some() {
             drop(stream);
         }
         tokio::time::advance(Duration::from_secs(35)).await;
