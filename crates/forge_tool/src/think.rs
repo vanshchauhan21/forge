@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
-use colorize::AnsiColor;
 use forge_domain::{NamedTool, ToolCallService, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
@@ -83,46 +82,6 @@ impl Think {
         Ok(input)
     }
 
-    fn format_thought(&self, thought_data: &ThoughtInput) -> String {
-        let (prefix, context) = match (thought_data.is_revision, &thought_data.branch_from_thought)
-        {
-            (Some(true), _) => (
-                "🔄 Revision".yellow().to_string(),
-                format!(
-                    " (revising thought {})",
-                    thought_data.revises_thought.unwrap_or(0)
-                ),
-            ),
-            (_, Some(branch)) => (
-                "🌿 Branch".green().to_string(),
-                format!(
-                    " (from thought {}, ID: {})",
-                    branch,
-                    thought_data.branch_id.as_ref().unwrap_or(&String::new())
-                ),
-            ),
-            _ => ("💭 Thought".blue().to_string(), String::new()),
-        };
-
-        let header = format!(
-            "{} {}/{}{} (Confidence: {:.2}%)",
-            prefix,
-            thought_data.thought_number,
-            thought_data.total_thoughts,
-            context,
-            thought_data.solution_confidence.unwrap_or(0.0) * 100.0
-        );
-        let border_len = header.len().max(thought_data.thought.len()) + 4;
-        let border = "─".repeat(border_len);
-
-        let thought_data = format!("{:width$}", thought_data.thought, width = border_len - 2);
-
-        format!(
-            "\n┌{}┐\n│ {} │\n├{}┤\n│ {} │\n└{}┘",
-            border, header, border, thought_data, border
-        )
-    }
-
     fn process_thought(&mut self, input: ThoughtInput) -> Result<ThoughtResult> {
         let mut thought_data = self.validate_thought_data(input)?;
 
@@ -160,8 +119,6 @@ impl Think {
                 .or_default()
                 .push(thought_data.clone());
         }
-
-        eprintln!("{}", self.format_thought(&thought_data));
 
         Ok(ThoughtResult {
             thought_number: thought_data.thought_number,
