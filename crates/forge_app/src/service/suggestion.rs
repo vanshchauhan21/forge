@@ -13,8 +13,8 @@ pub struct File {
 }
 
 #[async_trait::async_trait]
-pub trait CompletionService: Send + Sync {
-    async fn list(&self) -> Result<Vec<File>>;
+pub trait SuggestionService: Send + Sync {
+    async fn suggestions(&self) -> Result<Vec<File>>;
 }
 
 struct Live {
@@ -28,8 +28,8 @@ impl Live {
 }
 
 #[async_trait::async_trait]
-impl CompletionService for Live {
-    async fn list(&self) -> Result<Vec<File>> {
+impl SuggestionService for Live {
+    async fn suggestions(&self) -> Result<Vec<File>> {
         let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
         let walker = Walker::builder().cwd(cwd).build()?;
 
@@ -42,7 +42,7 @@ impl CompletionService for Live {
 }
 
 impl Service {
-    pub fn completion_service(path: impl Into<String>) -> impl CompletionService {
+    pub fn completion_service(path: impl Into<String>) -> impl SuggestionService {
         Live::new(path)
     }
 }

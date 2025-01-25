@@ -6,7 +6,7 @@ use tracing::debug;
 
 use super::chat::ChatService;
 use super::workflow_title::TitleService;
-use crate::Service;
+use super::Service;
 
 #[async_trait::async_trait]
 pub trait UIService: Send + Sync {

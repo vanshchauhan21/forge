@@ -9,13 +9,14 @@ use forge_domain::{
 };
 
 use super::chat::ConversationHistory;
-use super::completion::CompletionService;
 use super::env::EnvironmentService;
-use super::{File, Service, UIService};
+use super::suggestion::{File, SuggestionService};
+use super::ui::UIService;
+use super::Service;
 
 #[async_trait::async_trait]
 pub trait APIService: Send + Sync {
-    async fn completions(&self) -> Result<Vec<File>>;
+    async fn suggestions(&self) -> Result<Vec<File>>;
     async fn tools(&self) -> Vec<ToolDefinition>;
     async fn context(&self, conversation_id: ConversationId) -> Result<Context>;
     async fn models(&self) -> Result<Vec<Model>>;
@@ -37,7 +38,7 @@ impl Service {
 struct Live {
     provider: Arc<dyn ProviderService>,
     tool: Arc<dyn ToolService>,
-    completions: Arc<dyn CompletionService>,
+    completions: Arc<dyn SuggestionService>,
     ui_service: Arc<dyn UIService>,
     conversation_repo: Arc<dyn ConversationRepository>,
     config_repo: Arc<dyn ConfigRepository>,
@@ -98,8 +99,8 @@ impl Live {
 
 #[async_trait::async_trait]
 impl APIService for Live {
-    async fn completions(&self) -> Result<Vec<File>> {
-        self.completions.list().await
+    async fn suggestions(&self) -> Result<Vec<File>> {
+        self.completions.suggestions().await
     }
 
     async fn tools(&self) -> Vec<ToolDefinition> {

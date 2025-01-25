@@ -8,7 +8,7 @@ use diesel::sqlite::SqliteConnection;
 pub(crate) use driver::tests::TestDriver;
 pub(crate) use driver::Driver;
 
-use crate::Service;
+use crate::service::Service;
 
 /// Sqlite provides database access functionality.
 /// It abstracts away the connection pooling details and
