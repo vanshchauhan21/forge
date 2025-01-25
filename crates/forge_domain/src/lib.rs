@@ -9,6 +9,7 @@ mod conversation;
 mod environment;
 mod errata;
 mod error;
+mod file;
 mod learning;
 mod message;
 mod model;
@@ -36,6 +37,7 @@ pub use conversation::*;
 pub use environment::*;
 pub use errata::*;
 pub use error::*;
+pub use file::*;
 pub use learning::*;
 pub use message::*;
 pub use model::*;
@@ -56,6 +58,8 @@ pub use user_interaction::*;
 /// This trait follows clean architecture principles for dependency management
 /// and service/repository composition.
 pub trait ForgeDomain {
+    /// The concrete type implementing file read service capabilities
+    type FileReadService: file::FileReadService;
     /// The concrete type implementing tool service capabilities
     type ToolService: ToolService;
     /// The concrete type implementing provider service capabilities
@@ -77,4 +81,7 @@ pub trait ForgeDomain {
     fn config_repository(&self) -> &Self::ConfigRepo;
     /// Get a reference to the environment repository instance
     fn environment_repository(&self) -> &Self::EnvironmentRepo;
+
+    /// Get a reference to the file read service instance
+    fn file_read_service(&self) -> &Self::FileReadService;
 }

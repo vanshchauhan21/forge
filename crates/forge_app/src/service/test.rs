@@ -5,12 +5,11 @@ use std::sync::Mutex;
 use anyhow::{bail, Result};
 use derive_setters::Setters;
 use forge_domain::{
-    ChatCompletionMessage, ChatRequest, Context, Model, ModelId, Parameters, ProviderService,
-    ResultStream,
+    ChatCompletionMessage, ChatRequest, Context, FileReadService, Model, ModelId, Parameters,
+    ProviderService, ResultStream,
 };
 use tokio_stream::StreamExt;
 
-use super::file_read::FileReadService;
 use crate::service::PromptService;
 
 #[derive(Default)]

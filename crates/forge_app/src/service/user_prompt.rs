@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_domain::ChatRequest;
+use forge_domain::{ChatRequest, FileReadService};
 use forge_prompt::Prompt;
 use handlebars::Handlebars;
 use serde::Serialize;
 
-use super::file_read::FileReadService;
 use super::{PromptService, Service};
 
 impl Service {

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_domain::{ChatRequest, Environment, ProviderService, SystemContext, ToolService};
+use forge_domain::{
+    ChatRequest, Environment, FileReadService, ProviderService, SystemContext, ToolService,
+};
 use handlebars::Handlebars;
 use tracing::debug;
 
-use super::file_read::FileReadService;
 use super::{PromptService, Service};
 
 impl Service {
