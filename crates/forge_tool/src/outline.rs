@@ -11,6 +11,8 @@ use tokio::fs;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 use walkdir::WalkDir;
 
+use crate::utils::assert_absolute_path;
+
 const JAVASCRIPT: &str = include_str!("queries/javascript.rkt");
 const PYTHON: &str = include_str!("queries/python.rkt");
 const RUST: &str = include_str!("queries/rust.rkt");
@@ -96,14 +98,16 @@ fn parse_file(_file: &Path, content: &str, parser: &mut Parser, query: &Query) -
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OutlineInput {
-    /// The path to the directory containing the source code files to analyze.
+    /// The path to the directory containing the source code files to analyze
+    /// (absolute path required).
     pub path: String,
 }
 
 /// List definitions (classes, functions, methods, types etc.) in source code
 /// with their relationships. Helps navigate and understand code structure
-/// within a folder across multiple files. Returns a formatted string showing
-/// file names and their definitions in a tree-like structure. Example output:
+/// within a folder across multiple files. The path must be absolute. Returns
+/// a formatted string showing file names and their definitions in a tree-like
+/// structure. Example output:
 /// ```text
 /// models.rs
 /// │trait Repository<T>
@@ -125,6 +129,9 @@ impl ToolCallService for Outline {
     type Input = OutlineInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
+        let path = Path::new(&input.path);
+        assert_absolute_path(path)?;
+
         let extensions_to_languages = HashMap::from([
             ("rs", "rust"),
             ("js", "javascript"),
@@ -203,4 +210,32 @@ impl ToolCallService for Outline {
 }
 
 #[cfg(test)]
-mod tests;
+mod test {
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_outline_relative_path() {
+        let outline = Outline;
+        let result = outline
+            .call(OutlineInput { path: "relative/path".to_string() })
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Path must be absolute"));
+    }
+
+    #[tokio::test]
+    async fn test_outline_empty_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let outline = Outline;
+        let result = outline
+            .call(OutlineInput { path: temp_dir.path().to_string_lossy().to_string() })
+            .await
+            .unwrap();
+
+        assert_eq!(result, "No source code definitions found.");
+    }
+}

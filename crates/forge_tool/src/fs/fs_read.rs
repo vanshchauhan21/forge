@@ -5,6 +5,8 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::utils::assert_absolute_path;
+
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReadInput {
     /// The path of the file to read, always provide absolute paths.
@@ -32,16 +34,11 @@ impl ToolCallService for FSRead {
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let path = Path::new(&input.path);
-        if !path.is_absolute() {
-            return Err(format!(
-                "Path '{}' is not absolute, absolute path is required.",
-                input.path
-            ));
-        }
-        let content = tokio::fs::read_to_string(path)
+        assert_absolute_path(path)?;
+
+        tokio::fs::read_to_string(path)
             .await
-            .map_err(|e| format!("Failed to read file content from {}: {}", input.path, e))?;
-        Ok(content)
+            .map_err(|e| format!("Failed to read file content from {}: {}", input.path, e))
     }
 }
 
@@ -101,5 +98,16 @@ mod test {
     #[test]
     fn test_description() {
         assert!(FSRead.description().len() > 100)
+    }
+
+    #[tokio::test]
+    async fn test_fs_read_relative_path() {
+        let fs_read = FSRead;
+        let result = fs_read
+            .call(FSReadInput { path: "relative/path.txt".to_string() })
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Path must be absolute"));
     }
 }

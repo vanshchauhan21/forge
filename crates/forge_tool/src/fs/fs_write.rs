@@ -6,6 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::syn;
+use crate::utils::assert_absolute_path;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSWriteInput {
@@ -42,12 +43,7 @@ impl ToolCallService for FSWrite {
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         // Validate absolute path requirement
         let path = Path::new(&input.path);
-        if !path.is_absolute() {
-            return Err(format!(
-                "Path '{}' is not absolute, absolute path is required.",
-                input.path
-            ));
-        }
+        assert_absolute_path(path)?;
 
         // Check if file already exists
         let file_exists = tokio::fs::metadata(&input.path).await.is_ok();
@@ -358,7 +354,7 @@ mod test {
             .await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not absolute"));
+        assert!(result.unwrap_err().contains("Path must be absolute"));
     }
 
     #[tokio::test]

@@ -7,10 +7,11 @@ use forge_walker::Walker;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::utils::assert_absolute_path;
+
 #[derive(Deserialize, JsonSchema)]
 pub struct FSListInput {
-    /// The path of the directory to list contents for (relative to the current
-    /// working directory)
+    /// The path of the directory to list contents for (absolute path required)
     pub path: String,
     /// Whether to list files recursively. Use true for recursive listing, false
     /// or omit for top-level only.
@@ -20,9 +21,9 @@ pub struct FSListInput {
 /// Request to list files and directories within the specified directory. If
 /// recursive is true, it will list all files and directories recursively. If
 /// recursive is false or not provided, it will only list the top-level
-/// contents. Do not use this tool to confirm the existence of files you may
-/// have created, as the user will let you know if the files were created
-/// successfully or not.
+/// contents. The path must be absolute. Do not use this tool to confirm the
+/// existence of files you may have created, as the user will let you know if
+/// the files were created successfully or not.
 #[derive(ToolDescription)]
 pub struct FSList;
 
@@ -38,6 +39,8 @@ impl ToolCallService for FSList {
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let dir = Path::new(&input.path);
+        assert_absolute_path(dir)?;
+
         if !dir.exists() {
             return Err(format!("Directory '{}' does not exist", input.path));
         }
@@ -237,5 +240,16 @@ mod test {
         assert!(!result.contains("file1.txt"));
         assert!(!result.contains("subdir"));
         assert!(!result.contains("file2.txt"));
+    }
+
+    #[tokio::test]
+    async fn test_fs_list_relative_path() {
+        let fs_list = FSList;
+        let result = fs_list
+            .call(FSListInput { path: "relative/path".to_string(), recursive: None })
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Path must be absolute"));
     }
 }

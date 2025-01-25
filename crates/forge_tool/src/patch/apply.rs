@@ -10,6 +10,7 @@ use tokio::fs;
 use super::marker::{DIVIDER, REPLACE, SEARCH};
 use super::parse::{self, PatchBlock};
 use crate::syn;
+use crate::utils::assert_absolute_path;
 
 #[derive(Debug, Error)]
 enum Error {
@@ -22,7 +23,7 @@ enum Error {
 /// Input parameters for the fs_replace tool.
 #[derive(Deserialize, JsonSchema)]
 pub struct ApplyPatchInput {
-    /// File path relative to the current working directory
+    /// File path (absolute path required)
     pub path: String,
     /// Multiple SEARCH/REPLACE blocks separated by newlines, defining changes
     /// to make to the file.
@@ -143,6 +144,8 @@ impl ToolCallService for ApplyPatch {
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
         let path = Path::new(&input.path);
+        assert_absolute_path(path)?;
+
         if !path.exists() {
             return Err(Error::FileNotFound(path.to_path_buf()).to_string());
         }
@@ -242,15 +245,18 @@ mod test {
 
     #[tokio::test]
     async fn test_file_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let nonexistent = temp_dir.path().join("nonexistent.txt");
+
         let fs_replace = ApplyPatch;
         let result = fs_replace
             .call(ApplyPatchInput {
-                path: "nonexistent.txt".to_string(),
+                path: nonexistent.to_string_lossy().to_string(),
                 diff: format!("{SEARCH}\nHello\n{DIVIDER}\nWorld\n{REPLACE}\n"),
             })
             .await;
 
-        insta::assert_snapshot!(result.unwrap_err());
+        assert!(result.unwrap_err().contains("File not found"));
     }
 
     #[tokio::test]
@@ -538,5 +544,19 @@ mod test {
         insta::assert_snapshot!(normalize_path(&result));
         let content = fs::read_to_string(&file_path).await.unwrap();
         insta::assert_snapshot!(content);
+    }
+
+    #[tokio::test]
+    async fn test_patch_relative_path() {
+        let fs_replace = ApplyPatch;
+        let result = fs_replace
+            .call(ApplyPatchInput {
+                path: "relative/path.txt".to_string(),
+                diff: format!("{SEARCH}\ntest\n{DIVIDER}\nreplacement\n{REPLACE}\n"),
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Path must be absolute"));
     }
 }

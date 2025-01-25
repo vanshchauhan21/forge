@@ -10,7 +10,7 @@ use anyhow::Result;
 /// # Example
 /// ```rust,no_run
 /// use std::path::PathBuf;
-/// use forge_domain::file::FileReadService;
+/// use forge_domain::FileReadService;
 ///
 /// # async fn example(file_service: impl FileReadService) -> anyhow::Result<()> {
 /// let content = file_service.read(PathBuf::from("config.toml")).await?;
