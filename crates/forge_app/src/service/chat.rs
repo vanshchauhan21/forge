@@ -698,4 +698,80 @@ mod tests {
         // we should consumed only one message from stream.
         assert_eq!(services.provider.message(), total_messages - 1);
     }
+
+    #[tokio::test]
+    async fn test_mutliple_tool_calls() {
+        let model_id = ModelId::new("gpt-5");
+        let mock_llm_responses = vec![
+            vec![
+                ChatCompletionMessage::default()
+                    .content_part("Let's use tools")
+                    .add_tool_call(
+                        ToolCallPart::default()
+                            .name(ToolName::new("foo"))
+                            .arguments_part(r#"{"foo": 1,"#)
+                            .call_id(ToolCallId::new("too_call_001")),
+                    ),
+                ChatCompletionMessage::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""bar": 2}"#)),
+                ChatCompletionMessage::default().add_tool_call(
+                    ToolCallPart::default()
+                        .name(ToolName::new("bar"))
+                        .arguments_part(r#"{"x": 300,"#)
+                        .call_id(ToolCallId::new("too_call_002")),
+                ),
+                ChatCompletionMessage::default()
+                    .add_tool_call(ToolCallPart::default().arguments_part(r#""y": 400}"#)),
+                ChatCompletionMessage::default().finish_reason(FinishReason::ToolCalls),
+            ],
+            vec![ChatCompletionMessage::default()
+                .content_part("Task is complete, let me know how can i help you!")],
+        ];
+
+        let actual = Fixture::default()
+            .assistant_responses(mock_llm_responses)
+            .tools(vec![
+                json!({"a": 100, "b": 200}),
+                json!({"x": 300, "y": 400}),
+            ])
+            .run(
+                ChatRequest::new(model_id.clone(), "Hello can you use tools?").conversation_id(
+                    ConversationId::parse("5af97419-0277-410a-8ca6-0e2a252152c5").unwrap(),
+                ),
+            )
+            .await;
+
+        let expected_llm_request_1 = Context::default()
+            .set_system_message("Do everything that the user says")
+            .add_message(ContextMessage::user(
+                "<task>Hello can you use tools?</task>",
+            ));
+        let expected = vec![
+            expected_llm_request_1.clone(),
+            expected_llm_request_1
+                .add_message(ContextMessage::assistant(
+                    "Let's use tools",
+                    Some(vec![
+                        ToolCallFull::new(ToolName::new("foo"))
+                            .arguments(json!({"foo": 1, "bar": 2}))
+                            .call_id(ToolCallId::new("too_call_001")),
+                        ToolCallFull::new(ToolName::new("bar"))
+                            .arguments(json!({"x": 300, "y": 400}))
+                            .call_id(ToolCallId::new("too_call_002")),
+                    ]),
+                ))
+                .add_message(ContextMessage::ToolMessage(
+                    ToolResult::new(ToolName::new("foo"))
+                        .success(json!({"a": 100, "b": 200}).to_string())
+                        .call_id(ToolCallId::new("too_call_001")),
+                ))
+                .add_message(ContextMessage::ToolMessage(
+                    ToolResult::new(ToolName::new("bar"))
+                        .success(json!({"x": 300, "y": 400}).to_string())
+                        .call_id(ToolCallId::new("too_call_002")),
+                )),
+        ];
+
+        assert_eq!(actual.llm_calls, expected);
+    }
 }
