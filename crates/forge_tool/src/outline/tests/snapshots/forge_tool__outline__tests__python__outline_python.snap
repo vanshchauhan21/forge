@@ -1,0 +1,19 @@
+---
+source: crates/forge_tool/src/outline/tests/python.rs
+expression: result
+snapshot_kind: text
+---
+test.py
+│def greet(name: str) -> str:
+|----
+│class Person:
+│__init__
+|----
+│say_hello
+|----
+│def decorator(func):
+│def wrapper(*args, **kwargs):
+|----
+│def decorated_function():
+|----
+│async def fetch_data():

@@ -1,0 +1,12 @@
+---
+source: crates/forge_tool/src/outline/tests/rust.rs
+expression: result
+snapshot_kind: text
+---
+test.rs
+│struct User {
+|----
+│fn calculate_age(birth_year: u32) -> u32 {
+|----
+│impl User {
+│fn new(name: String, age: u32) -> Self {

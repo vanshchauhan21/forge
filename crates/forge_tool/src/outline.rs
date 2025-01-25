@@ -209,6 +209,10 @@ impl ToolCallService for Outline {
     }
 }
 
+// NOTE: This module is added to ensure outline tests keep working.
+#[cfg(test)]
+mod tests;
+
 #[cfg(test)]
 mod test {
 
