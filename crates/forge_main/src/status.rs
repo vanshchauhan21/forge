@@ -21,10 +21,10 @@ impl Kind {
 
     fn label(&self) -> &'static str {
         match self {
-            Kind::Execute => "EXECUTE",
-            Kind::Success => "SUCCESS",
-            Kind::Failed => "FAILED",
-            Kind::Task => "TASK",
+            Kind::Execute => "execute",
+            Kind::Success => "success",
+            Kind::Failed => "failed",
+            Kind::Task => "task",
         }
     }
 }
