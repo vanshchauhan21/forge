@@ -6,7 +6,7 @@ use nom::character::complete::{char, space0, space1};
 use nom::combinator::{map, opt, recognize};
 use nom::multi::many0;
 use nom::sequence::{pair, preceded};
-use nom::IResult;
+use nom::{IResult, Parser};
 
 #[derive(Debug, Clone)]
 pub struct Prompt {
@@ -74,7 +74,8 @@ impl Prompt {
         many0(alt((
             Self::parse_file_path,
             map(Self::parse_word, Token::Literal),
-        )))(input)
+        )))
+        .parse(input)
     }
 
     fn parse_file_path(input: &str) -> IResult<&str, Token> {
@@ -84,7 +85,8 @@ impl Prompt {
                 take_while1(|c: char| !c.is_whitespace() && c != '@'),
             ),
             |path: &str| Token::File(path.to_string()),
-        )(input)
+        )
+        .parse(input)
     }
 
     fn parse_word(input: &str) -> IResult<&str, String> {
@@ -92,7 +94,8 @@ impl Prompt {
         let (input, word) = recognize(pair(
             take_while1(|c: char| !c.is_whitespace() && c != '@'),
             opt(space1),
-        ))(input)?;
+        ))
+        .parse(input)?;
         Ok((input, word.trim().to_string()))
     }
 }

@@ -3,8 +3,8 @@ use nom::character::complete::line_ending;
 use nom::combinator::{map, verify};
 use nom::error::ErrorKind;
 use nom::multi::many0;
-use nom::sequence::{delimited, tuple};
-use nom::{Err as NomErr, IResult};
+use nom::sequence::delimited;
+use nom::{Err as NomErr, IResult, Parser};
 use thiserror::Error;
 
 use super::marker::{DIVIDER, REPLACE, SEARCH};
@@ -54,11 +54,12 @@ fn parse_search_marker(input: &str) -> IResult<&str, ()> {
             line_ending,
         ),
         |_| (),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_search_content(input: &str) -> IResult<&str, String> {
-    map(take_until(DIVIDER), |s: &str| s.to_string())(input)
+    map(take_until(DIVIDER), |s: &str| s.to_string()).parse(input)
 }
 
 fn parse_divider(input: &str) -> IResult<&str, ()> {
@@ -69,11 +70,12 @@ fn parse_divider(input: &str) -> IResult<&str, ()> {
             line_ending,
         ),
         |_| (),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_replace_content(input: &str) -> IResult<&str, String> {
-    map(take_until(REPLACE), |s: &str| s.to_string())(input)
+    map(take_until(REPLACE), |s: &str| s.to_string()).parse(input)
 }
 
 fn parse_replace_marker(input: &str) -> IResult<&str, ()> {
@@ -84,20 +86,22 @@ fn parse_replace_marker(input: &str) -> IResult<&str, ()> {
             many0(line_ending),
         ),
         |_| (),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_patch_block(input: &str) -> IResult<&str, PatchBlock> {
     map(
-        tuple((
+        (
             parse_search_marker,
             parse_search_content,
             parse_divider,
             parse_replace_content,
             parse_replace_marker,
-        )),
+        ),
         |(_, search, _, replace, _)| PatchBlock { search, replace },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_one_block(input: &str, position: usize) -> Result<(&str, PatchBlock), Error> {
@@ -190,7 +194,8 @@ pub fn parse_blocks(input: &str) -> Result<Vec<PatchBlock>, Error> {
         // But parse_one_block_nom already returns a normal IResult with PatchBlock,
         // so we can just do an identity here:
         |block: PatchBlock| -> Result<PatchBlock, Error> { Ok(block) },
-    ))(input);
+    ))
+    .parse(input);
 
     match result {
         Ok((_remaining, blocks)) => {

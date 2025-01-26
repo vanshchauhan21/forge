@@ -21,18 +21,18 @@ fn is_identifier_char(c: char) -> bool {
 }
 
 fn parse_identifier(input: &str) -> IResult<&str, &str> {
-    take_while1(is_identifier_char)(input)
+    take_while1(is_identifier_char).parse(input)
 }
 
 fn parse_arg(input: &str) -> IResult<&str, (&str, &str)> {
     let (input, _) = multispace0(input)?;
-    let (input, _) = tag("<")(input)?;
+    let (input, _) = tag("<").parse(input)?;
     let (input, key) = parse_identifier(input)?;
-    let (input, _) = tag(">")(input)?;
-    let (input, value) = take_until("</")(input)?;
-    let (input, _) = tag("</")(input)?;
-    let (input, _) = tag(key)(input)?;
-    let (input, _) = tag(">")(input)?;
+    let (input, _) = tag(">").parse(input)?;
+    let (input, value) = take_until("</").parse(input)?;
+    let (input, _) = tag("</").parse(input)?;
+    let (input, _) = tag(key).parse(input)?;
+    let (input, _) = tag(">").parse(input)?;
     let (input, _) = multispace0(input)?;
 
     Ok((input, (key, value)))
@@ -49,20 +49,20 @@ fn parse_args(input: &str) -> IResult<&str, HashMap<String, String>> {
 }
 
 fn parse_tool_call(input: &str) -> IResult<&str, ToolCallParsed> {
-    let (input, _) = tag("<")(input)?;
+    let (input, _) = tag("<").parse(input)?;
     let (input, name) = parse_identifier(input)?;
-    let (input, _) = tag(">")(input)?;
+    let (input, _) = tag(">").parse(input)?;
     let (input, args) = parse_args(input)?;
-    let (input, _) = tag("</")(input)?;
-    let (input, _) = tag(name)(input)?;
-    let (input, _) = tag(">")(input)?;
+    let (input, _) = tag("</").parse(input)?;
+    let (input, _) = tag(name).parse(input)?;
+    let (input, _) = tag(">").parse(input)?;
 
     Ok((input, ToolCallParsed { name: name.to_string(), args }))
 }
 
 fn find_next_tool_call(input: &str) -> IResult<&str, &str> {
     // Find the next occurrence of a tool call opening tag
-    let (remaining, _) = take_until("<")(input)?;
+    let (remaining, _) = take_until("<").parse(input)?;
     Ok((remaining, ""))
 }
 
