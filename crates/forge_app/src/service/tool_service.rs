@@ -7,7 +7,7 @@ use tracing::debug;
 use super::Service;
 
 // Timeout duration for tool calls
-const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
+const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(300);
 
 impl Service {
     pub fn tool_service() -> impl ToolService {
@@ -49,9 +49,9 @@ impl ToolService for Live {
                 match timeout(TOOL_CALL_TIMEOUT, tool.executable.call(input)).await {
                     Ok(result) => result,
                     Err(_) => Err(format!(
-                        "Tool '{}' timed out after {} seconds",
+                        "Tool '{}' timed out after {} minutes",
                         name.as_str(),
-                        TOOL_CALL_TIMEOUT.as_secs()
+                        TOOL_CALL_TIMEOUT.as_secs() / 60
                     )),
                 }
             }
@@ -199,7 +199,7 @@ mod test {
 
         async fn call(&self, _input: Self::Input) -> Result<String, String> {
             // Simulate a long-running task that exceeds the timeout
-            tokio::time::sleep(Duration::from_secs(40)).await;
+            tokio::time::sleep(Duration::from_secs(400)).await;
             Ok("Slow tool completed".to_string())
         }
     }
@@ -226,13 +226,12 @@ mod test {
         };
 
         // Advance time to trigger timeout
-        test::time::advance(Duration::from_secs(35)).await;
+        test::time::advance(Duration::from_secs(305)).await;
 
         let result = service.call(call).await;
 
         // Assert that the result contains a timeout error message
         let content_str = &result.content;
-
         assert!(
             content_str.contains("timed out"),
             "Expected timeout error message"
