@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use forge_domain::{ChatRequest, FileReadService};
 use forge_prompt::Prompt;
 use handlebars::Handlebars;
@@ -19,7 +19,7 @@ struct Live {
 }
 
 #[derive(Serialize)]
-struct Context {
+struct PromptContext {
     task: String,
     files: Vec<FileRead>,
 }
@@ -38,7 +38,11 @@ impl PromptService for Live {
 
         let mut file_contents = vec![];
         for file_path in parsed_task.files() {
-            let content = self.file_read.read(file_path.clone().into()).await?;
+            let content = self
+                .file_read
+                .read(file_path.clone().into())
+                .await
+                .with_context(|| format!("Failed to read content from file: {}", file_path))?;
             file_contents.push(FileRead { path: file_path, content });
         }
 
@@ -46,9 +50,11 @@ impl PromptService for Live {
         hb.set_strict_mode(true);
         hb.register_escape_fn(|str| str.to_string());
 
-        let ctx = Context { task: request.content.to_string(), files: file_contents };
+        let ctx = PromptContext { task: request.content.to_string(), files: file_contents };
 
-        Ok(hb.render_template(template, &ctx)?)
+        Ok(hb
+            .render_template(template, &ctx)
+            .with_context(|| "Failed to render user task template")?)
     }
 }
 

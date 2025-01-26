@@ -88,12 +88,18 @@ impl ConfigRepository for Live {
     }
 
     async fn set(&self, data: Config) -> anyhow::Result<Config> {
-        let mut conn = self.pool_service.connection().await?;
+        let mut conn =
+            self.pool_service.connection().await.with_context(|| {
+                "Failed to acquire database connection for saving configuration"
+            })?;
         let now = Utc::now().naive_utc();
+
+        let serialized_data = serde_json::to_string(&data)
+            .with_context(|| "Failed to serialize configuration data")?;
 
         let raw = ConfigEntity {
             id: ConfigId::generate().to_string(),
-            data: serde_json::to_string(&data)?,
+            data: serialized_data,
             created_at: now,
         };
 

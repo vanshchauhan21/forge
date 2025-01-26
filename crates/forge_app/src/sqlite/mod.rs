@@ -21,7 +21,7 @@ pub trait Sqlite: Send + Sync {
 
 impl Service {
     /// Create a new SQLite service
-    pub fn db_pool_service(db_path: &str) -> Result<impl Sqlite> {
+    pub fn db_pool_service(db_path: &str) -> Result<impl Sqlite + 'static> {
         Driver::new(db_path)
     }
 }

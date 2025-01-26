@@ -112,7 +112,7 @@ impl Shell {
         let base_command = command
             .split_whitespace()
             .next()
-            .ok_or_else(|| "Empty command".to_string())?;
+            .ok_or_else(|| "Command string is empty or contains only whitespace".to_string())?;
 
         if self.blacklist.contains(base_command) {
             return Err(format!("Command '{}' is not allowed", base_command));
@@ -147,7 +147,10 @@ impl ToolCallService for Shell {
 
         cmd.current_dir(input.cwd);
 
-        let output = cmd.output().await.map_err(|e| e.to_string())?;
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute command '{}': {}", input.command, e))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -310,7 +313,10 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Empty command"));
+        assert_eq!(
+            result.unwrap_err(),
+            "Command string is empty or contains only whitespace"
+        );
     }
 
     #[tokio::test]

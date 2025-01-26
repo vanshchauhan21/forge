@@ -13,7 +13,9 @@ pub enum Error {
     #[error("Parser initialization error: {0}")]
     Language(#[from] LanguageError),
     /// Failed to parse the content
-    #[error("Syntax error found in file with extension {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets.")]
+    #[error(
+        "Syntax error found in file with extension {extension}. Hint: Please retry in raw mode without HTML-encoding angle brackets."
+    )]
     Parse {
         file_path: String,
         extension: String,

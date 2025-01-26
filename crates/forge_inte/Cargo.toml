@@ -1,0 +1,12 @@
+[package]
+name = "forge_inte"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+forge_app = { path = "../forge_app" }
+forge_domain = { path = "../forge_domain" }
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"

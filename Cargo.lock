@@ -885,6 +885,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_inte"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "forge_app",
+ "forge_domain",
+ "futures",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "forge_main"
 version = "0.1.0"
 dependencies = [
