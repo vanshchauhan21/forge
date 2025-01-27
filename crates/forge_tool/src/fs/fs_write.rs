@@ -5,6 +5,7 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::patch::ApplyPatch;
 use crate::syn;
 use crate::utils::assert_absolute_path;
 
@@ -16,22 +17,18 @@ pub struct FSWriteInput {
     /// content of the file, without any truncation or omissions. You MUST
     /// include ALL parts of the file, even if they haven't been modified.
     pub content: String,
-    /// When set to true, allows overwriting of existing files. Defaults to
-    /// false.
-    pub overwrite: Option<bool>,
 }
 
 /// Use it to create a new file at a specified path with the provided content.
-/// Always provide absolute paths for file locations. By default, if the file
-/// already exists, the tool will return an error to prevent overwriting. Set
-/// overwrite=true to allow overwriting existing files. The tool automatically
-/// handles the creation of any missing intermediary directories in the
-/// specified path.
+/// Always provide absolute paths for file locations. If the file already
+/// exists, the tool will return an error to prevent overwriting. The tool
+/// automatically handles the creation of any missing intermediary directories
+/// in the specified path.
 #[derive(ToolDescription)]
 pub struct FSWrite;
 
 impl NamedTool for FSWrite {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_fs_write")
     }
 }
@@ -47,10 +44,11 @@ impl ToolCallService for FSWrite {
 
         // Check if file already exists
         let file_exists = tokio::fs::metadata(&input.path).await.is_ok();
-        if file_exists && !input.overwrite.unwrap_or(false) {
+        if file_exists {
             return Err(format!(
-                "File {} already exists. Set overwrite=true to overwrite.",
-                input.path
+                "File {} already exists. Use '{}' tool to modify existing files.",
+                input.path,
+                ApplyPatch::tool_name().as_str()
             ));
         }
 
@@ -87,6 +85,7 @@ impl ToolCallService for FSWrite {
 mod test {
     use std::path::Path;
 
+    use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
     use tokio::fs;
 
@@ -108,7 +107,6 @@ mod test {
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
                 content: content.to_string(),
-                overwrite: Some(false),
             })
             .await
             .unwrap();
@@ -132,7 +130,6 @@ mod test {
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
                 content: "fn main() { let x = ".to_string(),
-                overwrite: Some(false),
             })
             .await;
 
@@ -151,7 +148,6 @@ mod test {
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
                 content: content.to_string(),
-                overwrite: Some(false),
             })
             .await;
 
@@ -178,13 +174,12 @@ mod test {
             .call(FSWriteInput {
                 path: file_path.to_string_lossy().to_string(),
                 content: "New content".to_string(),
-                overwrite: Some(false),
             })
             .await;
 
-        // Check that the result is an error
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("already exists"));
+        // Check that the result is an error with correct tool name
+        let actual = TempDir::normalize(&result.unwrap_err());
+        assert_snapshot!(actual);
 
         // Verify original content remains unchanged
         let content = fs::read_to_string(&file_path).await.unwrap();
@@ -202,7 +197,6 @@ mod test {
             .call(FSWriteInput {
                 path: nested_path.to_string_lossy().to_string(),
                 content: content.to_string(),
-                overwrite: Some(false),
             })
             .await
             .unwrap();
@@ -233,7 +227,6 @@ mod test {
             .call(FSWriteInput {
                 path: deep_path.to_string_lossy().to_string(),
                 content: content.to_string(),
-                overwrite: Some(false),
             })
             .await
             .unwrap();
@@ -263,11 +256,7 @@ mod test {
 
         let fs_write = FSWrite;
         let result = fs_write
-            .call(FSWriteInput {
-                path: path_str,
-                content: content.to_string(),
-                overwrite: Some(false),
-            })
+            .call(FSWriteInput { path: path_str, content: content.to_string() })
             .await
             .unwrap();
 
@@ -287,103 +276,16 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_fs_write_with_overwrite() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
-
-        // Create initial file
-        let initial_content = "Initial content";
-        fs::write(&file_path, initial_content).await.unwrap();
-
-        // Try to overwrite with overwrite flag
-        let new_content = "New content";
-        let fs_write = FSWrite;
-        let result = fs_write
-            .call(FSWriteInput {
-                path: file_path.to_string_lossy().to_string(),
-                content: new_content.to_string(),
-                overwrite: Some(true),
-            })
-            .await;
-
-        // Verify overwrite was successful
-        assert!(result.is_ok());
-        let written_content = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(written_content, new_content);
-    }
-
-    #[tokio::test]
-    async fn test_fs_write_without_overwrite() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
-
-        // Create initial file
-        let initial_content = "Initial content";
-        fs::write(&file_path, initial_content).await.unwrap();
-
-        // Try to write without overwrite flag
-        let fs_write = FSWrite;
-        let result = fs_write
-            .call(FSWriteInput {
-                path: file_path.to_string_lossy().to_string(),
-                content: "New content".to_string(),
-                overwrite: Some(false),
-            })
-            .await;
-
-        // Verify write was prevented
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Set overwrite=true to overwrite"));
-
-        // Verify original content remains unchanged
-        let content = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(content, initial_content);
-    }
-
-    #[tokio::test]
     async fn test_fs_write_relative_path() {
         let fs_write = FSWrite;
         let result = fs_write
             .call(FSWriteInput {
                 path: "relative/path/file.txt".to_string(),
                 content: "test content".to_string(),
-                overwrite: None,
             })
             .await;
 
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Path must be absolute"));
-    }
-
-    #[tokio::test]
-    async fn test_fs_write_overwrite_not_provided() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
-
-        // Create initial file
-        let initial_content = "Initial content";
-        fs::write(&file_path, initial_content).await.unwrap();
-
-        // Try to write without providing overwrite parameter
-        let fs_write = FSWrite;
-        let result = fs_write
-            .call(FSWriteInput {
-                path: file_path.to_string_lossy().to_string(),
-                content: "New content".to_string(),
-                overwrite: None,
-            })
-            .await;
-
-        // Verify write was prevented
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Set overwrite=true to overwrite"));
-
-        // Verify original content remains unchanged
-        let content = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(content, initial_content);
     }
 }

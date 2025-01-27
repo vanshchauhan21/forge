@@ -119,7 +119,7 @@ pub struct OutlineInput {
 pub struct Outline;
 
 impl NamedTool for Outline {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_code_outline")
     }
 }

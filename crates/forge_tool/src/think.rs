@@ -133,7 +133,7 @@ impl Think {
 }
 
 impl NamedTool for Think {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_process_think")
     }
 }

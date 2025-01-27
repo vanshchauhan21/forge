@@ -123,7 +123,7 @@ impl Shell {
 }
 
 impl NamedTool for Shell {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_process_shell")
     }
 }

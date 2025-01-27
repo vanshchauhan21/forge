@@ -33,7 +33,7 @@ pub struct ApplyPatchInput {
 pub struct ApplyPatch;
 
 impl NamedTool for ApplyPatch {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_patch")
     }
 }

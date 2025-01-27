@@ -23,7 +23,7 @@ pub struct FSReadInput {
 pub struct FSRead;
 
 impl NamedTool for FSRead {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_fs_read")
     }
 }

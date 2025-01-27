@@ -31,7 +31,7 @@ pub struct ApproveInput {
 pub struct Approve;
 
 impl NamedTool for Approve {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_ui_approve")
     }
 }

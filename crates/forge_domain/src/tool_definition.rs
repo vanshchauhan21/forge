@@ -108,7 +108,7 @@ where
         }
 
         ToolDefinition {
-            name: t.tool_name(),
+            name: T::tool_name(),
             description: full_description,
             input_schema: input,
             output_schema: Some(output),

@@ -35,7 +35,7 @@ pub struct SelectInput {
 pub struct SelectTool;
 
 impl NamedTool for SelectTool {
-    fn tool_name(&self) -> ToolName {
+    fn tool_name() -> ToolName {
         ToolName::new("tool_forge_ui_select")
     }
 }
