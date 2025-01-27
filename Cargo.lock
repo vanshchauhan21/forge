@@ -1011,7 +1011,7 @@ name = "forge_walker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "derive_builder",
+ "derive_setters",
  "ignore",
  "pretty_assertions",
  "tempfile",

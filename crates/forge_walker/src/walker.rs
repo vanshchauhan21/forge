@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use derive_builder::Builder;
+use derive_setters::Setters;
 use ignore::WalkBuilder;
 use tokio::task::spawn_blocking;
 
@@ -13,8 +13,7 @@ pub struct File {
     pub size: u64,
 }
 
-#[derive(Builder, Debug, Clone)]
-#[builder(default)]
+#[derive(Debug, Clone, Setters)]
 pub struct Walker {
     /// Base directory to start walking from
     cwd: PathBuf,
@@ -59,10 +58,6 @@ impl Default for Walker {
 }
 
 impl Walker {
-    pub fn builder() -> WalkerBuilder {
-        WalkerBuilder::default()
-    }
-
     pub async fn get(&self) -> Result<Vec<File>> {
         let walker = self.clone();
         spawn_blocking(move || walker.get_blocking())
@@ -93,12 +88,14 @@ impl Walker {
         let mut dir_entries: HashMap<String, usize> = HashMap::new();
         let mut file_count = 0;
 
+        // TODO: Convert to async and return a stream
         let walk = WalkBuilder::new(&self.cwd)
             .hidden(true) // Skip hidden files
             .git_global(true) // Use global gitignore
             .git_ignore(true) // Use local .gitignore
             .ignore(true) // Use .ignore files
             .max_depth(Some(self.max_depth))
+            // TODO: use build_parallel() for better performance
             .build();
 
         'walk_loop: for entry in walk.flatten() {
@@ -238,10 +235,8 @@ mod tests {
         ])
         .unwrap();
 
-        let actual = Walker::builder()
+        let actual = Walker::default()
             .cwd(fixture.path().to_path_buf())
-            .build()
-            .unwrap()
             .get()
             .await
             .unwrap();
@@ -260,11 +255,9 @@ mod tests {
             fixtures::create_sized_files(&[("text.txt".into(), 10), ("binary.exe".into(), 10)])
                 .unwrap();
 
-        let actual = Walker::builder()
+        let actual = Walker::default()
             .cwd(fixture.path().to_path_buf())
             .skip_binary(true)
-            .build()
-            .unwrap()
             .get()
             .await
             .unwrap();
@@ -287,10 +280,8 @@ mod tests {
         let (fixture, _) =
             fixtures::create_file_collection(DEFAULT_MAX_BREADTH + 5, "file").unwrap();
 
-        let actual = Walker::builder()
+        let actual = Walker::default()
             .cwd(fixture.path().to_path_buf())
-            .build()
-            .unwrap()
             .get()
             .await
             .unwrap();
@@ -311,10 +302,8 @@ mod tests {
     async fn test_walker_enforces_directory_depth_limit() {
         let fixture = fixtures::create_directory_tree(DEFAULT_MAX_DEPTH + 3, "test.txt").unwrap();
 
-        let actual = Walker::builder()
+        let actual = Walker::default()
             .cwd(fixture.path().to_path_buf())
-            .build()
-            .unwrap()
             .get()
             .await
             .unwrap();

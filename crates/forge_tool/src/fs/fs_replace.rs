@@ -277,7 +277,7 @@ impl ToolCallService for FSReplace {
 
 #[cfg(test)]
 mod test {
-    use tempfile::TempDir;
+    use crate::utils::TempDir;
 
     use super::*;
 

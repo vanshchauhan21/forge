@@ -1,9 +1,9 @@
 use forge_domain::ToolCallService;
 use insta::assert_snapshot;
-use tempfile::TempDir;
 use tokio::fs;
 
 use super::super::{Outline, OutlineInput};
+use crate::utils::TempDir;
 
 #[tokio::test]
 async fn typescript_outline() {

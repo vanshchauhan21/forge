@@ -51,10 +51,13 @@ impl ToolCallService for FSSearch {
         let pattern = format!("(?i){}", input.regex);
         let regex = Regex::new(&pattern).map_err(|e| format!("Invalid regex pattern: {}", e))?;
 
-        let walker = Walker::builder()
+        // TODO: Current implementation is extremely slow and inefficient.
+        // It should ideally be taking in a stream of files and processing them
+        // concurrently.
+        let walker = Walker::default()
             .cwd(dir.to_path_buf())
-            .build()
-            .map_err(|e| format!("Failed to create directory walker: {}", e))?;
+            .max_breadth(usize::MAX)
+            .max_depth(usize::MAX);
 
         let files = walker
             .get()
@@ -129,10 +132,10 @@ impl ToolCallService for FSSearch {
 #[cfg(test)]
 mod test {
     use pretty_assertions::assert_eq;
-    use tempfile::TempDir;
     use tokio::fs;
 
     use super::*;
+    use crate::utils::TempDir;
 
     #[tokio::test]
     async fn test_fs_search_content() {

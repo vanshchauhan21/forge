@@ -46,10 +46,10 @@ impl ToolCallService for FSFileInfo {
 
 #[cfg(test)]
 mod test {
-    use tempfile::TempDir;
     use tokio::fs;
 
     use super::*;
+    use crate::utils::TempDir;
 
     #[tokio::test]
     async fn test_fs_file_info_on_file() {

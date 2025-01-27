@@ -1,9 +1,9 @@
 use forge_domain::ToolCallService;
 use insta::assert_snapshot;
-use tempfile::TempDir;
 use tokio::fs;
 
 use crate::outline::{Outline, OutlineInput};
+use crate::utils::TempDir;
 
 #[tokio::test]
 async fn javascript_outline() {

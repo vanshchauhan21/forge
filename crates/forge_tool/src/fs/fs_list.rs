@@ -24,8 +24,10 @@ pub struct FSListInput {
 /// contents. The path must be absolute. Do not use this tool to confirm the
 /// existence of files you may have created, as the user will let you know if
 /// the files were created successfully or not.
-#[derive(ToolDescription)]
-pub struct FSList;
+#[derive(Default, ToolDescription)]
+pub struct FSList {
+    sorted: bool,
+}
 
 impl NamedTool for FSList {
     fn tool_name(&self) -> ToolName {
@@ -49,17 +51,21 @@ impl ToolCallService for FSList {
         let recursive = input.recursive.unwrap_or(false);
         let max_depth = if recursive { usize::MAX } else { 1 };
 
-        let walker = Walker::builder()
+        let walker = Walker::default()
             .cwd(dir.to_path_buf())
-            .max_depth(max_depth)
-            .build()
-            .map_err(|e| format!("Failed to create directory walker: {}", e))?;
+            .max_breadth(usize::MAX)
+            .max_depth(max_depth);
 
-        let files = walker
+        let mut files = walker
             .get()
             .await
             .with_context(|| format!("Failed to read directory contents from '{}'", input.path))
             .map_err(|e| e.to_string())?;
+
+        // Sort the files for consistent snapshots
+        if self.sorted {
+            files.sort_by(|a, b| a.path.cmp(&b.path));
+        }
 
         for entry in files {
             // Skip the root directory itself
@@ -68,32 +74,41 @@ impl ToolCallService for FSList {
             }
 
             if !entry.path.is_empty() {
-                let prefix = if entry.is_dir { "[DIR]" } else { "[FILE]" };
-                paths.push(format!("{} {}", prefix, entry.path));
+                if entry.is_dir {
+                    paths.push(format!(r#"<dir path="{}">"#, entry.path));
+                } else {
+                    paths.push(format!(r#"<file path="{}">"#, entry.path));
+                };
             }
         }
 
-        if paths.is_empty() {
-            Ok("No files found".to_string())
-        } else {
-            Ok(paths.join("\n"))
-        }
+        Ok(format!(
+            "<file_list path=\"{}\">\n{}\n</file_list>",
+            input.path,
+            paths.join("\n")
+        ))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use pretty_assertions::assert_eq;
-    use tempfile::TempDir;
+    use insta::assert_snapshot;
     use tokio::fs;
 
     use super::*;
+    use crate::utils::TempDir;
+
+    impl FSList {
+        fn new(sorted: bool) -> Self {
+            Self { sorted }
+        }
+    }
 
     #[tokio::test]
     async fn test_fs_list_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
 
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
         let result = fs_list
             .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
@@ -102,7 +117,7 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(result, "No files found");
+        assert_snapshot!(TempDir::normalize(&result));
     }
 
     #[tokio::test]
@@ -118,7 +133,7 @@ mod test {
         fs::create_dir(temp_dir.path().join("dir1")).await.unwrap();
         fs::create_dir(temp_dir.path().join("dir2")).await.unwrap();
 
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
         let result = fs_list
             .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
@@ -127,19 +142,7 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 4);
-
-        let files: Vec<_> = lines.iter().filter(|p| p.starts_with("[FILE]")).collect();
-        let dirs: Vec<_> = lines.iter().filter(|p| p.starts_with("[DIR]")).collect();
-
-        assert_eq!(files.len(), 2);
-        assert_eq!(dirs.len(), 2);
-
-        assert!(result.contains("file1.txt"));
-        assert!(result.contains("file2.txt"));
-        assert!(result.contains("dir1"));
-        assert!(result.contains("dir2"));
+        assert_snapshot!(TempDir::normalize(&result));
     }
 
     #[tokio::test]
@@ -147,7 +150,7 @@ mod test {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent_dir = temp_dir.path().join("nonexistent");
 
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
         let result = fs_list
             .call(FSListInput {
                 path: nonexistent_dir.to_string_lossy().to_string(),
@@ -172,7 +175,7 @@ mod test {
             .await
             .unwrap();
 
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
         let result = fs_list
             .call(FSListInput {
                 path: temp_dir.path().to_string_lossy().to_string(),
@@ -205,7 +208,7 @@ mod test {
             .await
             .unwrap();
 
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
 
         // Test recursive listing
         let result = fs_list
@@ -216,35 +219,12 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 5); // root.txt, dir1, file1.txt, subdir, file2.txt
-        assert!(result.contains("root.txt"));
-        assert!(result.contains("dir1"));
-        assert!(result.contains("file1.txt"));
-        assert!(result.contains("subdir"));
-        assert!(result.contains("file2.txt"));
-
-        // Test non-recursive listing of same structure
-        let result = fs_list
-            .call(FSListInput {
-                path: temp_dir.path().to_string_lossy().to_string(),
-                recursive: Some(false),
-            })
-            .await
-            .unwrap();
-
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 2); // Only root.txt and dir1
-        assert!(result.contains("root.txt"));
-        assert!(result.contains("dir1"));
-        assert!(!result.contains("file1.txt"));
-        assert!(!result.contains("subdir"));
-        assert!(!result.contains("file2.txt"));
+        assert_snapshot!(TempDir::normalize(&result));
     }
 
     #[tokio::test]
     async fn test_fs_list_relative_path() {
-        let fs_list = FSList;
+        let fs_list = FSList::new(true);
         let result = fs_list
             .call(FSListInput { path: "relative/path".to_string(), recursive: None })
             .await;

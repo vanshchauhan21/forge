@@ -216,9 +216,8 @@ mod tests;
 #[cfg(test)]
 mod test {
 
-    use tempfile::TempDir;
-
     use super::*;
+    use crate::utils::TempDir;
 
     #[tokio::test]
     async fn test_outline_relative_path() {

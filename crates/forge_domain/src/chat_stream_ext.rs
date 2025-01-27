@@ -1,14 +1,11 @@
+use anyhow::Result;
 use futures::Stream;
 
 use super::stream_ext::StreamExt;
 use super::{ChatCompletionMessage, FinishReason, ToolCall, ToolCallFull, ToolCallPart};
-use crate::Error;
 
-pub trait BoxStreamExt<E>: Stream<Item = Result<ChatCompletionMessage, E>> + Sized
-where
-    E: From<Error>,
-{
-    fn collect_tool_call_parts(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
+pub trait BoxStreamExt: Stream<Item = Result<ChatCompletionMessage>> + Sized {
+    fn collect_tool_call_parts(self) -> impl Stream<Item = Result<ChatCompletionMessage>> {
         self.try_collect(Vec::<ToolCallPart>::new(), |parts, message| {
             if let Some(ToolCall::Part(tool_call)) = &message.tool_call.first() {
                 parts.push(tool_call.clone());
@@ -24,7 +21,7 @@ where
         })
     }
 
-    fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage, E>> {
+    fn collect_tool_call_xml_content(self) -> impl Stream<Item = Result<ChatCompletionMessage>> {
         self.try_collect(String::new(), |parts, message| {
             if let Some(content) = &message.content {
                 parts.push_str(content.as_str());
@@ -45,12 +42,7 @@ where
     }
 }
 
-impl<S, E> BoxStreamExt<E> for S
-where
-    E: From<Error> + 'static,
-    S: Stream<Item = Result<ChatCompletionMessage, E>>,
-{
-}
+impl<S> BoxStreamExt for S where S: Stream<Item = Result<ChatCompletionMessage>> {}
 
 #[cfg(test)]
 mod tests {
@@ -60,7 +52,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::ToolName;
+    use crate::{Error, ToolName};
 
     /// Tests that tool call parts are properly collected and combined into a
     /// full tool call
@@ -79,7 +71,7 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_parts()
             .map(Result::unwrap)
@@ -108,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn test_collect_tool_call_parts_empty_stream() {
         // Setup empty message stream
-        let messages: Vec<Result<ChatCompletionMessage, Error>> = vec![];
+        let messages: Vec<Result<ChatCompletionMessage>> = vec![];
 
         // Execute collection
         let actual = stream::iter(messages)
@@ -131,17 +123,12 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(
-            messages
-                .clone()
-                .into_iter()
-                .map(Ok::<ChatCompletionMessage, Error>),
-        )
-        .boxed()
-        .collect_tool_call_parts()
-        .map(Result::unwrap)
-        .collect::<Vec<_>>()
-        .await;
+        let actual = stream::iter(messages.clone().into_iter().map(Ok))
+            .boxed()
+            .collect_tool_call_parts()
+            .map(Result::unwrap)
+            .collect::<Vec<_>>()
+            .await;
 
         // Verify messages pass through unchanged
         let expected = messages;
@@ -161,7 +148,7 @@ mod tests {
             .finish_reason_opt(Some(FinishReason::ToolCalls))];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_parts()
             .collect::<Vec<_>>()
@@ -181,7 +168,7 @@ mod tests {
             .finish_reason_opt(Some(FinishReason::ToolCalls))];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_parts()
             .collect::<Vec<_>>()
@@ -189,7 +176,10 @@ mod tests {
 
         // Verify ToolCallMissingName error is returned
         assert_eq!(actual.len(), 1);
-        assert!(matches!(actual[0], Err(Error::ToolCallMissingName)));
+        assert!(matches!(
+            actual[0].as_ref().unwrap_err().downcast_ref::<Error>(),
+            Some(Error::ToolCallMissingName)
+        ));
     }
 
     /// Tests that XML content is properly collected and parsed into a tool call
@@ -205,7 +195,7 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_xml_content()
             .map(Result::unwrap)
@@ -234,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn test_collect_xml_content_empty_stream() {
         // Setup empty message stream
-        let messages: Vec<Result<ChatCompletionMessage, Error>> = vec![];
+        let messages: Vec<Result<ChatCompletionMessage>> = vec![];
 
         // Execute collection
         let actual = stream::iter(messages)
@@ -260,7 +250,7 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_xml_content()
             .map(Result::unwrap)
@@ -282,17 +272,12 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(
-            messages
-                .clone()
-                .into_iter()
-                .map(Ok::<ChatCompletionMessage, Error>),
-        )
-        .boxed()
-        .collect_tool_call_xml_content()
-        .map(Result::unwrap)
-        .collect::<Vec<_>>()
-        .await;
+        let actual = stream::iter(messages.clone().into_iter().map(Ok))
+            .boxed()
+            .collect_tool_call_xml_content()
+            .map(Result::unwrap)
+            .collect::<Vec<_>>()
+            .await;
 
         // Verify messages pass through unchanged
         let expected = messages;
@@ -318,7 +303,7 @@ mod tests {
         ];
 
         // Execute collection
-        let actual = stream::iter(messages.into_iter().map(Ok::<ChatCompletionMessage, Error>))
+        let actual = stream::iter(messages.into_iter().map(Ok))
             .boxed()
             .collect_tool_call_xml_content()
             .map(Result::unwrap)

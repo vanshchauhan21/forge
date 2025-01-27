@@ -88,10 +88,10 @@ mod test {
     use std::path::Path;
 
     use pretty_assertions::assert_eq;
-    use tempfile::TempDir;
     use tokio::fs;
 
     use super::*;
+    use crate::utils::TempDir;
 
     async fn assert_path_exists(path: impl AsRef<Path>) {
         assert!(fs::metadata(path).await.is_ok(), "Path should exist");

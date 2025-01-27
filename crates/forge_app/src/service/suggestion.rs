@@ -31,7 +31,7 @@ impl Live {
 impl SuggestionService for Live {
     async fn suggestions(&self) -> Result<Vec<File>> {
         let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
-        let walker = Walker::builder().cwd(cwd).build()?;
+        let walker = Walker::default().cwd(cwd);
 
         let files = walker.get().await?;
         Ok(files
