@@ -93,10 +93,10 @@ Usage:
 </tool_forge_fs_read>
 
 5. tool_forge_fs_search
-Request to perform a regex search across files in a specified directory,
- providing context-rich results. This tool searches for patterns or specific
- content across multiple files, displaying each match with encapsulating
- context. The path must be absolute.
+Request to perform a regex search on the content across files in a specified
+ directory, providing context-rich results. This tool searches for patterns
+ or specific content across multiple files, displaying each match with
+ encapsulating context. The path must be absolute.
 
 Parameters:
 - file_pattern: Glob pattern to filter files (e.g., '*.ts' for TypeScript files). If not provided, it will search all files (*).

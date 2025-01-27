@@ -42,7 +42,7 @@ impl Live {
             std::env::current_dir()?
         };
 
-        let files = match Walker::default().cwd(cwd.clone()).max_depth(3).get().await {
+        let files = match Walker::min().cwd(cwd.clone()).max_depth(3).get().await {
             Ok(files) => files
                 .into_iter()
                 .filter(|f| !f.is_dir)

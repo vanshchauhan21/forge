@@ -22,10 +22,10 @@ pub struct FSSearchInput {
     pub file_pattern: Option<String>,
 }
 
-/// Request to perform a regex search across files in a specified directory,
-/// providing context-rich results. This tool searches for patterns or specific
-/// content across multiple files, displaying each match with encapsulating
-/// context. The path must be absolute.
+/// Request to perform a regex search on the content across files in a specified
+/// directory, providing context-rich results. This tool searches for patterns
+/// or specific content across multiple files, displaying each match with
+/// encapsulating context. The path must be absolute.
 #[derive(ToolDescription)]
 pub struct FSSearch;
 
@@ -54,10 +54,7 @@ impl ToolCallService for FSSearch {
         // TODO: Current implementation is extremely slow and inefficient.
         // It should ideally be taking in a stream of files and processing them
         // concurrently.
-        let walker = Walker::default()
-            .cwd(dir.to_path_buf())
-            .max_breadth(usize::MAX)
-            .max_depth(usize::MAX);
+        let walker = Walker::max().cwd(dir.to_path_buf());
 
         let files = walker
             .get()

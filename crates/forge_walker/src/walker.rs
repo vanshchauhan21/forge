@@ -43,8 +43,8 @@ const DEFAULT_MAX_TOTAL_SIZE: u64 = 10 * 1024 * 1024; // 10MB
 const DEFAULT_MAX_DEPTH: usize = 5;
 const DEFAULT_MAX_BREADTH: usize = 10;
 
-impl Default for Walker {
-    fn default() -> Self {
+impl Walker {
+    pub fn min() -> Self {
         Self {
             cwd: PathBuf::new(),
             max_depth: DEFAULT_MAX_DEPTH,
@@ -53,6 +53,18 @@ impl Default for Walker {
             max_files: DEFAULT_MAX_FILES,
             max_total_size: DEFAULT_MAX_TOTAL_SIZE,
             skip_binary: true,
+        }
+    }
+
+    pub fn max() -> Self {
+        Self {
+            cwd: PathBuf::new(),
+            max_depth: usize::MAX,
+            max_breadth: usize::MAX,
+            max_file_size: u64::MAX,
+            max_files: usize::MAX,
+            max_total_size: u64::MAX,
+            skip_binary: false,
         }
     }
 }
@@ -235,7 +247,7 @@ mod tests {
         ])
         .unwrap();
 
-        let actual = Walker::default()
+        let actual = Walker::min()
             .cwd(fixture.path().to_path_buf())
             .get()
             .await
@@ -255,7 +267,7 @@ mod tests {
             fixtures::create_sized_files(&[("text.txt".into(), 10), ("binary.exe".into(), 10)])
                 .unwrap();
 
-        let actual = Walker::default()
+        let actual = Walker::min()
             .cwd(fixture.path().to_path_buf())
             .skip_binary(true)
             .get()
@@ -280,7 +292,7 @@ mod tests {
         let (fixture, _) =
             fixtures::create_file_collection(DEFAULT_MAX_BREADTH + 5, "file").unwrap();
 
-        let actual = Walker::default()
+        let actual = Walker::min()
             .cwd(fixture.path().to_path_buf())
             .get()
             .await
@@ -302,7 +314,7 @@ mod tests {
     async fn test_walker_enforces_directory_depth_limit() {
         let fixture = fixtures::create_directory_tree(DEFAULT_MAX_DEPTH + 3, "test.txt").unwrap();
 
-        let actual = Walker::default()
+        let actual = Walker::min()
             .cwd(fixture.path().to_path_buf())
             .get()
             .await
