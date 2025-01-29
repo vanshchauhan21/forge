@@ -101,9 +101,10 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
-    - uses: actions-rs/cargo@v1
+    - uses: ClementTsang/cargo-action@v0.0.3
       with:
-        command: build --release --target ${{matrix.target}}
+        command: build --release
+        args: --target ${{ matrix.target }}
     - run: "\n                    cd $(dirname \"${{ matrix.binary_path }}\")\n                    if [ \"${{ runner.os }}\" = \"Windows\" ]; then\n                        7z a ../../../${{ matrix.binary_name }}.zip $(basename \"${{ matrix.binary_path }}\")\n                    else\n                        tar czf ../../../${{ matrix.binary_name }}.tar.gz $(basename \"${{ matrix.binary_path }}\")\n                    fi\n                    cd -\n                "
     - uses: actions/upload-artifact@v3
       with:
@@ -123,4 +124,7 @@ jobs:
         path: ${{ inputs.path }}
     - uses: softprops/action-gh-release@v1
       with:
+        generate_release_notes: 'true'
+        files: ${{ inputs.path }}/artifacts/**/*
+        prerelease: 'true'
         token: ${{ secrets.GITHUB_TOKEN }}

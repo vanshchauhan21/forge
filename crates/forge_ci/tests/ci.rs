@@ -1,6 +1,5 @@
-use gh_workflow_tailcall::{Input, *};
-use indexmap::map::IndexMap;
-use serde_json::{json, Value};
+use gh_workflow_tailcall::*;
+use serde_json::json;
 
 #[test]
 fn generate() {
@@ -64,8 +63,9 @@ fn generate() {
             )
             // Build release binary
             .add_step(
-                Step::uses("actions-rs", "cargo", "v1")
-                    .with(("command", "build --release --target ${{matrix.target}}"))
+                Step::uses("ClementTsang", "cargo-action", "v0.0.3")
+                    .add_with(("command", "build --release"))
+                    .add_with(("args", "--target ${{ matrix.target }}"))
             )
             // Create release archive
             .add_step(
@@ -81,24 +81,11 @@ fn generate() {
             )
             // Upload artifact for release
             .add_step(
-                {  let indexmap = IndexMap::new();
-                    let input = Input::from(indexmap).add("name", "${{ matrix.binary_name }}")
-                    .add("path", "${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz")
-                    .add("if-no-files-found", "error");
                     Step::uses("actions", "upload-artifact", "v3")
-                    .with(input)
-                }
+                    .add_with(("name", "${{ matrix.binary_name }}"))
+                    .add_with(("path", "${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz"))
+                    .add_with(("if-no-files-found", "error"))
             )
-    );
-
-    let mut path_map = IndexMap::new();
-    path_map.insert(
-        "name".to_string(),
-        Value::String("${{ matrix.binary_name }}".to_string()),
-    );
-    path_map.insert(
-        "path".to_string(),
-        Value::String("${{ inputs.path }}".to_string()),
     );
     // Add release creation job
     let build_release_job = workflow
@@ -115,14 +102,18 @@ fn generate() {
             .runs_on("ubuntu-latest")
             .add_step(Step::uses("actions", "checkout", "v4"))
             // Download all artifacts
-            .add_step(Step::uses("actions", "download-artifact", "v3").with(Input::from(path_map)))
+            .add_step(
+                Step::uses("actions", "download-artifact", "v3")
+                    .add_with(("name", "${{ matrix.binary_name }}"))
+                    .add_with(("path", "${{ inputs.path }}")),
+            )
             // Create GitHub release
             .add_step(
                 Step::uses("softprops", "action-gh-release", "v1")
-                    .with(("generate_release_notes", "true"))
-                    .with(("files", "${{ inputs.path }}/artifacts/**/*"))
-                    .with(("prerelease", "true"))
-                    .with(("token", "${{ secrets.GITHUB_TOKEN }}")),
+                    .add_with(("generate_release_notes", "true"))
+                    .add_with(("files", "${{ inputs.path }}/artifacts/**/*"))
+                    .add_with(("prerelease", "true"))
+                    .add_with(("token", "${{ secrets.GITHUB_TOKEN }}")),
             ),
     );
 
