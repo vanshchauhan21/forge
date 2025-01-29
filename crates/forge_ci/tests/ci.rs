@@ -49,43 +49,30 @@ fn generate() {
         Job::new("build-release")
             .add_needs(build_job.clone())
             .cond(main_cond)
-            .strategy(Strategy {
-                fail_fast: None,
-                max_parallel: None,
-                matrix: Some(matrix)
-            })
+            .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
             .runs_on("${{ matrix.os }}")
             .add_step(Step::uses("actions", "checkout", "v4"))
             // Install Rust with cross-compilation target
             .add_step(
                 Step::uses("dtolnay", "rust-toolchain", "stable")
-                    .with(("targets", "${{ matrix.target }}"))
+                    .with(("targets", "${{ matrix.target }}")),
             )
             // Build release binary
             .add_step(
                 Step::uses("ClementTsang", "cargo-action", "v0.0.3")
                     .add_with(("command", "build --release"))
-                    .add_with(("args", "--target ${{ matrix.target }}"))
-            )
-            // Create release archive
-            .add_step(
-                Step::run(r#"
-                    cd $(dirname "${{ matrix.binary_path }}")
-                    if [ "${{ runner.os }}" = "Windows" ]; then
-                        7z a ../../../${{ matrix.binary_name }}.zip $(basename "${{ matrix.binary_path }}")
-                    else
-                        tar czf ../../../${{ matrix.binary_name }}.tar.gz $(basename "${{ matrix.binary_path }}")
-                    fi
-                    cd -
-                "#)
+                    .add_with(("args", "--target ${{ matrix.target }}")),
             )
             // Upload artifact for release
             .add_step(
-                    Step::uses("actions", "upload-artifact", "v3")
+                Step::uses("actions", "upload-artifact", "v3")
                     .add_with(("name", "${{ matrix.binary_name }}"))
-                    .add_with(("path", "${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz"))
-                    .add_with(("if-no-files-found", "error"))
-            )
+                    .add_with((
+                        "path",
+                        "${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz",
+                    ))
+                    .add_with(("if-no-files-found", "error")),
+            ),
     );
     // Add release creation job
     let build_release_job = workflow

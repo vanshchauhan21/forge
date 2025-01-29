@@ -105,7 +105,6 @@ jobs:
       with:
         command: build --release
         args: --target ${{ matrix.target }}
-    - run: "\n                    cd $(dirname \"${{ matrix.binary_path }}\")\n                    if [ \"${{ runner.os }}\" = \"Windows\" ]; then\n                        7z a ../../../${{ matrix.binary_name }}.zip $(basename \"${{ matrix.binary_path }}\")\n                    else\n                        tar czf ../../../${{ matrix.binary_name }}.tar.gz $(basename \"${{ matrix.binary_path }}\")\n                    fi\n                    cd -\n                "
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.binary_name }}
