@@ -148,17 +148,46 @@ Usage:
 <url>...</url>
 </tool_forge_net_fetch>
 
-8. tool_forge_patch_v2
-Finds and replaces all occurrences of the search text with the replacement
- text in the file at the given path.
+8. tool_forge_patch
+Replace sections in a file using multiple SEARCH/REPLACE blocks. Example:
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+
+Rules:
+1. SEARCH must exactly match whitespace, indentation & line endings
+2. Each block replaces first match only
+3. Keep blocks minimal - include only changing lines plus needed context
+4. Provide complete lines only - no truncation
+5. Use multiple blocks for multiple changes in the same file
+6. For moves: use 2 blocks (delete block + insert block)
+7. For deletes: use empty REPLACE section
+
+Example with multiple blocks:
+<<<<<<< SEARCH
+def old_function(x):
+    return x + 1
+=======
+def new_function(x, y=0):
+    return x + y
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+# Old comment
+=======
+# Updated documentation - now supports multiple parameters
+>>>>>>> REPLACE
 
 Parameters:
+- diff (required): Multiple SEARCH/REPLACE blocks separated by newlines, defining changes to make to the file.
+- path (required): File path (absolute path required)
 
 Usage:
-<tool_forge_patch_v2>
+<tool_forge_patch>
+<diff>...</diff>
 <path>...</path>
-<replacements>...</replacements>
-</tool_forge_patch_v2>
+</tool_forge_patch>
 
 9. tool_forge_process_shell
 Execute shell commands with safety checks and validation. This tool provides
