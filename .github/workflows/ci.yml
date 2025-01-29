@@ -108,7 +108,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.binary_name }}
-        path: ${{ inputs.path }}/${{ matrix.binary_name }}
+        path: ${{ matrix.binary_path }}/forge${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
         if-no-files-found: error
   create-release:
     needs:
