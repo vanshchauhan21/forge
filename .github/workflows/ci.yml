@@ -108,7 +108,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.binary_name }}
-        path: ${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz
+        path: ${{ inputs.path }}/${{ matrix.binary_name }}
         if-no-files-found: error
   create-release:
     needs:

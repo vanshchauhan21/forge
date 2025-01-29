@@ -69,7 +69,7 @@ fn generate() {
                     .add_with(("name", "${{ matrix.binary_name }}"))
                     .add_with((
                         "path",
-                        "${{ inputs.path }}/${{ matrix.binary_name }}.tar.gz",
+                        "${{ inputs.path }}/${{ matrix.binary_name }}",
                     ))
                     .add_with(("if-no-files-found", "error")),
             ),
