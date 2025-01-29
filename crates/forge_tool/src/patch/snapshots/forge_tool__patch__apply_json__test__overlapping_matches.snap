@@ -1,0 +1,12 @@
+---
+source: crates/forge_tool/src/patch/apply_json.rs
+expression: actual
+snapshot_kind: text
+---
+<!-- INITIAL -->abcabcabc
+<!-- REPLACEMENTS -->
+<!-- SEARCH -->abca
+<!-- REPLACE -->1234
+<!-- SEARCH -->cabc
+<!-- REPLACE -->5678
+<!-- FINAL -->1234b5678

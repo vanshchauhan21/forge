@@ -1,0 +1,12 @@
+---
+source: crates/forge_tool/src/patch/apply_json.rs
+expression: actual
+snapshot_kind: text
+---
+<!-- INITIAL -->same same same
+<!-- REPLACEMENTS -->
+<!-- SEARCH -->same
+<!-- REPLACE -->different
+<!-- SEARCH -->same
+<!-- REPLACE -->changed
+<!-- FINAL -->different changed same

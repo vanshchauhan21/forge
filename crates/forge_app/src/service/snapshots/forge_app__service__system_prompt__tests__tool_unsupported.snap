@@ -43,7 +43,24 @@ Usage:
 <path>...</path>
 </tool_forge_code_outline>
 
-2. tool_forge_fs_info
+2. tool_forge_fs_create
+Use it to create a new file at a specified path with the provided content.
+ Always provide absolute paths for file locations. If the file already
+ exists, the tool will return an error to prevent overwriting. The tool
+ automatically handles the creation of any missing intermediary directories
+ in the specified path.
+
+Parameters:
+- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
+- path (required): The path of the file to write to (absolute path required)
+
+Usage:
+<tool_forge_fs_create>
+<content>...</content>
+<path>...</path>
+</tool_forge_fs_create>
+
+3. tool_forge_fs_info
 Request to retrieve detailed metadata about a file or directory at the
  specified path. Returns comprehensive information including size, creation
  time, last modified time, permissions, and type. Path must be absolute. Use
@@ -58,7 +75,7 @@ Usage:
 <path>...</path>
 </tool_forge_fs_info>
 
-3. tool_forge_fs_list
+4. tool_forge_fs_list
 Request to list files and directories within the specified directory. If
  recursive is true, it will list all files and directories recursively. If
  recursive is false or not provided, it will only list the top-level
@@ -76,7 +93,7 @@ Usage:
 <recursive>...</recursive>
 </tool_forge_fs_list>
 
-4. tool_forge_fs_read
+5. tool_forge_fs_read
 Request to read the contents of a file at the specified path. Use this when
  you need to examine the contents of an existing file you do not know the
  contents of, for example to analyze code, review text files, or extract
@@ -92,7 +109,7 @@ Usage:
 <path>...</path>
 </tool_forge_fs_read>
 
-5. tool_forge_fs_search
+6. tool_forge_fs_search
 Request to perform a regex search on the content across files in a specified
  directory, providing context-rich results. This tool searches for patterns
  or specific content across multiple files, displaying each match with
@@ -109,23 +126,6 @@ Usage:
 <path>...</path>
 <regex>...</regex>
 </tool_forge_fs_search>
-
-6. tool_forge_fs_write
-Use it to create a new file at a specified path with the provided content.
- Always provide absolute paths for file locations. If the file already
- exists, the tool will return an error to prevent overwriting. The tool
- automatically handles the creation of any missing intermediary directories
- in the specified path.
-
-Parameters:
-- content (required): The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.
-- path (required): The path of the file to write to (absolute path required)
-
-Usage:
-<tool_forge_fs_write>
-<content>...</content>
-<path>...</path>
-</tool_forge_fs_write>
 
 7. tool_forge_net_fetch
 Fetches a URL from the internet and optionally extracts its contents as
@@ -148,46 +148,17 @@ Usage:
 <url>...</url>
 </tool_forge_net_fetch>
 
-8. tool_forge_patch
-Replace sections in a file using multiple SEARCH/REPLACE blocks. Example:
-<<<<<<< SEARCH
-[exact content to find]
-=======
-[new content to replace with]
->>>>>>> REPLACE
-
-Rules:
-1. SEARCH must exactly match whitespace, indentation & line endings
-2. Each block replaces first match only
-3. Keep blocks minimal - include only changing lines plus needed context
-4. Provide complete lines only - no truncation
-5. Use multiple blocks for multiple changes in the same file
-6. For moves: use 2 blocks (delete block + insert block)
-7. For deletes: use empty REPLACE section
-
-Example with multiple blocks:
-<<<<<<< SEARCH
-def old_function(x):
-    return x + 1
-=======
-def new_function(x, y=0):
-    return x + y
->>>>>>> REPLACE
-<<<<<<< SEARCH
-# Old comment
-=======
-# Updated documentation - now supports multiple parameters
->>>>>>> REPLACE
+8. tool_forge_patch_v2
+Finds and replaces all occurrences of the search text with the replacement
+ text in the file at the given path.
 
 Parameters:
-- diff (required): Multiple SEARCH/REPLACE blocks separated by newlines, defining changes to make to the file.
-- path (required): File path (absolute path required)
 
 Usage:
-<tool_forge_patch>
-<diff>...</diff>
+<tool_forge_patch_v2>
 <path>...</path>
-</tool_forge_patch>
+<replacements>...</replacements>
+</tool_forge_patch_v2>
 
 9. tool_forge_process_shell
 Execute shell commands with safety checks and validation. This tool provides

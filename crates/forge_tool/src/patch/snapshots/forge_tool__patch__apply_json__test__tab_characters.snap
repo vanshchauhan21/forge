@@ -1,0 +1,10 @@
+---
+source: crates/forge_tool/src/patch/apply_json.rs
+expression: actual
+snapshot_kind: text
+---
+<!-- INITIAL -->no_tab	has_tab
+<!-- REPLACEMENTS -->
+<!-- SEARCH -->has_tab
+<!-- REPLACE -->replaced
+<!-- FINAL -->no_tab	replaced

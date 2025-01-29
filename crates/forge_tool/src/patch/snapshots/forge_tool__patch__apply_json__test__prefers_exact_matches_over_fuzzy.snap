@@ -1,0 +1,12 @@
+---
+source: crates/forge_tool/src/patch/apply_json.rs
+expression: actual
+snapshot_kind: text
+---
+<!-- INITIAL -->foo foox foo
+<!-- REPLACEMENTS -->
+<!-- SEARCH -->foo
+<!-- REPLACE -->bar
+<!-- SEARCH -->foo
+<!-- REPLACE -->baz
+<!-- FINAL -->bar bazx foo
