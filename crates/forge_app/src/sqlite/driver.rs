@@ -10,7 +10,7 @@ use super::Sqlite;
 
 type SQLConnection = Pool<ConnectionManager<SqliteConnection>>;
 
-const DB_NAME: &str = ".forge.db";
+const DB_NAME: &str = "forge.db";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 /// SQLite driver that manages database connections and migrations
