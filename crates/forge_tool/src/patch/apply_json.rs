@@ -84,7 +84,6 @@ impl MatchSequence {
 
         // Walk through text and track position of matching chunks
         let diff = dissimilar::diff(source, search);
-        dbg!(&diff);
         for chunk in diff {
             match chunk {
                 // Text is equal in both source and search
