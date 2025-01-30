@@ -16,25 +16,25 @@ fn generate() {
                 "os": "ubuntu-latest",
                 "target": "x86_64-unknown-linux-gnu",
                 "binary_name": "forge-x86_64-unknown-linux-gnu",
-                "binary_path": "target/x86_64-unknown-linux-gnu/release/forge"
+                "binary_path": "target/x86_64-unknown-linux-gnu/release/forge_main"
             },
             {
                 "os": "macos-latest",
                 "target": "x86_64-apple-darwin",
                 "binary_name": "forge-x86_64-apple-darwin",
-                "binary_path": "target/x86_64-apple-darwin/release/forge"
+                "binary_path": "target/x86_64-apple-darwin/release/forge_main"
             },
             {
                 "os": "macos-latest",
                 "target": "aarch64-apple-darwin",
                 "binary_name": "forge-aarch64-apple-darwin",
-                "binary_path": "target/aarch64-apple-darwin/release/forge"
+                "binary_path": "target/aarch64-apple-darwin/release/forge_main"
             },
             {
                 "os": "windows-latest",
                 "target": "x86_64-pc-windows-msvc",
                 "binary_name": "forge-x86_64-pc-windows-msvc.exe",
-                "binary_path": "target/x86_64-pc-windows-msvc/release/forge.exe"
+                "binary_path": "target/x86_64-pc-windows-msvc/release/forge_main.exe"
             }
         ]
     });
@@ -67,10 +67,7 @@ fn generate() {
             .add_step(
                 Step::uses("actions", "upload-artifact", "v3")
                     .add_with(("name", "${{ matrix.binary_name }}"))
-                    .add_with((
-                        "path",
-                        "${{ matrix.binary_path }}/forge_main${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}",
-                    ))
+                    .add_with(("path", "${{ matrix.binary_path }}"))
                     .add_with(("if-no-files-found", "error")),
             ),
     );
