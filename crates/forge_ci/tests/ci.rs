@@ -132,15 +132,31 @@ fn generate() {
                 .add_with(("pattern", "forge-*"))
                 .add_with(("path", "artifacts")),
         )
-        // Rename artifacts with target names
-        .add_step(
-            Step::run("for file in artifacts/forge-*/*; do\n  filename=$(basename \"$file\")\n  target=$(echo \"$filename\" | cut -d'-' -f2-)\n  cp \"$file\" \"artifacts/forge-$target\"\ndone"),
-        )
-        // Upload to release
+        // Create directory for renamed artifacts
+        .add_step(Step::run("mkdir -p renamed_artifacts"))
+        // Rename and move artifacts with target names
+        .add_step(Step::run(
+            r#"for dir in artifacts/forge-*; do
+                for file in "$dir"/*; do
+                    if [ -f "$file" ]; then
+                        filename=$(basename "$file")
+                        dirname=$(basename "$dir")
+                        target=${dirname#forge-}
+                        cp "$file" "renamed_artifacts/forge-$target"
+                    fi
+                done
+            done"#,
+        ))
+        // List artifacts
+        .add_step(Step::run("ls -la renamed_artifacts/"))
+        // Upload all renamed artifacts
         .add_step(
             Step::uses("xresloader", "upload-to-github-release", "v1")
-                .add_with(("release_id", "${{ needs.draft_release.outputs.create_release_id }}"))
-                .add_with(("file", "artifacts/forge-*"))
+                .add_with((
+                    "release_id",
+                    "${{ needs.draft_release.outputs.create_release_id }}",
+                ))
+                .add_with(("file", "renamed_artifacts/*"))
                 .add_with(("overwrite", "true")),
         );
 

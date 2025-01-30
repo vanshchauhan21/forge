@@ -144,16 +144,23 @@ jobs:
       with:
         pattern: forge-*
         path: artifacts
+    - run: mkdir -p renamed_artifacts
     - run: |-
-        for file in artifacts/forge-*/*; do
-          filename=$(basename "$file")
-          target=$(echo "$filename" | cut -d'-' -f2-)
-          cp "$file" "artifacts/forge-$target"
-        done
+        for dir in artifacts/forge-*; do
+                        for file in "$dir"/*; do
+                            if [ -f "$file" ]; then
+                                filename=$(basename "$file")
+                                dirname=$(basename "$dir")
+                                target=${dirname#forge-}
+                                cp "$file" "renamed_artifacts/forge-$target"
+                            fi
+                        done
+                    done
+    - run: ls -la renamed_artifacts/
     - uses: xresloader/upload-to-github-release@v1
       with:
         release_id: ${{ needs.draft_release.outputs.create_release_id }}
-        file: artifacts/forge-*
+        file: renamed_artifacts/*
         overwrite: 'true'
   semantic_release:
     needs:
