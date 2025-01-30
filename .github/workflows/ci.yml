@@ -122,7 +122,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - id: set_output
-      run: echo "create_release_id=${{ steps.create_release.outputs.id }}" >> $GITHUB_OUTPUT
+      run: echo "create_release_id=${{ steps.create_release.outputs.id }}" >> $GITHUB_OUTPUT && echo "create_release_name=${{ steps.create_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
     outputs:
       create_release_name: ${{ steps.set_output.outputs.create_release_name }}
       create_release_id: ${{ steps.set_output.outputs.create_release_id }}
