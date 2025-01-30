@@ -42,7 +42,7 @@ fn generate() {
         "build-release",
         Job::new("build-release")
             .add_needs(build_job.clone())
-            .cond(main_cond)
+            .cond(main_cond.clone())
             .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
             .runs_on("${{ matrix.os }}")
             .add_step(Step::uses("actions", "checkout", "v4"))
@@ -65,6 +65,21 @@ fn generate() {
                     .add_with(("if-no-files-found", "error")),
             ),
     );
+    // Add release-drafter job
+    workflow = workflow.add_job(
+        "update-release-draft",
+        Job::new("update-release-draft")
+            .runs_on("ubuntu-latest")
+            .cond(main_cond.clone())
+            .add_step(Step::uses("actions", "checkout", "v4"))
+            .add_step(
+                Step::uses("release-drafter", "release-drafter", "v5")
+                    .add_with(("config-name", "release-drafter.yml"))
+                    .add_with(("disable-autolabeler", "false"))
+                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}")),
+            ),
+    );
+
     // Add release creation job
     let build_release_job = workflow
         .jobs
@@ -82,14 +97,14 @@ fn generate() {
             // Download all artifacts
             .add_step(
                 Step::uses("actions", "download-artifact", "v3")
-                    .add_with(("name", "${{ matrix.binary_name }}"))
-                    .add_with(("path", "${{ inputs.path }}")),
+                    .add_with(("pattern", "forge-*"))
+                    .add_with(("path", "artifacts")),
             )
             // Create GitHub release
             .add_step(
                 Step::uses("softprops", "action-gh-release", "v1")
                     .add_with(("generate_release_notes", "true"))
-                    .add_with(("files", "${{ inputs.path }}/artifacts/**/*"))
+                    .add_with(("files", "artifacts/**/*"))
                     .add_with(("prerelease", "true"))
                     .add_with(("token", "${{ secrets.GITHUB_TOKEN }}")),
             ),
