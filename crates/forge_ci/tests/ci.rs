@@ -92,6 +92,10 @@ fn generate() {
                     .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_with(("commitish", "main"))
                     .add_with(("publish", "false")),
+            ).permissions(
+                Permissions::default()
+                    .contents(Level::Write)
+                    .pull_requests(Level::Write),
             )
             // Create GitHub release using the version from release-drafter
             .add_step(

@@ -111,6 +111,9 @@ jobs:
     - build-release
     name: create-release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v3
