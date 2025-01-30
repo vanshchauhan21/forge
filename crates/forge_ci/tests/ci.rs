@@ -145,10 +145,7 @@ fn generate() {
         );
 
     // Add create_release job
-    workflow = workflow.add_job(
-        "create_release",
-        create_release_job.clone(),
-    );
+    workflow = workflow.add_job("create_release", create_release_job.clone());
 
     // Add semantic release job to publish the release
     workflow = workflow.add_job(
