@@ -61,7 +61,7 @@ fn generate() {
             )
             // Upload artifact for release
             .add_step(
-                Step::uses("actions", "upload-artifact", "v3")
+                Step::uses("actions", "upload-artifact", "v4")
                     .add_with(("name", "${{ matrix.binary_name }}"))
                     .add_with(("path", "${{ matrix.binary_path }}"))
                     .add_with(("if-no-files-found", "error")),
@@ -128,7 +128,7 @@ fn generate() {
         .add_step(Step::uses("actions", "checkout", "v4"))
         // Download all artifacts
         .add_step(
-            Step::uses("actions", "download-artifact", "v3")
+            Step::uses("actions", "download-artifact", "v4")
                 .add_with(("pattern", "forge-*"))
                 .add_with(("path", "artifacts")),
         )

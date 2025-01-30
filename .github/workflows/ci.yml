@@ -101,7 +101,7 @@ jobs:
       with:
         command: build --release
         args: --target ${{ matrix.target }}
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.binary_name }}
         path: ${{ matrix.binary_path }}
@@ -140,7 +140,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         pattern: forge-*
         path: artifacts
