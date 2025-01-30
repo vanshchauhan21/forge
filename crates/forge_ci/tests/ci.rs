@@ -1,5 +1,6 @@
 use generate::Generate;
 use gh_workflow_tailcall::*;
+use indexmap::indexmap;
 use serde_json::json;
 
 #[test]
@@ -66,7 +67,7 @@ fn generate() {
                     .add_with(("if-no-files-found", "error")),
             ),
     );
-    // Add release creation job
+    // Store reference to build-release job
     let build_release_job = workflow
         .jobs
         .clone()
@@ -74,39 +75,101 @@ fn generate() {
         .get("build-release")
         .unwrap()
         .clone();
+
+    // Add draft release job
     workflow = workflow.add_job(
-        "create-release",
-        Job::new("create-release")
-            .add_needs(build_release_job)
+        "draft_release",
+        Job::new("draft_release")
             .runs_on("ubuntu-latest")
-            .add_step(Step::uses("actions", "checkout", "v4"))
-            // Download all artifacts
-            .add_step(
-                Step::uses("actions", "download-artifact", "v3")
-                    .add_with(("pattern", "forge-*"))
-                    .add_with(("path", "artifacts")),
-            )
-            // First determine the next version using release-drafter
-            .add_step(
-                Step::uses("release-drafter", "release-drafter", "v6")
-                    .id("release-drafter")
-                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
-                    .add_with(("commitish", "main"))
-                    .add_with(("publish", "false")),
-            )
+            .cond(main_cond.clone())
             .permissions(
                 Permissions::default()
                     .contents(Level::Write)
                     .pull_requests(Level::Write),
             )
-            // Create GitHub release using the version from release-drafter
+            .add_step(Step::uses("actions", "checkout", "v4"))
             .add_step(
-                Step::uses("softprops", "action-gh-release", "v1")
-                    .add_with(("tag_name", "${{ steps.release-drafter.outputs.tag_name }}"))
-                    .add_with(("generate_release_notes", "true"))
-                    .add_with(("files", "artifacts/**/*"))
-                    .add_with(("prerelease", "true"))
-                    .add_with(("token", "${{ secrets.GITHUB_TOKEN }}")),
+                Step::uses("release-drafter", "release-drafter", "v6")
+                    .id("create_release")
+                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+                    .with(("config-name", "release-drafter.yml")),
+            )
+            .add_step(
+                Step::run("echo \"create_release_id=${{ steps.create_release.outputs.id }}\" >> $GITHUB_OUTPUT")
+                    .id("set_output"),
+            )
+            .outputs(indexmap! {
+                "create_release_name".to_string() => "${{ steps.set_output.outputs.create_release_name }}".to_string(),
+                "create_release_id".to_string() => "${{ steps.set_output.outputs.create_release_id }}".to_string()
+            })
+    );
+
+    // Store reference to draft_release job
+    let draft_release_job = workflow
+        .jobs
+        .clone()
+        .unwrap()
+        .get("draft_release")
+        .unwrap()
+        .clone();
+
+    // Store reference to create_release job before we add it
+    let create_release_job = Job::new("create_release")
+        .add_needs(build_release_job.clone())
+        .add_needs(draft_release_job.clone())
+        .cond(main_cond.clone())
+        .permissions(
+            Permissions::default()
+                .contents(Level::Write)
+                .pull_requests(Level::Write),
+        )
+        .runs_on("ubuntu-latest")
+        .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+        .add_step(Step::uses("actions", "checkout", "v4"))
+        // Download all artifacts
+        .add_step(
+            Step::uses("actions", "download-artifact", "v3")
+                .add_with(("pattern", "forge-*"))
+                .add_with(("path", "artifacts")),
+        )
+        // Rename artifacts with target names
+        .add_step(
+            Step::run("for file in artifacts/forge-*/*; do\n  filename=$(basename \"$file\")\n  target=$(echo \"$filename\" | cut -d'-' -f2-)\n  cp \"$file\" \"artifacts/forge-$target\"\ndone"),
+        )
+        // Upload to release
+        .add_step(
+            Step::uses("xresloader", "upload-to-github-release", "v1")
+                .add_with(("release_id", "${{ needs.draft_release.outputs.create_release_id }}"))
+                .add_with(("file", "artifacts/forge-*"))
+                .add_with(("overwrite", "true")),
+        );
+
+    // Add create_release job
+    workflow = workflow.add_job(
+        "create_release",
+        create_release_job.clone(),
+    );
+
+    // Add semantic release job to publish the release
+    workflow = workflow.add_job(
+        "semantic_release",
+        Job::new("semantic_release")
+            .add_needs(draft_release_job.clone())
+            .add_needs(create_release_job.clone())
+            .cond(Expression::new("(startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')"))
+            .permissions(
+                Permissions::default()
+                    .contents(Level::Write)
+                    .pull_requests(Level::Write),
+            )
+            .runs_on("ubuntu-latest")
+            .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+            .env(("APP_VERSION", "${{ needs.draft_release.outputs.create_release_name }}"))
+            .add_step(
+                Step::uses("test-room-7", "action-publish-release-drafts", "v0")
+                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+                    .add_with(("github-token", "${{ secrets.GITHUB_TOKEN }}"))
+                    .add_with(("tag-name", "${{ needs.draft_release.outputs.create_release_name }}")),
             ),
     );
 
@@ -141,7 +204,7 @@ fn test_release_drafter() {
             .add_step(
                 Step::uses("release-drafter", "release-drafter", "v6")
                     .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
-                    .add_with(("commitish", "main")),
+                    .add_with(("config-name", "release-drafter.yml")),
             ),
     );
 

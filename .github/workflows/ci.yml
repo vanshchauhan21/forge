@@ -106,31 +106,71 @@ jobs:
         name: ${{ matrix.binary_name }}
         path: ${{ matrix.binary_path }}
         if-no-files-found: error
-  create-release:
-    needs:
-    - build-release
-    name: create-release
+  draft_release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: draft_release
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
     - uses: actions/checkout@v4
+    - id: create_release
+      uses: release-drafter/release-drafter@v6
+      with:
+        config-name: release-drafter.yml
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - id: set_output
+      run: echo "create_release_id=${{ steps.create_release.outputs.id }}" >> $GITHUB_OUTPUT
+    outputs:
+      create_release_name: ${{ steps.set_output.outputs.create_release_name }}
+      create_release_id: ${{ steps.set_output.outputs.create_release_id }}
+  create_release:
+    needs:
+    - build-release
+    - draft_release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: create_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@v4
     - uses: actions/download-artifact@v3
       with:
         pattern: forge-*
         path: artifacts
-    - id: release-drafter
-      uses: release-drafter/release-drafter@v6
+    - run: |-
+        for file in artifacts/forge-*/*; do
+          filename=$(basename "$file")
+          target=$(echo "$filename" | cut -d'-' -f2-)
+          cp "$file" "artifacts/forge-$target"
+        done
+    - uses: xresloader/upload-to-github-release@v1
       with:
-        commitish: main
-        publish: 'false'
+        release_id: ${{ needs.draft_release.outputs.create_release_id }}
+        file: artifacts/forge-*
+        overwrite: 'true'
+  semantic_release:
+    needs:
+    - draft_release
+    - create_release
+    if: (startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    name: semantic_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      APP_VERSION: ${{ needs.draft_release.outputs.create_release_name }}
+    steps:
+    - uses: test-room-7/action-publish-release-drafts@v0
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        tag-name: ${{ needs.draft_release.outputs.create_release_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.release-drafter.outputs.tag_name }}
-        generate_release_notes: 'true'
-        files: artifacts/**/*
-        prerelease: 'true'
-        token: ${{ secrets.GITHUB_TOKEN }}
