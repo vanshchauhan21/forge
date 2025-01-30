@@ -1,3 +1,4 @@
+use generate::Generate;
 use gh_workflow_tailcall::*;
 use serde_json::json;
 
@@ -92,7 +93,8 @@ fn generate() {
                     .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_with(("commitish", "main"))
                     .add_with(("publish", "false")),
-            ).permissions(
+            )
+            .permissions(
                 Permissions::default()
                     .contents(Level::Write)
                     .pull_requests(Level::Write),
@@ -115,19 +117,13 @@ fn test_release_drafter() {
     // Generate Release Drafter workflow
     let mut release_drafter = Workflow::default()
         .on(Event {
-            push: Some(Push {
-                branches: vec!["main".to_string()],
-                paths: vec![],
-                ..Push::default()
-            }),
+            push: Some(Push { branches: vec!["main".to_string()], ..Push::default() }),
             pull_request: Some(PullRequest {
                 types: vec![
                     PullRequestType::Opened,
                     PullRequestType::Reopened,
                     PullRequestType::Synchronize,
                 ],
-                paths: vec![],
-                branches: vec![],
                 ..PullRequest::default()
             }),
             ..Event::default()
@@ -150,8 +146,8 @@ fn test_release_drafter() {
     );
 
     release_drafter = release_drafter.name("Release Drafter");
-    let yaml = release_drafter.to_string().unwrap();
-    let github_dir = "../../.github/workflows";
-    std::fs::create_dir_all(github_dir).unwrap();
-    std::fs::write(format!("{}/release-drafter.yml", github_dir), yaml).unwrap();
+    Generate::new(release_drafter)
+        .name("release-drafter.yml")
+        .generate()
+        .unwrap();
 }
