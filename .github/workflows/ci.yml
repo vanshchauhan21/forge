@@ -92,10 +92,6 @@ jobs:
           binary_path: target/aarch64-apple-darwin/release/forge_main
           os: macos-latest
           target: aarch64-apple-darwin
-        - binary_name: forge-x86_64-pc-windows-msvc.exe
-          binary_path: target/x86_64-pc-windows-msvc/release/forge_main.exe
-          os: windows-latest
-          target: x86_64-pc-windows-msvc
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
