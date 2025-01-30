@@ -69,7 +69,7 @@ fn generate() {
                     .add_with(("name", "${{ matrix.binary_name }}"))
                     .add_with((
                         "path",
-                        "${{ matrix.binary_path }}/forge${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}",
+                        "${{ matrix.binary_path }}/forge_main${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}",
                     ))
                     .add_with(("if-no-files-found", "error")),
             ),
