@@ -117,8 +117,16 @@ jobs:
       with:
         pattern: forge-*
         path: artifacts
+    - id: release-drafter
+      uses: release-drafter/release-drafter@v6
+      with:
+        commitish: main
+        publish: 'false'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.release-drafter.outputs.tag_name }}
         generate_release_notes: 'true'
         files: artifacts/**/*
         prerelease: 'true'

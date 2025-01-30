@@ -85,9 +85,18 @@ fn generate() {
                     .add_with(("pattern", "forge-*"))
                     .add_with(("path", "artifacts")),
             )
-            // Create GitHub release
+            // First determine the next version using release-drafter
+            .add_step(
+                Step::uses("release-drafter", "release-drafter", "v6")
+                    .id("release-drafter")
+                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+                    .add_with(("commitish", "main"))
+                    .add_with(("publish", "false")),
+            )
+            // Create GitHub release using the version from release-drafter
             .add_step(
                 Step::uses("softprops", "action-gh-release", "v1")
+                    .add_with(("tag_name", "${{ steps.release-drafter.outputs.tag_name }}"))
                     .add_with(("generate_release_notes", "true"))
                     .add_with(("files", "artifacts/**/*"))
                     .add_with(("prerelease", "true"))
