@@ -100,43 +100,45 @@ fn generate() {
 #[test]
 fn test_release_drafter() {
     // Generate Release Drafter workflow
-    let mut release_drafter = Workflow::default().on(Event {
-        push: Some(Push {
-            branches: vec!["main".to_string()],
-            paths: vec![],
-            ..Push::default()
-        }),
-        pull_request: Some(PullRequest {
-            types: vec![
-                PullRequestType::Opened,
-                PullRequestType::Reopened,
-                PullRequestType::Synchronize,
-            ],
-            paths: vec![],
-            branches: vec![],
-            ..PullRequest::default()
-        }),
-        ..Event::default()
-    });
+    let mut release_drafter = Workflow::default()
+        .on(Event {
+            push: Some(Push {
+                branches: vec!["main".to_string()],
+                paths: vec![],
+                ..Push::default()
+            }),
+            pull_request: Some(PullRequest {
+                types: vec![
+                    PullRequestType::Opened,
+                    PullRequestType::Reopened,
+                    PullRequestType::Synchronize,
+                ],
+                paths: vec![],
+                branches: vec![],
+                ..PullRequest::default()
+            }),
+            ..Event::default()
+        })
+        .permissions(
+            Permissions::default()
+                .contents(Level::Write)
+                .pull_requests(Level::Write),
+        );
 
     release_drafter = release_drafter.add_job(
         "update_release_draft",
         Job::new("update_release_draft")
             .runs_on("ubuntu-latest")
-            .permissions(
-                Permissions::default()
-                    .contents(Level::Write)
-                    .pull_requests(Level::Write),
-            )
             .add_step(
-                Step::uses("release-drafter", "release-drafter", "v5")
-                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}")),
+                Step::uses("release-drafter", "release-drafter", "v6")
+                    .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
+                    .add_with(("commitish", "main")),
             ),
     );
 
     release_drafter = release_drafter.name("Release Drafter");
     let yaml = release_drafter.to_string().unwrap();
-    let github_dir = ".github/workflows";
+    let github_dir = "../../.github/workflows";
     std::fs::create_dir_all(github_dir).unwrap();
     std::fs::write(format!("{}/release-drafter.yml", github_dir), yaml).unwrap();
 }
