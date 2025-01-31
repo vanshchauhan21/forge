@@ -194,13 +194,13 @@ fn test_release_drafter() {
     let mut release_drafter = Workflow::default()
         .on(Event {
             push: Some(Push { branches: vec!["main".to_string()], ..Push::default() }),
-            pull_request: Some(PullRequest {
+            pull_request_target: Some(PullRequestTarget {
                 types: vec![
                     PullRequestType::Opened,
                     PullRequestType::Reopened,
                     PullRequestType::Synchronize,
                 ],
-                ..PullRequest::default()
+                branches: vec!["main".to_string()],
             }),
             ..Event::default()
         })
