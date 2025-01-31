@@ -59,7 +59,7 @@ impl Live {
             file_read.clone(),
         ));
 
-        let user_prompt = Arc::new(Service::user_prompt_service(file_read.clone()));
+        let user_prompt = Arc::new(Service::user_prompt_service());
 
         // Create an owned String that will live for 'static
         let sqlite = Arc::new(Service::db_pool_service(&env.db_path)?);
