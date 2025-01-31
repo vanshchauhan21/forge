@@ -5,10 +5,10 @@ use forge_domain::{
     ChatRequest, ChatResponse, Context, ContextMessage, FinishReason, ProviderService,
     ResultStream, ToolCall, ToolCallFull, ToolResult, ToolService,
 };
-use tokio_stream::wrappers::ReceiverStream;
-use tokio_stream::StreamExt;
+use futures::StreamExt;
 
 use super::{PromptService, Service};
+use crate::mpsc_stream::MpscStream;
 
 #[async_trait::async_trait]
 pub trait ChatService: Send + Sync {
@@ -71,12 +71,6 @@ impl Live {
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
-
-                if tx.is_closed() {
-                    // If the receiver is closed, we should stop processing messages.
-                    drop(response);
-                    break;
-                }
 
                 if let Some(ref content) = message.content {
                     if !content.is_empty() {
@@ -184,7 +178,6 @@ impl ChatService for Live {
     ) -> ResultStream<ChatResponse, anyhow::Error> {
         let system_prompt = self.system_prompt.get(&chat).await?;
         let user_prompt = self.user_prompt.get(&chat).await?;
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         let request = request
             .set_system_message(system_prompt)
@@ -193,7 +186,7 @@ impl ChatService for Live {
 
         let that = self.clone();
 
-        tokio::spawn(async move {
+        Ok(Box::pin(MpscStream::spawn(move |tx| async move {
             // TODO: simplify this match.
             match that.chat_workflow(request, tx.clone(), chat.clone()).await {
                 Ok(_) => {}
@@ -203,11 +196,7 @@ impl ChatService for Live {
             };
 
             tx.send(Ok(ChatResponse::Complete)).await.unwrap();
-
-            drop(tx);
-        });
-
-        Ok(Box::pin(ReceiverStream::new(rx)))
+        })))
     }
 }
 

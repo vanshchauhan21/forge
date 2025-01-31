@@ -7,10 +7,10 @@ use forge_domain::{
 };
 use schemars::{schema_for, JsonSchema};
 use serde::Deserialize;
-use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use super::Service;
+use crate::mpsc_stream::MpscStream;
 
 impl Service {
     /// Creates a new title service with the specified provider
@@ -60,11 +60,6 @@ impl Live {
 
         while let Some(chunk) = response.next().await {
             let message = chunk?;
-            if tx.is_closed() {
-                // If the receiver is closed, we should stop processing messages.
-                drop(response);
-                break;
-            }
             if let Some(ToolCall::Part(args)) = message.tool_call.first() {
                 parts.push(args.clone());
             }
@@ -115,16 +110,13 @@ impl TitleService for Live {
             .add_tool(tool.clone())
             .tool_choice(ToolChoice::Call(tool.name));
 
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
-
         let that = self.clone();
-        tokio::spawn(async move {
+
+        Ok(Box::pin(MpscStream::spawn(move |tx| async move {
             if let Err(e) = that.execute(request, tx.clone(), chat.clone()).await {
                 tx.send(Err(e)).await.unwrap();
             }
-            drop(tx);
-        });
-        Ok(Box::pin(ReceiverStream::new(rx)))
+        })))
     }
 }
 
