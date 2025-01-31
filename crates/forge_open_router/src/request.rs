@@ -169,13 +169,21 @@ pub struct OpenRouterRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prediction: Option<Prediction>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transforms: Option<Vec<String>>,
+    pub transforms: Option<Vec<Transform>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub models: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<ProviderPreferences>,
+}
+
+/// ref: https://openrouter.ai/docs/transforms
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub enum Transform {
+    #[default]
+    #[serde(rename = "middle-out")]
+    MiddleOut,
 }
 
 impl From<ToolDefinition> for OpenRouterTool {
@@ -234,7 +242,7 @@ impl From<Context> for OpenRouterRequest {
             min_p: Default::default(),
             top_a: Default::default(),
             prediction: Default::default(),
-            transforms: Default::default(),
+            transforms: Some(vec![Transform::default()]),
             models: Default::default(),
             route: Default::default(),
             provider: Default::default(),
@@ -560,5 +568,13 @@ mod tests {
         for msg in messages {
             assert!(matches!(msg.content, Some(MessageContent::Text(_))));
         }
+    }
+
+    #[test]
+    fn test_transform_display() {
+        assert_eq!(
+            serde_json::to_string(&Transform::MiddleOut).unwrap(),
+            "\"middle-out\""
+        );
     }
 }
