@@ -71,9 +71,30 @@ jobs:
       run: cargo +nightly fmt --all --check
     - name: Cargo Clippy
       run: cargo +nightly clippy --all-features --workspace -- -D warnings
+  draft_release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: draft_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@v4
+    - id: create_release
+      uses: release-drafter/release-drafter@v6
+      with:
+        config-name: release-drafter.yml
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - id: set_output
+      run: echo "create_release_id=${{ steps.create_release.outputs.id }}" >> $GITHUB_OUTPUT && echo "create_release_name=${{ steps.create_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
+    outputs:
+      create_release_name: ${{ steps.set_output.outputs.create_release_name }}
+      create_release_id: ${{ steps.set_output.outputs.create_release_id }}
   build-release:
     needs:
     - build
+    - draft_release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: build-release
     runs-on: ${{ matrix.os }}
@@ -101,31 +122,13 @@ jobs:
       with:
         command: build --release
         args: --target ${{ matrix.target }}
+      env:
+        APP_VERSION: ${{ needs.draft_release.outputs.create_release_name }}
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.binary_name }}
         path: ${{ matrix.binary_path }}
         if-no-files-found: error
-  draft_release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: draft_release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-    - uses: actions/checkout@v4
-    - id: create_release
-      uses: release-drafter/release-drafter@v6
-      with:
-        config-name: release-drafter.yml
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - id: set_output
-      run: echo "create_release_id=${{ steps.create_release.outputs.id }}" >> $GITHUB_OUTPUT && echo "create_release_name=${{ steps.create_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
-    outputs:
-      create_release_name: ${{ steps.set_output.outputs.create_release_name }}
-      create_release_id: ${{ steps.set_output.outputs.create_release_id }}
   create_release:
     needs:
     - build-release
@@ -181,3 +184,21 @@ jobs:
         tag-name: ${{ needs.draft_release.outputs.create_release_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  homebrew_release:
+    needs:
+    - draft_release
+    - create_release
+    - semantic_release
+    if: (startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    name: homebrew_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: tailcallhq/homebrew-code-forge
+        ref: main
+        token: ${{ secrets.HOMEBREW_ACCESS }}
+    - run: ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}

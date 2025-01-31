@@ -39,43 +39,6 @@ fn generate() {
     let main_cond =
         Expression::new("github.event_name == 'push' && github.ref == 'refs/heads/main'");
 
-    // Add release build job
-    workflow = workflow.add_job(
-        "build-release",
-        Job::new("build-release")
-            .add_needs(build_job.clone())
-            .cond(main_cond.clone())
-            .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
-            .runs_on("${{ matrix.os }}")
-            .add_step(Step::uses("actions", "checkout", "v4"))
-            // Install Rust with cross-compilation target
-            .add_step(
-                Step::uses("dtolnay", "rust-toolchain", "stable")
-                    .with(("targets", "${{ matrix.target }}")),
-            )
-            // Build release binary
-            .add_step(
-                Step::uses("ClementTsang", "cargo-action", "v0.0.3")
-                    .add_with(("command", "build --release"))
-                    .add_with(("args", "--target ${{ matrix.target }}")),
-            )
-            // Upload artifact for release
-            .add_step(
-                Step::uses("actions", "upload-artifact", "v4")
-                    .add_with(("name", "${{ matrix.binary_name }}"))
-                    .add_with(("path", "${{ matrix.binary_path }}"))
-                    .add_with(("if-no-files-found", "error")),
-            ),
-    );
-    // Store reference to build-release job
-    let build_release_job = workflow
-        .jobs
-        .clone()
-        .unwrap()
-        .get("build-release")
-        .unwrap()
-        .clone();
-
     // Add draft release job
     workflow = workflow.add_job(
         "draft_release",
@@ -110,6 +73,48 @@ fn generate() {
         .clone()
         .unwrap()
         .get("draft_release")
+        .unwrap()
+        .clone();
+
+    // Add release build job
+    workflow = workflow.add_job(
+        "build-release",
+        Job::new("build-release")
+            .add_needs(build_job.clone())
+            .add_needs(draft_release_job.clone())
+            .cond(main_cond.clone())
+            .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
+            .runs_on("${{ matrix.os }}")
+            .add_step(Step::uses("actions", "checkout", "v4"))
+            // Install Rust with cross-compilation target
+            .add_step(
+                Step::uses("dtolnay", "rust-toolchain", "stable")
+                    .with(("targets", "${{ matrix.target }}")),
+            )
+            // Build release binary
+            .add_step(
+                Step::uses("ClementTsang", "cargo-action", "v0.0.3")
+                    .add_with(("command", "build --release"))
+                    .add_with(("args", "--target ${{ matrix.target }}"))
+                    .add_env((
+                        "APP_VERSION",
+                        "${{ needs.draft_release.outputs.create_release_name }}",
+                    )),
+            )
+            // Upload artifact for release
+            .add_step(
+                Step::uses("actions", "upload-artifact", "v4")
+                    .add_with(("name", "${{ matrix.binary_name }}"))
+                    .add_with(("path", "${{ matrix.binary_path }}"))
+                    .add_with(("if-no-files-found", "error")),
+            ),
+    );
+    // Store reference to build-release job
+    let build_release_job = workflow
+        .jobs
+        .clone()
+        .unwrap()
+        .get("build-release")
         .unwrap()
         .clone();
 
@@ -164,9 +169,7 @@ fn generate() {
     workflow = workflow.add_job("create_release", create_release_job.clone());
 
     // Add semantic release job to publish the release
-    workflow = workflow.add_job(
-        "semantic_release",
-        Job::new("semantic_release")
+    let semantic_release_job = Job::new("semantic_release")
             .add_needs(draft_release_job.clone())
             .add_needs(create_release_job.clone())
             .cond(Expression::new("(startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')"))
@@ -183,6 +186,31 @@ fn generate() {
                     .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_with(("github-token", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_with(("tag-name", "${{ needs.draft_release.outputs.create_release_name }}")),
+            );
+    workflow = workflow.add_job("semantic_release", semantic_release_job.clone());
+
+    // Homebrew release job
+    workflow = workflow.add_job(
+        "homebrew_release",
+        Job::new("homebrew_release")
+            .add_needs(draft_release_job.clone())
+            .add_needs(create_release_job.clone())
+            .add_needs(semantic_release_job.clone())
+            .cond(Expression::new("(startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')"))
+            .permissions(
+                Permissions::default()
+                    .contents(Level::Write)
+                    .pull_requests(Level::Write),
+            )
+            .runs_on("ubuntu-latest")
+            .add_step(
+                Step::uses("actions", "checkout", "v4")
+                    .add_with(("repository", "tailcallhq/homebrew-code-forge"))
+                    .add_with(("ref", "main"))
+                    .add_with(("token", "${{ secrets.HOMEBREW_ACCESS }}")),
+            )
+            .add_step(
+                Step::run("./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}"),
             ),
     );
 

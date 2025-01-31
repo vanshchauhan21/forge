@@ -6,6 +6,7 @@ use forge_main::{banner, UI};
 
 /// Command line arguments for the application
 #[derive(Parser)]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     /// Optional file path to execute commands from
     exec: Option<String>,
