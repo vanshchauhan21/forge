@@ -98,6 +98,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: build-release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       matrix:
         include:
@@ -124,51 +127,16 @@ jobs:
         args: --target ${{ matrix.target }}
       env:
         APP_VERSION: ${{ needs.draft_release.outputs.create_release_name }}
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.binary_name }}
-        path: ${{ matrix.binary_path }}
-        if-no-files-found: error
-  create_release:
-    needs:
-    - build-release
-    - draft_release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: create_release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: forge-*
-        path: artifacts
-    - run: mkdir -p renamed_artifacts
-    - run: |-
-        for dir in artifacts/forge-*; do
-                        for file in "$dir"/*; do
-                            if [ -f "$file" ]; then
-                                filename=$(basename "$file")
-                                dirname=$(basename "$dir")
-                                target=${dirname#forge-}
-                                cp "$file" "renamed_artifacts/forge-$target"
-                            fi
-                        done
-                    done
-    - run: ls -la renamed_artifacts/
+    - run: cp ${{ matrix.binary_path }} forge-${{ matrix.target }}
     - uses: xresloader/upload-to-github-release@v1
       with:
         release_id: ${{ needs.draft_release.outputs.create_release_id }}
-        file: renamed_artifacts/*
+        file: forge-${{ matrix.target }}
         overwrite: 'true'
   semantic_release:
     needs:
     - draft_release
-    - create_release
+    - build-release
     if: (startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')
     name: semantic_release
     runs-on: ubuntu-latest
@@ -187,7 +155,7 @@ jobs:
   homebrew_release:
     needs:
     - draft_release
-    - create_release
+    - build-release
     - semantic_release
     if: (startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')
     name: homebrew_release

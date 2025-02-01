@@ -40,9 +40,7 @@ fn generate() {
         Expression::new("github.event_name == 'push' && github.ref == 'refs/heads/main'");
 
     // Add draft release job
-    workflow = workflow.add_job(
-        "draft_release",
-        Job::new("draft_release")
+    let draft_release_job = Job::new("draft_release")
             .runs_on("ubuntu-latest")
             .cond(main_cond.clone())
             .permissions(
@@ -64,19 +62,10 @@ fn generate() {
             .outputs(indexmap! {
                 "create_release_name".to_string() => "${{ steps.set_output.outputs.create_release_name }}".to_string(),
                 "create_release_id".to_string() => "${{ steps.set_output.outputs.create_release_id }}".to_string()
-            })
-    );
+            });
+    workflow = workflow.add_job("draft_release", draft_release_job.clone());
 
-    // Store reference to draft_release job
-    let draft_release_job = workflow
-        .jobs
-        .clone()
-        .unwrap()
-        .get("draft_release")
-        .unwrap()
-        .clone();
-
-    // Add release build job
+    // Build and upload release job
     workflow = workflow.add_job(
         "build-release",
         Job::new("build-release")
@@ -85,6 +74,11 @@ fn generate() {
             .cond(main_cond.clone())
             .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
             .runs_on("${{ matrix.os }}")
+            .permissions(
+                Permissions::default()
+                    .contents(Level::Write)
+                    .pull_requests(Level::Write),
+            )
             .add_step(Step::uses("actions", "checkout", "v4"))
             // Install Rust with cross-compilation target
             .add_step(
@@ -101,12 +95,19 @@ fn generate() {
                         "${{ needs.draft_release.outputs.create_release_name }}",
                     )),
             )
-            // Upload artifact for release
+            // Rename binary to target name
+            .add_step(Step::run(
+                "cp ${{ matrix.binary_path }} forge-${{ matrix.target }}",
+            ))
+            // Upload directly to release
             .add_step(
-                Step::uses("actions", "upload-artifact", "v4")
-                    .add_with(("name", "${{ matrix.binary_name }}"))
-                    .add_with(("path", "${{ matrix.binary_path }}"))
-                    .add_with(("if-no-files-found", "error")),
+                Step::uses("xresloader", "upload-to-github-release", "v1")
+                    .add_with((
+                        "release_id",
+                        "${{ needs.draft_release.outputs.create_release_id }}",
+                    ))
+                    .add_with(("file", "forge-${{ matrix.target }}"))
+                    .add_with(("overwrite", "true")),
             ),
     );
     // Store reference to build-release job
@@ -118,60 +119,10 @@ fn generate() {
         .unwrap()
         .clone();
 
-    // Store reference to create_release job before we add it
-    let create_release_job = Job::new("create_release")
-        .add_needs(build_release_job.clone())
-        .add_needs(draft_release_job.clone())
-        .cond(main_cond.clone())
-        .permissions(
-            Permissions::default()
-                .contents(Level::Write)
-                .pull_requests(Level::Write),
-        )
-        .runs_on("ubuntu-latest")
-        .env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
-        .add_step(Step::uses("actions", "checkout", "v4"))
-        // Download all artifacts
-        .add_step(
-            Step::uses("actions", "download-artifact", "v4")
-                .add_with(("pattern", "forge-*"))
-                .add_with(("path", "artifacts")),
-        )
-        // Create directory for renamed artifacts
-        .add_step(Step::run("mkdir -p renamed_artifacts"))
-        // Rename and move artifacts with target names
-        .add_step(Step::run(
-            r#"for dir in artifacts/forge-*; do
-                for file in "$dir"/*; do
-                    if [ -f "$file" ]; then
-                        filename=$(basename "$file")
-                        dirname=$(basename "$dir")
-                        target=${dirname#forge-}
-                        cp "$file" "renamed_artifacts/forge-$target"
-                    fi
-                done
-            done"#,
-        ))
-        // List artifacts
-        .add_step(Step::run("ls -la renamed_artifacts/"))
-        // Upload all renamed artifacts
-        .add_step(
-            Step::uses("xresloader", "upload-to-github-release", "v1")
-                .add_with((
-                    "release_id",
-                    "${{ needs.draft_release.outputs.create_release_id }}",
-                ))
-                .add_with(("file", "renamed_artifacts/*"))
-                .add_with(("overwrite", "true")),
-        );
-
-    // Add create_release job
-    workflow = workflow.add_job("create_release", create_release_job.clone());
-
     // Add semantic release job to publish the release
     let semantic_release_job = Job::new("semantic_release")
             .add_needs(draft_release_job.clone())
-            .add_needs(create_release_job.clone())
+            .add_needs(build_release_job.clone())
             .cond(Expression::new("(startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')"))
             .permissions(
                 Permissions::default()
@@ -194,7 +145,7 @@ fn generate() {
         "homebrew_release",
         Job::new("homebrew_release")
             .add_needs(draft_release_job.clone())
-            .add_needs(create_release_job.clone())
+            .add_needs(build_release_job.clone())
             .add_needs(semantic_release_job.clone())
             .cond(Expression::new("(startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')) && (github.event_name == 'push' && github.ref == 'refs/heads/main')"))
             .permissions(
