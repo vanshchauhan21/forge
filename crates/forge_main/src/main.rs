@@ -24,6 +24,7 @@ async fn main() -> Result<()> {
 
     // Display the banner in dimmed colors
     banner::display()?;
+    forge_domain::init_tracing()?;
 
     // Initialize and run the UI
     let mut ui = UI::new(cli.verbose, cli.exec, cli.custom_instructions).await?;
