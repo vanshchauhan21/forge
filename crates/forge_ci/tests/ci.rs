@@ -209,8 +209,9 @@ fn generate() {
                     .add_with(("ref", "main"))
                     .add_with(("token", "${{ secrets.HOMEBREW_ACCESS }}")),
             )
+            // Make script executable and run it with token
             .add_step(
-                Step::run("./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}"),
+                Step::run("GITHUB_TOKEN=\"${{ secrets.HOMEBREW_ACCESS }}\" ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}"),
             ),
     );
 

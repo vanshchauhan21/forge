@@ -201,4 +201,4 @@ jobs:
         repository: tailcallhq/homebrew-code-forge
         ref: main
         token: ${{ secrets.HOMEBREW_ACCESS }}
-    - run: ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}
+    - run: GITHUB_TOKEN="${{ secrets.HOMEBREW_ACCESS }}" ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}
