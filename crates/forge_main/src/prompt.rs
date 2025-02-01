@@ -24,7 +24,11 @@ impl Prompt for ForgePrompt {
     fn render_prompt_left(&self) -> Cow<str> {
         if let Some(title) = self.title.as_ref() {
             let title = if title.len() > MAX_LEN {
-                format!("{}{}", &title[..MAX_LEN - TRUNCATION_INDICATOR.len()], TRUNCATION_INDICATOR)
+                format!(
+                    "{}{}",
+                    &title[..MAX_LEN - TRUNCATION_INDICATOR.len()],
+                    TRUNCATION_INDICATOR
+                )
             } else {
                 title.clone()
             };
@@ -115,7 +119,11 @@ mod tests {
         let long_title = "a".repeat(MAX_LEN + 10);
         let mut prompt = ForgePrompt::default();
         prompt.title(long_title);
-        let truncated_title = format!("{}{}", "a".repeat(MAX_LEN - TRUNCATION_INDICATOR.len()), TRUNCATION_INDICATOR);
+        let truncated_title = format!(
+            "{}{}",
+            "a".repeat(MAX_LEN - TRUNCATION_INDICATOR.len()),
+            TRUNCATION_INDICATOR
+        );
         let title_style = Style::new()
             .fg(Color::Cyan)
             .paint(truncated_title)
