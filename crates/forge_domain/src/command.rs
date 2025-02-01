@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Represents user input types in the chat application.
 ///
@@ -66,7 +66,6 @@ impl Command {
             "/reload" => Ok(Command::Reload),
             "/info" => Ok(Command::Info),
             "/exit" => Ok(Command::Exit),
-            cmd if cmd.starts_with('/') => Err(Error::InputCommand(cmd.to_string())),
             text => Ok(Command::Message(text.to_string())),
         }
     }

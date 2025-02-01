@@ -59,7 +59,7 @@ impl ForgeEditor {
 
         keybindings.add_binding(
             KeyModifiers::NONE,
-            KeyCode::Char('/'),
+            KeyCode::Esc,
             ReedlineEvent::Menu("command_menu".to_string()),
         );
 
