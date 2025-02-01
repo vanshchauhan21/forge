@@ -10,6 +10,8 @@ use super::completer::{CommandCompleter, FileCompleter};
 
 // TODO: Store the last `HISTORY_CAPACITY` commands in the history file
 const HISTORY_CAPACITY: usize = 1024;
+const FILE_COMPLETION_MENU: &str = "file_completion_menu";
+const COMMAND_COMPLETION_MENU: &str = "command_completion_menu";
 
 pub struct ForgeEditor {
     editor: Reedline,
@@ -23,7 +25,7 @@ pub enum ReadResult {
 }
 
 impl ForgeEditor {
-    fn intialize_bindings() -> reedline::Keybindings {
+    fn init() -> reedline::Keybindings {
         let mut keybindings = default_emacs_keybindings();
         // on TAB press shows the completion menu, and if we've exact match it will
         // insert it
@@ -32,7 +34,7 @@ impl ForgeEditor {
             KeyCode::Tab,
             ReedlineEvent::UntilFound(vec![
                 ReedlineEvent::HistoryHintComplete,
-                ReedlineEvent::Menu("completion_menu".to_string()),
+                ReedlineEvent::Menu(FILE_COMPLETION_MENU.to_string()),
                 ReedlineEvent::Edit(vec![EditCommand::Complete]),
             ]),
         );
@@ -61,7 +63,7 @@ impl ForgeEditor {
         keybindings.add_binding(
             KeyModifiers::NONE,
             KeyCode::Esc,
-            ReedlineEvent::Menu("command_menu".to_string()),
+            ReedlineEvent::Menu(COMMAND_COMPLETION_MENU.to_string()),
         );
 
         keybindings
@@ -82,31 +84,29 @@ impl ForgeEditor {
         );
         let completion_menu = Box::new(
             ColumnarMenu::default()
-                .with_name("completion_menu")
+                .with_name(FILE_COMPLETION_MENU)
                 .with_marker("")
-                .with_text_style(Style::new().bold().fg(Color::White))
-                .with_selected_text_style(Style::new().bold().on(Color::White).fg(Color::Black)),
+                .with_text_style(Style::new().bold().fg(Color::Cyan))
+                .with_selected_text_style(Style::new().on(Color::White).fg(Color::Black)),
         );
 
         let commands_menu = Box::new(
             ColumnarMenu::default()
                 .with_name("command_menu")
                 .with_marker("")
-                .with_text_style(Style::new().bold().fg(Color::White))
-                .with_selected_text_style(Style::new().bold().on(Color::White).fg(Color::Black)),
+                .with_text_style(Style::new().bold().fg(Color::Cyan))
+                .with_selected_text_style(Style::new().on(Color::White).fg(Color::Black)),
         );
 
-        let edit_mode = Box::new(Emacs::new(Self::intialize_bindings()));
-        let suggestions_completer = Box::new(FileCompleter::new(cwd));
+        let edit_mode = Box::new(Emacs::new(Self::init()));
+
         let editor = Reedline::create()
+            .with_completer(Box::new(FileCompleter::new(cwd)))
             .with_history(history)
             .with_hinter(Box::new(
                 DefaultHinter::default().with_style(Style::new().fg(Color::DarkGray)),
             ))
-            .with_menu(ReedlineMenu::WithCompleter {
-                menu: completion_menu,
-                completer: suggestions_completer,
-            })
+            .with_menu(ReedlineMenu::EngineCompleter(completion_menu))
             .with_menu(ReedlineMenu::WithCompleter {
                 menu: commands_menu,
                 completer: Box::new(CommandCompleter),

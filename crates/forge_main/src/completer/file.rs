@@ -17,10 +17,8 @@ impl FileCompleter {
 
 impl Completer for FileCompleter {
     fn complete(&mut self, line: &str, _: usize) -> Vec<Suggestion> {
-        // For file completion - find the last space and use everything after it as the
-        // search term
-        if let Some(last_space_pos) = line.rfind(' ') {
-            let search_term = &line[(last_space_pos + 1)..];
+        if let Some(search_term) = line.split_whitespace().last() {
+            let last_space_pos = line.rfind(' ').map(|a| a + 1).unwrap_or(0);
             let files = self.walker.get_blocking().unwrap_or_default();
             files
                 .into_iter()
@@ -33,11 +31,11 @@ impl Completer for FileCompleter {
                             .map_or_else(|| false, |file| file.contains(search_term))
                     {
                         Some(Suggestion {
-                            value: file.file_name.unwrap_or_default().to_string(),
+                            value: file.path,
                             description: None,
                             style: None,
                             extra: None,
-                            span: Span::new(last_space_pos + 1, line.len()),
+                            span: Span::new(last_space_pos, line.len()),
                             append_whitespace: true,
                         })
                     } else {
