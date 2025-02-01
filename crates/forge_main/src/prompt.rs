@@ -22,7 +22,11 @@ pub struct ForgePrompt {
 impl Prompt for ForgePrompt {
     fn render_prompt_left(&self) -> Cow<str> {
         if let Some(title) = self.title.as_ref() {
-            let title = title.chars().take(MAX_LEN).collect::<String>();
+            let title = if title.len() > MAX_LEN {
+                format!("{}...", &title[..MAX_LEN])
+            } else {
+                title.clone()
+            };
             Cow::Owned(format!(
                 "{AI_INDICATOR} {}",
                 Style::new().fg(Color::Cyan).paint(title),
