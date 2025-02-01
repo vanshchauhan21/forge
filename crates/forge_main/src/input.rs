@@ -43,6 +43,7 @@ impl UserInput for Console {
             match result {
                 Ok(ReadResult::Continue) => continue,
                 Ok(ReadResult::Exit) => return Ok(Command::Exit),
+                Ok(ReadResult::Empty) => continue,
                 Ok(ReadResult::Success(text)) => match Command::parse(&text) {
                     Ok(input) => return Ok(input),
                     Err(e) => {

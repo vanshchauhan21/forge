@@ -17,6 +17,7 @@ pub struct ForgeEditor {
 
 pub enum ReadResult {
     Success(String),
+    Empty,
     Continue,
     Exit,
 }
@@ -126,7 +127,14 @@ impl ForgeEditor {
 impl From<Signal> for ReadResult {
     fn from(signal: Signal) -> Self {
         match signal {
-            Signal::Success(buffer) => ReadResult::Success(buffer),
+            Signal::Success(buffer) => {
+                let trimmed = buffer.trim();
+                if trimmed.is_empty() {
+                    ReadResult::Empty
+                } else {
+                    ReadResult::Success(trimmed.to_string())
+                }
+            }
             Signal::CtrlC => ReadResult::Continue,
             Signal::CtrlD => ReadResult::Exit,
         }
