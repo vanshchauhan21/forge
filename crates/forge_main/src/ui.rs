@@ -7,7 +7,7 @@ use forge_app::{APIService, Service};
 use forge_domain::{ChatRequest, ChatResponse, Command, ConversationId, ModelId, Usage, UserInput};
 use tokio_stream::StreamExt;
 
-use crate::keyboard::{Key, KeyboardEvents};
+use crate::input::PromptInput;
 use crate::{Console, StatusDisplay, CONSOLE};
 
 #[derive(Default)]
@@ -16,6 +16,15 @@ struct UIState {
     current_title: Option<String>,
     current_content: Option<String>,
     usage: Usage,
+}
+
+impl From<&UIState> for PromptInput {
+    fn from(state: &UIState) -> Self {
+        PromptInput::Update {
+            title: state.current_title.clone(),
+            usage: Some(state.usage.clone()),
+        }
+    }
 }
 
 pub struct UI {
@@ -37,8 +46,8 @@ impl UI {
 
         Ok(Self {
             state: Default::default(),
-            api,
-            console: Console,
+            api: api.clone(),
+            console: Console::new(PathBuf::from(api.environment().await?.cwd)),
             verbose,
             exec,
             custom_instructions,
@@ -56,7 +65,7 @@ impl UI {
         // Get initial input from file or prompt
         let mut input = match &self.exec {
             Some(path) => self.console.upload(path).await?,
-            None => self.console.prompt(None, None).await?,
+            None => self.console.prompt(None).await?,
         };
 
         let model = ModelId::from_env(&self.api.environment().await?);
@@ -67,7 +76,7 @@ impl UI {
                 Command::New => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
                     self.state = Default::default();
-                    input = self.console.prompt(None, None).await?;
+                    input = self.console.prompt(None).await?;
                     continue;
                 }
                 Command::Reload => {
@@ -75,29 +84,24 @@ impl UI {
                     self.state = Default::default();
                     input = match &self.exec {
                         Some(path) => self.console.upload(path).await?,
-                        None => {
-                            self.console
-                                .prompt(None, self.state.current_content.as_deref())
-                                .await?
-                        }
+                        None => self.console.prompt(None).await?,
                     };
                     continue;
                 }
                 Command::Info => {
                     crate::display_info(&self.api.environment().await?, &self.state.usage)?;
-                    input = self
-                        .console
-                        .prompt(self.format_title().as_deref(), None)
-                        .await?;
+                    let prompt_input = Some((&self.state).into());
+                    input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
                 Command::Message(ref content) => {
                     self.state.current_content = Some(content.clone());
                     self.chat(content.clone(), &model).await?;
-                    input = self
-                        .console
-                        .prompt(self.format_title().as_deref(), None)
-                        .await?;
+                    let prompt_input = Some((&self.state).into());
+                    input = self.console.prompt(prompt_input).await?;
+                }
+                Command::Exit => {
+                    break;
                 }
             }
         }
@@ -112,18 +116,8 @@ impl UI {
             conversation_id: self.state.current_conversation_id,
             custom_instructions: self.custom_instructions.clone(),
         };
-
-        self.process_chat(chat).await
-    }
-
-    async fn process_chat(&mut self, chat: ChatRequest) -> Result<()> {
-        // Register the ESC key for keyboard events
-        let mut keyboard = KeyboardEvents::new();
-        keyboard.register(Key::Esc);
-        keyboard.register(Key::ControlC);
-
         match self.api.chat(chat).await {
-            Ok(mut stream) => self.handle_chat_stream(&mut stream, &mut keyboard).await,
+            Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
             Err(err) => Err(err),
         }
     }
@@ -131,14 +125,11 @@ impl UI {
     async fn handle_chat_stream(
         &mut self,
         stream: &mut (impl StreamExt<Item = Result<ChatResponse>> + Unpin),
-        keyboard: &mut KeyboardEvents,
     ) -> Result<()> {
         loop {
             tokio::select! {
-                maybe_key_pressed = keyboard.is_pressed() => {
-                    if maybe_key_pressed {
-                        return Ok(());
-                    }
+                _ = tokio::signal::ctrl_c() => {
+                    return Ok(());
                 }
                 maybe_message = stream.next() => {
                     match maybe_message {
@@ -210,12 +201,5 @@ impl UI {
             }
         }
         Ok(())
-    }
-
-    fn format_title(&self) -> Option<String> {
-        self.state
-            .current_title
-            .as_ref()
-            .map(|title| StatusDisplay::task(title, self.state.usage.clone()).format())
     }
 }

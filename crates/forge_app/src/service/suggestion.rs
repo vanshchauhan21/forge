@@ -31,12 +31,12 @@ impl Live {
 impl SuggestionService for Live {
     async fn suggestions(&self) -> Result<Vec<File>> {
         let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
-        let walker = Walker::max().cwd(cwd);
+        let walker = Walker::max_all().cwd(cwd);
 
         let files = walker.get().await?;
         Ok(files
             .into_iter()
-            .map(|file| File { path: file.path, is_dir: file.is_dir })
+            .map(|file| File { path: file.path.clone(), is_dir: file.is_dir() })
             .collect())
     }
 }

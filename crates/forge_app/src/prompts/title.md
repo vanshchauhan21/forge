@@ -9,7 +9,7 @@ Please follow these steps to generate an appropriate title:
 2. Identify the main technical concepts, key functionality, and purpose.
 3. Determine the likely target audience for this content.
 4. Generate a concise title that meets the following requirements:
-   - Between 5 and 10 words in length
+   - Between 3 and 5 words in length
    - Captures the core message or functionality
    - Uses clear, technical language
    - Avoids unnecessary words or marketing language

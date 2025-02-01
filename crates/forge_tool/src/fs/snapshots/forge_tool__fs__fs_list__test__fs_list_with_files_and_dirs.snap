@@ -4,8 +4,9 @@ expression: "TempDir::normalize(&result)"
 snapshot_kind: text
 ---
 <file_list path="[TEMP_DIR]">
-<dir path="dir1">
-<dir path="dir2">
+<dir path="/">
+<dir path="dir1/">
+<dir path="dir2/">
 <file path="file1.txt">
 <file path="file2.txt">
 </file_list>

@@ -1,9 +1,11 @@
 pub mod banner;
+mod completer;
 pub mod console;
+mod editor;
 pub mod info;
 pub mod input;
-mod keyboard;
 mod normalize;
+mod prompt;
 pub mod status;
 pub mod ui;
 
