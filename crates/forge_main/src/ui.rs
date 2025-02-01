@@ -37,6 +37,8 @@ pub struct UI {
     api: Arc<dyn APIService>,
     console: Console,
     cli: Cli,
+    #[allow(dead_code)] // The guard is kept alive by being held in the struct
+    _guard: tracing_appender::non_blocking::WorkerGuard,
 }
 
 impl UI {
@@ -44,9 +46,10 @@ impl UI {
         // NOTE: This has to be first line
         let dir = dirs::config_dir()
             .ok_or_else(|| anyhow::anyhow!("Failed to get config directory"))?
-            .join("forge");
+            .join("forge")
+            .join("logs");
 
-        log::init_tracing(dir)?;
+        let guard = log::init_tracing(dir)?;
 
         let cli = Cli::parse();
         let api = Arc::new(Service::api_service(None).await?);
@@ -56,6 +59,7 @@ impl UI {
             api: api.clone(),
             console: Console::new(PathBuf::from(api.environment().await?.cwd)),
             cli,
+            _guard: guard,
         })
     }
 
