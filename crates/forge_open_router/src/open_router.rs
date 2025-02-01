@@ -5,7 +5,7 @@ use forge_domain::{
 };
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client;
-use reqwest_eventsource::{Event, EventSource};
+use reqwest_eventsource::{Event, RequestBuilderExt};
 use tokio_stream::StreamExt;
 
 use super::model::{ListModelResponse, OpenRouterModel};
@@ -65,40 +65,59 @@ impl ProviderService for OpenRouter {
             .stream(true)
             .cache();
 
-        let request = serde_json::to_string(&request)?;
-
-        let rb = self
+        let es = self
             .client
             .post(self.config.url("/chat/completions"))
             .headers(self.config.headers())
-            .body(request);
-
-        let es = EventSource::new(rb).unwrap();
+            .json(&request)
+            .eventsource()?;
 
         let stream = es
             .take_while(|message| !matches!(message, Err(reqwest_eventsource::Error::StreamEnded)))
-            .filter_map(|event| match event {
-                Ok(ref event) => match event {
-                    Event::Open => None,
-                    Event::Message(event) => {
-                        // Ignoring wasteful events
-                        if ["[DONE]", ""].contains(&event.data.as_str()) {
-                            return None;
+            .then(|event| async {
+                match event {
+                    Ok(event) => match event {
+                        Event::Open => None,
+                        Event::Message(event) if ["[DONE]", ""].contains(&event.data.as_str()) => {
+                            None
                         }
-
-                        let message = serde_json::from_str::<OpenRouterResponse>(&event.data)
+                        Event::Message(event) => Some(
+                            serde_json::from_str::<OpenRouterResponse>(&event.data)
+                                .with_context(|| "Failed to parse OpenRouter response")
+                                .and_then(|message| {
+                                    ChatCompletionMessage::try_from(message.clone())
+                                        .with_context(|| "Failed to create completion message")
+                                }),
+                        ),
+                    },
+                    Err(reqwest_eventsource::Error::StreamEnded) => None,
+                    Err(reqwest_eventsource::Error::InvalidStatusCode(_, response)) => Some(
+                        response
+                            .json::<OpenRouterResponse>()
+                            .await
                             .with_context(|| "Failed to parse OpenRouter response")
                             .and_then(|message| {
-                                Ok(ChatCompletionMessage::try_from(message.clone())?)
-                            });
-                        Some(message)
-                    }
-                },
-                Err(reqwest_eventsource::Error::StreamEnded) => None,
-                Err(err) => Some(Err(err.into())),
+                                ChatCompletionMessage::try_from(message.clone())
+                                    .with_context(|| "Failed to create completion message")
+                            })
+                            .with_context(|| "Failed with invalid status code"),
+                    ),
+                    Err(reqwest_eventsource::Error::InvalidContentType(_, response)) => Some(
+                        response
+                            .json::<OpenRouterResponse>()
+                            .await
+                            .with_context(|| "Failed to parse OpenRouter response")
+                            .and_then(|message| {
+                                ChatCompletionMessage::try_from(message.clone())
+                                    .with_context(|| "Failed to create completion message")
+                            })
+                            .with_context(|| "Failed with invalid content type"),
+                    ),
+                    Err(err) => Some(Err(err.into())),
+                }
             });
 
-        Ok(Box::pin(Box::new(stream)))
+        Ok(Box::pin(stream.filter_map(|x| x)))
     }
 
     async fn models(&self) -> Result<Vec<Model>> {

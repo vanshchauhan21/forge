@@ -96,7 +96,12 @@ impl UI {
                 }
                 Command::Message(ref content) => {
                     self.state.current_content = Some(content.clone());
-                    self.chat(content.clone(), &model).await?;
+                    if let Err(err) = self.chat(content.clone(), &model).await {
+                        CONSOLE.writeln(
+                            StatusDisplay::failed(err.to_string(), self.state.usage.clone())
+                                .format(),
+                        )?;
+                    }
                     let prompt_input = Some((&self.state).into());
                     input = self.console.prompt(prompt_input).await?;
                 }
@@ -135,10 +140,6 @@ impl UI {
                     match maybe_message {
                         Some(Ok(message)) => self.handle_chat_response(message)?,
                         Some(Err(err)) => {
-                            CONSOLE.writeln(
-                                StatusDisplay::failed(err.to_string(), self.state.usage.clone())
-                                    .format(),
-                            )?;
                             return Err(err);
                         }
                         None => return Ok(()),
