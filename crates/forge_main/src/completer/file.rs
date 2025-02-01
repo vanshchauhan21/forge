@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use forge_walker::Walker;
 use reedline::{Completer, Span, Suggestion};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct FileCompleter {
@@ -16,7 +17,8 @@ impl FileCompleter {
 }
 
 impl Completer for FileCompleter {
-    fn complete(&mut self, line: &str, _: usize) -> Vec<Suggestion> {
+    fn complete(&mut self, line: &str, pos: usize) -> Vec<Suggestion> {
+        info!("Completing line: {} pos: {}", line, pos);
 
         // Handle empty or whitespace-only input
         if line.trim().is_empty() {
@@ -28,25 +30,29 @@ impl Completer for FileCompleter {
         let trailing_spaces = line.len() - line.trim_end().len();
 
         // Calculate span based on word position and spaces
-        let (search_term, span) = if line[leading_spaces..line.len() - trailing_spaces].contains(' ') {
-            // Multiple words after leading spaces
-            let last_space_idx = line.rfind(' ').unwrap();
-            let after_space = &line[last_space_idx + 1..];
+        let (search_term, span) =
+            if line[leading_spaces..line.len() - trailing_spaces].contains(' ') {
+                // Multiple words after leading spaces
+                let last_space_idx = line.rfind(' ').unwrap();
+                let after_space = &line[last_space_idx + 1..];
 
-            // Skip trailing spaces
-            if after_space.trim().is_empty() {
-                return Vec::new();
-            }
+                // Skip trailing spaces
+                if after_space.trim().is_empty() {
+                    return Vec::new();
+                }
 
-            (after_space.trim(), Span::new(last_space_idx + 1, line.len()))
-        } else {
-            // Single word (with possible leading/trailing spaces)
-            let term = line.trim();
-            if term.is_empty() {
-                return Vec::new();
-            }
-            (term, Span::new(0, line.len()))
-        };
+                (
+                    after_space.trim(),
+                    Span::new(last_space_idx + 1, line.len()),
+                )
+            } else {
+                // Single word (with possible leading/trailing spaces)
+                let term = line.trim();
+                if term.is_empty() {
+                    return Vec::new();
+                }
+                (term, Span::new(0, line.len()))
+            };
 
         let files = self.walker.get_blocking().unwrap_or_default();
         files
@@ -77,6 +83,7 @@ impl Completer for FileCompleter {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
+
     use tempfile::tempdir;
 
     use super::*;
@@ -210,7 +217,7 @@ mod tests {
         File::create(dir.path().join("very_long_name.txt")).unwrap();
 
         let mut completer = FileCompleter::new(dir.path().to_path_buf());
-        
+
         // Test for shorter filename
         let suggestions_short = completer.complete("open sho", 0);
         assert_eq!(suggestions_short.len(), 1);

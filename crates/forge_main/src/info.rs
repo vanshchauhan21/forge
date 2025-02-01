@@ -3,7 +3,7 @@ use std::io;
 use colored::Colorize;
 use forge_domain::{Environment, Usage};
 
-use crate::CONSOLE;
+use crate::console::CONSOLE;
 
 pub fn display_info(env: &Environment, usage: &Usage) -> io::Result<()> {
     CONSOLE.newline()?;

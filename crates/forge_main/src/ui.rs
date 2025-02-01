@@ -2,13 +2,18 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use clap::Parser;
 use colored::Colorize;
 use forge_app::{APIService, Service};
 use forge_domain::{ChatRequest, ChatResponse, Command, ConversationId, ModelId, Usage, UserInput};
 use tokio_stream::StreamExt;
 
-use crate::input::PromptInput;
-use crate::{Console, StatusDisplay, CONSOLE};
+use crate::cli::Cli;
+use crate::console::CONSOLE;
+use crate::info::display_info;
+use crate::input::{Console, PromptInput};
+use crate::status::StatusDisplay;
+use crate::{banner, log};
 
 #[derive(Default)]
 struct UIState {
@@ -31,26 +36,26 @@ pub struct UI {
     state: UIState,
     api: Arc<dyn APIService>,
     console: Console,
-    verbose: bool,
-    exec: Option<String>,
-    custom_instructions: Option<PathBuf>,
+    cli: Cli,
 }
 
 impl UI {
-    pub async fn new(
-        verbose: bool,
-        exec: Option<String>,
-        custom_instructions: Option<PathBuf>,
-    ) -> Result<Self> {
+    pub async fn init() -> Result<Self> {
+        // NOTE: This has to be first line
+        let dir = dirs::config_dir()
+            .ok_or_else(|| anyhow::anyhow!("Failed to get config directory"))?
+            .join("forge");
+
+        log::init_tracing(dir)?;
+
+        let cli = Cli::parse();
         let api = Arc::new(Service::api_service(None).await?);
 
         Ok(Self {
             state: Default::default(),
             api: api.clone(),
             console: Console::new(PathBuf::from(api.environment().await?.cwd)),
-            verbose,
-            exec,
-            custom_instructions,
+            cli,
         })
     }
 
@@ -62,8 +67,11 @@ impl UI {
     }
 
     pub async fn run(&mut self) -> Result<()> {
+        // Display the banner in dimmed colors
+        banner::display()?;
+
         // Get initial input from file or prompt
-        let mut input = match &self.exec {
+        let mut input = match &self.cli.exec {
             Some(path) => self.console.upload(path).await?,
             None => self.console.prompt(None).await?,
         };
@@ -82,14 +90,14 @@ impl UI {
                 Command::Reload => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
                     self.state = Default::default();
-                    input = match &self.exec {
+                    input = match &self.cli.exec {
                         Some(path) => self.console.upload(path).await?,
                         None => self.console.prompt(None).await?,
                     };
                     continue;
                 }
                 Command::Info => {
-                    crate::display_info(&self.api.environment().await?, &self.state.usage)?;
+                    display_info(&self.api.environment().await?, &self.state.usage)?;
                     let prompt_input = Some((&self.state).into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
@@ -119,7 +127,7 @@ impl UI {
             content,
             model: model.clone(),
             conversation_id: self.state.current_conversation_id,
-            custom_instructions: self.custom_instructions.clone(),
+            custom_instructions: self.cli.custom_instructions.clone(),
         };
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
@@ -171,7 +179,7 @@ impl UI {
             ChatResponse::ToolCallEnd(tool_result) => {
                 let tool_name = tool_result.name.as_str();
                 // Always show result content for errors, or in verbose mode
-                if tool_result.is_error || self.verbose {
+                if tool_result.is_error || self.cli.verbose {
                     CONSOLE.writeln(format!("{}", tool_result.to_string().dimmed()))?;
                 }
                 let status = if tool_result.is_error {

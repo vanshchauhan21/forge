@@ -6,7 +6,6 @@ enum Kind {
     Execute,
     Success,
     Failed,
-    Task,
 }
 
 impl Kind {
@@ -15,7 +14,6 @@ impl Kind {
             Kind::Execute => "⚙",
             Kind::Success => "✓",
             Kind::Failed => "✗",
-            Kind::Task => "◆",
         }
     }
 
@@ -24,7 +22,6 @@ impl Kind {
             Kind::Execute => "execute",
             Kind::Success => "success",
             Kind::Failed => "failed",
-            Kind::Task => "task",
         }
     }
 }
@@ -68,30 +65,6 @@ impl StatusDisplay {
         }
     }
 
-    /// Create a failure status with additional details
-    pub fn failed_with(
-        message: impl Into<String>,
-        details: impl Into<String>,
-        usage: Usage,
-    ) -> Self {
-        Self {
-            kind: Kind::Failed,
-            message: message.into(),
-            error_details: Some(details.into()),
-            usage,
-        }
-    }
-
-    /// Create a task status
-    pub fn task(message: impl Into<String>, usage: Usage) -> Self {
-        Self {
-            kind: Kind::Task,
-            message: message.into(),
-            error_details: None,
-            usage,
-        }
-    }
-
     pub fn format(&self) -> String {
         let (icon, label, message) = match self.kind {
             Kind::Execute => (
@@ -116,11 +89,6 @@ impl StatusDisplay {
                     format!("{}{}", self.message, error_suffix.red()),
                 )
             }
-            Kind::Task => (
-                self.icon().blue(),
-                self.label().bold().blue(),
-                self.message.to_string(),
-            ),
         };
 
         let timestamp = chrono::Local::now().format("%H:%M:%S%.3f").to_string();

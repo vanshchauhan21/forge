@@ -7,7 +7,7 @@ use tokio::fs;
 use crate::console::CONSOLE;
 use crate::editor::{ForgeEditor, ReadResult};
 use crate::prompt::ForgePrompt;
-use crate::StatusDisplay;
+use crate::status::StatusDisplay;
 
 /// Console implementation for handling user input via command line.
 #[derive(Debug, Default)]
