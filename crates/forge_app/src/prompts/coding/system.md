@@ -8,7 +8,7 @@ First, let's establish the current system information:
 <default_shell>{{env.shell}}</default_shell>
 <home_directory>{{env.home}}</home_directory>
 <file_list>
-{{#each env.files}} - {{this}}
+{{#each files}} - {{this}}
 {{/each}}
 </file_list>
 </system_info>

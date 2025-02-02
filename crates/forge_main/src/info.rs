@@ -14,11 +14,6 @@ pub fn display_info(env: &Environment, usage: &Usage) -> io::Result<()> {
         env.cwd.display()
     ))?;
     CONSOLE.writeln(format!("{} {}", "Shell:".bold().bright_yellow(), env.shell))?;
-    CONSOLE.writeln(format!(
-        "{} {}",
-        "File Count:".bold().bright_yellow(),
-        env.files.len()
-    ))?;
     CONSOLE.newline()?;
     CONSOLE.writeln(format!(
         "{} {}",

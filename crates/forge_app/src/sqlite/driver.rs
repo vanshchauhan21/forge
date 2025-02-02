@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use tokio::sync::Mutex;
 use tracing::debug;
 
 use super::conn::ConnectionOptions;
@@ -18,17 +19,39 @@ const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 /// SQLite driver that manages database connections and migrations
 #[derive(Debug)]
 pub(crate) struct Driver {
-    pool: SQLConnection,
+    pool: Mutex<Option<SQLConnection>>,
+    db_path: PathBuf,
 }
 
 impl Driver {
-    pub fn new(db_path: &PathBuf) -> Result<Self> {
-        let db_path = db_path.join(DB_NAME);
-        let db_path = db_path.to_string_lossy();
+    pub fn new(db_path: PathBuf) -> Self {
+        Driver { pool: Mutex::new(None), db_path }
+    }
+
+    async fn init(&self) -> Result<SQLConnection> {
+        let mut live_pool = self.pool.lock().await;
+
+        if let Some(pool) = live_pool.as_ref() {
+            return Ok(pool.clone());
+        }
+
+        if !self.db_path.exists() {
+            tokio::fs::create_dir(&self.db_path)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to create db directory on {}",
+                        self.db_path.display()
+                    )
+                })?;
+        }
+
+        let db_path = self.db_path.join(DB_NAME).display().to_string();
 
         // Run migrations first
         let mut conn = SqliteConnection::establish(&db_path)
             .with_context(|| format!("Failed to establish db connection on {}", db_path))?;
+
         let migrations = conn
             .run_pending_migrations(MIGRATIONS)
             .map_err(|e| anyhow::anyhow!("Database initialization failed with error: {}", e))
@@ -53,14 +76,16 @@ impl Driver {
             .test_on_check_out(true)
             .build(manager)?;
 
-        Ok(Driver { pool })
+        *live_pool = Some(pool.clone());
+
+        Ok(pool)
     }
 }
 
 #[async_trait::async_trait]
 impl Sqlite for Driver {
     async fn connection(&self) -> Result<PooledConnection<ConnectionManager<SqliteConnection>>> {
-        self.pool.get().with_context(|| {
+        self.init().await?.get().with_context(|| {
             "Failed to acquire connection from pool - pool may be exhausted or database locked"
         })
     }
@@ -84,7 +109,7 @@ pub(crate) mod tests {
             let temp_dir = TempDir::new().unwrap();
             let db_path = temp_dir.path().to_path_buf();
 
-            Ok(Self { driver: Driver::new(&db_path)?, _temp_dir: temp_dir })
+            Ok(Self { driver: Driver::new(db_path), _temp_dir: temp_dir })
         }
     }
 

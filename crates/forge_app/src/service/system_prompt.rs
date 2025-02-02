@@ -4,6 +4,7 @@ use anyhow::Result;
 use forge_domain::{
     ChatRequest, Environment, FileReadService, ProviderService, SystemContext, ToolService,
 };
+use forge_walker::Walker;
 use handlebars::Handlebars;
 use tracing::debug;
 
@@ -69,11 +70,20 @@ impl PromptService for Live {
             tool_supported
         );
 
+        let files = Walker::max_all()
+            .cwd(self.env.cwd.clone())
+            .get()
+            .await?
+            .iter()
+            .map(|f| f.path.to_string())
+            .collect();
+
         let ctx = SystemContext {
             env: self.env.clone(),
             tool_information: self.tool.usage_prompt(),
             tool_supported,
             custom_instructions,
+            files,
         };
 
         Ok(hb.render_template(template, &ctx)?)
@@ -87,16 +97,23 @@ mod tests {
 
     use forge_domain::{ModelId, Parameters};
     use insta::assert_snapshot;
+    use tempfile::TempDir;
+    use tokio::fs;
 
     use super::*;
     use crate::service::test::{TestFileReadService, TestProvider};
 
-    fn test_env() -> Environment {
+    async fn test_env(dir: PathBuf) -> Environment {
+        fs::write(dir.join("file1.txt"), "A").await.unwrap();
+        fs::write(dir.join("file2.txt"), "B").await.unwrap();
+        fs::create_dir_all(dir.join("nested")).await.unwrap();
+        fs::write(dir.join("nested").join("file3.txt"), "B")
+            .await
+            .unwrap();
         Environment {
             os: "linux".to_string(),
-            cwd: PathBuf::from("/home/user/project"),
+            cwd: dir,
             shell: "/bin/bash".to_string(),
-            files: vec!["file1.txt".to_string(), "file2.txt".to_string()],
             api_key: "test".to_string(),
             large_model_id: "open-ai/gpt-4o".to_string(),
             small_model_id: "open-ai/gpt-4o-mini".to_string(),
@@ -107,7 +124,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_tool_supported() {
-        let env = test_env();
+        let dir = TempDir::new().unwrap();
+        let env = test_env(dir.path().to_path_buf()).await;
         let tools = Arc::new(Service::tool_service());
         let provider = Arc::new(
             TestProvider::default()
@@ -118,13 +136,16 @@ mod tests {
         let prompt = Live::new(env, tools, provider, file)
             .get(&request)
             .await
-            .unwrap();
+            .unwrap()
+            .replace(&dir.path().display().to_string(), "[TEMP_DIR]");
+
         assert_snapshot!(prompt);
     }
 
     #[tokio::test]
     async fn test_tool_unsupported() {
-        let env = test_env();
+        let dir = TempDir::new().unwrap();
+        let env = test_env(dir.path().to_path_buf()).await;
         let tools = Arc::new(Service::tool_service());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::new("gpt-3.5-turbo"),
@@ -135,13 +156,15 @@ mod tests {
         let prompt = Live::new(env, tools, provider, file)
             .get(&request)
             .await
-            .unwrap();
+            .unwrap()
+            .replace(&dir.path().display().to_string(), "[TEMP_DIR]");
         assert_snapshot!(prompt);
     }
 
     #[tokio::test]
     async fn test_system_prompt_custom_prompt() {
-        let env = test_env();
+        let dir = TempDir::new().unwrap();
+        let env = test_env(dir.path().to_path_buf()).await;
         let tools = Arc::new(Service::tool_service());
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::new("gpt-3.5-turbo"),
@@ -153,7 +176,8 @@ mod tests {
         let prompt = Live::new(env, tools, provider, file)
             .get(&request)
             .await
-            .unwrap();
+            .unwrap()
+            .replace(&dir.path().display().to_string(), "[TEMP_DIR]");
         assert!(prompt.contains("Woof woof!"));
     }
 }

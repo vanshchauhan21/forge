@@ -28,17 +28,17 @@ impl Fixture {
     }
 
     /// Get the API service, panicking if not validated
-    async fn api(&self) -> impl APIService {
+    fn api(&self) -> impl APIService {
+        // NOTE: In tests the CWD is not the project root
         let path = Path::new("../../").to_path_buf();
         let path = path.canonicalize().unwrap();
-        Service::api_service(Some(path)).await.unwrap()
+        Service::api_service(Some(path)).unwrap()
     }
 
     /// Get model response as text
     async fn get_model_response(&self, model: &str) -> String {
         let request = ChatRequest::new(ModelId::new(model), self.task.clone());
         self.api()
-            .await
             .chat(request)
             .await
             .unwrap()

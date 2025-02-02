@@ -28,8 +28,8 @@ pub trait APIService: Send + Sync {
 }
 
 impl Service {
-    pub async fn api_service(cwd: Option<PathBuf>) -> Result<impl APIService> {
-        Live::new(cwd).await
+    pub fn api_service(cwd: Option<PathBuf>) -> Result<impl APIService> {
+        Live::new(cwd)
     }
 }
 
@@ -45,8 +45,8 @@ struct Live {
 }
 
 impl Live {
-    async fn new(cwd: Option<PathBuf>) -> Result<Self> {
-        let env = Service::environment_service(cwd).get().await?;
+    fn new(cwd: Option<PathBuf>) -> Result<Self> {
+        let env = Service::environment_service(cwd).get()?;
 
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
         let tool = Arc::new(Service::tool_service());
@@ -62,7 +62,7 @@ impl Live {
         let user_prompt = Arc::new(Service::user_prompt_service());
 
         // Create an owned String that will live for 'static
-        let sqlite = Arc::new(Service::db_pool_service(&env.db_path())?);
+        let sqlite = Arc::new(Service::db_pool_service(env.db_path()));
 
         let conversation_repo = Arc::new(Service::conversation_repo(sqlite.clone()));
 

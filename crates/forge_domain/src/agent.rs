@@ -17,6 +17,7 @@ pub struct SystemContext {
     pub tool_information: String,
     pub tool_supported: bool,
     pub custom_instructions: Option<String>,
+    pub files: Vec<String>,
 }
 
 /// Represents which model (primary/secondary) should be used for the agent

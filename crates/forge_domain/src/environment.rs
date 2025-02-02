@@ -17,8 +17,6 @@ pub struct Environment {
     pub home: Option<PathBuf>,
     /// The shell being used.
     pub shell: String,
-    /// A list of files in the current working directory.
-    pub files: Vec<String>,
     /// The Forge API key.
     pub api_key: String,
     /// The large model ID.
