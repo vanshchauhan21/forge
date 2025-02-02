@@ -93,7 +93,10 @@ mod tests {
         let mut prompt = ForgePrompt::default();
         prompt.title("test-title".to_string());
         let title_style = Style::new().fg(Color::Cyan).paint("test-title").to_string();
-        let chevron_style = Style::new().fg(Color::LightYellow).paint(RIGHT_CHEVRON).to_string();
+        let chevron_style = Style::new()
+            .fg(Color::LightYellow)
+            .paint(RIGHT_CHEVRON)
+            .to_string();
         let actual = prompt.render_prompt_left();
         let expected = format!("{AI_INDICATOR} {title_style} {chevron_style} ");
         assert_eq!(actual, expected);
@@ -122,7 +125,10 @@ mod tests {
             .paint(truncated_title)
             .to_string();
         let actual = prompt.render_prompt_left();
-        let chevron_style = Style::new().fg(Color::LightYellow).paint(RIGHT_CHEVRON).to_string();
+        let chevron_style = Style::new()
+            .fg(Color::LightYellow)
+            .paint(RIGHT_CHEVRON)
+            .to_string();
         let expected = format!("{AI_INDICATOR} {title_style} {chevron_style} ");
         assert_eq!(actual, expected);
     }
