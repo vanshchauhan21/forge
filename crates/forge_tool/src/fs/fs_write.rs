@@ -20,8 +20,7 @@ pub struct FSWriteInput {
 }
 
 /// Use it to create a new file at a specified path with the provided content.
-/// Always provide absolute paths for file locations. If the file already
-/// exists, the tool will return an error to prevent overwriting. The tool
+/// Always provide absolute paths for file locations. The tool
 /// automatically handles the creation of any missing intermediary directories
 /// in the specified path.
 #[derive(ToolDescription)]
@@ -41,16 +40,6 @@ impl ToolCallService for FSWrite {
         // Validate absolute path requirement
         let path = Path::new(&input.path);
         assert_absolute_path(path)?;
-
-        // Check if file already exists
-        let file_exists = tokio::fs::metadata(&input.path).await.is_ok();
-        if file_exists {
-            return Err(format!(
-                "File {} already exists. Use '{}' tool to modify existing files.",
-                input.path,
-                ApplyPatch::tool_name().as_str()
-            ));
-        }
 
         // Validate file content if it's a supported language file
         let syntax_warning = syn::validate(&input.path, &input.content);
@@ -159,31 +148,6 @@ mod test {
         // Verify file contains valid Rust code
         let content = fs::read_to_string(&file_path).await.unwrap();
         assert_eq!(content, "fn main() { let x = 42; }");
-    }
-
-    #[tokio::test]
-    async fn test_fs_write_file_exists() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
-
-        // Create the file first
-        fs::write(&file_path, "Existing content").await.unwrap();
-
-        let fs_write = FSWrite;
-        let result = fs_write
-            .call(FSWriteInput {
-                path: file_path.to_string_lossy().to_string(),
-                content: "New content".to_string(),
-            })
-            .await;
-
-        // Check that the result is an error with correct tool name
-        let actual = TempDir::normalize(&result.unwrap_err());
-        assert_snapshot!(actual);
-
-        // Verify original content remains unchanged
-        let content = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(content, "Existing content");
     }
 
     #[tokio::test]
