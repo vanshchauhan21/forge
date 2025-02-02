@@ -28,7 +28,7 @@ impl Live {
 
     fn from_env(cwd: Option<PathBuf>) -> Result<Environment> {
         dotenv::dotenv().ok();
-        let api_key = std::env::var("FORGE_KEY").expect("FORGE_KEY must be set");
+        let api_key = std::env::var("OPEN_ROUTER_KEY").expect("OPEN_ROUTER_KEY must be set");
         let large_model_id =
             std::env::var("FORGE_LARGE_MODEL").unwrap_or("anthropic/claude-3.5-sonnet".to_owned());
         let small_model_id =

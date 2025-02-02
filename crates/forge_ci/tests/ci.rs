@@ -9,7 +9,7 @@ fn generate() {
         .auto_fix(true)
         .add_setup(Step::run("sudo apt-get install -y libsqlite3-dev"))
         .to_ci_workflow()
-        .add_env(("FORGE_KEY", "${{secrets.FORGE_KEY}}"));
+        .add_env(("OPEN_ROUTER_KEY", "${{secrets.FORGE_KEY}}"));
 
     // Set up the build matrix for all platforms
     let matrix = json!({
