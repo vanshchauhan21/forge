@@ -1,6 +1,5 @@
 mod api;
 mod chat;
-mod env;
 mod file_read;
 mod provider;
 mod suggestion;
@@ -13,6 +12,7 @@ mod user_prompt;
 mod workflow_title;
 
 pub use api::APIService;
+
 pub struct Service;
 
 #[async_trait::async_trait]

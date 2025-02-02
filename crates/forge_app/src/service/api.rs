@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -8,7 +7,6 @@ use forge_domain::{
     ProviderService, ResultStream, ToolDefinition, ToolService,
 };
 
-use super::env::EnvironmentService;
 use super::suggestion::{File, SuggestionService};
 use super::ui::UIService;
 use super::Service;
@@ -28,8 +26,8 @@ pub trait APIService: Send + Sync {
 }
 
 impl Service {
-    pub fn api_service(cwd: Option<PathBuf>) -> Result<impl APIService> {
-        Live::new(cwd)
+    pub fn api_service(env: Environment) -> Result<impl APIService> {
+        Live::new(env)
     }
 }
 
@@ -45,9 +43,7 @@ struct Live {
 }
 
 impl Live {
-    fn new(cwd: Option<PathBuf>) -> Result<Self> {
-        let env = Service::environment_service(cwd).get()?;
-
+    fn new(env: Environment) -> Result<Self> {
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
         let tool = Arc::new(Service::tool_service());
         let file_read = Arc::new(Service::file_read_service());

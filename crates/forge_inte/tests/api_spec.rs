@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use forge_app::{APIService, Service};
+use forge_app::{APIService, EnvironmentFactory, Service};
 use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use futures::future::join_all;
 use tokio_stream::StreamExt;
@@ -32,7 +32,8 @@ impl Fixture {
         // NOTE: In tests the CWD is not the project root
         let path = Path::new("../../").to_path_buf();
         let path = path.canonicalize().unwrap();
-        Service::api_service(Some(path)).unwrap()
+        let env = EnvironmentFactory::new(path).create().unwrap();
+        Service::api_service(env).unwrap()
     }
 
     /// Get model response as text

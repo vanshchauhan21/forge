@@ -41,7 +41,6 @@ impl Environment {
         self.base_path.clone()
     }
 }
-
 /// Repository for accessing system environment information
 #[async_trait]
 pub trait EnvironmentRepository {
