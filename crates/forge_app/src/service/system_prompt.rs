@@ -60,8 +60,7 @@ impl PromptService for Live {
         let tool_supported = self
             .provider
             .parameters(&request.model)
-            .await
-            .unwrap()
+            .await?
             .tool_supported;
 
         debug!(
