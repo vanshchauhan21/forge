@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 
 pub fn init_tracing(dir: PathBuf) -> anyhow::Result<WorkerGuard> {
-    let append = tracing_appender::rolling::hourly(dir.clone(), "forge.log");
+    let append = tracing_appender::rolling::daily(dir.clone(), "forge.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(append);
 
     tracing_subscriber::fmt()
