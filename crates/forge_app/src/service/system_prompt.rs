@@ -69,14 +69,17 @@ impl PromptService for Live {
             tool_supported
         );
 
-        let files = Walker::max_all()
+        let mut files = Walker::max_all()
             .max_depth(2)
             .cwd(self.env.cwd.clone())
             .get()
             .await?
             .iter()
             .map(|f| f.path.to_string())
-            .collect();
+            .collect::<Vec<_>>();
+
+        // Sort the files alphabetically to ensure consistent ordering
+        files.sort();
 
         let ctx = SystemContext {
             env: self.env.clone(),
