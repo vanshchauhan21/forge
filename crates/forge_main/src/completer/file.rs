@@ -18,7 +18,7 @@ impl FileCompleter {
 
 impl Completer for FileCompleter {
     fn complete(&mut self, line: &str, pos: usize) -> Vec<Suggestion> {
-        info!("Completing line: {} pos: {}", line, pos);
+        info!("Completing line: '{}' pos: {}", line, pos);
 
         // Handle empty or whitespace-only input
         if line.trim().is_empty() {
@@ -54,6 +54,8 @@ impl Completer for FileCompleter {
                 (term, Span::new(0, line.len()))
             };
 
+        info!("Search term: '{}', Span: {:?}", search_term, span);
+        
         let files = self.walker.get_blocking().unwrap_or_default();
         files
             .into_iter()
