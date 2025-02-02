@@ -21,7 +21,7 @@ impl Kind {
         match self {
             Kind::Execute => "execute",
             Kind::Success => "success",
-            Kind::Failed => "failed",
+            Kind::Failed => "error",
         }
     }
 }

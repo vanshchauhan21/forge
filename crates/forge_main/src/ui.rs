@@ -161,14 +161,20 @@ impl UI {
                 CONSOLE.write(&text)?;
             }
             ChatResponse::ToolCallDetected(tool_name) => {
-                CONSOLE.newline()?;
-                CONSOLE.writeln(
-                    StatusDisplay::execute(tool_name.as_str(), self.state.usage.clone()).format(),
-                )?;
-                CONSOLE.newline()?;
+                if self.cli.verbose {
+                    CONSOLE.newline()?;
+                    CONSOLE.newline()?;
+                    CONSOLE.writeln(
+                        StatusDisplay::execute(tool_name.as_str(), self.state.usage.clone())
+                            .format(),
+                    )?;
+                    CONSOLE.newline()?;
+                }
             }
             ChatResponse::ToolCallArgPart(arg) => {
-                CONSOLE.write(format!("{}", arg.dimmed()))?;
+                if self.cli.verbose {
+                    CONSOLE.write(format!("{}", arg.dimmed()))?;
+                }
             }
             ChatResponse::ToolCallStart(_) => {
                 CONSOLE.newline()?;
@@ -178,7 +184,7 @@ impl UI {
                 let tool_name = tool_result.name.as_str();
                 // Always show result content for errors, or in verbose mode
                 if tool_result.is_error || self.cli.verbose {
-                    CONSOLE.writeln(format!("{}", tool_result.to_string().dimmed()))?;
+                    CONSOLE.writeln(format!("{}", tool_result.content.dimmed()))?;
                 }
                 let status = if tool_result.is_error {
                     StatusDisplay::failed(tool_name, self.state.usage.clone())
