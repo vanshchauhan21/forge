@@ -144,7 +144,7 @@ impl Live {
                 assistant_message_content.clone(),
                 Some(tool_call_requests),
             );
-            debug!("Assistant Message: {:#?}", message);
+            debug!("Assistant Message: {:?}", message);
             context = context.add_message(message);
 
             tx.send(Ok(ChatResponse::ModifyContext(context.clone())))
