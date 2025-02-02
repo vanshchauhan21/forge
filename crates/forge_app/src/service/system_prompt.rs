@@ -71,6 +71,7 @@ impl PromptService for Live {
         );
 
         let files = Walker::max_all()
+            .max_depth(2)
             .cwd(self.env.cwd.clone())
             .get()
             .await?

@@ -6,6 +6,7 @@ use forge_domain::{
     ResultStream, ToolCall, ToolCallFull, ToolResult, ToolService,
 };
 use futures::StreamExt;
+use tracing::debug;
 
 use super::{PromptService, Service};
 use crate::mpsc_stream::MpscStream;
@@ -57,7 +58,7 @@ impl Live {
     /// Executes the chat workflow until the task is complete.
     async fn chat_workflow(
         &self,
-        mut request: Context,
+        mut context: Context,
         tx: tokio::sync::mpsc::Sender<Result<ChatResponse>>,
         chat: ChatRequest,
     ) -> Result<()> {
@@ -67,7 +68,7 @@ impl Live {
 
             let mut tool_call_entry = Vec::new();
 
-            let mut response = self.provider.chat(&chat.model, request.clone()).await?;
+            let mut response = self.provider.chat(&chat.model, context.clone()).await?;
 
             while let Some(chunk) = response.next().await {
                 let message = chunk?;
@@ -139,12 +140,14 @@ impl Live {
                 .iter()
                 .map(|t| t.request.clone())
                 .collect::<Vec<_>>();
-            request = request.add_message(ContextMessage::assistant(
+            let message = ContextMessage::assistant(
                 assistant_message_content.clone(),
                 Some(tool_call_requests),
-            ));
+            );
+            debug!("Assistant Message: {:#?}", message);
+            context = context.add_message(message);
 
-            tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+            tx.send(Ok(ChatResponse::ModifyContext(context.clone())))
                 .await
                 .unwrap();
 
@@ -153,13 +156,13 @@ impl Live {
                 .map(|t| t.response)
                 .collect::<Vec<_>>();
             if !tool_call_results.is_empty() {
-                request = request.extend_messages(
+                context = context.extend_messages(
                     tool_call_results
                         .into_iter()
                         .map(ContextMessage::ToolMessage)
                         .collect(),
                 );
-                tx.send(Ok(ChatResponse::ModifyContext(request.clone())))
+                tx.send(Ok(ChatResponse::ModifyContext(context.clone())))
                     .await
                     .unwrap();
             } else {
@@ -174,21 +177,24 @@ impl ChatService for Live {
     async fn chat(
         &self,
         chat: forge_domain::ChatRequest,
-        request: Context,
+        context: Context,
     ) -> ResultStream<ChatResponse, anyhow::Error> {
         let system_prompt = self.system_prompt.get(&chat).await?;
+        debug!("System Prompt: {}", system_prompt);
         let user_prompt = self.user_prompt.get(&chat).await?;
-
-        let request = request
+        debug!("User Prompt: {}", user_prompt);
+        let context = context
             .set_system_message(system_prompt)
             .add_message(ContextMessage::user(user_prompt))
             .tools(self.tool.list());
+
+        debug!("Tools: {:?}", self.tool.list());
 
         let that = self.clone();
 
         Ok(Box::pin(MpscStream::spawn(move |tx| async move {
             // TODO: simplify this match.
-            match that.chat_workflow(request, tx.clone(), chat.clone()).await {
+            match that.chat_workflow(context, tx.clone(), chat.clone()).await {
                 Ok(_) => {}
                 Err(e) => {
                     tx.send(Err(e)).await.unwrap();
