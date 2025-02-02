@@ -5,7 +5,6 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::patch::ApplyPatch;
 use crate::syn;
 use crate::utils::assert_absolute_path;
 
@@ -74,7 +73,6 @@ impl ToolCallService for FSWrite {
 mod test {
     use std::path::Path;
 
-    use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
     use tokio::fs;
 
