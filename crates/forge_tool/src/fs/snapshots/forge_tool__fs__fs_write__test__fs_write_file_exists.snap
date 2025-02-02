@@ -1,6 +1,0 @@
----
-source: crates/forge_tool/src/fs/fs_write.rs
-expression: actual
-snapshot_kind: text
----
-File [TEMP_DIR]/test.txt already exists. Use 'tool_forge_patch' tool to modify existing files.

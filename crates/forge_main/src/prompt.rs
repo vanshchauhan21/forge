@@ -33,8 +33,9 @@ impl Prompt for ForgePrompt {
                 title.clone()
             };
             Cow::Owned(format!(
-                "{AI_INDICATOR} {}",
+                "{AI_INDICATOR} {} {} ",
                 Style::new().fg(Color::Cyan).paint(title),
+                Style::new().fg(Color::LightYellow).paint(RIGHT_CHEVRON),
             ))
         } else {
             Cow::Borrowed(AI_INDICATOR)
@@ -60,16 +61,7 @@ impl Prompt for ForgePrompt {
     }
 
     fn render_prompt_indicator(&self, _prompt_mode: reedline::PromptEditMode) -> Cow<str> {
-        if self.title.is_some() {
-            Cow::Owned(
-                Style::new()
-                    .fg(Color::LightYellow)
-                    .paint(format!(" {RIGHT_CHEVRON} "))
-                    .to_string(),
-            )
-        } else {
-            Cow::Borrowed("")
-        }
+        Cow::Borrowed("")
     }
 
     fn render_prompt_multiline_indicator(&self) -> Cow<str> {
@@ -101,8 +93,9 @@ mod tests {
         let mut prompt = ForgePrompt::default();
         prompt.title("test-title".to_string());
         let title_style = Style::new().fg(Color::Cyan).paint("test-title").to_string();
+        let chevron_style = Style::new().fg(Color::LightYellow).paint(RIGHT_CHEVRON).to_string();
         let actual = prompt.render_prompt_left();
-        let expected = format!("{AI_INDICATOR} {title_style}");
+        let expected = format!("{AI_INDICATOR} {title_style} {chevron_style} ");
         assert_eq!(actual, expected);
     }
 
@@ -129,7 +122,8 @@ mod tests {
             .paint(truncated_title)
             .to_string();
         let actual = prompt.render_prompt_left();
-        let expected = format!("{AI_INDICATOR} {title_style}");
+        let chevron_style = Style::new().fg(Color::LightYellow).paint(RIGHT_CHEVRON).to_string();
+        let expected = format!("{AI_INDICATOR} {title_style} {chevron_style} ");
         assert_eq!(actual, expected);
     }
 
@@ -160,12 +154,9 @@ mod tests {
     fn test_render_prompt_indicator_with_title() {
         let mut prompt = ForgePrompt::default();
         prompt.title("test".to_string());
-        let indicator_style = Style::new()
-            .fg(Color::LightYellow)
-            .paint(format!(" {RIGHT_CHEVRON} "))
-            .to_string();
+
         let actual = prompt.render_prompt_indicator(reedline::PromptEditMode::Default);
-        let expected = indicator_style;
+        let expected = "";
         assert_eq!(actual, expected);
     }
 
