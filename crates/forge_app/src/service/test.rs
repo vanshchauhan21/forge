@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -13,7 +13,7 @@ use tokio_stream::StreamExt;
 use crate::service::PromptService;
 
 #[derive(Default)]
-pub struct TestFileReadService(HashMap<String, String>);
+pub struct TestFileReadService(BTreeMap<String, String>);
 
 impl TestFileReadService {
     pub fn add(mut self, path: impl ToString, content: impl ToString) -> Self {
