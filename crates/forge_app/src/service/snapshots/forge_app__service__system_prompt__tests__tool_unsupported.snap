@@ -45,8 +45,7 @@ Usage:
 
 2. tool_forge_fs_create
 Use it to create a new file at a specified path with the provided content.
- Always provide absolute paths for file locations. If the file already
- exists, the tool will return an error to prevent overwriting. The tool
+ Always provide absolute paths for file locations. The tool
  automatically handles the creation of any missing intermediary directories
  in the specified path.
 
