@@ -53,28 +53,29 @@ impl Live {
 
         Ok(Environment {
             os: std::env::consts::OS.to_string(),
-            cwd: cwd.display().to_string(),
+            cwd,
             shell: if cfg!(windows) {
                 std::env::var("COMSPEC")?
             } else {
                 std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
             },
-            home: dirs::home_dir().map(|a| a.display().to_string()),
             files,
             api_key,
             large_model_id,
             small_model_id,
-            db_path: db_path().await?,
+            base_path: base_path().await?,
+            home: dirs::home_dir(),
         })
     }
 }
 
-async fn db_path() -> Result<String> {
-    let db_path = dirs::home_dir()
-        .ok_or(anyhow::anyhow!("Unable to get home dir."))?
-        .join(".forge");
+async fn base_path() -> Result<PathBuf> {
+    let db_path = dirs::config_dir()
+        .map(|a| a.join("forge"))
+        .unwrap_or(PathBuf::from(".").join(".forge"));
+
     tokio::fs::create_dir_all(&db_path).await?;
-    Ok(db_path.display().to_string())
+    Ok(db_path)
 }
 
 #[async_trait::async_trait]

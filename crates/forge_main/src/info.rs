@@ -11,16 +11,9 @@ pub fn display_info(env: &Environment, usage: &Usage) -> io::Result<()> {
     CONSOLE.writeln(format!(
         "{} {}",
         "Working Directory:".bold().bright_yellow(),
-        env.cwd
+        env.cwd.display()
     ))?;
     CONSOLE.writeln(format!("{} {}", "Shell:".bold().bright_yellow(), env.shell))?;
-    if let Some(home) = &env.home {
-        CONSOLE.writeln(format!(
-            "{} {}",
-            "Home Directory:".bold().bright_yellow(),
-            home
-        ))?;
-    }
     CONSOLE.writeln(format!(
         "{} {}",
         "File Count:".bold().bright_yellow(),

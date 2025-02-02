@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -44,20 +43,15 @@ pub struct UI {
 impl UI {
     pub async fn init() -> Result<Self> {
         // NOTE: This has to be first line
-        let dir = dirs::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Failed to get config directory"))?
-            .join("forge")
-            .join("logs");
 
-        let guard = log::init_tracing(dir)?;
+        let api = Arc::new(Service::api_service(None).await?);
+        let guard = log::init_tracing(api.environment().await?)?;
 
         let cli = Cli::parse();
-        let api = Arc::new(Service::api_service(None).await?);
-
         Ok(Self {
             state: Default::default(),
             api: api.clone(),
-            console: Console::new(PathBuf::from(api.environment().await?.cwd)),
+            console: Console::new(api.environment().await?),
             cli,
             _guard: guard,
         })

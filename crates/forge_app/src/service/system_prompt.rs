@@ -83,6 +83,8 @@ impl PromptService for Live {
 #[cfg(test)]
 mod tests {
 
+    use std::path::PathBuf;
+
     use forge_domain::{ModelId, Parameters};
     use insta::assert_snapshot;
 
@@ -92,14 +94,14 @@ mod tests {
     fn test_env() -> Environment {
         Environment {
             os: "linux".to_string(),
-            cwd: "/home/user/project".to_string(),
+            cwd: PathBuf::from("/home/user/project"),
             shell: "/bin/bash".to_string(),
-            home: Some("/home/user".to_string()),
             files: vec!["file1.txt".to_string(), "file2.txt".to_string()],
             api_key: "test".to_string(),
             large_model_id: "open-ai/gpt-4o".to_string(),
             small_model_id: "open-ai/gpt-4o-mini".to_string(),
-            db_path: "/home/user/.forge/globalConfig".to_string(),
+            base_path: PathBuf::from("/home/user/.forge/globalConfig"),
+            home: Some(PathBuf::from("/home/user")),
         }
     }
 

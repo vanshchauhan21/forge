@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use derive_setters::Setters;
 use serde::Serialize;
@@ -10,11 +12,11 @@ pub struct Environment {
     /// The operating system of the environment.
     pub os: String,
     /// The current working directory.
-    pub cwd: String,
+    pub cwd: PathBuf,
+    /// The home directory.
+    pub home: Option<PathBuf>,
     /// The shell being used.
     pub shell: String,
-    /// The home directory, if available.
-    pub home: Option<String>,
     /// A list of files in the current working directory.
     pub files: Vec<String>,
     /// The Forge API key.
@@ -23,8 +25,23 @@ pub struct Environment {
     pub large_model_id: String,
     /// The small model ID.
     pub small_model_id: String,
-    /// Config dir for Forge.
-    pub db_path: String,
+
+    /// The base path relative to which everything else stored.
+    pub base_path: PathBuf,
+}
+
+impl Environment {
+    pub fn db_path(&self) -> PathBuf {
+        self.base_path.clone()
+    }
+
+    pub fn log_path(&self) -> PathBuf {
+        self.base_path.join("logs")
+    }
+
+    pub fn history_path(&self) -> PathBuf {
+        self.base_path.clone()
+    }
 }
 
 /// Repository for accessing system environment information

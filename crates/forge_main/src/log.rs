@@ -1,9 +1,8 @@
-use std::path::PathBuf;
-
+use forge_domain::Environment;
 use tracing_appender::non_blocking::WorkerGuard;
 
-pub fn init_tracing(dir: PathBuf) -> anyhow::Result<WorkerGuard> {
-    let append = tracing_appender::rolling::daily(dir.clone(), "forge.log");
+pub fn init_tracing(env: Environment) -> anyhow::Result<WorkerGuard> {
+    let append = tracing_appender::rolling::daily(env.log_path().clone(), "forge.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(append);
 
     tracing_subscriber::fmt()

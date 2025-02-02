@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use forge_domain::{Command, Usage, UserInput};
+use forge_domain::{Command, Environment, Usage, UserInput};
 use tokio::fs;
 
 use crate::console::CONSOLE;
@@ -12,13 +12,13 @@ use crate::status::StatusDisplay;
 /// Console implementation for handling user input via command line.
 #[derive(Debug, Default)]
 pub struct Console {
-    cwd: PathBuf,
+    env: Environment,
 }
 
 impl Console {
     /// Creates a new instance of `Console`.
-    pub fn new(cwd: PathBuf) -> Self {
-        Self { cwd }
+    pub fn new(env: Environment) -> Self {
+        Self { env }
     }
 }
 
@@ -35,7 +35,7 @@ impl UserInput for Console {
 
     async fn prompt(&self, input: Option<Self::PromptInput>) -> anyhow::Result<Command> {
         CONSOLE.writeln("")?;
-        let mut engine = ForgeEditor::start(self.cwd.clone());
+        let mut engine = ForgeEditor::start(self.env.clone());
         let prompt: ForgePrompt = input.map(Into::into).unwrap_or_default();
 
         loop {

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::{Context, Result};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
@@ -20,8 +22,9 @@ pub(crate) struct Driver {
 }
 
 impl Driver {
-    pub fn new(db_path: &str) -> Result<Self> {
-        let db_path = format!("{}/{}", db_path, DB_NAME);
+    pub fn new(db_path: &PathBuf) -> Result<Self> {
+        let db_path = db_path.join(DB_NAME);
+        let db_path = db_path.to_string_lossy();
 
         // Run migrations first
         let mut conn = SqliteConnection::establish(&db_path)
@@ -79,7 +82,7 @@ pub(crate) mod tests {
     impl TestDriver {
         pub fn new() -> Result<Self> {
             let temp_dir = TempDir::new().unwrap();
-            let db_path = temp_dir.path().to_str().unwrap().to_string();
+            let db_path = temp_dir.path().to_path_buf();
 
             Ok(Self { driver: Driver::new(&db_path)?, _temp_dir: temp_dir })
         }

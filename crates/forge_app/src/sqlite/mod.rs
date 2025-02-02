@@ -1,6 +1,8 @@
 mod conn;
 pub(crate) mod driver;
 
+use std::path::PathBuf;
+
 use anyhow::Result;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::sqlite::SqliteConnection;
@@ -21,7 +23,7 @@ pub trait Sqlite: Send + Sync {
 
 impl Service {
     /// Create a new SQLite service
-    pub fn db_pool_service(db_path: &str) -> Result<impl Sqlite + 'static> {
+    pub fn db_pool_service(db_path: &PathBuf) -> Result<impl Sqlite + 'static> {
         Driver::new(db_path)
     }
 }

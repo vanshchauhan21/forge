@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-
+use forge_domain::Environment;
 use nu_ansi_term::{Color, Style};
 use reedline::{
     default_emacs_keybindings, ColumnarMenu, DefaultHinter, EditCommand, Emacs, FileBackedHistory,
@@ -69,15 +68,9 @@ impl ForgeEditor {
         keybindings
     }
 
-    pub fn start(cwd: PathBuf) -> Self {
+    pub fn start(env: Environment) -> Self {
         // Store file history in system config directory
-        let history_file = dirs::config_dir()
-            .map(|mut path| {
-                path.push("forge");
-                path.push(".forge_history");
-                path
-            })
-            .unwrap_or_else(|| PathBuf::from(".forge_history"));
+        let history_file = env.history_path();
 
         let history = Box::new(
             FileBackedHistory::with_file(HISTORY_CAPACITY, history_file).unwrap_or_default(),
@@ -101,7 +94,7 @@ impl ForgeEditor {
         let edit_mode = Box::new(Emacs::new(Self::init()));
 
         let editor = Reedline::create()
-            .with_completer(Box::new(FileCompleter::new(cwd)))
+            .with_completer(Box::new(FileCompleter::new(env.cwd)))
             .with_history(history)
             .with_hinter(Box::new(
                 DefaultHinter::default().with_style(Style::new().fg(Color::DarkGray)),

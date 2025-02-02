@@ -18,11 +18,11 @@ pub trait SuggestionService: Send + Sync {
 }
 
 struct Live {
-    path: String,
+    path: PathBuf,
 }
 
 impl Live {
-    pub fn new(path: impl Into<String>) -> Self {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
         Self { path: path.into() }
     }
 }
@@ -30,7 +30,7 @@ impl Live {
 #[async_trait::async_trait]
 impl SuggestionService for Live {
     async fn suggestions(&self) -> Result<Vec<File>> {
-        let cwd = PathBuf::from(self.path.clone()); // Use the current working directory
+        let cwd = self.path.clone(); // Use the current working directory
         let walker = Walker::max_all().cwd(cwd);
 
         let files = walker.get().await?;
@@ -42,7 +42,7 @@ impl SuggestionService for Live {
 }
 
 impl Service {
-    pub fn completion_service(path: impl Into<String>) -> impl SuggestionService {
+    pub fn completion_service(path: impl Into<PathBuf>) -> impl SuggestionService {
         Live::new(path)
     }
 }
