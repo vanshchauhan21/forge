@@ -35,6 +35,8 @@ impl ContextMessage {
     }
 
     pub fn assistant(content: impl ToString, tool_calls: Option<Vec<ToolCallFull>>) -> Self {
+        let tool_calls =
+            tool_calls.and_then(|calls| if calls.is_empty() { None } else { Some(calls) });
         ContentMessage {
             role: Role::Assistant,
             content: content.to_string(),
@@ -48,6 +50,10 @@ impl ContextMessage {
             ContextMessage::ContentMessage(message) => message.content.to_string(),
             ContextMessage::ToolMessage(result) => serde_json::to_string(&result.content).unwrap(),
         }
+    }
+
+    pub fn tool_result(result: ToolResult) -> Self {
+        Self::ToolMessage(result)
     }
 }
 
@@ -106,6 +112,12 @@ impl Context {
 
     pub fn extend_messages(mut self, messages: Vec<impl Into<ContextMessage>>) -> Self {
         self.messages.extend(messages.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn add_tool_results(mut self, results: Vec<ToolResult>) -> Self {
+        self.messages
+            .extend(results.into_iter().map(ContextMessage::tool_result));
         self
     }
 

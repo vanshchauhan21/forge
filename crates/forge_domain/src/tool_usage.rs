@@ -14,6 +14,7 @@ impl Display for UsagePrompt {
         f.write_str(&self.description)?;
 
         f.write_str("\n\nUsage:\n")?;
+        f.write_str("<tool_call>\n")?;
         f.write_str("<")?;
         f.write_str(&self.tool_name)?;
         f.write_str(">")?;
@@ -27,6 +28,7 @@ impl Display for UsagePrompt {
         f.write_str("</")?;
         f.write_str(&self.tool_name)?;
         f.write_str(">\n")?;
+        f.write_str("</tool_call>\n")?;
 
         Ok(())
     }

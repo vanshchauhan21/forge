@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use derive_setters::Setters;
 use forge_domain::{
     ChatCompletionMessage, ChatRequest, Context, FileReadService, Model, ModelId, Parameters,
@@ -104,7 +104,7 @@ impl ProviderService for TestProvider {
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
         match self.parameters.iter().find(|(id, _)| id == model) {
-            None => bail!("Model not found: {}", model),
+            None => anyhow::bail!("Model not found: {}", model),
             Some((_, parameter)) => Ok(parameter.clone()),
         }
     }

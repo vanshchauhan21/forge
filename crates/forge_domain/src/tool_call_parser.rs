@@ -29,6 +29,8 @@ fn parse_arg(input: &str) -> IResult<&str, (&str, &str)> {
     let (input, _) = tag("<").parse(input)?;
     let (input, key) = parse_identifier(input)?;
     let (input, _) = tag(">").parse(input)?;
+    let (input, _) = multispace0(input)?; // Handle whitespace after opening tag
+
     let (input, value) = take_until("</").parse(input)?;
     let (input, _) = tag("</").parse(input)?;
     let (input, _) = tag(key).parse(input)?;
@@ -43,26 +45,56 @@ fn parse_args(input: &str) -> IResult<&str, HashMap<String, String>> {
     let (input, args) = arg_parser.parse(input)?;
     let mut map = HashMap::new();
     for (key, value) in args {
-        map.insert(key.to_string(), value.to_string());
+        // Clean up any extraneous whitespace in values, including indentation and
+        // newlines
+        map.insert(
+            key.to_string(),
+            value.split_whitespace().collect::<Vec<_>>().join(" "),
+        );
     }
     Ok((input, map))
 }
 
 fn parse_tool_call(input: &str) -> IResult<&str, ToolCallParsed> {
+    let (input, _) = multispace0(input)?; // Handle leading whitespace and newlines
+    let (input, _) = tag("<tool_call>").parse(input)?;
+    let (input, _) = multispace0(input)?; // Handle whitespace after <tool_call>
+
+    // Match the tool name tags: <tool_name>
     let (input, _) = tag("<").parse(input)?;
     let (input, name) = parse_identifier(input)?;
     let (input, _) = tag(">").parse(input)?;
+    let (input, _) = multispace0(input)?;
+
+    // Match all the arguments with whitespace
     let (input, args) = parse_args(input)?;
+
+    // Match closing tags: </tool_name>
+    let (input, _) = multispace0(input)?; // Handle whitespace before closing tag
     let (input, _) = tag("</").parse(input)?;
     let (input, _) = tag(name).parse(input)?;
     let (input, _) = tag(">").parse(input)?;
+    let (input, _) = multispace0(input)?; // Handle whitespace after closing tag
 
-    Ok((input, ToolCallParsed { name: name.to_string(), args }))
+    // Match </tool_call> and any whitespace
+    let (input, _) = tag("</tool_call>").parse(input)?;
+    let (input, _) = multispace0(input)?; // Handle trailing whitespace and newlines
+
+    Ok((
+        input,
+        ToolCallParsed {
+            name: name.to_string(),
+            args: args
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.trim().to_string()))
+                .collect(),
+        },
+    ))
 }
 
 fn find_next_tool_call(input: &str) -> IResult<&str, &str> {
     // Find the next occurrence of a tool call opening tag
-    let (remaining, _) = take_until("<").parse(input)?;
+    let (remaining, _) = take_until("<tool_call>").parse(input)?;
     Ok((remaining, ""))
 }
 
@@ -167,7 +199,8 @@ mod tests {
         }
 
         fn build_xml(&self) -> String {
-            let mut xml = format!("<{}>", self.name);
+            let mut xml = String::from("<tool_call>");
+            xml.push_str(&format!("<{}>", self.name));
             let args: Vec<_> = self.args.iter().collect();
             for (idx, (key, value)) in args.iter().enumerate() {
                 xml.push_str(&format!(
@@ -178,7 +211,7 @@ mod tests {
                     if idx < args.len() - 1 { " " } else { "" }
                 ));
             }
-            xml.push_str(&format!("</{}>\n", self.name));
+            xml.push_str(&format!("</{}></tool_call>", self.name));
             xml
         }
 
@@ -215,6 +248,38 @@ mod tests {
             map.insert("key2".to_string(), "value2".to_string());
             map
         };
+        assert_eq!(action, expected);
+    }
+
+    #[test]
+    fn test_actual_llm_respone() {
+        // Test with real LLM response including newlines and indentation
+        let str = r#"To find the cat hidden in the codebase, I will use the `tool_forge_fs_search` to grep for the string "cat" in all markdown files except those in the `docs` directory.
+                <analysis>
+                Files Read: */*.md
+                Git Status: Not applicable, as we are not dealing with version control changes.
+                Compilation Status: Not applicable, as this is a text search.
+                Test Status: Not applicable, as this is a text search.
+                </analysis>
+
+                <tool_call>
+                <tool_forge_fs_search>
+                <file_pattern>**/*.md</file_pattern>
+                <path>/Users/amit/code-forge</path>
+                <regex>cat</regex>
+                </tool_forge_fs_search>
+                </tool_call>"#;
+
+        let action = parse(str).unwrap();
+
+        let expected = vec![ToolCallFull {
+            name: ToolName::new("tool_forge_fs_search"),
+            call_id: None,
+            arguments: serde_json::from_str(
+                r#"{"file_pattern":"**/*.md","path":"/Users/amit/code-forge","regex":"cat"}"#,
+            )
+            .unwrap(),
+        }];
         assert_eq!(action, expected);
     }
 
@@ -357,6 +422,19 @@ mod tests {
 
         let action = parse(&input).unwrap();
         let expected = vec![tool1.build_expected(), tool2.build_expected()];
+        assert_eq!(action, expected);
+    }
+
+    #[test]
+    fn test_parse_new_tool_call_format() {
+        let input = r#"<tool_call><tool_forge_fs_search><path>/test/path</path><regex>test</regex></tool_forge_fs_search></tool_call>"#;
+
+        let action = parse(input).unwrap();
+        let expected = vec![ToolCallFull {
+            name: ToolName::new("tool_forge_fs_search"),
+            call_id: None,
+            arguments: serde_json::from_str(r#"{"path":"/test/path","regex":"test"}"#).unwrap(),
+        }];
         assert_eq!(action, expected);
     }
 }

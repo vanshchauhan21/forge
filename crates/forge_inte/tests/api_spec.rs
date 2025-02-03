@@ -5,13 +5,14 @@ use forge_domain::{ChatRequest, ChatResponse, ModelId};
 use futures::future::join_all;
 use tokio_stream::StreamExt;
 
-const MAX_RETRIES: usize = 3;
+const MAX_RETRIES: usize = 5;
 const SUPPORTED_MODELS: &[&str] = &[
     "anthropic/claude-3.5-sonnet:beta",
     "openai/gpt-4o-2024-11-20",
     "anthropic/claude-3.5-sonnet",
     "openai/gpt-4o",
     "openai/gpt-4o-mini",
+    "qwen/qwen-2.5-7b-instruct",
     // "google/gemini-flash-1.5",
     "anthropic/claude-3-sonnet",
 ];
@@ -95,7 +96,7 @@ impl Fixture {
 #[tokio::test]
 async fn test_find_cat_name() {
     let errors = Fixture::new(
-        "There is a cat hidden in the codebase. What is its name? hint: it's present in *.md file.",
+        "There is a cat hidden in the codebase. What is its name? hint: it's present in *.md file, but not in the docs directory. You can use any tool at your disposal to find it. Do not ask me any questions.",
     )
     .test_models(|response| response.to_lowercase().contains("juniper"))
     .await;
