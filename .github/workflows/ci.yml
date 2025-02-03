@@ -18,7 +18,7 @@
 name: ci
 env:
   RUSTFLAGS: -Dwarnings
-  OPEN_ROUTER_KEY: ${{secrets.FORGE_KEY}}
+  OPEN_ROUTER_KEY: ${{secrets.OPEN_ROUTER_KEY}}
 on:
   pull_request:
     types:
@@ -166,7 +166,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        repository: tailcallhq/homebrew-code-forge
+        repository: antinomyhq/homebrew-code-forge
         ref: main
         token: ${{ secrets.HOMEBREW_ACCESS }}
     - run: GITHUB_TOKEN="${{ secrets.HOMEBREW_ACCESS }}" ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}

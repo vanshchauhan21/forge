@@ -9,7 +9,7 @@ fn generate() {
         .auto_fix(true)
         .add_setup(Step::run("sudo apt-get install -y libsqlite3-dev"))
         .to_ci_workflow()
-        .add_env(("OPEN_ROUTER_KEY", "${{secrets.FORGE_KEY}}"));
+        .add_env(("OPEN_ROUTER_KEY", "${{secrets.OPEN_ROUTER_KEY}}"));
 
     // Set up the build matrix for all platforms
     let matrix = json!({
@@ -156,7 +156,7 @@ fn generate() {
             .runs_on("ubuntu-latest")
             .add_step(
                 Step::uses("actions", "checkout", "v4")
-                    .add_with(("repository", "tailcallhq/homebrew-code-forge"))
+                    .add_with(("repository", "antinomyhq/homebrew-code-forge"))
                     .add_with(("ref", "main"))
                     .add_with(("token", "${{ secrets.HOMEBREW_ACCESS }}")),
             )
