@@ -200,6 +200,7 @@ impl From<OpenRouterModel> for Model {
             id: value.id,
             name: value.name,
             description: value.description,
+            context_length: value.context_length,
         }
     }
 }

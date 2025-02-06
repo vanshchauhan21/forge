@@ -29,6 +29,8 @@ pub enum Command {
     Info,
     /// Exit the application without any further action.
     Exit,
+    /// Lists the models available for use.
+    Models,
 }
 
 impl Command {
@@ -45,6 +47,7 @@ impl Command {
             "/reload".to_string(),
             "/info".to_string(),
             "/exit".to_string(),
+            "/models".to_string(),
         ]
     }
 
@@ -66,6 +69,7 @@ impl Command {
             "/reload" => Ok(Command::Reload),
             "/info" => Ok(Command::Info),
             "/exit" => Ok(Command::Exit),
+            "/models" => Ok(Command::Models),
             text => Ok(Command::Message(text.to_string())),
         }
     }
