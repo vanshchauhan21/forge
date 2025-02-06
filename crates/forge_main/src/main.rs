@@ -1,5 +1,5 @@
 use anyhow::Result;
-use forge_main::UI;
+use forge::UI;
 
 #[tokio::main]
 async fn main() -> Result<()> {

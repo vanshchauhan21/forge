@@ -7,11 +7,12 @@ use clap::Parser;
 #[command(version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {
     /// Optional file path to execute commands from
-    pub prompt: Option<String>,
+    #[arg(long, short = 'c')]
+    pub command: Option<String>,
     /// Enable verbose output, showing additional tool information
     #[arg(long, default_value_t = false)]
     pub verbose: bool,
-    /// Path to runtime configuration file for AI customization
-    #[arg(long, short = 'c')]
+    /// Path to custom instructions
+    #[arg(long, short = 'i')]
     pub custom_instructions: Option<PathBuf>,
 }

@@ -76,7 +76,7 @@ impl UI {
         banner::display()?;
 
         // Get initial input from file or prompt
-        let mut input = match &self.cli.prompt {
+        let mut input = match &self.cli.command {
             Some(path) => self.console.upload(path).await?,
             None => self.console.prompt(None).await?,
         };
@@ -100,7 +100,7 @@ impl UI {
                 Command::Reload => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
                     self.state = Default::default();
-                    input = match &self.cli.prompt {
+                    input = match &self.cli.command {
                         Some(path) => self.console.upload(path).await?,
                         None => self.console.prompt(None).await?,
                     };
@@ -120,7 +120,7 @@ impl UI {
                     self.state.current_content = Some(content.clone());
                     if let Err(err) = self.chat(content.clone(), &model).await {
                         CONSOLE.writeln(
-                            StatusDisplay::failed(err.to_string(), self.state.usage.clone())
+                            StatusDisplay::failed(format!("{:?}", err), self.state.usage.clone())
                                 .format(),
                         )?;
                     }
@@ -272,11 +272,6 @@ impl UI {
             }
             ChatResponse::ModifyContext(_) => {}
             ChatResponse::Complete => {}
-            ChatResponse::Error(err) => {
-                CONSOLE.writeln(
-                    StatusDisplay::failed(err.to_string(), self.state.usage.clone()).format(),
-                )?;
-            }
             ChatResponse::PartialTitle(_) => {}
             ChatResponse::CompleteTitle(title) => {
                 self.state.current_title = Some(title);
