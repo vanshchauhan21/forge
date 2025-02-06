@@ -29,8 +29,8 @@ impl Parameters {
 pub struct ModelId(String);
 
 impl ModelId {
-    pub fn new(id: &str) -> Self {
-        Self(id.to_string())
+    pub fn new<T: Into<String>>(id: T) -> Self {
+        Self(id.into())
     }
 }
 

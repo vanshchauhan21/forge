@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use forge_domain::{Command, Environment, Usage, UserInput};
+use forge_domain::{Environment, Usage};
 use tokio::fs;
 
 use crate::console::CONSOLE;
 use crate::editor::{ForgeEditor, ReadResult};
+use crate::model::{Command, UserInput};
 use crate::prompt::ForgePrompt;
 use crate::status::StatusDisplay;
 

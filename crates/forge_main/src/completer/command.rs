@@ -1,5 +1,6 @@
-use forge_domain::Command;
 use reedline::{Completer, Span, Suggestion};
+
+use crate::model::Command;
 
 #[derive(Default)]
 pub struct CommandCompleter;
