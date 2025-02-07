@@ -38,6 +38,22 @@ pub enum ToolCall {
     Part(ToolCallPart),
 }
 
+impl ToolCall {
+    pub fn as_partial(&self) -> Option<&ToolCallPart> {
+        match self {
+            ToolCall::Full(_) => None,
+            ToolCall::Part(part) => Some(part),
+        }
+    }
+
+    pub fn as_full(&self) -> Option<&ToolCallFull> {
+        match self {
+            ToolCall::Full(full) => Some(full),
+            ToolCall::Part(_) => None,
+        }
+    }
+}
+
 /// Contains the full information about using a tool. This is received as a part
 /// of the response from the model when streaming is disabled.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
@@ -54,6 +70,10 @@ impl ToolCallFull {
     }
 
     pub fn try_from_parts(parts: &[ToolCallPart]) -> Result<Vec<Self>> {
+        if parts.is_empty() {
+            return Ok(vec![]);
+        }
+
         let mut tool_name: Option<&ToolName> = None;
         let mut tool_call_id = None;
 
@@ -170,6 +190,14 @@ mod tests {
             name: ToolName::new("tool_forge_fs_read"),
             arguments: serde_json::json!({"path": "docs/onboarding.md"}),
         }];
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_empty_call_parts() {
+        let actual = ToolCallFull::try_from_parts(&[]).unwrap();
+        let expected = vec![];
 
         assert_eq!(actual, expected);
     }

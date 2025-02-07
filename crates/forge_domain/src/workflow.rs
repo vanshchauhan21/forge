@@ -1,38 +1,29 @@
-use std::collections::{HashMap, HashSet};
+#![allow(dead_code)]
 
-use derive_more::derive::{Display, From};
+use std::collections::HashMap;
 
-use crate::AgentId;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Display, Eq, PartialEq, Hash, Clone)]
-pub struct WorkflowId(String);
+use crate::{Agent, AgentId, Context, Variables};
 
+#[derive(Default, Serialize, Deserialize)]
 pub struct Workflow {
-    pub id: WorkflowId,
-    pub description: String,
-    pub handovers: HashMap<FlowId, Vec<FlowId>>,
+    pub agents: Vec<Agent>,
+    pub state: HashMap<AgentId, Context>,
+    pub variables: Variables,
 }
 
 impl Workflow {
-    /// Returns flows that have no predecessors
-    pub fn head_flow(&self) -> Vec<FlowId> {
-        let values = self
-            .handovers
-            .values()
-            .clone()
-            .flatten()
-            .collect::<HashSet<_>>();
-
-        self.handovers
-            .keys()
-            .filter(|&flow| !values.contains(flow))
-            .cloned()
-            .collect::<Vec<_>>()
+    pub fn find_agent(&self, id: &AgentId) -> Option<&Agent> {
+        self.agents.iter().find(|a| a.id == *id)
     }
-}
 
-#[derive(Debug, Display, Eq, PartialEq, From, Hash, Clone)]
-pub enum FlowId {
-    Agent(AgentId),
-    Workflow(WorkflowId),
+    pub fn get_agent(&self, id: &AgentId) -> crate::Result<&Agent> {
+        self.find_agent(id)
+            .ok_or_else(|| crate::Error::AgentUndefined(id.clone()))
+    }
+
+    pub fn get_entries(&self) -> Vec<&Agent> {
+        self.agents.iter().filter(|a| a.entry).collect::<Vec<_>>()
+    }
 }

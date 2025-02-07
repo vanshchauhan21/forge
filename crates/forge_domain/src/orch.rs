@@ -1,69 +1,83 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::Context as _;
 use async_recursion::async_recursion;
+use derive_setters::Setters;
 use futures::future::join_all;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use serde_json::Value;
+use tokio::sync::Mutex;
 
-use crate::arena::{Arena, SmartTool};
-use crate::{
-    Agent, AgentId, ChatCompletionMessage, ContentMessage, Context, ContextMessage, Error, FlowId,
-    ProviderService, Role, Summarize, SystemContext, ToolCallFull, ToolDefinition, ToolName,
-    ToolResult, ToolService, Transform, Variables, Workflow, WorkflowId,
-};
+use crate::*;
 
+pub struct AgentMessage<T> {
+    pub agent: AgentId,
+    pub message: T,
+}
+
+#[derive(Setters)]
 pub struct Orchestrator {
-    arena: Arena,
+    provider_svc: Arc<dyn ProviderService>,
+    tool_svc: Arc<dyn ToolService>,
+    workflow: Arc<Mutex<Workflow>>,
     system_context: SystemContext,
-    provider: Arc<dyn ProviderService>,
-    tool: Arc<dyn ToolService>,
+    sender: Option<tokio::sync::mpsc::Sender<AgentMessage<ChatResponse>>>,
+}
+
+struct ChatCompletionResult {
+    pub content: String,
+    pub tool_calls: Vec<ToolCallFull>,
 }
 
 impl Orchestrator {
-    pub fn new(
-        provider: Arc<dyn ProviderService>,
-        tool: Arc<dyn ToolService>,
-        arena: Arena,
-        system_context: SystemContext,
-    ) -> Self {
-        Self { arena, provider, system_context, tool }
-    }
-
-    pub async fn execute(&self, id: &FlowId, input: &Variables) -> anyhow::Result<Variables> {
-        match id {
-            FlowId::Agent(id) => self.init_agent(id, input).await,
-            FlowId::Workflow(id) => self.init_workflow(id, input).await,
+    pub fn new(provider: Arc<dyn ProviderService>, tool: Arc<dyn ToolService>) -> Self {
+        Self {
+            provider_svc: provider,
+            tool_svc: tool,
+            workflow: Arc::new(Mutex::new(Workflow::default())),
+            system_context: SystemContext::default(),
+            sender: None,
         }
     }
 
+    pub async fn agent_context(&self, id: &AgentId) -> Option<Context> {
+        let guard = self.workflow.lock().await;
+        guard.state.get(id).cloned()
+    }
+
+    async fn send_message(&self, agent_id: &AgentId, message: ChatResponse) -> anyhow::Result<()> {
+        if let Some(sender) = &self.sender {
+            sender
+                .send(AgentMessage { agent: agent_id.clone(), message })
+                .await?
+        }
+        Ok(())
+    }
+
+    async fn send(&self, agent_id: &AgentId, message: ChatResponse) -> anyhow::Result<()> {
+        self.send_message(agent_id, message).await
+    }
+
     fn init_default_tool_definitions(&self) -> Vec<ToolDefinition> {
-        self.tool.list()
+        self.tool_svc.list()
     }
 
-    fn init_smart_tool_definitions(&self) -> Vec<ToolDefinition> {
-        self.arena
-            .tools
-            .iter()
-            .map(|a| a.to_tool_definition())
-            .collect()
-    }
+    fn init_tool_definitions(&self, agent: &Agent) -> Vec<ToolDefinition> {
+        let allowed = agent.tools.iter().collect::<HashSet<_>>();
+        let mut forge_tools = self.init_default_tool_definitions();
 
-    fn init_tool_definitions(&self, tools: &[ToolName]) -> Vec<ToolDefinition> {
-        let required_tools = tools.iter().collect::<HashSet<_>>();
-        let default_tools = self.init_default_tool_definitions();
-        let smart_tools = self.init_smart_tool_definitions();
+        // Adding self to the list of tool definitions
+        forge_tools.push(ReadVariable::tool_definition());
+        forge_tools.push(WriteVariable::tool_definition());
 
-        default_tools
+        forge_tools
             .into_iter()
-            .chain(smart_tools)
-            .filter(|tool| required_tools.contains(&tool.name))
+            .filter(|tool| allowed.contains(&tool.name))
             .collect::<Vec<_>>()
     }
 
     fn init_agent_context(&self, agent: &Agent, input: &Variables) -> anyhow::Result<Context> {
-        let tool_defs = self.init_tool_definitions(&agent.tools);
+        let tool_defs = self.init_tool_definitions(agent);
 
         let tool_usage_prompt = tool_defs.iter().fold("".to_string(), |acc, tool| {
             format!("{}\n{}", acc, tool.usage_prompt())
@@ -84,62 +98,103 @@ impl Orchestrator {
             .extend_tools(tool_defs))
     }
 
-    async fn collect_content(
+    async fn collect_messages(
         &self,
-        _response: &impl Stream<Item = std::result::Result<ChatCompletionMessage, anyhow::Error>>,
-    ) -> String {
-        todo!()
-    }
+        agent: &AgentId,
+        mut response: impl Stream<Item = std::result::Result<ChatCompletionMessage, anyhow::Error>>
+            + std::marker::Unpin,
+    ) -> anyhow::Result<ChatCompletionResult> {
+        let mut messages = Vec::new();
 
-    async fn collect_tool_calls(
-        &self,
-        _response: &impl Stream<Item = std::result::Result<ChatCompletionMessage, anyhow::Error>>,
-        _variables: &mut Variables,
-    ) -> Vec<ToolCallFull> {
-        todo!()
-    }
-
-    fn find_tool(&self, name: &ToolName) -> Option<&SmartTool<Variables>> {
-        self.arena.tools.iter().find(|tool| tool.name == *name)
-    }
-
-    async fn execute_tool(&self, tool_call: &ToolCallFull) -> anyhow::Result<ToolResult> {
-        let smart_tool = self.find_tool(&tool_call.name);
-        if let Some(tool) = smart_tool {
-            let input = Variables::from(tool_call.arguments.clone());
-            match self.execute(&tool.run, &input).await {
-                Ok(output) => {
-                    let output = serde_json::to_string(&output).with_context(|| {
-                        format!(
-                            "Failed to serialize output of smart tool: {}",
-                            tool.name.as_str()
-                        )
-                    })?;
-                    Ok(ToolResult::from(tool_call.clone()).success(output))
-                }
-                Err(error) => Ok(ToolResult::from(tool_call.clone()).failure(error.to_string())),
+        while let Some(message) = response.next().await {
+            let message = message?;
+            messages.push(message.clone());
+            if let Some(content) = message.content {
+                self.send(agent, ChatResponse::Text(content.as_str().to_string()))
+                    .await?;
             }
-        } else {
-            Ok(self.tool.call(tool_call.clone()).await)
+
+            if let Some(usage) = message.usage {
+                self.send(agent, ChatResponse::Usage(usage)).await?;
+            }
         }
+
+        let content = messages
+            .iter()
+            .flat_map(|m| m.content.iter())
+            .map(|content| content.as_str())
+            .collect::<Vec<_>>()
+            .join("");
+
+        // From Complete (incase streaming is disabled)
+        let mut tool_calls: Vec<ToolCallFull> = messages
+            .iter()
+            .flat_map(|message| message.tool_call.iter())
+            .filter_map(|message| message.as_full().cloned())
+            .collect::<Vec<_>>();
+
+        // From partial tool calls
+        tool_calls.extend(ToolCallFull::try_from_parts(
+            &messages
+                .iter()
+                .filter_map(|message| message.tool_call.first())
+                .clone()
+                .filter_map(|tool_call| tool_call.as_partial().cloned())
+                .collect::<Vec<_>>(),
+        )?);
+
+        // From XML
+        tool_calls.extend(ToolCallFull::try_from_xml(&content)?);
+
+        Ok(ChatCompletionResult { content, tool_calls })
     }
 
-    fn find_workflow(&self, id: &WorkflowId) -> anyhow::Result<&Workflow> {
-        Ok(self
-            .arena
-            .workflows
-            .iter()
-            .find(|w| w.id == *id)
-            .ok_or(Error::WorkflowUndefined(id.clone()))?)
+    async fn write_variable(
+        &self,
+        tool_call: &ToolCallFull,
+        write: WriteVariable,
+    ) -> anyhow::Result<ToolResult> {
+        let mut guard = self.workflow.lock().await;
+        guard.variables.add(write.name.clone(), write.value.clone());
+        Ok(ToolResult::from(tool_call.clone())
+            .success(format!("Variable {} set to {}", write.name, write.value)))
     }
 
-    fn find_agent(&self, id: &AgentId) -> anyhow::Result<&Agent> {
-        Ok(self
-            .arena
-            .agents
-            .iter()
-            .find(|a| a.id == *id)
-            .ok_or(Error::AgentUndefined(id.clone()))?)
+    async fn read_variable(
+        &self,
+        tool_call: &ToolCallFull,
+        read: ReadVariable,
+    ) -> anyhow::Result<ToolResult> {
+        let guard = self.workflow.lock().await;
+        let output = guard.variables.get(&read.name);
+        let result = match output {
+            Some(value) => {
+                ToolResult::from(tool_call.clone()).success(serde_json::to_string(value)?)
+            }
+            None => ToolResult::from(tool_call.clone())
+                .failure(format!("Variable {} not found", read.name)),
+        };
+        Ok(result)
+    }
+
+    #[async_recursion(?Send)]
+    async fn execute_tool(&self, tool_call: &ToolCallFull) -> anyhow::Result<Option<ToolResult>> {
+        if let Some(read) = ReadVariable::parse(tool_call) {
+            self.read_variable(tool_call, read).await.map(Some)
+        } else if let Some(write) = WriteVariable::parse(tool_call) {
+            self.write_variable(tool_call, write).await.map(Some)
+        } else if let Some(agent) = self
+            .workflow
+            .lock()
+            .await
+            .find_agent(&tool_call.name.clone().into())
+        {
+            let input = Variables::from(tool_call.arguments.clone());
+            self.init_agent(&agent.id, &input).await?;
+            Ok(None)
+        } else {
+            Ok(Some(self.tool_svc.call(tool_call.clone()).await))
+        }
     }
 
     #[async_recursion(?Send)]
@@ -161,8 +216,12 @@ impl Orchestrator {
                         let mut input = Variables::default();
                         input.add(input_key, summary.get());
 
-                        let output = self.init_agent(agent_id, &input).await?;
-                        let value = output
+                        self.init_agent(agent_id, &input).await?;
+
+                        let guard = self.workflow.lock().await;
+
+                        let value = guard
+                            .variables
                             .get(output_key)
                             .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
 
@@ -179,8 +238,10 @@ impl Orchestrator {
                         let mut input = Variables::default();
                         input.add(input_key, Value::from(content.clone()));
 
-                        let output = self.init_agent(agent_id, &input).await?;
-                        let value = output
+                        self.init_agent(agent_id, &input).await?;
+                        let guard = self.workflow.lock().await;
+                        let value = guard
+                            .variables
                             .get(output_key)
                             .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
 
@@ -202,79 +263,80 @@ impl Orchestrator {
         Ok(context)
     }
 
-    async fn init_agent(&self, agent: &AgentId, input: &Variables) -> anyhow::Result<Variables> {
-        let agent = self.find_agent(agent)?;
-        let mut context = self.init_agent_context(agent, input)?;
+    async fn init_agent(&self, agent: &AgentId, input: &Variables) -> anyhow::Result<()> {
+        let guard = self.workflow.lock().await;
+        let agent = guard.get_agent(agent)?;
+
+        let mut context = if agent.ephemeral {
+            self.init_agent_context(agent, input)?
+        } else {
+            self.workflow
+                .lock()
+                .await
+                .state
+                .get(&agent.id)
+                .cloned()
+                .map(Ok)
+                .unwrap_or_else(|| self.init_agent_context(agent, input))?
+        };
+
         let content = agent.user_prompt.render(input)?;
-        let mut output = Variables::default();
+
         context = context.add_message(ContextMessage::user(content));
 
         loop {
             context = self.execute_transform(&agent.transforms, context).await?;
 
-            let response = self.provider.chat(&agent.model, context.clone()).await?;
-            let tool_calls = self.collect_tool_calls(&response, &mut output).await;
+            let response = self
+                .provider_svc
+                .chat(&agent.model, context.clone())
+                .await?;
+            let ChatCompletionResult { tool_calls, content } =
+                self.collect_messages(&agent.id, response).await?;
 
-            if tool_calls.is_empty() {
-                return Ok(output);
+            let mut tool_results = Vec::new();
+
+            for tool_call in tool_calls.iter() {
+                self.send(&agent.id, ChatResponse::ToolCallStart(tool_call.clone()))
+                    .await?;
+                if let Some(tool_result) = self.execute_tool(tool_call).await? {
+                    tool_results.push(tool_result.clone());
+                    self.send(&agent.id, ChatResponse::ToolCallEnd(tool_result))
+                        .await?;
+                }
             }
-
-            let content = self.collect_content(&response).await;
-
-            let tool_results = join_all(
-                tool_calls
-                    .iter()
-                    .map(|tool_call| self.execute_tool(tool_call)),
-            )
-            .await
-            .into_iter()
-            .collect::<anyhow::Result<Vec<_>>>()?;
 
             context = context
                 .add_message(ContextMessage::assistant(content, Some(tool_calls)))
-                .add_tool_results(tool_results);
-        }
-    }
+                .add_tool_results(tool_results.clone());
 
-    async fn init_flow(
-        &self,
-        flow_id: &FlowId,
-        input: &Variables,
-        workflow: &Workflow,
-    ) -> anyhow::Result<Variables> {
-        match flow_id {
-            FlowId::Agent(agent_id) => {
-                let variables = self.init_agent(agent_id, input).await?;
-                let flows = workflow
-                    .handovers
-                    .get(&agent_id.clone().into())
-                    .ok_or(Error::AgentUndefined(agent_id.clone()))?;
-
-                join_all(
-                    flows
-                        .iter()
-                        .map(|flow_id| self.init_flow(flow_id, &variables, workflow)),
-                )
-                .await
-                .into_iter()
-                .collect::<anyhow::Result<Vec<_>>>()
-                .map(Variables::from)
+            if !agent.ephemeral {
+                self.workflow
+                    .lock()
+                    .await
+                    .state
+                    .insert(agent.id.clone(), context.clone());
             }
-            FlowId::Workflow(id) => self.init_workflow(id, input).await,
+
+            if tool_results.is_empty() {
+                return Ok(());
+            }
         }
     }
 
-    async fn init_workflow(&self, id: &WorkflowId, input: &Variables) -> anyhow::Result<Variables> {
-        let workflow = self.find_workflow(id)?;
+    pub async fn execute(&self, input: &Variables) -> anyhow::Result<()> {
+        let guard = self.workflow.lock().await;
+
         join_all(
-            workflow
-                .head_flow()
+            guard
+                .get_entries()
                 .iter()
-                .map(|flow_id| self.init_flow(flow_id, input, workflow)),
+                .map(|agent| self.init_agent(&agent.id, input)),
         )
         .await
         .into_iter()
-        .collect::<anyhow::Result<Vec<_>>>()
-        .map(Variables::from)
+        .collect::<anyhow::Result<Vec<()>>>()?;
+
+        Ok(())
     }
 }

@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use thiserror::Error;
 
-use crate::{AgentId, WorkflowId};
+use crate::AgentId;
 
 // NOTE: Deriving From for error is a really bad idea. This is because you end
 // up converting errors incorrectly without much context. For eg: You don't want
@@ -28,11 +28,11 @@ pub enum Error {
     #[error("Agent not found in the arena: {0}")]
     AgentUndefined(AgentId),
 
-    #[error("Workflow not found in the arena: {0}")]
-    WorkflowUndefined(WorkflowId),
-
     #[error("Variable not found in output: {0}")]
     UndefinedVariable(String),
+
+    #[error("Head agent not found")]
+    HeadAgentUndefined,
 }
 
 pub type Result<A> = std::result::Result<A, Error>;

@@ -76,9 +76,9 @@ impl PromptService for Live {
         files.sort();
 
         let ctx = SystemContext {
-            env: self.env.clone(),
-            tool_information: self.tool.usage_prompt(),
-            tool_supported,
+            env: Some(self.env.clone()),
+            tool_information: Some(self.tool.usage_prompt()),
+            tool_supported: Some(tool_supported),
             custom_instructions,
             files,
         };

@@ -19,6 +19,7 @@ pub struct Usage {
 #[setters(into, strip_option)]
 pub struct ChatCompletionMessage {
     pub content: Option<Content>,
+    // TODO: rename to tool_calls (plural)
     pub tool_call: Vec<ToolCall>,
     pub finish_reason: Option<FinishReason>,
     pub usage: Option<Usage>,

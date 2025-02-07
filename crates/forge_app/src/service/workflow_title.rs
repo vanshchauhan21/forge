@@ -47,9 +47,9 @@ impl Live {
         tool: ToolDefinition,
     ) -> Result<String> {
         let ctx = SystemContext {
-            tool_information: tool.usage_prompt().to_string(),
-            tool_supported,
-            env: Environment::default(),
+            tool_information: Some(tool.usage_prompt().to_string()),
+            tool_supported: Some(tool_supported),
+            env: Some(Environment::default()),
             custom_instructions: None,
             files: vec![],
         };

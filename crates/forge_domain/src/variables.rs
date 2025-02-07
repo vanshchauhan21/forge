@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
-use serde::Serialize;
+use schemars::{schema_for, JsonSchema};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Default, Serialize)]
+use crate::{NamedTool, ToolCallFull, ToolDefinition, ToolName};
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Variables(HashMap<String, Value>);
 
 impl Variables {
@@ -60,5 +64,64 @@ impl From<Value> for Variables {
         };
 
         variables
+    }
+}
+
+#[derive(Debug, JsonSchema, Deserialize)]
+pub struct ReadVariable {
+    pub name: String,
+}
+
+impl ReadVariable {
+    pub fn tool_definition() -> ToolDefinition {
+        ToolDefinition {
+            name: ToolName::new("forge_read_variable"),
+            description: "Reads a global workflow variable".to_string(),
+            input_schema: schema_for!(Self),
+            output_schema: None,
+        }
+    }
+
+    pub fn parse(tool_call: &ToolCallFull) -> Option<Self> {
+        if tool_call.name != Self::tool_definition().name {
+            return None;
+        }
+        serde_json::from_value(tool_call.arguments.clone()).ok()
+    }
+}
+
+impl NamedTool for ReadVariable {
+    fn tool_name() -> ToolName {
+        Self::tool_definition().name
+    }
+}
+
+#[derive(Debug, JsonSchema, Deserialize)]
+pub struct WriteVariable {
+    pub name: String,
+    pub value: String,
+}
+
+impl WriteVariable {
+    pub fn tool_definition() -> ToolDefinition {
+        ToolDefinition {
+            name: ToolName::new("forge_write_variable"),
+            description: "Writes a global workflow variable".to_string(),
+            input_schema: schema_for!(Self),
+            output_schema: None,
+        }
+    }
+
+    pub fn parse(tool_call: &ToolCallFull) -> Option<Self> {
+        if tool_call.name != Self::tool_definition().name {
+            return None;
+        }
+        serde_json::from_value(tool_call.arguments.clone()).ok()
+    }
+}
+
+impl NamedTool for WriteVariable {
+    fn tool_name() -> ToolName {
+        Self::tool_definition().name
     }
 }

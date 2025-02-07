@@ -1,5 +1,4 @@
 mod agent;
-mod arena;
 mod chat_request;
 mod chat_response;
 mod chat_stream_ext;
