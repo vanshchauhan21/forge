@@ -9,6 +9,11 @@ fn generate() {
         .auto_fix(true)
         .add_setup(Step::run("sudo apt-get install -y libsqlite3-dev"))
         .to_ci_workflow()
+        .concurrency(Concurrency {
+            group: "${{ github.workflow }}-${{ github.ref }}".to_string(),
+            cancel_in_progress: None,
+            limit: None,
+        })
         .add_env(("OPEN_ROUTER_KEY", "${{secrets.OPEN_ROUTER_KEY}}"));
 
     // Set up the build matrix for all platforms

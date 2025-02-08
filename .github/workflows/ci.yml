@@ -170,3 +170,5 @@ jobs:
         ref: main
         token: ${{ secrets.HOMEBREW_ACCESS }}
     - run: GITHUB_TOKEN="${{ secrets.HOMEBREW_ACCESS }}" ./update-formula.sh ${{needs.draft_release.outputs.create_release_name }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
