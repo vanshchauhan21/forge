@@ -70,7 +70,7 @@ impl StatusDisplay {
             Kind::Execute => (
                 self.icon().cyan(),
                 self.label().bold().cyan(),
-                format!("{} ...", self.message),
+                format!("{} ", self.message),
             ),
             Kind::Success => (
                 self.icon().green(),

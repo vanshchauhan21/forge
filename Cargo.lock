@@ -856,6 +856,7 @@ dependencies = [
  "derive_setters",
  "dirs",
  "forge_app",
+ "forge_display",
  "forge_domain",
  "forge_walker",
  "inquire",
@@ -922,6 +923,15 @@ dependencies = [
  "indexmap",
  "pretty_assertions",
  "serde_json",
+]
+
+[[package]]
+name = "forge_display"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "colored 3.0.0",
+ "forge_domain",
 ]
 
 [[package]]
@@ -999,6 +1009,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "dissimilar",
+ "forge_display",
  "forge_domain",
  "forge_tool_macros",
  "forge_walker",

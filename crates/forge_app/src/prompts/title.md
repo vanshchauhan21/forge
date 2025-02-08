@@ -17,7 +17,7 @@ Please follow these steps to generate an appropriate title:
    - Captures the core message or functionality
    - Uses clear, technical language
    - Avoids unnecessary words or marketing language
-   - Uses kebab case
+   - Uses kebab case to standardize
 
 Before providing your final title, wrap your analysis in <title_generation_process> tags. Follow these steps:
 

@@ -31,6 +31,7 @@ tree-sitter-cpp = "0.23"
 tree-sitter-ruby = "0.23"
 forge_walker = { path = "../forge_walker" }
 forge_domain = { path = "../forge_domain" }
+forge_display = { path = "../forge_display" }
 tempfile = "3.8.1"
 streaming-iterator = "0.1.9"
 inquire = "0.7.0"

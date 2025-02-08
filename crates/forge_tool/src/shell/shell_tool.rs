@@ -6,7 +6,9 @@ use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tokio::process::Command;
+
+use super::executor::Output;
+use crate::shell::executor::CommandExecutor;
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ShellInput {
@@ -16,45 +18,36 @@ pub struct ShellInput {
     pub cwd: PathBuf,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct ShellOutput {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stdout: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stderr: Option<String>,
-    pub success: bool,
-}
-
 /// Formats command output by wrapping non-empty stdout/stderr in XML tags.
 /// stderr is commonly used for warnings and progress info, so success is
 /// determined by exit status, not stderr presence. Returns Ok(output) on
 /// success or Err(output) on failure, with a status message if both streams are
 /// empty.
-fn format_output(stdout: &str, stderr: &str, success: bool) -> Result<String, String> {
-    let mut output = String::new();
+fn format_output(output: Output) -> Result<String, String> {
+    let mut formatted_output = String::new();
 
-    if !stdout.trim().is_empty() {
-        output.push_str(&format!("<stdout>{}</stdout>", stdout));
+    if !output.stdout.trim().is_empty() {
+        formatted_output.push_str(&format!("<stdout>{}</stdout>", output.stdout));
     }
 
-    if !stderr.trim().is_empty() {
-        if !output.is_empty() {
-            output.push('\n');
+    if !output.stderr.trim().is_empty() {
+        if !formatted_output.is_empty() {
+            formatted_output.push('\n');
         }
-        output.push_str(&format!("<stderr>{}</stderr>", stderr));
+        formatted_output.push_str(&format!("<stderr>{}</stderr>", output.stderr));
     }
 
-    let result = if output.is_empty() {
-        if success {
+    let result = if formatted_output.is_empty() {
+        if output.success {
             "Command executed successfully with no output.".to_string()
         } else {
             "Command failed with no output.".to_string()
         }
     } else {
-        output
+        formatted_output
     };
 
-    if success {
+    if output.success {
         Ok(result)
     } else {
         Err(result)
@@ -133,28 +126,27 @@ impl ExecutableTool for Shell {
     type Input = ShellInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
+        // Validate command
         self.validate_command(&input.command)?;
+        #[cfg(not(test))]
+        {
+            use forge_display::StatusDisplay;
+            use forge_domain::Usage;
 
-        let mut cmd = if cfg!(target_os = "windows") {
-            let mut c = Command::new("cmd");
-            c.args(["/C", &input.command]);
-            c
-        } else {
-            let mut c = Command::new("sh");
-            c.args(["-c", &input.command]);
-            c
-        };
+            println!(
+                "{}",
+                StatusDisplay::execute(format!("sh -c {}", &input.command), Usage::default())
+                    .format()
+            );
+        }
 
-        cmd.current_dir(input.cwd);
-
-        let output = cmd
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute command '{}': {}", input.command, e))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        format_output(&stdout, &stderr, output.status.success())
+        format_output(
+            CommandExecutor::new(&input.cwd, &input.command)
+                .colored()
+                .execute()
+                .await
+                .map_err(|e| e.to_string())?,
+        )
     }
 }
 
@@ -190,9 +182,7 @@ mod tests {
             })
             .await
             .unwrap();
-
-        assert!(result.contains("<stdout>Hello, World!</stdout>"));
-        assert!(!result.contains("<stderr>"));
+        assert!(result.contains("<stdout>Hello, World!\n</stdout>"));
     }
 
     #[tokio::test]
@@ -211,8 +201,10 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.contains("<stderr>to stderr</stderr>"));
-        assert!(result.contains("<stdout>to stdout</stdout>"));
+        assert_eq!(
+            result,
+            "<stdout>to stdout\n</stdout>\n<stderr>to stderr\n</stderr>"
+        );
     }
 
     #[tokio::test]
@@ -226,8 +218,10 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(result.contains("<stdout>to stdout</stdout>"));
-        assert!(result.contains("<stderr>to stderr</stderr>"));
+        assert_eq!(
+            result,
+            "<stdout>to stdout\n</stdout>\n<stderr>to stderr\n</stderr>"
+        );
     }
 
     #[tokio::test]
@@ -246,24 +240,7 @@ mod tests {
             })
             .await
             .unwrap();
-
-        let path_str = result
-            .trim()
-            .trim_start_matches("<stdout>")
-            .trim_end_matches("</stdout>");
-
-        let output_path = PathBuf::from(path_str);
-        let actual_path = match fs::canonicalize(output_path.clone()) {
-            Ok(path) => path,
-            Err(_) => output_path,
-        };
-        let expected_path = temp_dir.as_path();
-
-        assert_eq!(
-            actual_path, expected_path,
-            "\nExpected path: {:?}\nActual path: {:?}",
-            expected_path, actual_path
-        );
+        assert_eq!(result, format!("<stdout>{}\n</stdout>", temp_dir.display()));
     }
 
     #[tokio::test]
@@ -320,9 +297,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_description() {
+        assert!(Shell::default().description().len() > 100)
+    }
+
+    #[tokio::test]
     async fn test_shell_pwd() {
         let shell = Shell::default();
-        let current_dir = fs::canonicalize(env::current_dir().unwrap()).unwrap();
+        let current_dir = env::current_dir().unwrap();
         let result = shell
             .call(ShellInput {
                 command: if cfg!(target_os = "windows") {
@@ -335,17 +317,10 @@ mod tests {
             .await
             .unwrap();
 
-        let path_str = result
-            .trim()
-            .trim_start_matches("<stdout>")
-            .trim_end_matches("</stdout>");
-
-        let output_path = PathBuf::from(path_str);
-        let actual_path = match fs::canonicalize(output_path.clone()) {
-            Ok(path) => path,
-            Err(_) => output_path,
-        };
-        assert_eq!(actual_path, current_dir);
+        assert_eq!(
+            result,
+            format!("<stdout>{}\n</stdout>", current_dir.display())
+        );
     }
 
     #[tokio::test]
@@ -358,9 +333,7 @@ mod tests {
             })
             .await
             .unwrap();
-
-        assert!(result.contains("first"));
-        assert!(result.contains("second"));
+        assert_eq!(result, format!("<stdout>first\nsecond\n</stdout>"));
     }
 
     #[tokio::test]
@@ -374,7 +347,8 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(result, "Command executed successfully with no output.");
+        assert!(result.contains("executed successfully"));
+        assert!(!result.contains("failed"));
     }
 
     #[tokio::test]
@@ -388,7 +362,8 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(result, "Command executed successfully with no output.");
+        assert!(result.contains("executed successfully"));
+        assert!(!result.contains("failed"));
     }
 
     #[tokio::test]
@@ -404,10 +379,5 @@ mod tests {
 
         assert!(!result.is_empty());
         assert!(!result.contains("Error:"));
-    }
-
-    #[test]
-    fn test_description() {
-        assert!(Shell::default().description().len() > 100)
     }
 }

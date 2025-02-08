@@ -11,7 +11,6 @@ mod log;
 mod model;
 mod normalize;
 mod prompt;
-mod status;
 mod ui;
 
 pub use ui::UI;

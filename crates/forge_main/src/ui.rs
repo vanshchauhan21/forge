@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 use forge_app::{APIService, EnvironmentFactory, Service};
+use forge_display::StatusDisplay;
 use forge_domain::{ChatRequest, ChatResponse, ConversationId, Model, ModelId, Usage};
 use tokio_stream::StreamExt;
 
@@ -13,7 +14,6 @@ use crate::console::CONSOLE;
 use crate::info::Info;
 use crate::input::{Console, PromptInput};
 use crate::model::{Command, ConfigCommand, UserInput};
-use crate::status::StatusDisplay;
 use crate::{banner, log};
 
 #[derive(Default)]
@@ -254,18 +254,23 @@ impl UI {
                 CONSOLE.newline()?;
             }
             ChatResponse::ToolCallEnd(tool_result) => {
-                let tool_name = tool_result.name.as_str();
-                // Always show result content for errors, or in verbose mode
-                if tool_result.is_error || self.cli.verbose {
-                    CONSOLE.writeln(format!("{}", tool_result.content.dimmed()))?;
+                if !self.cli.verbose {
+                    return Ok(());
                 }
-                let status = if tool_result.is_error {
-                    StatusDisplay::failed(tool_name, self.state.usage.clone())
-                } else {
-                    StatusDisplay::success(tool_name, self.state.usage.clone())
-                };
 
-                CONSOLE.writeln(status.format())?;
+                let tool_name = tool_result.name.as_str();
+
+                CONSOLE.writeln(format!("{}", tool_result.content.dimmed()))?;
+
+                if tool_result.is_error {
+                    CONSOLE.writeln(
+                        StatusDisplay::failed(tool_name, self.state.usage.clone()).format(),
+                    )?;
+                } else {
+                    CONSOLE.writeln(
+                        StatusDisplay::success(tool_name, self.state.usage.clone()).format(),
+                    )?;
+                }
             }
             ChatResponse::ConversationStarted(conversation_id) => {
                 self.state.current_conversation_id = Some(conversation_id);

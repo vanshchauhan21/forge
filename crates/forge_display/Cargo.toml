@@ -1,0 +1,9 @@
+[package]
+name = "forge_display"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+forge_domain = { path = "../forge_domain" }
+colored = "3.0.0"
+chrono = { version = "0.4", features = ["serde"] }
