@@ -48,14 +48,11 @@ impl UserInput for Console {
                 Ok(ReadResult::Success(text)) => match Command::parse(&text) {
                     Ok(input) => return Ok(input),
                     Err(e) => {
-                        CONSOLE.writeln(
-                            TitleFormat::failed(e.to_string(), Usage::default()).format(),
-                        )?;
+                        CONSOLE.writeln(TitleFormat::failed(e.to_string()).format())?;
                     }
                 },
                 Err(e) => {
-                    CONSOLE
-                        .writeln(TitleFormat::failed(e.to_string(), Usage::default()).format())?;
+                    CONSOLE.writeln(TitleFormat::failed(e.to_string()).format())?;
                 }
             }
         }

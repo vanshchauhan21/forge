@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use forge_display::TitleFormat;
 use forge_domain::{ExecutableTool, NamedTool, ToolDescription};
 use forge_tool_macros::ToolDescription;
 use reqwest::{Client, Url};
@@ -100,6 +101,14 @@ impl Fetch {
             .send()
             .await
             .map_err(|e| anyhow!("Failed to fetch URL {}: {}", url, e))?;
+
+        println!(
+            "{}",
+            TitleFormat::execute(format!("GET {}", response.status()))
+                .sub_title(url.as_str())
+                .to_string()
+                .as_str()
+        );
 
         if !response.status().is_success() {
             return Err(anyhow!(
