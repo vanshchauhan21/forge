@@ -1,0 +1,12 @@
+---
+source: crates/forge_pretty_diff/src/format.rs
+expression: clean_diff
+snapshot_kind: text
+---
+File: abc.txt
+1   1    | line 1
+2        |-line 2
+    2    |+modified line
+3   3    | line 3
+4   4    | line 5
+5   5    | line 6

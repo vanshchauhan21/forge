@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use dissimilar::Chunk;
 use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_pretty_diff::Format;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use thiserror::Error;
@@ -152,13 +153,14 @@ impl ExecutableTool for ApplyPatch {
 
         let blocks = parse::parse_blocks(&input.diff).map_err(|e| e.to_string())?;
 
-        let result: Result<_, Error> = async {
-            let content = fs::read_to_string(&input.path)
-                .await
-                .map_err(Error::FileOperation)?;
+        // Read the content of the file before applying the patch
+        let old_content = fs::read_to_string(&input.path)
+            .await
+            .map_err(Error::FileOperation)
+            .map_err(|e| e.to_string())?;
 
-            let modified = apply_patches(content, blocks).await?;
-
+        let result = async {
+            let modified = apply_patches(old_content.clone(), blocks).await?;
             fs::write(&input.path, &modified)
                 .await
                 .map_err(Error::FileOperation)?;
@@ -180,12 +182,21 @@ impl ExecutableTool for ApplyPatch {
                     modified.trim_end()
                 )
             };
-
             Ok(output)
         }
-        .await;
+        .await
+        .map_err(|e: Error| e.to_string())?;
 
-        result.map_err(|e| e.to_string())
+        // record the content of the file after applying the patch
+        let new_content = fs::read_to_string(path)
+            .await
+            .map_err(Error::FileOperation)
+            .map_err(|e| e.to_string())?;
+        // Generate diff between old and new content
+        let diff = Format::format(path.to_path_buf(), &old_content, &new_content);
+        println!("{}", diff);
+
+        Ok(result)
     }
 }
 

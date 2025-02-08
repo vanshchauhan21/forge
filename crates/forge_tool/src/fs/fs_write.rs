@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_pretty_diff::Format;
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -50,6 +51,17 @@ impl ExecutableTool for FSWrite {
                 .map_err(|e| format!("Failed to create directories: {}", e))?;
         }
 
+        // record the file content before they're modified
+        let old_content = if path.is_file() {
+            // if file already exists, we should be able to read it.
+            tokio::fs::read_to_string(path)
+                .await
+                .map_err(|e| e.to_string())?
+        } else {
+            // if file doesn't exist, we should record it as an empty string.
+            "".to_string()
+        };
+
         // Write file only after validation passes and directories are created
         tokio::fs::write(&input.path, &input.content)
             .await
@@ -64,6 +76,13 @@ impl ExecutableTool for FSWrite {
             result.push_str("\nWarning: ");
             result.push_str(&warning.to_string());
         }
+
+        // record the file content after they're modified
+        let new_content = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| e.to_string())?;
+        let diff = Format::format(path.to_path_buf(), &old_content, &new_content);
+        println!("{}", diff);
 
         Ok(result)
     }

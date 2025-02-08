@@ -38,6 +38,7 @@ inquire = "0.7.0"
 html2md = "0.2"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 nom = "8.0.0"
+forge_pretty_diff = { path = "../forge_pretty_diff" }
 
 [dev-dependencies]
 insta = { version = "1.42.0" }

@@ -370,6 +370,7 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
+ "unicode-width 0.2.0",
  "windows-sys 0.59.0",
 ]
 
@@ -1002,6 +1003,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_pretty_diff"
+version = "0.1.0"
+dependencies = [
+ "console",
+ "insta",
+ "similar",
+]
+
+[[package]]
 name = "forge_tool"
 version = "0.1.0"
 dependencies = [
@@ -1011,6 +1021,7 @@ dependencies = [
  "dissimilar",
  "forge_display",
  "forge_domain",
+ "forge_pretty_diff",
  "forge_tool_macros",
  "forge_walker",
  "glob",
@@ -1213,7 +1224,7 @@ version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14dbbfd5c71d70241ecf9e6f13737f7b5ce823821063188d7e46c41d371eebd5"
 dependencies = [
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -1719,7 +1730,7 @@ dependencies = [
  "newline-converter",
  "once_cell",
  "unicode-segmentation",
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -2659,7 +2670,7 @@ dependencies = [
  "strum_macros",
  "thiserror 1.0.69",
  "unicode-segmentation",
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -3823,6 +3834,12 @@ name = "unicode-width"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 
 [[package]]
 name = "unicode-xid"
