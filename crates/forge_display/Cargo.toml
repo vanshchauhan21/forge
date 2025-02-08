@@ -7,3 +7,11 @@ edition = "2021"
 forge_domain = { path = "../forge_domain" }
 colored = "3.0.0"
 chrono = { version = "0.4", features = ["serde"] }
+similar = { version = "2.4", features = ["inline"]}
+console = "0.15.7"
+regex = "1.10.2"
+
+[dev-dependencies]
+insta = { version = "1.42.0" }
+pretty_assertions = "1.4.0"
+strip-ansi-escapes = "0.2.0"
