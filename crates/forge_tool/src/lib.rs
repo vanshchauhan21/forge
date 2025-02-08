@@ -23,6 +23,7 @@ pub fn tools() -> Vec<Tool> {
         // Approve.into(),
         FSRead.into(),
         FSWrite.into(),
+        FSRemove.into(),
         FSList::default().into(),
         FSSearch.into(),
         FSFileInfo.into(),
