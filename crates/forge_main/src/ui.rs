@@ -50,9 +50,9 @@ impl UI {
         let env = EnvironmentFactory::new(std::env::current_dir()?).create()?;
         let guard = log::init_tracing(env.clone())?;
         let config = Config::from(&env);
-        let api = Arc::new(Service::api_service(env)?);
-
         let cli = Cli::parse();
+        let api = Arc::new(Service::api_service(env, cli.system_prompt.clone())?);
+
         Ok(Self {
             state: Default::default(),
             api: api.clone(),

@@ -23,7 +23,7 @@ impl Fixture {
         let path = Path::new("../../").to_path_buf();
         let path = path.canonicalize().unwrap();
         let env = EnvironmentFactory::new(path).create().unwrap();
-        Service::api_service(env).unwrap()
+        Service::api_service(env, None).unwrap()
     }
 
     /// Get model response as text

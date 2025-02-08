@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -26,8 +27,11 @@ pub trait APIService: Send + Sync {
 }
 
 impl Service {
-    pub fn api_service(env: Environment) -> Result<impl APIService> {
-        Live::new(env)
+    pub fn api_service(
+        env: Environment,
+        system_prompt: Option<PathBuf>,
+    ) -> Result<impl APIService> {
+        Live::new(env, system_prompt)
     }
 }
 
@@ -43,7 +47,7 @@ struct Live {
 }
 
 impl Live {
-    fn new(env: Environment) -> Result<Self> {
+    fn new(env: Environment, system_prompt: Option<PathBuf>) -> Result<Self> {
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
         let tool = Arc::new(Service::tool_service());
         let file_read = Arc::new(Service::file_read_service());
@@ -53,6 +57,7 @@ impl Live {
             tool.clone(),
             provider.clone(),
             file_read.clone(),
+            system_prompt,
         ));
 
         let user_prompt = Arc::new(Service::user_prompt_service());
