@@ -317,6 +317,14 @@ impl OpenRouterRequest {
         }
         self
     }
+    pub fn assign_tool_strategy(mut self) -> Self {
+        if let Some(model) = self.model.as_ref() {
+            if model.as_str().contains("gemini") {
+                self.tool_choice = Some(ToolChoice::Auto);
+            }
+        }
+        self
+    }
 }
 
 impl From<Role> for OpenRouterRole {

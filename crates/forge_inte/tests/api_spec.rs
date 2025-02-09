@@ -76,7 +76,7 @@ macro_rules! generate_model_test {
         #[tokio::test]
         async fn test_find_cat_name() {
             let fixture = Fixture::new(
-                "There is a cat hidden in the codebase. What is its name? hint: it's present in *.md file, but not in the docs directory. You can use any tool at your disposal to find it. Do not ask me any questions.",
+                "There is a cat hidden in the codebase. What is its name? hint: it's present in juniper.md file. You can use any tool at your disposal to find it. Do not ask me any questions.",
             );
 
             let result = fixture
@@ -101,4 +101,9 @@ mod openai_gpt_4o {
 mod openai_gpt_4o_mini {
     use super::*;
     generate_model_test!("openai/gpt-4o-mini");
+}
+
+mod gemini_flash_2_0 {
+    use super::*;
+    generate_model_test!("google/gemini-2.0-flash-001");
 }

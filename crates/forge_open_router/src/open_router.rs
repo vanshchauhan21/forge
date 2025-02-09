@@ -86,7 +86,8 @@ impl ProviderService for OpenRouter {
         let request = OpenRouterRequest::from(request)
             .model(model_id.clone())
             .stream(true)
-            .cache();
+            .cache()
+            .assign_tool_strategy();
 
         let es = self
             .client
