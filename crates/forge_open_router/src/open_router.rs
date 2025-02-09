@@ -87,6 +87,7 @@ impl ProviderService for OpenRouter {
             .model(model_id.clone())
             .stream(true)
             .cache()
+            .parallel_tool_calls(false)
             .assign_tool_strategy();
 
         let es = self

@@ -7,5 +7,6 @@ pub enum ToolChoice {
     #[default]
     None,
     Auto,
+    Required,
     Call(ToolName),
 }

@@ -176,6 +176,8 @@ pub struct OpenRouterRequest {
     pub route: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<ProviderPreferences>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parallel_tool_calls: Option<bool>,
 }
 
 /// ref: https://openrouter.ai/docs/transforms
@@ -246,6 +248,7 @@ impl From<Context> for OpenRouterRequest {
             models: Default::default(),
             route: Default::default(),
             provider: Default::default(),
+            parallel_tool_calls: Default::default(),
         }
     }
 }

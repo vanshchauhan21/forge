@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum ToolChoice {
     None,
     Auto,
+    Required,
     #[serde(untagged)]
     Function {
         r#type: FunctionType,
@@ -44,6 +45,7 @@ impl From<forge_domain::ToolChoice> for ToolChoice {
         match value {
             forge_domain::ToolChoice::None => ToolChoice::None,
             forge_domain::ToolChoice::Auto => ToolChoice::Auto,
+            forge_domain::ToolChoice::Required => ToolChoice::Required,
             forge_domain::ToolChoice::Call(tool_name) => ToolChoice::Function {
                 function: FunctionName { name: tool_name.into_string() },
                 r#type: FunctionType,
