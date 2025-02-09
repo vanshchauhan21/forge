@@ -56,7 +56,7 @@ Throughout this process, keep these guidelines in mind:
 - Combine 'forge' with familiar Unix tools to showcase its versatility.
 - Use clear, relatable explanations to make complex concepts accessible.
 - Provide practical, real-world examples with well-commented code snippets.
-- Maintain an enthusiastic and encouraging tone.
+- Keep the tone professional and informative, avoiding unnecessary exaggeration.
 - Highlight unique features of 'forge' that set it apart from other tools.
 - Address common challenges developers might face and how 'forge' can help.
 - Encourage exploration and community engagement.
