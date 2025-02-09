@@ -27,6 +27,8 @@ Code-Forge is an AI-powered interactive shell that stands out through:
   - [Autocomplete](#autocomplete)
   - [Custom Instructions](#custom-instructions)
   - [System Prompts](#system-prompts)
+  - [WYSIWYG Shell Integration](#wysiwyg-shell-integration)
+  - [Command Interruption](#command-interruption)
 - [Capabilities](#capabilities)
 - [Why Shell?](#why-shell)
 - [Support Us](#support-us)
@@ -131,6 +133,17 @@ Leverage pre-configured expert modes for specialized tasks:
 ```bash
 forge --system-prompt prompts/technical_writer_prompt.txt
 ```
+
+### WYSIWYG Shell Integration
+
+Enhance your interactive shell experience with WYSIWYG (What You See Is What You Get) integration. 'forge' now visualizes each command executed, complete with colorful formatting, allowing you to see command outputs just as if you were typing them directly into your terminal. This feature ensures clarity and enhances interaction, making every command visible in rich detail.
+
+### Command Interruption
+
+Stay in control of your shell environment with intuitive command handling:
+
+- **Cancel with `CTRL+C`:** Gracefully interrupt ongoing operations, providing the flexibility to halt processes that no longer need execution.
+- **Exit with `CTRL+D`:** Easily exit the shell session without hassle, ensuring you can quickly terminate your operations when needed.
 
 ## Capabilities
 
