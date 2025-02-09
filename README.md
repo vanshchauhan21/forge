@@ -58,6 +58,10 @@ Use `forge --help` to configure additional parameters.
 
 ## Features
 
+Leveraging Navigational Shortcuts
+
+Enhance your productivity by utilizing convenient keyboard shortcuts like `Ctrl+R` for reverse search and the `Up Arrow` key to cycle through your command history effortlessly.
+
 ### Interactive Shell
 
 Seamlessly integrate with your existing command-line workflow while leveraging advanced AI capabilities.
@@ -96,7 +100,7 @@ Forge recognizes the operating system and optimizes its behavior accordingly:
 
 ### Autocomplete
 
-Accelerate your command entry with intelligent autocompletion in the interactive shell by typing `@` and pressing Tab to autocomplete file paths or commands contextually.
+Accelerate your command entry with intelligent autocompletion in the interactive shell by typing `@` and pressing Tab to autocomplete file paths or commands contextually. If the command has been executed before, use the `Right Arrow` key to complete it quickly.
 
 **Example**:
 While in the interactive shell, if you type `forge open @` followed by the Tab key, it will suggest files in the current directory to complete your command.
