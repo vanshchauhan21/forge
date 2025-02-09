@@ -6,6 +6,8 @@ use colored::Colorize;
 use forge_app::{APIService, EnvironmentFactory, Service};
 use forge_display::TitleFormat;
 use forge_domain::{ChatRequest, ChatResponse, ConversationId, Model, ModelId, Usage};
+use forge_tracker::EventKind;
+use lazy_static::lazy_static;
 use tokio_stream::StreamExt;
 
 use crate::cli::Cli;
@@ -15,6 +17,10 @@ use crate::info::Info;
 use crate::input::{Console, PromptInput};
 use crate::model::{Command, ConfigCommand, UserInput};
 use crate::{banner, log};
+
+lazy_static! {
+    pub static ref TRACKER: forge_tracker::Tracker = forge_tracker::Tracker::default();
+}
 
 #[derive(Default)]
 struct UIState {
@@ -211,11 +217,17 @@ impl UI {
 
     async fn chat(&mut self, content: String, model: &ModelId) -> Result<()> {
         let chat = ChatRequest {
-            content,
+            content: content.clone(),
             model: model.clone(),
             conversation_id: self.state.current_conversation_id,
             custom_instructions: self.cli.custom_instructions.clone(),
         };
+        tokio::spawn({
+            let content = content.clone();
+            async move {
+                let _ = TRACKER.dispatch(EventKind::Prompt(content)).await;
+            }
+        });
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
             Err(err) => Err(err),

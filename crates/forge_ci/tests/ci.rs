@@ -95,6 +95,7 @@ fn generate() {
                 Step::uses("ClementTsang", "cargo-action", "v0.0.3")
                     .add_with(("command", "build --release"))
                     .add_with(("args", "--target ${{ matrix.target }}"))
+                    .add_env(("POSTHOG_API_SECRET", "${{secrets.POSTHOG_API_SECRET}}"))
                     .add_env((
                         "APP_VERSION",
                         "${{ needs.draft_release.outputs.create_release_name }}",
