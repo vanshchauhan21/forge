@@ -126,6 +126,7 @@ jobs:
         command: build --release
         args: --target ${{ matrix.target }}
       env:
+        RUSTFLAGS: -C target-feature=+crt-static
         POSTHOG_API_SECRET: ${{secrets.POSTHOG_API_SECRET}}
         APP_VERSION: ${{ needs.draft_release.outputs.create_release_name }}
     - run: cp ${{ matrix.binary_path }} forge-${{ matrix.target }}

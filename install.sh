@@ -8,7 +8,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Installing Code-Forge...${NC}"
+echo -e "${BLUE}Installing Forge...${NC}"
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -52,20 +52,20 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Download and extract
-echo -e "${BLUE}Downloading Code-Forge...${NC}"
-curl -L "$DOWNLOAD_URL" -o "$TMP_DIR/code-forge"
+echo -e "${BLUE}Downloading Forge...${NC}"
+curl -L "$DOWNLOAD_URL" -o "$TMP_DIR/forge"
 
 echo -e "${BLUE}Extracting...${NC}"
 
 # Install
 echo -e "${BLUE}Installing to /usr/local/bin...${NC}"
-sudo mv "$TMP_DIR/code-forge" "/usr/local/bin/"
-sudo chmod +x "/usr/local/bin/code-forge"
+sudo mv "$TMP_DIR/forge" "/usr/local/bin/"
+sudo chmod +x "/usr/local/bin/forge"
 
 # Verify installation
-if command -v code-forge >/dev/null 2>&1; then
-    echo -e "${GREEN}Code-Forge has been successfully installed!${NC}"
-    echo -e "${BLUE}You can now run 'code-forge' to get started.${NC}"
+if command -v forge >/dev/null 2>&1; then
+    echo -e "${GREEN}Forge has been successfully installed!${NC}"
+    echo -e "${BLUE}You can now run 'forge' to get started.${NC}"
 else
     echo -e "${RED}Installation failed. Please try again or install manually.${NC}"
     exit 1
