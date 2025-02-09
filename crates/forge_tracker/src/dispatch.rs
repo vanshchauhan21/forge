@@ -18,6 +18,11 @@ const POSTHOG_API_SECRET: &str = match option_env!("POSTHOG_API_SECRET") {
     None => "dev",
 };
 
+const VERSION: &str = match option_env!("APP_VERSION") {
+    Some(val) => val,
+    None => env!("CARGO_PKG_VERSION"),
+};
+
 const PARAPHRASE: &str = "forge_key";
 
 const DEFAULT_CLIENT_ID: &str = "<anonymous>";
@@ -166,7 +171,7 @@ fn up_time(start_time: DateTime<Utc>) -> i64 {
 }
 
 fn version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
+    VERSION.to_string()
 }
 
 fn user() -> String {
