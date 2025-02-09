@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use console::style;
-use forge_display::GrepFormat;
+use forge_display::{GrepFormat, Kind, TitleFormat};
 use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
@@ -30,6 +29,19 @@ pub struct FSSearchInput {
 /// encapsulating context. The path must be absolute.
 #[derive(ToolDescription)]
 pub struct FSSearch;
+
+impl From<&FSSearchInput> for TitleFormat {
+    fn from(input: &FSSearchInput) -> Self {
+        let title = match &input.file_pattern {
+            Some(pattern) => format!("search '{}' '{}'", input.regex, pattern),
+            None => format!("search '{}'", input.regex),
+        };
+
+        let sub_title = Some(input.path.clone());
+
+        TitleFormat { kind: Kind::Execute, title, sub_title, error: None }
+    }
+}
 
 impl NamedTool for FSSearch {
     fn tool_name() -> ToolName {
@@ -117,23 +129,14 @@ impl ExecutableTool for FSSearch {
             }
         }
 
-        if matches.is_empty() {
-            let output = format!(
-                "{} No matches found for pattern '{}' in path '{}'",
-                style("Note:").blue().bold(),
-                style(&input.regex).yellow(),
-                style(&input.path).cyan()
-            );
-            println!("{}", output);
-            Ok(strip_ansi_escapes::strip_str(output))
-        } else {
-            println!(
-                "{}\n{}",
-                style("Matches:").dim(),
-                GrepFormat::new(matches.clone()).format(&regex)
-            );
-            Ok(matches.join("\n"))
-        }
+        // Print title
+        println!("{}", TitleFormat::from(&input).format());
+
+        // Print results using GrepFormat for all cases
+        let formatted_output = GrepFormat::new(matches.clone()).format(&regex);
+        println!("{}", formatted_output);
+
+        Ok(matches.join("\n"))
     }
 }
 
@@ -304,7 +307,7 @@ mod test {
             .await
             .unwrap();
 
-        assert!(result.contains("No matches found"));
+        assert!(result.is_empty());
     }
 
     #[tokio::test]

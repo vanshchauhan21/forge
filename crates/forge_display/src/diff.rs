@@ -30,7 +30,7 @@ impl DiffFormat {
         );
 
         if ops.is_empty() {
-            output.push_str(&format!("{}\n", style("No changes found").dim()));
+            output.push_str(&format!("{}\n", style("No changes applied").dim()));
             return output;
         }
 
@@ -85,7 +85,7 @@ mod tests {
     fn test_diff_printer_no_differences() {
         let content = "line 1\nline 2\nline 3";
         let diff = DiffFormat::format("xyz.txt".into(), content, content);
-        assert!(diff.contains("No changes found"));
+        assert!(diff.contains("No changes applied"));
     }
 
     #[test]
