@@ -8,47 +8,28 @@ Best Practices:
 [![CI Status](https://img.shields.io/github/actions/workflow/status/antinomyhq/forge/ci.yml?style=for-the-badge)](https://github.com/antinomyhq/forge/actions)
 [![GitHub Release](https://img.shields.io/github/v/release/antinomyhq/forge?style=for-the-badge)](https://github.com/antinomyhq/forge/releases)
 
-# Code-Forge: Your AI-Powered Shell Assistant
-
-Code-Forge is a revolutionary AI-powered interactive shell that stands out through:
+Code-Forge is an AI-powered interactive shell that stands out through:
 
 - Lightning-fast performance with sub-50ms startup times
 - Seamless integration with existing Unix tools and workflows
-- Context-aware assistance that understands your development environment
+- Context-aware assistance that understands your development environment and workflows
 - Natural language interface to powerful system operations
-
-We have been using shells (bash, zsh, fish) as their primary interface for decades because they're fast, powerful, and close to the system. The shell is our natural habitat - it's where we navigate code, run tests, manage processes, and orchestrate our development environment. That's why Code-Forge reimagines the shell as an AI-powered environment where you can interact with an intelligent agent using natural language.
-
-Why a shell-based AI assistant makes sense:
-
-- **Rich Tool Ecosystem**: The shell gives you immediate access to powerful Unix tools (grep, awk, sed, find) that LLMs already understand deeply. This means the AI can leverage `ripgrep` for code search, `jq` for JSON processing, `git` for version control, and hundreds of other battle-tested tools without reinventing them.
-
-- **Context is Everything**: Your shell session already has your complete development context - current directory, project structure, environment variables, and system state. This rich context makes the AI interactions more accurate and relevant.
-
-- **Speed Matters**: Code-Forge revolutionizes development workflows through its Rust-powered performance, delivering immediate value with sub-50ms startup times. This exceptional speed unlocks powerful capabilities that directly enhance your productivity: seamlessly manage multiple feature developments in parallel, effortlessly coordinate across git worktrees, and instantly access AI assistance in any directory. By eliminating the frustrating delays and context switches common to web-based AI assistants, Code-Forge keeps you in your flow state. The result? A development experience where your tools match your thinking speed, enabling faster iterations, smoother task transitions, and more efficient project management across all your development contexts.
-
-- **Workflow Integration**: Engineers context-switch about 13.3 times per hour between tools (according to Microsoft research). A shell-based AI assistant stays in your existing workflow - no need to switch windows, lose context, or break your flow.
-
-- **Tool Composition**: Unix philosophy teaches us to make tools that compose well. The AI can pipe commands together, combining tools like `find | xargs | sort | uniq` in ways that solve complex problems elegantly.
-
-- **Ephemeral by Default**: Unlike chat interfaces that accumulate state, shell sessions are naturally ephemeral and reproducible. This matches how developers work - focused sessions for specific tasks, with reliable, reproducible environments.
-
-Think of Code-Forge as your productivity amplifier, where natural communication meets system-level power. By eliminating the cognitive overhead of command memorization, it lets you focus on what matters - solving problems and building features. You gain immediate access to the entire Unix toolkit through simple, conversational requests, while sophisticated code analysis and generation capabilities accelerate your development workflow. This natural interaction layer transforms complicated system operations into intuitive conversations, making development more accessible and efficient without sacrificing any of the power that experienced developers expect.
 
 **Table of Contents**
 
-- [Code-Forge: Your AI-Powered Shell Assistant](#code-forge-your-ai-powered-shell-assistant)
-  - [Installation](#installation)
-    - [Mac](#mac)
-    - [Linux](#linux)
-  - [Get Started](#get-started)
-  - [Features](#features)
-    - [Interactive Shell](#interactive-shell)
-    - [Model Flexibility](#model-flexibility)
-    - [Autocomplete](#autocomplete)
-    - [Custom Instructions](#custom-instructions)
-    - [System Prompts](#system-prompts)
-  - [Support Us](#support-us)
+- [Installation](#installation)
+  - [Mac](#mac)
+  - [Linux](#linux)
+- [Get Started](#get-started)
+- [Features](#features)
+  - [Interactive Shell](#interactive-shell)
+  - [Model Flexibility](#model-flexibility)
+  - [Autocomplete](#autocomplete)
+  - [Custom Instructions](#custom-instructions)
+  - [System Prompts](#system-prompts)
+- [Capabilities](#capabilities)
+- [Why Shell?](#why-shell)
+- [Support Us](#support-us)
 
 ## Installation
 
@@ -150,6 +131,28 @@ Leverage pre-configured expert modes for specialized tasks:
 ```bash
 forge --system-prompt prompts/technical_writer_prompt.txt
 ```
+
+## Capabilities
+
+## Why Shell?
+
+We have been using shells (bash, zsh, fish) as their primary interface for decades because they're fast, powerful, and close to the system. The shell is our natural habitat - it's where we navigate code, run tests, manage processes, and orchestrate our development environment. That's why Code-Forge reimagines the shell as an AI-powered environment where you can interact with an intelligent agent using natural language.
+
+Why a shell-based AI assistant makes sense:
+
+- **Rich Tool Ecosystem**: The shell gives you immediate access to powerful Unix tools (grep, awk, sed, find) that LLMs already understand deeply. This means the AI can leverage `ripgrep` for code search, `jq` for JSON processing, `git` for version control, and hundreds of other battle-tested tools without reinventing them.
+
+- **Context is Everything**: Your shell session already has your complete development context - current directory, project structure, environment variables, and system state. This rich context makes the AI interactions more accurate and relevant.
+
+- **Speed Matters**: Code-Forge revolutionizes development workflows through its Rust-powered performance, delivering immediate value with sub-50ms startup times. This exceptional speed unlocks powerful capabilities that directly enhance your productivity: seamlessly manage multiple feature developments in parallel, effortlessly coordinate across git worktrees, and instantly access AI assistance in any directory. By eliminating the frustrating delays and context switches common to web-based AI assistants, Code-Forge keeps you in your flow state. The result? A development experience where your tools match your thinking speed, enabling faster iterations, smoother task transitions, and more efficient project management across all your development contexts.
+
+- **Workflow Integration**: Engineers context-switch about 13.3 times per hour between tools (according to Microsoft research). A shell-based AI assistant stays in your existing workflow - no need to switch windows, lose context, or break your flow.
+
+- **Tool Composition**: Unix philosophy teaches us to make tools that compose well. The AI can pipe commands together, combining tools like `find | xargs | sort | uniq` in ways that solve complex problems elegantly.
+
+- **Ephemeral by Default**: Unlike chat interfaces that accumulate state, shell sessions are naturally ephemeral and reproducible. This matches how developers work - focused sessions for specific tasks, with reliable, reproducible environments.
+
+Think of Code-Forge as your productivity amplifier, where natural communication meets system-level power. By eliminating the cognitive overhead of command memorization, it lets you focus on what matters - solving problems and building features. You gain immediate access to the entire Unix toolkit through simple, conversational requests, while sophisticated code analysis and generation capabilities accelerate your development workflow. This natural interaction layer transforms complicated system operations into intuitive conversations, making development more accessible and efficient without sacrificing any of the power that experienced developers expect.
 
 ## Support Us
 
