@@ -45,7 +45,7 @@ fi
 echo -e "${GREEN}Latest release: $LATEST_RELEASE${NC}"
 
 # Download URL
-DOWNLOAD_URL="https://github.com/antinomyhq/forge/releases/download/$LATEST_RELEASE/code-forge-$OS-$ARCH.tar.gz"
+DOWNLOAD_URL="https://github.com/antinomyhq/forge/releases/download/$LATEST_RELEASE/forge-$ARCH-unknown-$OSTYPE"
 
 # Create temp directory
 TMP_DIR=$(mktemp -d)
@@ -53,10 +53,9 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Download and extract
 echo -e "${BLUE}Downloading Code-Forge...${NC}"
-curl -L "$DOWNLOAD_URL" -o "$TMP_DIR/code-forge.tar.gz"
+curl -L "$DOWNLOAD_URL" -o "$TMP_DIR/code-forge"
 
 echo -e "${BLUE}Extracting...${NC}"
-tar xzf "$TMP_DIR/code-forge.tar.gz" -C "$TMP_DIR"
 
 # Install
 echo -e "${BLUE}Installing to /usr/local/bin...${NC}"
