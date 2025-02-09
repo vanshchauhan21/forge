@@ -107,3 +107,8 @@ mod gemini_flash_2_0 {
     use super::*;
     generate_model_test!("google/gemini-2.0-flash-001");
 }
+
+mod mistralai_codestral_2501 {
+    use super::*;
+    generate_model_test!("mistralai/codestral-2501");
+}

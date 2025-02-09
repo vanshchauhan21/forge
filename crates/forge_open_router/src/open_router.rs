@@ -13,6 +13,7 @@ use super::model::{ListModelResponse, OpenRouterModel};
 use super::parameters::ParameterResponse;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
+use super::transformers::{pipeline, Transformer};
 
 #[derive(Debug, Default, Clone, Setters)]
 #[setters(into, strip_option)]
@@ -83,12 +84,12 @@ impl ProviderService for OpenRouter {
         model_id: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        let request = OpenRouterRequest::from(request)
+        let mut request = OpenRouterRequest::from(request)
             .model(model_id.clone())
             .stream(true)
-            .cache()
-            .parallel_tool_calls(false)
-            .assign_tool_strategy();
+            .parallel_tool_calls(false);
+
+        request = pipeline().transform(request);
 
         let es = self
             .client
