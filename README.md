@@ -1,7 +1,5 @@
-[![License](https://img.shields.io/badge/License-Apache-2.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/antinomyhq/forge/ci.yml?style=for-the-badge)](https://github.com/antinomyhq/forge/actions)
 [![GitHub Release](https://img.shields.io/github/v/release/antinomyhq/forge?style=for-the-badge)](https://github.com/antinomyhq/forge/releases)
-[![Discord](https://img.shields.io/badge/Discord-Join %20Us-blue?style=for-the-badge)](https://discord.gg/Rdyu7hgSWm)
 
 An open-source AI powered interactive shell
 
