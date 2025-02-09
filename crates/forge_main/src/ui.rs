@@ -45,6 +45,16 @@ pub struct UI {
 }
 
 impl UI {
+    async fn process_message(&mut self, content: &str) -> Result<()> {
+        let model = self
+            .config
+            .primary_model()
+            .map(ModelId::new)
+            .unwrap_or(ModelId::from_env(&self.api.environment().await?));
+
+        self.chat(content.to_string(), &model).await
+    }
+
     pub async fn init() -> Result<Self> {
         // NOTE: This has to be first line
         let env = EnvironmentFactory::new(std::env::current_dir()?).create()?;
@@ -72,7 +82,14 @@ impl UI {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        // Display the banner in dimmed colors
+        // Handle direct prompt if provided
+        let prompt = self.cli.prompt.clone();
+        if let Some(prompt) = prompt {
+            self.process_message(&prompt).await?;
+            return Ok(());
+        }
+
+        // Display the banner in dimmed colors since we're in interactive mode
         banner::display()?;
 
         // Get initial input from file or prompt
@@ -90,7 +107,6 @@ impl UI {
 
         loop {
             match input {
-                Command::End => break,
                 Command::New => {
                     CONSOLE.writeln(self.context_reset_message(&input))?;
                     self.state = Default::default();

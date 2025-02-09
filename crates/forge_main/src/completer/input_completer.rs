@@ -41,7 +41,9 @@ impl Completer for InputCompleter {
                 .filter(|file| !file.is_dir())
                 .filter_map(|file| {
                     if let Some(file_name) = file.file_name.as_ref() {
-                        if file_name.contains(query.term) {
+                        let file_name_lower = file_name.to_lowercase();
+                        let query_lower = query.term.to_lowercase();
+                        if file_name_lower.contains(&query_lower) {
                             Some(Suggestion {
                                 value: file.path,
                                 description: None,

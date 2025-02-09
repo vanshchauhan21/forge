@@ -10,6 +10,9 @@ pub struct Cli {
     /// Optional file path to execute commands from
     #[arg(long, short = 'c')]
     pub command: Option<String>,
+    /// Direct prompt input that bypasses interactive mode
+    #[arg(long, short = 'p')]
+    pub prompt: Option<String>,
     /// Enable verbose output, showing additional tool information
     #[arg(long, default_value_t = false)]
     pub verbose: bool,

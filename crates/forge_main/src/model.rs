@@ -83,9 +83,6 @@ impl ConfigKey {
 /// - File content
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
-    /// End the current session and exit the application.
-    /// This can be triggered with the '/end' command.
-    End,
     /// Start a new conversation while preserving history.
     /// This can be triggered with the '/new' command.
     New,
@@ -208,7 +205,6 @@ impl Command {
         }
 
         match trimmed {
-            "/end" => Ok(Command::End),
             "/new" => Ok(Command::New),
             "/reload" => Ok(Command::Reload),
             "/info" => Ok(Command::Info),
