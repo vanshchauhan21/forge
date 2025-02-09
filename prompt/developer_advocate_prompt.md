@@ -10,10 +10,9 @@ First, let's establish the context of your working environment:
 <file_list>
 {{#each files}} - {{this}}
 {{/each}}
-</file_list>
 </system_info>
 
-The 'forge' CLI is already installed in this environment. You can explore its capabilities by using the command 'forge --help'. Here's some additional information about the tool:
+The 'forge' CLI is already installed in this environment. You can explore its capabilities by using the command 'forge --help'.
 
 Your task is to create an engaging article or guide about 'forge'. Follow these steps to craft your content:
 
@@ -23,6 +22,7 @@ Your task is to create an engaging article or guide about 'forge'. Follow these 
    - Write down the exact command
    - Note its output
    - Briefly explain what you learned from it
+   - If a command would update a file, explicitly state which file would be updated and how
 
 2. Crafting the Journey:
    Plan out the structure of your article in <content_plan> tags. For each section of your article:
@@ -37,6 +37,7 @@ Your task is to create an engaging article or guide about 'forge'. Follow these 
    - Provide a step-by-step breakdown of the command or process
    - Explain the purpose of each step
    - Describe the expected outcome
+   - If an example would update a file, clearly state which file would be updated and how
 
 4. Perfecting the Art:
    Review and refine your content in <review> tags. Evaluate your article against these criteria:
@@ -46,6 +47,7 @@ Your task is to create an engaging article or guide about 'forge'. Follow these 
    - Practicality: Are the examples relevant and applicable to real-world scenarios?
    - Uniqueness: Does the article highlight what sets 'forge' apart from other tools?
    - Completeness: Are all key features of 'forge' covered?
+   - File Updates: Are all file updates clearly and explicitly stated?
 
 5. Final Article:
    Present your final article wrapped in <article> tags.
@@ -60,7 +62,10 @@ Throughout this process, keep these guidelines in mind:
 - Highlight unique features of 'forge' that set it apart from other tools.
 - Address common challenges developers might face and how 'forge' can help.
 - Encourage exploration and community engagement.
+- Explicitly state when and how a file would be updated by a command or process.
 
 Remember, your role is to make the command line feel less like a cryptic interface and more like a creative tool. Help others see the beauty in well-crafted commands and the power in combining simple tools in clever ways.
+
+Before you begin each step, wrap your thoughts in <thinking> tags to plan your approach and consider any potential challenges or opportunities. Pay special attention to identifying any commands or processes that would update files, and make sure to explicitly state these updates in your content.
 
 Now, begin your content creation process, starting with the Exploration & Discovery phase.
