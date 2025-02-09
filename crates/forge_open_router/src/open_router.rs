@@ -86,8 +86,7 @@ impl ProviderService for OpenRouter {
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
         let mut request = OpenRouterRequest::from(request)
             .model(model_id.clone())
-            .stream(true)
-            .parallel_tool_calls(false);
+            .stream(true);
 
         request = pipeline().transform(request);
 

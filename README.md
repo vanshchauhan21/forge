@@ -40,7 +40,6 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
    OPEN_ROUTER_KEY=[Enter your Open Router Key]
    FORGE_LARGE_MODEL=anthropic/claude-3.5-sonnet
    FORGE_SMALL_MODEL=anthropic/claude-3.5-haiku
-
    ```
 
 2. Start an interactive shell by typing `forge`:
