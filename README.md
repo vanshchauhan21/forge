@@ -105,6 +105,7 @@ Code-Forge prioritizes security by using restricted bash (rbash) by default, lim
 - **Safe by Default**: Protects your system while maintaining functionality
 
 **Example**:
+
 ```bash
 # Default secure mode
 forge
@@ -146,11 +147,107 @@ forge --custom-instructions path/to/instructions.yml
 
 ### System Prompts
 
-Leverage pre-configured expert modes for specialized tasks:
+Customize the AI's behavior and expertise with system prompts that can include dynamic context using mustache templates:
 
 ```bash
 forge --system-prompt prompts/technical_writer_prompt.txt
 ```
+
+System prompts support mustache templates that can access variables from the following context type:
+
+```typescript
+/**
+ * Represents the complete context available to system prompts in forge.
+ * All fields can be accessed using mustache template syntax.
+ */
+type SystemContext = {
+  /**
+   * Environment information about the current system and workspace.
+   * Access fields using {{env.field_name}} in templates.
+   */
+  env: {
+    /**
+     * The operating system identifier.
+     * Possible values: "macos", "linux", "windows"
+     */
+    operating_system: string;
+
+    /**
+     * Absolute path to the current working directory.
+     * Example: "/Users/username/projects/my-app"
+     */
+    current_working_directory: string;
+
+    /**
+     * Path to the default shell being used.
+     * Usually "/bin/rbash" for restricted shell mode
+     * or system default like "/bin/bash", "/bin/zsh"
+     */
+    default_shell: string;
+
+    /**
+     * Absolute path to the user's home directory.
+     * Example: "/Users/username"
+     */
+    home_directory: string;
+
+    /**
+     * List of files and directories in the current working directory.
+     * Includes both files and subdirectories at the root level.
+     */
+    file_list: string[];
+  };
+
+  /**
+   * Detailed information about available tools and their capabilities.
+   * Includes function names, descriptions, parameters, and return types.
+   * Access using {{tool_information}} in templates.
+   */
+  tool_information: string;
+
+  /**
+   * Indicates whether tools are available in the current context.
+   * Use {{#if tool_supported}}...{{/if}} for conditional rendering.
+   */
+  tool_supported: boolean;
+
+  /**
+   * Custom instructions provided via --custom-instructions flag.
+   * Will be null if no custom instructions were provided.
+   * Access using {{custom_instructions}} in templates.
+   */
+  custom_instructions: string | null;
+
+  /**
+   * Array of relevant file paths in the current context.
+   * Paths are relative to the current working directory.
+   * Iterate using {{#each files}}{{this}}{{/each}} in templates.
+   */
+  files: string[];
+};
+```
+
+**Example custom prompt template:**
+
+```mustache
+You are a technical expert working in the {{env.operating_system}} environment.
+Current directory: {{env.current_working_directory}}
+
+Available tools:
+{{tool_information}}
+
+Your task is to assist with development tasks in this context using the available tools.
+{{#if custom_instructions}}
+Additional instructions: {{custom_instructions}}
+{{/if}}
+
+Files in scope:
+{{#each files}}
+- {{this}}
+{{/each}}
+```
+
+You can create your own prompt templates or modify existing ones to adapt forge's behavior to specific tasks or workflows. The system context ensures the AI assistant has full awareness of your development environment.
 
 ### WYSIWYG Shell Integration
 
