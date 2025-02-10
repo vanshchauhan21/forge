@@ -1,5 +1,4 @@
 use std::io::{self, Write};
-use std::path::PathBuf;
 
 use tokio::io::AsyncRead;
 use tokio::process::Command;
@@ -19,20 +18,7 @@ pub struct Output {
 impl CommandExecutor {
     /// Create a new command executor with the specified command and working
     /// directory
-    pub fn new(cwd: &PathBuf, command: &str) -> Self {
-        let mut command = if cfg!(target_os = "windows") {
-            let mut c = Command::new("cmd");
-            c.args(["/C", command]);
-            c
-        } else {
-            let mut c = Command::new("sh");
-            c.args(["-c", command]);
-            c
-        };
-        // Set the current working directory for the command
-        command.current_dir(cwd);
-        // Kill the command when the handler is dropped
-        command.kill_on_drop(true);
+    pub fn new(command: Command) -> Self {
         Self { command }
     }
 

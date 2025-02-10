@@ -62,11 +62,13 @@ impl UI {
     }
 
     pub async fn init() -> Result<Self> {
-        // NOTE: This has to be first line
-        let env = EnvironmentFactory::new(std::env::current_dir()?).create()?;
+        // Parse CLI arguments first to get flags
+        let cli = Cli::parse();
+
+        // Create environment with CLI flags
+        let env = EnvironmentFactory::new(std::env::current_dir()?, cli.unrestricted).create()?;
         let guard = log::init_tracing(env.clone())?;
         let config = Config::from(&env);
-        let cli = Cli::parse();
         let api = Arc::new(Service::api_service(env, cli.system_prompt.clone())?);
 
         Ok(Self {

@@ -4,11 +4,36 @@ use forge_domain::Environment;
 
 pub struct EnvironmentFactory {
     cwd: PathBuf,
+    unrestricted: bool,
 }
 
 impl EnvironmentFactory {
-    pub fn new(cwd: PathBuf) -> Self {
-        Self { cwd }
+    /// Creates a new EnvironmentFactory with current working directory
+    ///
+    /// # Arguments
+    /// * `cwd` - The current working directory for the environment
+    /// * `unrestricted` - If true, use unrestricted shell mode (sh/bash) If
+    ///   false, use restricted shell mode (rbash)
+    pub fn new(cwd: PathBuf, unrestricted: bool) -> Self {
+        Self { cwd, unrestricted }
+    }
+
+    /// Get path to appropriate shell based on platform and mode
+    fn get_shell_path(unrestricted: bool) -> String {
+        if cfg!(target_os = "windows") {
+            if unrestricted {
+                std::env::var("COMSPEC").unwrap_or("cmd.exe".to_string())
+            } else {
+                // TODO: Add Windows restricted shell implementation
+                std::env::var("COMSPEC").unwrap_or("cmd.exe".to_string())
+            }
+        } else if unrestricted {
+            // Use user's preferred shell or fallback to sh
+            std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
+        } else {
+            // Default to rbash in restricted mode
+            "/bin/rbash".to_string()
+        }
     }
 
     pub fn create(&self) -> anyhow::Result<Environment> {
@@ -23,11 +48,7 @@ impl EnvironmentFactory {
         Ok(Environment {
             os: std::env::consts::OS.to_string(),
             cwd,
-            shell: if cfg!(windows) {
-                std::env::var("COMSPEC")?
-            } else {
-                std::env::var("SHELL").unwrap_or("/bin/sh".to_string())
-            },
+            shell: Self::get_shell_path(self.unrestricted),
             api_key,
             large_model_id,
             small_model_id,

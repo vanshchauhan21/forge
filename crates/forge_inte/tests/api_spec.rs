@@ -22,7 +22,7 @@ impl Fixture {
         // NOTE: In tests the CWD is not the project root
         let path = Path::new("../../").to_path_buf();
         let path = path.canonicalize().unwrap();
-        let env = EnvironmentFactory::new(path).create().unwrap();
+        let env = EnvironmentFactory::new(path, false).create().unwrap();
         Service::api_service(env, None).unwrap()
     }
 

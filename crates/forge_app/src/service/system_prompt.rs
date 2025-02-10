@@ -133,7 +133,7 @@ mod tests {
     async fn test_tool_supported() {
         let dir = TempDir::new().unwrap();
         let env = test_env(dir.path().to_path_buf()).await;
-        let tools = Arc::new(Service::tool_service());
+        let tools = Arc::new(Service::tool_service(&env));
         let provider = Arc::new(
             TestProvider::default()
                 .parameters(vec![(ModelId::new("gpt-3.5-turbo"), Parameters::new(true))]),
@@ -153,7 +153,7 @@ mod tests {
     async fn test_tool_unsupported() {
         let dir = TempDir::new().unwrap();
         let env = test_env(dir.path().to_path_buf()).await;
-        let tools = Arc::new(Service::tool_service());
+        let tools = Arc::new(Service::tool_service(&env));
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::new("gpt-3.5-turbo"),
             Parameters::new(false),
@@ -172,7 +172,7 @@ mod tests {
     async fn test_system_prompt_custom_prompt() {
         let dir = TempDir::new().unwrap();
         let env = test_env(dir.path().to_path_buf()).await;
-        let tools = Arc::new(Service::tool_service());
+        let tools = Arc::new(Service::tool_service(&env));
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::new("gpt-3.5-turbo"),
             Parameters::new(false),
@@ -192,7 +192,7 @@ mod tests {
     async fn test_system_prompt_file_path() {
         let dir = TempDir::new().unwrap();
         let env = test_env(dir.path().to_path_buf()).await;
-        let tools = Arc::new(Service::tool_service());
+        let tools = Arc::new(Service::tool_service(&env));
         let provider = Arc::new(TestProvider::default().parameters(vec![(
             ModelId::new("gpt-3.5-turbo"),
             Parameters::new(false),

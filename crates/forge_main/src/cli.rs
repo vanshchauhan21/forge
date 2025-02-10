@@ -37,6 +37,14 @@ pub struct Cli {
     /// Overrides the default system prompt used to initialize the AI assistant.
     #[arg(long, short = 's', value_parser = validate_path)]
     pub system_prompt: Option<PathBuf>,
+
+    /// Run shell in unrestricted mode.
+    ///
+    /// By default, the shell runs in restricted mode (rbash). This flag enables
+    /// running in unrestricted mode using standard shell (sh/bash).
+    /// WARNING: Unrestricted mode grants more system access - use with caution.
+    #[arg(long, default_value_t = false, short = 'u')]
+    pub unrestricted: bool,
 }
 
 fn validate_path(path: &str) -> Result<PathBuf, String> {

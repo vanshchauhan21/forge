@@ -14,6 +14,7 @@ Code-Forge is an AI-powered interactive shell that stands out through:
 - Seamless integration with existing Unix tools and workflows
 - Context-aware assistance that understands your development environment and workflows
 - Natural language interface to powerful system operations
+- Enhanced security with restricted bash (rbash) by default
 
 **Table of Contents**
 
@@ -23,6 +24,7 @@ Code-Forge is an AI-powered interactive shell that stands out through:
 - [Get Started](#get-started)
 - [Features](#features)
   - [Interactive Shell](#interactive-shell)
+  - [Enhanced Security](#enhanced-security)
   - [Model Flexibility](#model-flexibility)
   - [Autocomplete](#autocomplete)
   - [Custom Instructions](#custom-instructions)
@@ -92,6 +94,23 @@ Start the interactive shell with:
 
 ```bash
 forge
+```
+
+### Enhanced Security
+
+Code-Forge prioritizes security by using restricted bash (rbash) by default, limiting potentially dangerous operations:
+
+- **Default Restricted Mode**: Uses rbash to prevent unauthorized access and potentially harmful operations
+- **Unrestricted Access**: Available when needed via the `-u` flag
+- **Safe by Default**: Protects your system while maintaining functionality
+
+**Example**:
+```bash
+# Default secure mode
+forge
+
+# Unrestricted mode when needed
+forge -u
 ```
 
 ### Model Flexibility
@@ -167,4 +186,4 @@ Your support drives Code-Forge's continued evolution! By starring our GitHub rep
 - Enable us to prioritize new features
 - Strengthen our open-source community
 
-Recent community feedback has helped us implement features like improved autocomplete and cross-platform optimization. Join our growing community of developers who are reshaping the future of AI-powered development!
+Recent community feedback has helped us implement features like improved autocomplete, cross-platform optimization, and enhanced security features. Join our growing community of developers who are reshaping the future of AI-powered development!

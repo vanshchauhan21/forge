@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
+use forge_domain::{
+    Environment, Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService,
+};
 use tokio::time::{timeout, Duration};
 use tracing::debug;
 
@@ -10,8 +12,8 @@ use super::Service;
 const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(300);
 
 impl Service {
-    pub fn tool_service() -> impl ToolService {
-        Live::from_iter(forge_tool::tools())
+    pub fn tool_service(env: &Environment) -> impl ToolService {
+        Live::from_iter(forge_tool::tools(env))
     }
 }
 

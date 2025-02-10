@@ -49,7 +49,7 @@ struct Live {
 impl Live {
     fn new(env: Environment, system_prompt: Option<PathBuf>) -> Result<Self> {
         let provider = Arc::new(Service::provider_service(env.api_key.clone()));
-        let tool = Arc::new(Service::tool_service());
+        let tool = Arc::new(Service::tool_service(&env));
         let file_read = Arc::new(Service::file_read_service());
 
         let system_prompt = Arc::new(Service::system_prompt(

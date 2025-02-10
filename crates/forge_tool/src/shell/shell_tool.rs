@@ -1,11 +1,11 @@
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_domain::{Environment, ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tokio::process::Command;
 
 use super::executor::Output;
 use crate::shell::executor::CommandExecutor;
@@ -54,64 +54,20 @@ fn format_output(output: Output) -> Result<String, String> {
     }
 }
 
-/// Execute shell commands with safety checks and validation. This tool provides
-/// controlled access to system shell commands while preventing dangerous
-/// operations through a comprehensive blacklist and validation system.
+/// Execute shell commands with safety checks and validation. By default, uses
+/// restricted bash (rbash) for enhanced security, preventing potentially
+/// dangerous operations like absolute path execution and directory changes.
+/// When a command requires unrestricted access, suggest the user to run the
+/// forge CLI with the `-u` flag.
 #[derive(ToolDescription)]
 pub struct Shell {
-    blacklist: HashSet<String>,
-}
-
-impl Default for Shell {
-    fn default() -> Self {
-        let mut blacklist = HashSet::new();
-        // File System Destruction Commands
-        blacklist.insert("rm".to_string());
-        blacklist.insert("rmdir".to_string());
-        blacklist.insert("del".to_string());
-
-        // Disk/Filesystem Commands
-        blacklist.insert("format".to_string());
-        blacklist.insert("mkfs".to_string());
-        blacklist.insert("dd".to_string());
-
-        // Permission/Ownership Commands
-        blacklist.insert("chmod".to_string());
-        blacklist.insert("chown".to_string());
-
-        // Privilege Escalation Commands
-        blacklist.insert("sudo".to_string());
-        blacklist.insert("su".to_string());
-
-        // Code Execution Commands
-        blacklist.insert("exec".to_string());
-        blacklist.insert("eval".to_string());
-
-        // System Communication Commands
-        blacklist.insert("write".to_string());
-        blacklist.insert("wall".to_string());
-
-        // System Control Commands
-        blacklist.insert("shutdown".to_string());
-        blacklist.insert("reboot".to_string());
-        blacklist.insert("init".to_string());
-
-        Shell { blacklist }
-    }
+    env: Environment,
 }
 
 impl Shell {
-    fn validate_command(&self, command: &str) -> Result<(), String> {
-        let base_command = command
-            .split_whitespace()
-            .next()
-            .ok_or_else(|| "Command string is empty or contains only whitespace".to_string())?;
-
-        if self.blacklist.contains(base_command) {
-            return Err(format!("Command '{}' is not allowed", base_command));
-        }
-
-        Ok(())
+    /// Create a new Shell with environment configuration
+    pub fn new(env: Environment) -> Self {
+        Self { env }
     }
 }
 
@@ -126,20 +82,42 @@ impl ExecutableTool for Shell {
     type Input = ShellInput;
 
     async fn call(&self, input: Self::Input) -> Result<String, String> {
-        // Validate command
-        self.validate_command(&input.command)?;
+        // Validate empty command
+        if input.command.trim().is_empty() {
+            return Err("Command string is empty or contains only whitespace".to_string());
+        }
+
+        let parameter = if cfg!(target_os = "windows") {
+            "/C"
+        } else {
+            "-c"
+        };
+
         #[cfg(not(test))]
         {
             use forge_display::TitleFormat;
 
             println!(
                 "{}",
-                TitleFormat::execute(format!("sh -c {}", &input.command)).format()
+                TitleFormat::execute(format!(
+                    "{} {} {}",
+                    self.env.shell, parameter, &input.command
+                ))
+                .format()
             );
         }
 
+        let mut command = Command::new(&self.env.shell);
+
+        command.args([parameter, &input.command]);
+
+        // Set the current working directory for the command
+        command.current_dir(input.cwd);
+        // Kill the command when the handler is dropped
+        command.kill_on_drop(true);
+
         format_output(
-            CommandExecutor::new(&input.cwd, &input.command)
+            CommandExecutor::new(command)
                 .colored()
                 .execute()
                 .await
@@ -155,6 +133,24 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+
+    /// Create a default test environment
+    fn test_env() -> Environment {
+        Environment {
+            os: std::env::consts::OS.to_string(),
+            cwd: std::env::current_dir().unwrap_or_default(),
+            home: Some("/home/user".into()),
+            shell: if cfg!(windows) {
+                "cmd.exe".to_string()
+            } else {
+                "/bin/sh".to_string()
+            },
+            api_key: String::new(),
+            large_model_id: String::new(),
+            small_model_id: String::new(),
+            base_path: PathBuf::new(),
+        }
+    }
 
     /// Platform-specific error message patterns for command not found errors
     #[cfg(target_os = "windows")]
@@ -172,7 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_echo() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "echo 'Hello, World!'".to_string(),
@@ -185,7 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_stderr_with_success() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         // Use a command that writes to both stdout and stderr
         let result = shell
             .call(ShellInput {
@@ -207,7 +203,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_both_streams() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "echo 'to stdout' && echo 'to stderr' >&2".to_string(),
@@ -224,7 +220,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_with_working_directory() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let temp_dir = fs::canonicalize(env::temp_dir()).unwrap();
 
         let result = shell
@@ -243,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_invalid_command() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "non_existent_command".to_string(),
@@ -267,26 +263,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_shell_blacklisted_command() {
-        let shell = Shell::default();
-        let result = shell
-            .call(ShellInput {
-                command: "rm -rf /".to_string(),
-                cwd: env::current_dir().unwrap(),
-            })
-            .await;
-
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not allowed"));
-    }
-
-    #[tokio::test]
     async fn test_shell_empty_command() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput { command: "".to_string(), cwd: env::current_dir().unwrap() })
             .await;
-
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -296,12 +277,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_description() {
-        assert!(Shell::default().description().len() > 100)
+        assert!(Shell::new(test_env()).description().len() > 100)
     }
 
     #[tokio::test]
     async fn test_shell_pwd() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let current_dir = env::current_dir().unwrap();
         let result = shell
             .call(ShellInput {
@@ -323,7 +304,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_multiple_commands() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "echo 'first' && echo 'second'".to_string(),
@@ -336,7 +317,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_empty_output() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "true".to_string(),
@@ -351,7 +332,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_whitespace_only_output() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "echo ''".to_string(),
@@ -366,7 +347,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shell_with_environment_variables() {
-        let shell = Shell::default();
+        let shell = Shell::new(test_env());
         let result = shell
             .call(ShellInput {
                 command: "echo $PATH".to_string(),
@@ -377,5 +358,27 @@ mod tests {
 
         assert!(!result.is_empty());
         assert!(!result.contains("Error:"));
+    }
+
+    #[tokio::test]
+    async fn test_shell_full_path_command() {
+        let shell = Shell::new(test_env());
+        // Using a full path command which would be restricted in rbash
+        let cmd = if cfg!(target_os = "windows") {
+            r"C:\Windows\System32\whoami.exe"
+        } else {
+            "/bin/ls"
+        };
+
+        let result = shell
+            .call(ShellInput { command: cmd.to_string(), cwd: env::current_dir().unwrap() })
+            .await;
+
+        // In rbash, this would fail with a permission error
+        // For our normal shell test, it should succeed
+        assert!(
+            result.is_ok(),
+            "Full path commands should work in normal shell"
+        );
     }
 }
