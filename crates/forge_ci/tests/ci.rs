@@ -26,6 +26,12 @@ fn generate() {
                 "binary_path": "target/x86_64-unknown-linux-gnu/release/forge"
             },
             {
+                "os": "ubuntu-latest",
+                "target": "aarch64-unknown-linux-gnu",
+                "binary_name": "forge-aarch64-unknown-linux-gnu",
+                "binary_path": "target/aarch64-unknown-linux-gnu/release/forge"
+            },
+            {
                 "os": "macos-latest",
                 "target": "x86_64-apple-darwin",
                 "binary_name": "forge-x86_64-apple-darwin",
@@ -36,6 +42,18 @@ fn generate() {
                 "target": "aarch64-apple-darwin",
                 "binary_name": "forge-aarch64-apple-darwin",
                 "binary_path": "target/aarch64-apple-darwin/release/forge"
+            },
+            {
+                "os": "windows-latest",
+                "target": "x86_64-pc-windows-msvc",
+                "binary_name": "forge-x86_64-pc-windows-msvc.exe",
+                "binary_path": "target/x86_64-pc-windows-msvc/release/forge.exe"
+            },
+            {
+                "os": "windows-latest",
+                "target": "aarch64-pc-windows-msvc",
+                "binary_name": "forge-aarch64-pc-windows-msvc.exe",
+                "binary_path": "target/aarch64-pc-windows-msvc/release/forge.exe"
             }
         ]
     });
