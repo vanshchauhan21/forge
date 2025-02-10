@@ -23,14 +23,14 @@ Code-Forge is an AI-powered interactive shell that stands out through:
   - [Linux](#linux)
 - [Get Started](#get-started)
 - [Features](#features)
-  - [Interactive Shell](#interactive-shell)
-  - [Enhanced Security](#enhanced-security)
-  - [Model Flexibility](#model-flexibility)
-  - [Autocomplete](#autocomplete)
-  - [Custom Instructions](#custom-instructions)
-  - [System Prompts](#system-prompts)
-  - [WYSIWYG Shell Integration](#wysiwyg-shell-integration)
-  - [Command Interruption](#command-interruption)
+  - [1. Interactive Shell](#1-interactive-shell)
+  - [2. Enhanced Security](#2-enhanced-security)
+  - [3. Model Flexibility](#3-model-flexibility)
+  - [4. Autocomplete](#4-autocomplete)
+  - [5. Custom Instructions](#5-custom-instructions)
+  - [6. System Prompts](#6-system-prompts)
+  - [7. WYSIWYG Shell Integration](#7-wysiwyg-shell-integration)
+  - [8. Command Interruption](#8-command-interruption)
 - [Why Shell?](#why-shell)
 - [Support Us](#support-us)
 
@@ -85,7 +85,7 @@ For additional configuration options and features, use `forge --help`.
 
 ## Features
 
-### Interactive Shell
+### 1. Interactive Shell
 
 Transform your command-line experience with natural language interaction while maintaining the power and flexibility of traditional shell commands.
 
@@ -96,7 +96,7 @@ Start the interactive shell with:
 forge
 ```
 
-### Enhanced Security
+### 2. Enhanced Security
 
 Code-Forge prioritizes security by using restricted bash (rbash) by default, limiting potentially dangerous operations:
 
@@ -114,7 +114,7 @@ forge
 forge -u
 ```
 
-### Model Flexibility
+### 3. Model Flexibility
 
 Optimize your workflow by choosing the right AI model for each task:
 
@@ -128,7 +128,7 @@ export FORGE_LARGE_MODEL=anthropic/claude-3.5-sonnet
 export FORGE_SMALL_MODEL=anthropic/claude-3.5-haiku
 ```
 
-### Autocomplete
+### 4. Autocomplete
 
 Boost your productivity with intelligent command completion:
 
@@ -137,7 +137,7 @@ Boost your productivity with intelligent command completion:
 - Access command history with Up Arrow
 - Quick history search with Ctrl+R
 
-### Custom Instructions
+### 5. Custom Instructions
 
 Tailor Code-Forge to your specific needs with custom instruction sets:
 
@@ -145,7 +145,7 @@ Tailor Code-Forge to your specific needs with custom instruction sets:
 forge --custom-instructions path/to/instructions.yml
 ```
 
-### System Prompts
+### 6. System Prompts
 
 Customize the AI's behavior and expertise with system prompts that can include dynamic context using mustache templates:
 
@@ -249,11 +249,11 @@ Files in scope:
 
 You can create your own prompt templates or modify existing ones to adapt forge's behavior to specific tasks or workflows. The system context ensures the AI assistant has full awareness of your development environment.
 
-### WYSIWYG Shell Integration
+### 7. WYSIWYG Shell Integration
 
 Enhance your interactive shell experience with WYSIWYG (What You See Is What You Get) integration. 'forge' now visualizes each command executed, complete with colorful formatting, allowing you to see command outputs just as if you were typing them directly into your terminal. This feature ensures clarity and enhances interaction, making every command visible in rich detail.
 
-### Command Interruption
+### 8. Command Interruption
 
 Stay in control of your shell environment with intuitive command handling:
 
