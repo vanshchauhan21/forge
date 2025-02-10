@@ -23,19 +23,43 @@ fn generate() {
                 "os": "ubuntu-latest",
                 "target": "x86_64-unknown-linux-gnu",
                 "binary_name": "forge-x86_64-unknown-linux-gnu",
-                "binary_path": "target/x86_64-unknown-linux-gnu/release/forge"
+                "binary_path": "target/x86_64-unknown-linux-gnu/release/forge",
+                "cross": "false"
+            },
+            {
+                "os": "ubuntu-latest",
+                "target": "aarch64-unknown-linux-gnu",
+                "binary_name": "forge-aarch64-unknown-linux-gnu",
+                "binary_path": "target/aarch64-unknown-linux-gnu/release/forge",
+                "cross": "true"
             },
             {
                 "os": "macos-latest",
                 "target": "x86_64-apple-darwin",
                 "binary_name": "forge-x86_64-apple-darwin",
-                "binary_path": "target/x86_64-apple-darwin/release/forge"
+                "binary_path": "target/x86_64-apple-darwin/release/forge",
+                "cross": "false"
             },
             {
                 "os": "macos-latest",
                 "target": "aarch64-apple-darwin",
                 "binary_name": "forge-aarch64-apple-darwin",
-                "binary_path": "target/aarch64-apple-darwin/release/forge"
+                "binary_path": "target/aarch64-apple-darwin/release/forge",
+                "cross": "false"
+            },
+            {
+                "os": "windows-latest",
+                "target": "x86_64-pc-windows-msvc",
+                "binary_name": "forge-x86_64-pc-windows-msvc.exe",
+                "binary_path": "target/x86_64-pc-windows-msvc/release/forge.exe",
+                "cross": "false"
+            },
+            {
+                "os": "windows-latest",
+                "target": "aarch64-pc-windows-msvc",
+                "binary_name": "forge-aarch64-pc-windows-msvc.exe",
+                "binary_path": "target/aarch64-pc-windows-msvc/release/forge.exe",
+                "cross": "false"
             }
         ]
     });
@@ -87,14 +111,16 @@ fn generate() {
             .add_step(Step::uses("actions", "checkout", "v4"))
             // Install Rust with cross-compilation target
             .add_step(
-                Step::uses("dtolnay", "rust-toolchain", "stable")
-                    .with(("targets", "${{ matrix.target }}")),
+                Step::uses("taiki-e", "setup-cross-toolchain-action", "v1")
+                    .with(("target", "${{ matrix.target }}")),
             )
             // Build release binary
             .add_step(
-                Step::uses("ClementTsang", "cargo-action", "v0.0.3")
+                Step::uses("ClementTsang", "cargo-action", "v0.0.6")
                     .add_with(("command", "build --release"))
                     .add_with(("args", "--target ${{ matrix.target }}"))
+                    .add_with(("use-cross", "${{ matrix.cross }}"))
+                    .add_with(("cross-version", "0.2.4"))
                     .add_env(("RUSTFLAGS", "-C target-feature=+crt-static"))
                     .add_env(("POSTHOG_API_SECRET", "${{secrets.POSTHOG_API_SECRET}}"))
                     .add_env((
@@ -104,7 +130,7 @@ fn generate() {
             )
             // Rename binary to target name
             .add_step(Step::run(
-                "cp ${{ matrix.binary_path }} forge-${{ matrix.target }}",
+                "cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}",
             ))
             // Upload directly to release
             .add_step(
@@ -113,7 +139,7 @@ fn generate() {
                         "release_id",
                         "${{ needs.draft_release.outputs.create_release_id }}",
                     ))
-                    .add_with(("file", "forge-${{ matrix.target }}"))
+                    .add_with(("file", "${{ matrix.binary_name }}"))
                     .add_with(("overwrite", "true")),
             ),
     );
