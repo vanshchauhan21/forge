@@ -28,7 +28,7 @@ Code-Forge is an AI-powered interactive shell that stands out through:
   - [3. Model Flexibility](#3-model-flexibility)
   - [4. Autocomplete](#4-autocomplete)
   - [5. Custom Instructions](#5-custom-instructions)
-  - [6. System Prompts](#6-system-prompts)
+  - [6. Custom Agents](#6-custom-agents)
   - [7. WYSIWYG Shell Integration](#7-wysiwyg-shell-integration)
   - [8. Command Interruption](#8-command-interruption)
 - [Why Shell?](#why-shell)
@@ -145,15 +145,15 @@ Tailor Code-Forge to your specific needs with custom instruction sets:
 forge --custom-instructions path/to/instructions.yml
 ```
 
-### 6. System Prompts
+### 6. Custom Agents
 
-Customize the AI's behavior and expertise with system prompts that can include dynamic context using mustache templates:
+Transform forge into specialized expert agents by creating custom agent profiles that define their behavior, expertise, and capabilities. Each agent can be tailored for specific tasks or domains using mustache templates:
 
 ```bash
-forge --system-prompt prompts/technical_writer_prompt.txt
+forge --agent prompts/technical_writer_agent.txt
 ```
 
-System prompts support mustache templates that can access variables from the following context type:
+Agent profiles support mustache templates that can access variables from the following context type:
 
 ```typescript
 /**
