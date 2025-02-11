@@ -65,7 +65,7 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
 
 ```bash
 # Your OpenRouter API key for accessing AI models
-OPEN_ROUTER_KEY=[Enter your Open Router Key]
+OPEN_ROUTER_KEY=<Enter your Open Router Key>
 
 # Preferred model for complex tasks requiring deeper analysis
 FORGE_LARGE_MODEL=anthropic/claude-3.5-sonnet
