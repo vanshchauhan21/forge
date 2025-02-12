@@ -13,6 +13,8 @@ pub trait ExecutorService: Send {
         &self,
         chat_request: ChatRequest,
     ) -> anyhow::Result<MpscStream<anyhow::Result<AgentMessage<ChatResponse>>>>;
+
+    async fn reset(&self) -> anyhow::Result<()>;
 }
 
 #[async_trait::async_trait]
@@ -30,4 +32,5 @@ pub trait API {
         chat: ChatRequest,
     ) -> anyhow::Result<MpscStream<anyhow::Result<AgentMessage<ChatResponse>, anyhow::Error>>>;
     fn environment(&self) -> Environment;
+    async fn reset(&self) -> anyhow::Result<()>;
 }

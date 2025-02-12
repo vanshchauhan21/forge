@@ -122,4 +122,12 @@ impl ConcurrentWorkflow {
             }
         })
     }
+
+    pub async fn reset(&self) -> crate::Result<()> {
+        let mut guard = self.workflow.write().await;
+        for agent in guard.agents.iter_mut() {
+            agent.state = Default::default();
+        }
+        Ok(())
+    }
 }

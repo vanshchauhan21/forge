@@ -27,6 +27,11 @@ impl<F: Infrastructure + App> ForgeExecutorService<F> {
 
 #[async_trait::async_trait]
 impl<F: Infrastructure + App> ExecutorService for ForgeExecutorService<F> {
+    async fn reset(&self) -> anyhow::Result<()> {
+        self.workflow.reset().await?;
+        Ok(())
+    }
+
     async fn chat(
         &self,
         chat_request: ChatRequest,

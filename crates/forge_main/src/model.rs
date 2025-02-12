@@ -63,9 +63,6 @@ pub enum Command {
     /// Start a new conversation while preserving history.
     /// This can be triggered with the '/new' command.
     New,
-    /// Reload the conversation with the original prompt.
-    /// This can be triggered with the '/reload' command.
-    Reload,
     /// A regular text message from the user to be processed by the chat system.
     /// Any input that doesn't start with '/' is treated as a message.
     Message(String),
@@ -114,7 +111,6 @@ impl Command {
 
         match trimmed {
             "/new" => Command::New,
-            "/reload" => Command::Reload,
             "/info" => Command::Info,
             "/exit" => Command::Exit,
             "/models" => Command::Models,
