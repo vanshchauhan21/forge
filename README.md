@@ -28,9 +28,8 @@ Code-Forge is an AI-powered interactive shell that stands out through:
   - [3. Model Flexibility](#3-model-flexibility)
   - [4. Autocomplete](#4-autocomplete)
   - [5. Custom Instructions](#5-custom-instructions)
-  - [6. Custom Agents](#6-custom-agents)
-  - [7. WYSIWYG Shell Integration](#7-wysiwyg-shell-integration)
-  - [8. Command Interruption](#8-command-interruption)
+  - [6. WYSIWYG Shell Integration](#6-wysiwyg-shell-integration)
+  - [7. Command Interruption](#7-command-interruption)
 - [Why Shell?](#why-shell)
 - [Support Us](#support-us)
 
@@ -150,115 +149,11 @@ Tailor Code-Forge to your specific needs with custom instruction sets:
 forge --custom-instructions path/to/instructions.yml
 ```
 
-### 6. Custom Agents
-
-Transform forge into specialized expert agents by creating custom agent profiles that define their behavior, expertise, and capabilities. Each agent can be tailored for specific tasks or domains using mustache templates:
-
-```bash
-forge --agent prompts/technical_writer_agent.txt
-```
-
-Agent profiles support mustache templates that can access variables from the following context type:
-
-```typescript
-/**
- * Represents the complete context available to system prompts in forge.
- * All fields can be accessed using mustache template syntax.
- */
-type SystemContext = {
-  /**
-   * Environment information about the current system and workspace.
-   * Access fields using {{env.field_name}} in templates.
-   */
-  env: {
-    /**
-     * The operating system identifier.
-     * Possible values: "macos", "linux", "windows"
-     */
-    operating_system: string;
-
-    /**
-     * Absolute path to the current working directory.
-     * Example: "/Users/username/projects/my-app"
-     */
-    current_working_directory: string;
-
-    /**
-     * Path to the default shell being used.
-     * Usually "/bin/rbash" for restricted shell mode
-     * or system default like "/bin/bash", "/bin/zsh"
-     */
-    default_shell: string;
-
-    /**
-     * Absolute path to the user's home directory.
-     * Example: "/Users/username"
-     */
-    home_directory: string;
-
-    /**
-     * List of files and directories in the current working directory.
-     * Includes both files and subdirectories at the root level.
-     */
-    file_list: string[];
-  };
-
-  /**
-   * Detailed information about available tools and their capabilities.
-   * Includes function names, descriptions, parameters, and return types.
-   * Access using {{tool_information}} in templates.
-   */
-  tool_information: string;
-
-  /**
-   * Indicates whether tools are available in the current context.
-   * Use {{#if tool_supported}}...{{/if}} for conditional rendering.
-   */
-  tool_supported: boolean;
-
-  /**
-   * Custom instructions provided via --custom-instructions flag.
-   * Will be null if no custom instructions were provided.
-   * Access using {{custom_instructions}} in templates.
-   */
-  custom_instructions: string | null;
-
-  /**
-   * Array of relevant file paths in the current context.
-   * Paths are relative to the current working directory.
-   * Iterate using {{#each files}}{{this}}{{/each}} in templates.
-   */
-  files: string[];
-};
-```
-
-**Example custom prompt template:**
-
-```mustache
-You are a technical expert working in the {{env.operating_system}} environment.
-Current directory: {{env.current_working_directory}}
-
-Available tools:
-{{tool_information}}
-
-Your task is to assist with development tasks in this context using the available tools.
-{{#if custom_instructions}}
-Additional instructions: {{custom_instructions}}
-{{/if}}
-
-Files in scope:
-{{#each files}}
-- {{this}}
-{{/each}}
-```
-
-You can create your own prompt templates or modify existing ones to adapt forge's behavior to specific tasks or workflows. The system context ensures the AI assistant has full awareness of your development environment.
-
-### 7. WYSIWYG Shell Integration
+### 6. WYSIWYG Shell Integration
 
 Enhance your interactive shell experience with WYSIWYG (What You See Is What You Get) integration. 'forge' now visualizes each command executed, complete with colorful formatting, allowing you to see command outputs just as if you were typing them directly into your terminal. This feature ensures clarity and enhances interaction, making every command visible in rich detail.
 
-### 8. Command Interruption
+### 7. Command Interruption
 
 Stay in control of your shell environment with intuitive command handling:
 
