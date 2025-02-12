@@ -4,11 +4,63 @@ use std::sync::Arc;
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use futures::{Stream, StreamExt};
-use serde_json::Value;
+use schemars::{schema_for, JsonSchema};
+use serde::{Deserialize, Serialize};
 
 use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
+
+#[derive(Debug, JsonSchema, Deserialize, Serialize, Clone)]
+pub struct DispatchEvent {
+    pub name: String,
+    pub value: String,
+}
+
+impl From<DispatchEvent> for UserContext {
+    fn from(event: DispatchEvent) -> Self {
+        Self { event }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UserContext {
+    event: DispatchEvent,
+}
+
+impl NamedTool for DispatchEvent {
+    fn tool_name() -> ToolName {
+        ToolName::new("forge_tool_event_dispatch")
+    }
+}
+
+impl DispatchEvent {
+    pub fn tool_definition() -> ToolDefinition {
+        ToolDefinition {
+            name: Self::tool_name(),
+            description: "Dispatches an event with the provided name and value".to_string(),
+            input_schema: schema_for!(Self),
+            output_schema: None,
+        }
+    }
+
+    pub fn parse(tool_call: &ToolCallFull) -> Option<Self> {
+        if tool_call.name != Self::tool_definition().name {
+            return None;
+        }
+        serde_json::from_value(tool_call.arguments.clone()).ok()
+    }
+
+    pub fn new(name: impl ToString, value: impl ToString) -> Self {
+        Self { name: name.to_string(), value: value.to_string() }
+    }
+
+    pub fn task(value: impl ToString) -> Self {
+        Self::new(Self::USER_TASK, value)
+    }
+
+    pub const USER_TASK: &'static str = "user_task";
+}
 
 pub struct AgentMessage<T> {
     pub agent: AgentId,
@@ -74,8 +126,8 @@ impl<F: App> Orchestrator<F> {
         let mut forge_tools = self.init_default_tool_definitions();
 
         // Adding self to the list of tool definitions
-        forge_tools.push(ReadVariable::tool_definition());
-        forge_tools.push(WriteVariable::tool_definition());
+
+        forge_tools.push(DispatchEvent::tool_definition());
 
         forge_tools
             .into_iter()
@@ -164,39 +216,18 @@ impl<F: App> Orchestrator<F> {
         Ok(ChatCompletionResult { content, tool_calls })
     }
 
-    async fn write_variable(
-        &self,
-        agent_id: &AgentId,
-        tool_call: &ToolCallFull,
-        write: WriteVariable,
-    ) -> anyhow::Result<ToolResult> {
-        let value = Value::from(write.value.clone());
-        self.workflow
-            .write_variable(write.name.clone(), value.clone())
-            .await;
-        self.send_message(
-            agent_id,
-            ChatResponse::VariableSet { key: write.name.clone(), value },
+    async fn dispatch(&self, event: &DispatchEvent) -> anyhow::Result<()> {
+        join_all(
+            self.workflow
+                .entries(event.name.as_str())
+                .await
+                .iter()
+                .map(|agent| self.init_agent(&agent.id, event)),
         )
-        .await?;
-        Ok(ToolResult::from(tool_call.clone())
-            .success(format!("Variable {} set to {}", write.name, write.value)))
-    }
-
-    async fn read_variable(
-        &self,
-        tool_call: &ToolCallFull,
-        read: ReadVariable,
-    ) -> anyhow::Result<ToolResult> {
-        let output = self.workflow.read_variable(&read.name).await;
-        let result = match output {
-            Some(value) => {
-                ToolResult::from(tool_call.clone()).success(serde_json::to_string(&value)?)
-            }
-            None => ToolResult::from(tool_call.clone())
-                .failure(format!("Variable {} not found", read.name)),
-        };
-        Ok(result)
+        .await
+        .into_iter()
+        .collect::<anyhow::Result<Vec<()>>>()?;
+        Ok(())
     }
 
     #[async_recursion]
@@ -205,19 +236,11 @@ impl<F: App> Orchestrator<F> {
         agent_id: &AgentId,
         tool_call: &ToolCallFull,
     ) -> anyhow::Result<Option<ToolResult>> {
-        if let Some(read) = ReadVariable::parse(tool_call) {
-            self.read_variable(tool_call, read).await.map(Some)
-        } else if let Some(write) = WriteVariable::parse(tool_call) {
-            self.write_variable(agent_id, tool_call, write)
-                .await
-                .map(Some)
-        } else if let Some(agent) = self
-            .workflow
-            .find_agent(&tool_call.name.clone().into())
-            .await
-        {
-            let input = Variables::from(tool_call.arguments.clone());
-            self.init_agent(&agent.id, &input).await?;
+        if let Some(event) = DispatchEvent::parse(tool_call) {
+            self.send(agent_id, ChatResponse::Custom(event.clone()))
+                .await?;
+            self.dispatch(&event).await?;
+
             Ok(None)
         } else {
             Ok(Some(self.app.tool_service().call(tool_call.clone()).await))
@@ -240,34 +263,31 @@ impl<F: App> Orchestrator<F> {
                 } => {
                     let mut summarize = Summarize::new(&mut context, *token_limit);
                     while let Some(mut summary) = summarize.summarize() {
-                        let mut input = Variables::default();
-                        input.set(input_key, summary.get());
-
+                        let input = DispatchEvent::new(input_key, summary.get());
                         self.init_agent(agent_id, &input).await?;
 
                         let value = self
                             .workflow
-                            .read_variable(output_key)
+                            .get_event(output_key)
                             .await
                             .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
 
                         summary.set(serde_json::to_string(&value)?);
                     }
                 }
-                Transform::User { agent_id, input: input_key, output: output_key } => {
+                Transform::User { agent_id, output: output_key } => {
                     if let Some(ContextMessage::ContentMessage(ContentMessage {
                         role: Role::User,
                         content,
                         ..
                     })) = context.messages.last_mut()
                     {
-                        let mut input = Variables::default();
-                        input.set(input_key, Value::from(content.clone()));
+                        let task = DispatchEvent::task(content.clone());
+                        self.init_agent(agent_id, &task).await?;
 
-                        self.init_agent(agent_id, &input).await?;
                         let output = self
                             .workflow
-                            .read_variable(output_key)
+                            .get_event(output_key)
                             .await
                             .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
 
@@ -277,8 +297,7 @@ impl<F: App> Orchestrator<F> {
                     }
                 }
                 Transform::PassThrough { agent_id, input: input_key } => {
-                    let mut input = Variables::default();
-                    input.set(input_key, context.to_text());
+                    let input = DispatchEvent::new(input_key, context.to_text());
 
                     // NOTE: Tap transformers will not modify the context
                     self.init_agent(agent_id, &input).await?;
@@ -289,7 +308,7 @@ impl<F: App> Orchestrator<F> {
         Ok(context)
     }
 
-    async fn init_agent(&self, agent: &AgentId, input: &Variables) -> anyhow::Result<()> {
+    async fn init_agent(&self, agent: &AgentId, event: &DispatchEvent) -> anyhow::Result<()> {
         let agent = self.workflow.get_agent(agent).await?;
 
         let mut context = if agent.ephemeral {
@@ -301,7 +320,9 @@ impl<F: App> Orchestrator<F> {
             }
         };
 
-        let content = agent.user_prompt.render(input)?;
+        let content = agent
+            .user_prompt
+            .render(&UserContext::from(event.clone()))?;
         context = context.add_message(ContextMessage::user(content));
 
         loop {
@@ -348,18 +369,8 @@ impl<F: App> Orchestrator<F> {
     }
 
     pub async fn execute(&self, chat_request: ChatRequest) -> anyhow::Result<()> {
-        let input = Variables::new_pair("task", chat_request.content);
-        join_all(
-            self.workflow
-                .entries()
-                .await
-                .iter()
-                .map(|agent| self.init_agent(&agent.id, &input)),
-        )
-        .await
-        .into_iter()
-        .collect::<anyhow::Result<Vec<()>>>()?;
-
+        let event = DispatchEvent::task(chat_request.content);
+        self.dispatch(&event).await?;
         Ok(())
     }
 }

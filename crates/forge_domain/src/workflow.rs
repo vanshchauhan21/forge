@@ -1,19 +1,20 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use forge_stream::MpscStream;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tokio::sync::RwLock;
 
 use crate::{
-    Agent, AgentId, App, ChatRequest, ChatResponse, Context, Orchestrator, SystemContext, Variables,
+    Agent, AgentId, App, ChatRequest, ChatResponse, Context, DispatchEvent, Orchestrator,
+    SystemContext,
 };
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Workflow {
     pub agents: Vec<Agent>,
-    #[serde(skip_serializing_if = "Variables::is_empty")]
-    pub variables: Variables,
+    #[serde(skip)]
+    pub events: HashMap<String, DispatchEvent>,
 }
 
 impl Workflow {
@@ -35,11 +36,11 @@ impl Workflow {
             .ok_or_else(|| crate::Error::AgentUndefined(id.clone()))
     }
 
-    pub fn entries(&self) -> Vec<Agent> {
+    pub fn entries(&self, event_name: &str) -> Vec<Agent> {
         self.agents
             .iter()
-            .filter(|a| a.entry)
             .filter(|a| a.state.turn_count < a.max_turns)
+            .filter(|a| a.subscribe.contains(&event_name.to_string()))
             .cloned()
             .collect::<Vec<_>>()
     }
@@ -60,14 +61,14 @@ impl ConcurrentWorkflow {
         guard.find_agent(id).and_then(|a| a.state.context.clone())
     }
 
-    pub async fn write_variable(&self, name: impl ToString, value: Value) {
+    pub async fn insert_event(&self, event: DispatchEvent) {
         let mut guard = self.workflow.write().await;
-        guard.variables.set(name.to_string(), value);
+        guard.events.insert(event.name.to_string(), event);
     }
 
-    pub async fn read_variable(&self, name: &str) -> Option<Value> {
+    pub async fn get_event(&self, name: &str) -> Option<DispatchEvent> {
         let guard = self.workflow.read().await;
-        guard.variables.get(name).cloned()
+        guard.events.get(name).cloned()
     }
 
     pub async fn find_agent(&self, id: &AgentId) -> Option<Agent> {
@@ -86,9 +87,9 @@ impl ConcurrentWorkflow {
         Ok(())
     }
 
-    pub async fn entries(&self) -> Vec<Agent> {
+    pub async fn entries(&self, event_name: &str) -> Vec<Agent> {
         let guard = self.workflow.read().await;
-        guard.entries()
+        guard.entries(event_name)
     }
 
     pub async fn complete_turn(&self, agent: &AgentId) -> crate::Result<()> {

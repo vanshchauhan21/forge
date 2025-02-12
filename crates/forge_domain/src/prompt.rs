@@ -26,7 +26,7 @@ impl<V> Prompt<V> {
     }
 }
 
-impl<V: Serialize> Prompt<V> {
+impl<Context: Serialize> Prompt<Context> {
     /// Register all known partial templates with the Handlebars registry
     fn register_partials(hb: &mut Handlebars) {
         // Register all partial templates. Template names must match the file names
@@ -53,7 +53,7 @@ impl<V: Serialize> Prompt<V> {
         }
     }
 
-    pub fn render(&self, ctx: &V) -> crate::Result<String> {
+    pub fn render(&self, ctx: &Context) -> crate::Result<String> {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
         hb.register_escape_fn(|str| str.to_string());

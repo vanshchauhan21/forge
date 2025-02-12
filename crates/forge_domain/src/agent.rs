@@ -1,23 +1,13 @@
 use derive_builder::Builder;
 use derive_more::derive::Display;
 use derive_setters::Setters;
-use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
 use crate::prompt::Prompt;
-use crate::variables::Variables;
-use crate::{Context, Environment, ModelId, ToolDefinition, ToolName};
+use crate::{Context, Environment, ModelId, ToolName, UserContext};
 
 fn is_false(b: &bool) -> bool {
     !*b
-}
-
-fn is_true(b: &bool) -> bool {
-    *b
-}
-
-fn default_entry() -> bool {
-    true
 }
 
 #[derive(Default, Setters, Clone, Serialize, Deserialize)]
@@ -59,9 +49,10 @@ impl From<ToolName> for AgentId {
 pub struct Agent {
     pub id: AgentId,
     pub model: ModelId,
-    pub description: String,
+    #[builder(default)]
+    pub description: Option<String>,
     pub system_prompt: Prompt<SystemContext>,
-    pub user_prompt: Prompt<Variables>,
+    pub user_prompt: Prompt<UserContext>,
 
     /// Suggests if the agent needs to maintain its state for the lifetime of
     /// the program.
@@ -78,15 +69,10 @@ pub struct Agent {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub transforms: Vec<Transform>,
 
-    /// Downstream agents that this agent can handover to
+    /// Used to specify the events the agent is interested in
     #[builder(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub handovers: Vec<Downstream>,
-
-    /// Represents that the agent is the entry point to the workflow
-    #[builder(default = true)]
-    #[serde(default = "default_entry", skip_serializing_if = "is_true")]
-    pub entry: bool,
+    pub subscribe: Vec<String>,
 
     /// Maximum number of turns the agent can take
     #[builder(default = "1024")]
@@ -104,17 +90,6 @@ pub struct AgentState {
     pub context: Option<Context>,
 }
 
-impl From<Agent> for ToolDefinition {
-    fn from(value: Agent) -> Self {
-        ToolDefinition {
-            name: ToolName::new(value.id.0),
-            description: value.description,
-            input_schema: schema_for!(Variables),
-            output_schema: None,
-        }
-    }
-}
-
 /// Transformations that can be applied to the agent's context before sending it
 /// upstream to the provider.
 #[derive(Clone, Serialize, Deserialize)]
@@ -129,18 +104,9 @@ pub enum Transform {
     },
 
     /// Works on the user prompt by enriching it with additional information
-    User {
-        agent_id: AgentId,
-        input: String,
-        output: String,
-    },
+    User { agent_id: AgentId, output: String },
 
     /// Intercepts the context and performs an operation without changing the
     /// context
     PassThrough { agent_id: AgentId, input: String },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Downstream {
-    pub agent: AgentId,
 }

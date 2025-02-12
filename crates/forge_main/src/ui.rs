@@ -220,9 +220,9 @@ impl<F: API> UI<F> {
                     )?;
                 }
             }
-            ChatResponse::VariableSet { key, value } => {
-                if key == "title" {
-                    self.state.current_title = value.as_str().map(String::from);
+            ChatResponse::Custom(event) => {
+                if event.name == "title" {
+                    self.state.current_title = Some(event.value);
                 }
             }
             ChatResponse::Usage(u) => {

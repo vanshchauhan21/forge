@@ -1,6 +1,5 @@
 use forge_domain::{
-    Agent, AgentBuilder, AgentId, Environment, NamedTool, Prompt, SystemContext, Variables,
-    Workflow, WriteVariable,
+    Agent, AgentBuilder, AgentId, DispatchEvent, Environment, NamedTool, Prompt, Workflow,
 };
 
 const TITLE_GENERATOR_TEMPLATE: &str =
@@ -18,28 +17,26 @@ pub struct ForgeWorkflow {
 
 impl ForgeWorkflow {
     pub fn new(env: Environment) -> Self {
-        let agent = AgentBuilder::default().entry(true);
+        let agent = AgentBuilder::default().subscribe(vec![DispatchEvent::USER_TASK.to_string()]);
 
         let title_agent = agent
             .clone()
             .id(AgentId::new("title"))
             .model(env.small_model_id.clone())
-            .description("Generates a title for the provided user task")
-            .user_prompt(Prompt::<Variables>::new(
-                "<technical_content>{{task}}</technical_content>",
+            .user_prompt(Prompt::new(
+                "<technical_content>{{event.value}}</technical_content>",
             ))
-            .system_prompt(Prompt::<SystemContext>::new(TITLE_GENERATOR_TEMPLATE))
+            .system_prompt(Prompt::new(TITLE_GENERATOR_TEMPLATE))
             .max_turns(1u64)
-            .tools(vec![WriteVariable::tool_name()]);
+            .tools(vec![DispatchEvent::tool_name()]);
 
         let developer_agent = agent
             .clone()
             .id(AgentId::new("developer"))
             .model(env.large_model_id.clone())
             .ephemeral(false)
-            .description("Does all the engineering tasks provided by the user")
-            .user_prompt(Prompt::<Variables>::new("<task>{{task}}</task>"))
-            .system_prompt(Prompt::<SystemContext>::new(SOFTWARE_ENGINEER_TEMPLATE))
+            .user_prompt(Prompt::new("<task>{{event.value}}</task>"))
+            .system_prompt(Prompt::new(SOFTWARE_ENGINEER_TEMPLATE))
             .tools(
                 tools(&env)
                     .iter()
@@ -58,7 +55,7 @@ impl From<ForgeWorkflow> for Workflow {
     fn from(value: ForgeWorkflow) -> Self {
         Self {
             agents: vec![value.title_agent, value.developer_agent],
-            variables: Variables::default(),
+            events: Default::default(),
         }
     }
 }
