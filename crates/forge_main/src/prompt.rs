@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use derive_setters::Setters;
-use forge_domain::Usage;
+use forge_api::Usage;
 use nu_ansi_term::{Color, Style};
 use reedline::{Prompt, PromptHistorySearchStatus};
 

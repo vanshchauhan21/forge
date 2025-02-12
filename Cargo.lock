@@ -897,9 +897,8 @@ dependencies = [
  "crossterm 0.28.1",
  "derive_setters",
  "dirs",
- "forge_app",
+ "forge_api",
  "forge_display",
- "forge_domain",
  "forge_tracker",
  "forge_walker",
  "inquire",
@@ -923,6 +922,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "forge_app",
+ "forge_domain",
+ "forge_infra",
+ "forge_stream",
+ "forge_walker",
+]
+
+[[package]]
 name = "forge_app"
 version = "0.1.0"
 dependencies = [
@@ -938,6 +950,7 @@ dependencies = [
  "dotenv",
  "forge_domain",
  "forge_open_router",
+ "forge_stream",
  "forge_tool",
  "forge_walker",
  "futures",
@@ -993,8 +1006,10 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "chrono",
+ "derive_builder",
  "derive_more 1.0.0",
  "derive_setters",
+ "forge_stream",
  "futures",
  "handlebars",
  "html-escape",
@@ -1016,12 +1031,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge_infra"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dirs",
+ "dotenv",
+ "forge_app",
+ "forge_domain",
+ "tokio",
+]
+
+[[package]]
 name = "forge_inte"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "forge_app",
- "forge_domain",
+ "forge_api",
  "futures",
  "tokio",
  "tokio-stream",
@@ -1049,6 +1076,14 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
+]
+
+[[package]]
+name = "forge_stream"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "tokio",
 ]
 
 [[package]]

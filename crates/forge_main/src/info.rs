@@ -1,7 +1,7 @@
 use std::fmt;
 
 use colored::Colorize;
-use forge_domain::{Environment, Usage};
+use forge_api::{Environment, Usage};
 
 pub enum Section {
     Title(String),
@@ -54,6 +54,7 @@ impl From<&Environment> for Info {
             .add_title("Models")
             .add_item("Primary Model", &env.large_model_id)
             .add_item("Secondary Model", &env.small_model_id)
+            .add_title("Paths")
             .add_item("Config", env.base_path.display())
             .add_item("Logs", env.log_path().display())
             .add_item("Database", env.db_path().display())

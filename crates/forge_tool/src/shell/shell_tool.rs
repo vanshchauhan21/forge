@@ -130,6 +130,7 @@ impl ExecutableTool for Shell {
 mod tests {
     use std::{env, fs};
 
+    use forge_domain::ModelId;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -146,8 +147,8 @@ mod tests {
                 "/bin/sh".to_string()
             },
             api_key: String::new(),
-            large_model_id: String::new(),
-            small_model_id: String::new(),
+            large_model_id: ModelId::new("gpt-4"),
+            small_model_id: ModelId::new("gpt-0"),
             base_path: PathBuf::new(),
         }
     }

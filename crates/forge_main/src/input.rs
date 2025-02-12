@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use forge_api::{Environment, Usage};
 use forge_display::TitleFormat;
-use forge_domain::{Environment, Usage};
 use tokio::fs;
 
 use crate::console::CONSOLE;
@@ -11,7 +11,7 @@ use crate::model::{Command, UserInput};
 use crate::prompt::ForgePrompt;
 
 /// Console implementation for handling user input via command line.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Console {
     env: Environment,
 }
@@ -45,12 +45,9 @@ impl UserInput for Console {
                 Ok(ReadResult::Continue) => continue,
                 Ok(ReadResult::Exit) => return Ok(Command::Exit),
                 Ok(ReadResult::Empty) => continue,
-                Ok(ReadResult::Success(text)) => match Command::parse(&text) {
-                    Ok(input) => return Ok(input),
-                    Err(e) => {
-                        CONSOLE.writeln(TitleFormat::failed(e.to_string()).format())?;
-                    }
-                },
+                Ok(ReadResult::Success(text)) => {
+                    return Ok(Command::parse(&text));
+                }
                 Err(e) => {
                     CONSOLE.writeln(TitleFormat::failed(e.to_string()).format())?;
                 }

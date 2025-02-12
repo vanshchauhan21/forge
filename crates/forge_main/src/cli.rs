@@ -32,19 +32,21 @@ pub struct Cli {
     #[arg(long, short = 'i', value_parser = validate_path)]
     pub custom_instructions: Option<PathBuf>,
 
-    /// Path to a file containing the system prompt.
+    /// Enable restricted shell mode for enhanced security.
     ///
-    /// Overrides the default system prompt used to initialize the AI assistant.
-    #[arg(long, short = 's', value_parser = validate_path)]
-    pub system_prompt: Option<PathBuf>,
-
-    /// Run shell in unrestricted mode.
+    /// Controls the shell execution environment:
+    /// - Default (false): Uses standard shells (bash on Unix/Mac, cmd on
+    ///   Windows)
+    /// - Restricted (true): Uses restricted shell (rbash) with limited
+    ///   capabilities
     ///
-    /// By default, the shell runs in restricted mode (rbash). This flag enables
-    /// running in unrestricted mode using standard shell (sh/bash).
-    /// WARNING: Unrestricted mode grants more system access - use with caution.
-    #[arg(long, default_value_t = false, short = 'u')]
-    pub unrestricted: bool,
+    /// The restricted mode provides additional security by preventing:
+    /// - Changing directories
+    /// - Setting/modifying environment variables
+    /// - Executing commands with absolute paths
+    /// - Modifying shell options
+    #[arg(long, default_value_t = false, short = 'r')]
+    pub restricted: bool,
 }
 
 fn validate_path(path: &str) -> Result<PathBuf, String> {

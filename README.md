@@ -14,7 +14,7 @@ Code-Forge is an AI-powered interactive shell that stands out through:
 - Seamless integration with existing Unix tools and workflows
 - Context-aware assistance that understands your development environment and workflows
 - Natural language interface to powerful system operations
-- Enhanced security with restricted bash (rbash) by default
+- Enhanced security features with optional restricted shell mode
 
 **Table of Contents**
 
@@ -98,20 +98,25 @@ forge
 
 ### 2. Enhanced Security
 
-Code-Forge prioritizes security by using restricted bash (rbash) by default, limiting potentially dangerous operations:
+Code-Forge prioritizes security by providing a restricted shell mode (rbash) that limits potentially dangerous operations:
 
-- **Default Restricted Mode**: Uses rbash to prevent unauthorized access and potentially harmful operations
-- **Unrestricted Access**: Available when needed via the `-u` flag
-- **Safe by Default**: Protects your system while maintaining functionality
+- **Flexible Security Options**: Choose between standard and restricted modes based on your needs
+- **Restricted Mode**: Enable with `-r` flag to prevent potentially harmful operations
+- **Standard Mode**: Uses regular shell by default (bash on Unix/Mac, cmd on Windows)
+- **Security Controls**: Restricted mode prevents:
+  - Changing directories
+  - Setting/modifying environment variables
+  - Executing commands with absolute paths
+  - Modifying shell options
 
 **Example**:
 
 ```bash
-# Default secure mode
+# Standard mode (default)
 forge
 
-# Unrestricted mode when needed
-forge -u
+# Restricted secure mode
+forge -r
 ```
 
 ### 3. Model Flexibility

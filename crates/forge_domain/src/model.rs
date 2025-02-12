@@ -2,8 +2,6 @@ use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use super::Environment;
-
 #[derive(Clone, Debug, Deserialize, Serialize, Setters)]
 pub struct Model {
     pub id: ModelId,
@@ -37,11 +35,5 @@ impl ModelId {
 impl ModelId {
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-impl ModelId {
-    pub fn from_env(env: &Environment) -> Self {
-        ModelId(env.large_model_id.clone())
     }
 }

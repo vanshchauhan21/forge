@@ -1,0 +1,13 @@
+[package]
+name = "forge_api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+async-trait = "0.1.86"
+forge_domain = { path = "../forge_domain" }
+forge_stream = { path = "../forge_stream" }
+forge_app = { path = "../forge_app" }
+forge_walker = { path = "../forge_walker" }
+forge_infra = {path = "../forge_infra"}

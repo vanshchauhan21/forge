@@ -1,0 +1,13 @@
+[package]
+name = "forge_infra"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+async-trait = "0.1.86"
+dirs = "6.0.0"
+dotenv = "0.15.0"
+forge_domain = { path = "../forge_domain" }
+forge_app = { path = "../forge_app" }
+tokio = "1.43.0"

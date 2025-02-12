@@ -1,7 +1,4 @@
-use std::path::Path;
-
-use forge_app::{APIService, EnvironmentFactory, Service};
-use forge_domain::{ChatRequest, ChatResponse, ModelId};
+use forge_api::{AgentMessage, ChatRequest, ChatResponse, ModelId, TestAPI, API};
 use tokio_stream::StreamExt;
 
 const MAX_RETRIES: usize = 5;
@@ -9,32 +6,42 @@ const MAX_RETRIES: usize = 5;
 /// Test fixture for API testing that supports parallel model validation
 struct Fixture {
     task: String,
+    large_model_id: ModelId,
+    small_model_id: ModelId,
 }
 
 impl Fixture {
     /// Create a new test fixture with the given task
-    fn new(task: impl Into<String>) -> Self {
-        Self { task: task.into() }
+    fn new(task: impl Into<String>, large_model_id: ModelId, small_model_id: ModelId) -> Self {
+        Self { task: task.into(), large_model_id, small_model_id }
     }
 
     /// Get the API service, panicking if not validated
-    fn api(&self) -> impl APIService {
+    fn api(&self) -> impl API {
         // NOTE: In tests the CWD is not the project root
-        let path = Path::new("../../").to_path_buf();
-        let path = path.canonicalize().unwrap();
-        let env = EnvironmentFactory::new(path, false).create().unwrap();
-        Service::api_service(env, None).unwrap()
+        TestAPI::init(
+            false,
+            self.large_model_id.clone(),
+            self.small_model_id.clone(),
+        )
     }
 
     /// Get model response as text
-    async fn get_model_response(&self, model: &str) -> String {
-        let request = ChatRequest::new(ModelId::new(model), self.task.clone());
+    async fn get_model_response(&self) -> String {
+        let request = ChatRequest::new(self.task.clone());
         self.api()
             .chat(request)
             .await
             .unwrap()
             .filter_map(|message| match message.unwrap() {
-                ChatResponse::Text(text) => Some(text),
+                AgentMessage { agent, message: ChatResponse::Text(text) } => {
+                    // TODO: don't hard code agent id here
+                    if agent.as_str() == "developer" {
+                        Some(text)
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             })
             .collect::<Vec<_>>()
@@ -51,7 +58,7 @@ impl Fixture {
         check_response: impl Fn(&str) -> bool,
     ) -> Result<(), String> {
         for attempt in 0..MAX_RETRIES {
-            let response = self.get_model_response(model).await;
+            let response = self.get_model_response().await;
 
             if check_response(&response) {
                 println!(
@@ -77,6 +84,8 @@ macro_rules! generate_model_test {
         async fn test_find_cat_name() {
             let fixture = Fixture::new(
                 "There is a cat hidden in the codebase. What is its name? hint: it's present in juniper.md file. You can use any tool at your disposal to find it. Do not ask me any questions.",
+                ModelId::new($model),
+                ModelId::new($model),
             );
 
             let result = fixture

@@ -1,4 +1,4 @@
-use forge_domain::Environment;
+use forge_api::Environment;
 use tracing_appender::non_blocking::WorkerGuard;
 
 pub fn init_tracing(env: Environment) -> anyhow::Result<WorkerGuard> {

@@ -33,6 +33,9 @@ pub enum Error {
 
     #[error("Head agent not found")]
     HeadAgentUndefined,
+
+    #[error("Agent '{0}' has reached max turns of {1}")]
+    MaxTurnsReached(AgentId, u64),
 }
 
 pub type Result<A> = std::result::Result<A, Error>;

@@ -1,0 +1,8 @@
+[package]
+name = "forge_stream"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = "0.3.31"
+tokio = "1.43.0"

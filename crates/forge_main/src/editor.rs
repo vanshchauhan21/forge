@@ -1,4 +1,4 @@
-use forge_domain::Environment;
+use forge_api::Environment;
 use nu_ansi_term::{Color, Style};
 use reedline::{
     default_emacs_keybindings, ColumnarMenu, DefaultHinter, EditCommand, Emacs, FileBackedHistory,

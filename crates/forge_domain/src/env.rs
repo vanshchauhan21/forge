@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
-use async_trait::async_trait;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, Setters, Clone, Serialize, Deserialize)]
+use crate::ModelId;
+
+#[derive(Debug, Setters, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[setters(strip_option)]
 /// Represents the environment in which the application is running.
@@ -20,9 +21,9 @@ pub struct Environment {
     /// The Forge API key.
     pub api_key: String,
     /// The large model ID.
-    pub large_model_id: String,
+    pub large_model_id: ModelId,
     /// The small model ID.
-    pub small_model_id: String,
+    pub small_model_id: ModelId,
 
     /// The base path relative to which everything else stored.
     pub base_path: PathBuf,
@@ -40,14 +41,4 @@ impl Environment {
     pub fn history_path(&self) -> PathBuf {
         self.base_path.join(".forge_history")
     }
-}
-/// Repository for accessing system environment information
-#[async_trait]
-pub trait EnvironmentRepository {
-    /// Get the current environment information including:
-    /// - Operating system
-    /// - Current working directory
-    /// - Home directory
-    /// - Default shell
-    async fn get_environment(&self) -> anyhow::Result<Environment>;
 }

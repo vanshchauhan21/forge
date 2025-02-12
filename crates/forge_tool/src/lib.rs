@@ -42,6 +42,8 @@ pub fn tools(env: &Environment) -> Vec<Tool> {
 mod tests {
     use std::path::PathBuf;
 
+    use forge_domain::ModelId;
+
     use super::*;
 
     /// Create a default test environment
@@ -56,8 +58,8 @@ mod tests {
                 "/bin/sh".to_string()
             },
             api_key: String::new(),
-            large_model_id: String::new(),
-            small_model_id: String::new(),
+            large_model_id: ModelId::new("gpt-4"),
+            small_model_id: ModelId::new("gpt-3"),
             base_path: PathBuf::new(),
         }
     }
