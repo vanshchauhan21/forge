@@ -21,6 +21,20 @@ fn generate() {
         "include": [
             {
                 "os": "ubuntu-latest",
+                "target": "x86_64-unknown-linux-musl",
+                "binary_name": "forge-x86_64-unknown-linux-musl",
+                "binary_path": "target/x86_64-unknown-linux-musl/release/forge",
+                "cross": "false"
+            },
+            {
+                "os": "ubuntu-latest",
+                "target": "aarch64-unknown-linux-musl",
+                "binary_name": "forge-x86_64-unknown-linux-musl",
+                "binary_path": "target/x86_64-unknown-linux-musl/release/forge",
+                "cross": "true"
+            },
+            {
+                "os": "ubuntu-latest",
                 "target": "x86_64-unknown-linux-gnu",
                 "binary_name": "forge-x86_64-unknown-linux-gnu",
                 "binary_path": "target/x86_64-unknown-linux-gnu/release/forge",
@@ -114,6 +128,13 @@ fn generate() {
                 Step::uses("taiki-e", "setup-cross-toolchain-action", "v1")
                     .with(("target", "${{ matrix.target }}")),
             )
+            // Build add link flags
+            .add_step(
+                Step::run(r#"echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV"#)
+                    .if_condition(Expression::new(
+                        "!contains(matrix.target, '-unknown-linux-gnu')",
+                    )),
+            )
             // Build release binary
             .add_step(
                 Step::uses("ClementTsang", "cargo-action", "v0.0.6")
@@ -121,7 +142,7 @@ fn generate() {
                     .add_with(("args", "--target ${{ matrix.target }}"))
                     .add_with(("use-cross", "${{ matrix.cross }}"))
                     .add_with(("cross-version", "0.2.4"))
-                    .add_env(("RUSTFLAGS", "-C target-feature=+crt-static"))
+                    .add_env(("RUSTFLAGS", "${{ env.RUSTFLAGS }}"))
                     .add_env(("POSTHOG_API_SECRET", "${{secrets.POSTHOG_API_SECRET}}"))
                     .add_env((
                         "APP_VERSION",
