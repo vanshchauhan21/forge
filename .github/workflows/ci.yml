@@ -109,9 +109,9 @@ jobs:
           cross: 'false'
           os: ubuntu-latest
           target: x86_64-unknown-linux-musl
-        - binary_name: forge-x86_64-unknown-linux-musl
-          binary_path: target/x86_64-unknown-linux-musl/release/forge
-          cross: 'true'
+        - binary_name: forge-aarch64-unknown-linux-musl
+          binary_path: target/aarch64-unknown-linux-musl/release/forge
+          cross: 'false'
           os: ubuntu-latest
           target: aarch64-unknown-linux-musl
         - binary_name: forge-x86_64-unknown-linux-gnu
@@ -151,6 +151,8 @@ jobs:
         target: ${{ matrix.target }}
     - if: '!contains(matrix.target, ''-unknown-linux-gnu'')'
       run: echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+    - if: contains(matrix.target, 'aarch64-unknown-linux-musl')
+      run: sudo apt-get update; sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
     - uses: ClementTsang/cargo-action@v0.0.6
       with:
         command: build --release

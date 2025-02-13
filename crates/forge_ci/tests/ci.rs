@@ -29,9 +29,9 @@ fn generate() {
             {
                 "os": "ubuntu-latest",
                 "target": "aarch64-unknown-linux-musl",
-                "binary_name": "forge-x86_64-unknown-linux-musl",
-                "binary_path": "target/x86_64-unknown-linux-musl/release/forge",
-                "cross": "true"
+                "binary_name": "forge-aarch64-unknown-linux-musl",
+                "binary_path": "target/aarch64-unknown-linux-musl/release/forge",
+                "cross": "false"
             },
             {
                 "os": "ubuntu-latest",
@@ -134,6 +134,12 @@ fn generate() {
                     .if_condition(Expression::new(
                         "!contains(matrix.target, '-unknown-linux-gnu')",
                     )),
+            )
+            .add_step(
+                Step::run(r#"sudo apt-get update; sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools"#)
+                .if_condition(Expression::new(
+        "contains(matrix.target, 'aarch64-unknown-linux-musl')",
+            )),
             )
             // Build release binary
             .add_step(
