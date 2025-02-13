@@ -115,8 +115,8 @@ impl TitleFormat {
         };
         let mut result = format!("{} {} {} {}", timestamp.dimmed(), icon, label, message);
 
-        if let Some(ref usage) = self.sub_title {
-            result.push_str(&format!(" {}", usage).dimmed().to_string());
+        if let Some(ref sub_title) = self.sub_title {
+            result.push_str(&format!(" {}", sub_title).dimmed().to_string());
         }
 
         result

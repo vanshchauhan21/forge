@@ -62,13 +62,6 @@ impl<F: API> UI<F> {
         })
     }
 
-    fn context_reset_message(&self, _: &Command) -> String {
-        "All context was cleared, and we're starting fresh. Please re-add files and details so we can get started.".to_string()
-            .yellow()
-            .bold()
-            .to_string()
-    }
-
     pub async fn run(&mut self) -> Result<()> {
         // Handle direct prompt if provided
         let prompt = self.cli.prompt.clone();
@@ -90,7 +83,7 @@ impl<F: API> UI<F> {
             match input {
                 Command::New => {
                     self.api.reset().await?;
-                    CONSOLE.writeln(self.context_reset_message(&input))?;
+                    banner::display()?;
                     self.state = Default::default();
                     input = self.console.prompt(None).await?;
 
