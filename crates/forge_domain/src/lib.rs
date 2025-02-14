@@ -13,7 +13,6 @@ mod message;
 mod model;
 mod orch;
 mod prompt;
-mod provider;
 mod stream_ext;
 mod summarize;
 mod tool;
@@ -23,7 +22,6 @@ mod tool_choice;
 mod tool_definition;
 mod tool_name;
 mod tool_result;
-mod tool_service;
 mod tool_usage;
 mod user_interaction;
 mod workflow;
@@ -43,7 +41,6 @@ pub use message::*;
 pub use model::*;
 pub use orch::*;
 pub use prompt::*;
-pub use provider::*;
 pub use stream_ext::*;
 pub use summarize::*;
 pub use tool::*;
@@ -53,10 +50,28 @@ pub use tool_choice::*;
 pub use tool_definition::*;
 pub use tool_name::*;
 pub use tool_result::*;
-pub use tool_service::*;
 pub use tool_usage::*;
 pub use user_interaction::*;
 pub use workflow::*;
+
+#[async_trait::async_trait]
+pub trait ProviderService: Send + Sync + 'static {
+    async fn chat(
+        &self,
+        id: &ModelId,
+        context: Context,
+    ) -> ResultStream<ChatCompletionMessage, anyhow::Error>;
+    async fn models(&self) -> anyhow::Result<Vec<Model>>;
+    async fn parameters(&self, model: &ModelId) -> anyhow::Result<Parameters>;
+}
+
+#[async_trait::async_trait]
+pub trait ToolService: Send + Sync {
+    // TODO: should take `call` by reference
+    async fn call(&self, call: ToolCallFull) -> ToolResult;
+    fn list(&self) -> Vec<ToolDefinition>;
+    fn usage_prompt(&self) -> String;
+}
 
 /// Core app trait providing access to services and repositories.
 /// This trait follows clean architecture principles for dependency management
