@@ -10,10 +10,10 @@ pub enum PromptContent {
     File(PathBuf),
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Prompt<V> {
     pub template: PromptTemplate,
-    #[serde(skip_serializing_if = "Schema::is_empty")]
+    #[serde(flatten)]
     pub variables: Schema<V>,
 }
 
@@ -78,7 +78,7 @@ impl<S> Schema<S> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct PromptTemplate(String);
 

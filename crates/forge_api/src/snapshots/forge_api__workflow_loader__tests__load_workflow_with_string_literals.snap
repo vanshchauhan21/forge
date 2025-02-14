@@ -1,0 +1,27 @@
+---
+source: crates/forge_api/src/workflow_loader.rs
+expression: "serde_json::to_string_pretty(&workflow)?"
+---
+{
+  "agents": [
+    {
+      "id": "developer",
+      "model": "anthropic/claude-3.5-sonnet",
+      "description": null,
+      "system_prompt": {
+        "template": "You are a software developer assistant"
+      },
+      "user_prompt": {
+        "template": "<task>{{event.value}}</task>"
+      },
+      "tools": [
+        "tool_forge_fs_read",
+        "tool_forge_fs_create"
+      ],
+      "subscribe": [
+        "user_task"
+      ],
+      "max_turns": 1024
+    }
+  ]
+}

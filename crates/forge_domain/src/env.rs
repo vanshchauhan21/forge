@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use crate::ModelId;
-
 #[derive(Debug, Setters, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[setters(strip_option)]
@@ -20,11 +18,6 @@ pub struct Environment {
     pub shell: String,
     /// The Forge API key.
     pub api_key: String,
-    /// The large model ID.
-    pub large_model_id: ModelId,
-    /// The small model ID.
-    pub small_model_id: ModelId,
-
     /// The base path relative to which everything else stored.
     pub base_path: PathBuf,
 }

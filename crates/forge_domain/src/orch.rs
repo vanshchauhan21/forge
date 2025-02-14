@@ -23,7 +23,7 @@ impl From<DispatchEvent> for UserContext {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct UserContext {
     event: DispatchEvent,
 }
@@ -369,6 +369,7 @@ impl<F: App> Orchestrator<F> {
     }
 
     pub async fn execute(&self, chat_request: ChatRequest) -> anyhow::Result<()> {
+        self.workflow.init(Some(chat_request.workflow)).await;
         let event = DispatchEvent::task(chat_request.content);
         self.dispatch(&event).await?;
         Ok(())

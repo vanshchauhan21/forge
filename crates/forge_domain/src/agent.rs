@@ -1,4 +1,3 @@
-use derive_builder::Builder;
 use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
@@ -6,11 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::prompt::Prompt;
 use crate::{Context, Environment, ModelId, ToolName, UserContext};
 
-fn is_false(b: &bool) -> bool {
-    !*b
-}
-
-#[derive(Default, Setters, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Setters, Clone, Serialize, Deserialize)]
 #[setters(strip_option)]
 pub struct SystemContext {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -19,8 +14,6 @@ pub struct SystemContext {
     pub tool_information: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_supported: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_instructions: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<String>,
 }
@@ -44,47 +37,47 @@ impl From<ToolName> for AgentId {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Builder)]
-#[builder(setter(into), pattern = "immutable")]
+fn is_true(value: &bool) -> bool {
+    *value
+}
+
+fn truth() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     pub id: AgentId,
     pub model: ModelId,
-    #[builder(default)]
     pub description: Option<String>,
     pub system_prompt: Prompt<SystemContext>,
     pub user_prompt: Prompt<UserContext>,
 
     /// Suggests if the agent needs to maintain its state for the lifetime of
-    /// the program.
-    #[builder(default)]
-    #[serde(skip_serializing_if = "is_false")]
+    /// the program.    
+    #[serde(skip_serializing_if = "is_true", default = "truth")]
     pub ephemeral: bool,
 
-    /// Tools that the agent can use
-    #[builder(default)]
+    /// Tools that the agent can use    
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub tools: Vec<ToolName>,
 
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transforms: Vec<Transform>,
 
-    /// Used to specify the events the agent is interested in
-    #[builder(default)]
+    /// Used to specify the events the agent is interested in    
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub subscribe: Vec<String>,
 
-    /// Maximum number of turns the agent can take
-    #[builder(default = "1024")]
+    /// Maximum number of turns the agent can take    
     pub max_turns: u64,
 
     /// Internal state of the agent
     #[serde(skip)]
-    #[builder(default)]
     pub(crate) state: AgentState,
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AgentState {
     pub turn_count: u64,
     pub context: Option<Context>,
@@ -92,7 +85,7 @@ pub struct AgentState {
 
 /// Transformations that can be applied to the agent's context before sending it
 /// upstream to the provider.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Transform {
     /// Compresses multiple assistant messages into a single message

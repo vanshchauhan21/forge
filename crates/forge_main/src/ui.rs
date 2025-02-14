@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use colored::Colorize;
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, Model, Usage, API};
+use forge_api::{AgentMessage, ChatRequest, ChatResponse, Model, Usage, Workflow, API};
 use forge_display::TitleFormat;
 use forge_tracker::EventKind;
 use lazy_static::lazy_static;
@@ -136,8 +136,16 @@ impl<F: API> UI<F> {
     async fn chat(&mut self, content: String) -> Result<()> {
         let chat = ChatRequest {
             content: content.clone(),
-            custom_instructions: self.cli.custom_instructions.clone(),
+            workflow: match self.cli.workflow {
+                Some(ref path) => self.api.load(path).await?,
+                None => {
+                    let workflow: Workflow =
+                        include_str!("../../../templates/workflows/default.toml").parse()?;
+                    workflow
+                }
+            },
         };
+
         tokio::spawn({
             let content = content.clone();
             async move {

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -7,13 +8,15 @@ use forge_infra::ForgeInfra;
 use forge_stream::MpscStream;
 
 use crate::executor::ForgeExecutorService;
+use crate::loader::ForgeLoaderService;
 use crate::suggestion::ForgeSuggestionService;
-use crate::{ExecutorService, SuggestionService, API};
+use crate::API;
 
 pub struct ForgeAPI<F> {
     app: Arc<F>,
     _executor_service: ForgeExecutorService<F>,
     _suggestion_service: ForgeSuggestionService<F>,
+    _loader: ForgeLoaderService<F>,
 }
 
 impl<F: App + Infrastructure> ForgeAPI<F> {
@@ -22,6 +25,7 @@ impl<F: App + Infrastructure> ForgeAPI<F> {
             app: app.clone(),
             _executor_service: ForgeExecutorService::new(app.clone()),
             _suggestion_service: ForgeSuggestionService::new(app.clone()),
+            _loader: ForgeLoaderService::new(app.clone()),
         }
     }
 }
@@ -56,10 +60,15 @@ impl<F: App + Infrastructure> API for ForgeAPI<F> {
     }
 
     async fn reset(&self) -> anyhow::Result<()> {
-        self._executor_service.reset().await
+        self._executor_service.reset().await;
+        Ok(())
     }
 
     fn environment(&self) -> Environment {
         self.app.environment_service().get_environment().clone()
+    }
+
+    async fn load(&self, path: &Path) -> anyhow::Result<Workflow> {
+        self._loader.load(path).await
     }
 }

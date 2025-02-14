@@ -5,8 +5,6 @@ use forge_app::{EnvironmentService, Infrastructure};
 use forge_domain::{App, File};
 use forge_walker::Walker;
 
-use crate::SuggestionService;
-
 pub struct ForgeSuggestionService<F> {
     domain: Arc<F>,
 }
@@ -17,9 +15,8 @@ impl<F: App> ForgeSuggestionService<F> {
     }
 }
 
-#[async_trait::async_trait]
-impl<F: App + Infrastructure> SuggestionService for ForgeSuggestionService<F> {
-    async fn suggestions(&self) -> Result<Vec<File>> {
+impl<F: App + Infrastructure> ForgeSuggestionService<F> {
+    pub async fn suggestions(&self) -> Result<Vec<File>> {
         let cwd = self
             .domain
             .environment_service()

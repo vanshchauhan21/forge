@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use forge_stream::MpscStream;
@@ -10,7 +11,7 @@ use crate::{
     SystemContext,
 };
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
     pub agents: Vec<Agent>,
     #[serde(skip)]
@@ -46,7 +47,7 @@ impl Workflow {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct ConcurrentWorkflow {
     workflow: Arc<RwLock<Workflow>>,
 }
@@ -112,10 +113,10 @@ impl ConcurrentWorkflow {
         ctx: SystemContext,
     ) -> MpscStream<anyhow::Result<crate::AgentMessage<ChatResponse>>> {
         let workflow = self.clone();
+
         MpscStream::spawn(move |tx| async move {
             let tx = Arc::new(tx);
             let orch = Orchestrator::new(domain, workflow, ctx, Some(tx.clone()));
-
             match orch.execute(request).await {
                 Ok(_) => {}
                 Err(err) => tx.send(Err(err)).await.unwrap(),
@@ -123,11 +124,24 @@ impl ConcurrentWorkflow {
         })
     }
 
-    pub async fn reset(&self) -> crate::Result<()> {
+    /// Initialize the concurrent workflow with the given workflow. If None is
+    /// provided then it's initialized to an empty workflow.
+    pub async fn init(&self, workflow: Option<Workflow>) {
         let mut guard = self.workflow.write().await;
-        for agent in guard.agents.iter_mut() {
-            agent.state = Default::default();
+        if let Some(workflow) = workflow {
+            *guard = workflow;
+        } else {
+            for agent in guard.agents.iter_mut() {
+                agent.state = Default::default();
+            }
         }
-        Ok(())
+    }
+}
+
+impl FromStr for Workflow {
+    type Err = toml::de::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        toml::de::from_str(s)
     }
 }

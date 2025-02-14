@@ -1,10 +1,10 @@
 mod app;
 mod provider;
 mod tool_service;
-mod workflow;
+
+use std::path::Path;
 
 pub use app::*;
-pub use workflow::*;
 
 /// Repository for accessing system environment information
 #[async_trait::async_trait]
@@ -24,7 +24,7 @@ pub trait EnvironmentService {
 #[async_trait::async_trait]
 pub trait FileReadService: Send + Sync {
     /// Reads the content of a file at the specified path.
-    async fn read(&self, path: std::path::PathBuf) -> anyhow::Result<String>;
+    async fn read(&self, path: &Path) -> anyhow::Result<String>;
 }
 
 pub trait Infrastructure: Send + Sync + 'static {

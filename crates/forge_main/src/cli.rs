@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -26,12 +25,6 @@ pub struct Cli {
     #[arg(long, default_value_t = false)]
     pub verbose: bool,
 
-    /// Path to a file containing custom instructions.
-    ///
-    /// These instructions modify the behavior of the AI assistant.
-    #[arg(long, short = 'i', value_parser = validate_path)]
-    pub custom_instructions: Option<PathBuf>,
-
     /// Enable restricted shell mode for enhanced security.
     ///
     /// Controls the shell execution environment:
@@ -47,25 +40,8 @@ pub struct Cli {
     /// - Modifying shell options
     #[arg(long, default_value_t = false, short = 'r')]
     pub restricted: bool,
-}
 
-fn validate_path(path: &str) -> Result<PathBuf, String> {
-    let path_buf = PathBuf::from(path);
-
-    if !path_buf.exists() {
-        return Err(format!("Path does not exist: '{}'", path_buf.display()));
-    }
-
-    if !path_buf.is_file() {
-        return Err(format!("Path is not a file: '{}'", path_buf.display()));
-    }
-
-    if fs::metadata(&path_buf).is_err() {
-        return Err(format!(
-            "Unable to read file from path '{}'",
-            path_buf.display()
-        ));
-    }
-
-    Ok(path_buf)
+    /// Path to a file containing the workflow to execute.
+    #[arg(long, short = 'w')]
+    pub workflow: Option<PathBuf>,
 }

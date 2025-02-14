@@ -1,36 +1,49 @@
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, ModelId, TestAPI, API};
+use std::path::PathBuf;
+
+use forge_api::{AgentMessage, ChatRequest, ChatResponse, ForgeAPI, ModelId, API};
 use tokio_stream::StreamExt;
 
 const MAX_RETRIES: usize = 5;
+const WORKFLOW_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../templates/workflows/default.toml"
+);
 
 /// Test fixture for API testing that supports parallel model validation
 struct Fixture {
     task: String,
-    large_model_id: ModelId,
-    small_model_id: ModelId,
+    model: ModelId,
 }
 
 impl Fixture {
     /// Create a new test fixture with the given task
-    fn new(task: impl Into<String>, large_model_id: ModelId, small_model_id: ModelId) -> Self {
-        Self { task: task.into(), large_model_id, small_model_id }
+    fn new(task: impl Into<String>, model: ModelId) -> Self {
+        Self { task: task.into(), model }
     }
 
     /// Get the API service, panicking if not validated
     fn api(&self) -> impl API {
         // NOTE: In tests the CWD is not the project root
-        TestAPI::init(
-            false,
-            self.large_model_id.clone(),
-            self.small_model_id.clone(),
-        )
+        ForgeAPI::init(true)
     }
 
     /// Get model response as text
     async fn get_model_response(&self) -> String {
-        let request = ChatRequest::new(self.task.clone());
-        self.api()
-            .chat(request)
+        let api = self.api();
+        let mut workflow = api.load(&PathBuf::from(WORKFLOW_PATH)).await.unwrap();
+
+        // Reset the workflow model
+        workflow
+            .agents
+            .iter_mut()
+            .find(|a| a.id.as_str() == "developer")
+            .iter_mut()
+            .for_each(|agent| {
+                agent.model = self.model.clone();
+            });
+
+        let request = ChatRequest::new(self.task.clone(), workflow);
+        api.chat(request)
             .await
             .unwrap()
             .filter_map(|message| match message.unwrap() {
@@ -52,28 +65,27 @@ impl Fixture {
     }
 
     /// Test single model with retries
-    async fn test_single_model(
-        &self,
-        model: &str,
-        check_response: impl Fn(&str) -> bool,
-    ) -> Result<(), String> {
+    async fn test_single_model(&self, check_response: impl Fn(&str) -> bool) -> Result<(), String> {
         for attempt in 0..MAX_RETRIES {
             let response = self.get_model_response().await;
 
             if check_response(&response) {
                 println!(
                     "[{}] Successfully checked response in {} attempts",
-                    model,
+                    self.model,
                     attempt + 1
                 );
                 return Ok(());
             }
 
             if attempt < MAX_RETRIES - 1 {
-                println!("[{}] Attempt {}/{}", model, attempt + 1, MAX_RETRIES);
+                println!("[{}] Attempt {}/{}", self.model, attempt + 1, MAX_RETRIES);
             }
         }
-        Err(format!("[{}] Failed after {} attempts", model, MAX_RETRIES))
+        Err(format!(
+            "[{}] Failed after {} attempts",
+            self.model, MAX_RETRIES
+        ))
     }
 }
 
@@ -85,11 +97,10 @@ macro_rules! generate_model_test {
             let fixture = Fixture::new(
                 "There is a cat hidden in the codebase. What is its name? hint: it's present in juniper.md file. You can use any tool at your disposal to find it. Do not ask me any questions.",
                 ModelId::new($model),
-                ModelId::new($model),
             );
 
             let result = fixture
-                .test_single_model($model, |response| response.to_lowercase().contains("juniper"))
+                .test_single_model(|response| response.to_lowercase().contains("juniper"))
                 .await;
 
             assert!(result.is_ok(), "Test failure for {}: {:?}", $model, result);
