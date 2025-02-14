@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use derive_more::derive::Display;
 use derive_setters::Setters;
@@ -96,24 +95,6 @@ impl From<Context> for ConversationHistory {
             .collect();
         Self { messages }
     }
-}
-
-#[async_trait]
-pub trait ConversationRepository: Send + Sync {
-    /// Set a new conversation or update an existing one
-    async fn insert(&self, context: &Context, id: Option<ConversationId>) -> Result<Conversation>;
-
-    /// Get a conversation by its ID
-    async fn get(&self, id: ConversationId) -> Result<Conversation>;
-
-    /// List all active (non-archived) conversations
-    async fn list(&self) -> Result<Vec<Conversation>>;
-
-    /// Archive a conversation and return the updated conversation
-    async fn archive(&self, id: ConversationId) -> Result<Conversation>;
-
-    /// Set the title for a conversation
-    async fn set_title(&self, id: &ConversationId, title: String) -> Result<Conversation>;
 }
 
 #[cfg(test)]
