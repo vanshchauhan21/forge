@@ -4,6 +4,7 @@ mod chat_response;
 mod config;
 mod context;
 mod conversation;
+mod dispatch_event;
 mod env;
 mod error;
 mod file;
@@ -29,6 +30,7 @@ pub use chat_response::*;
 pub use config::*;
 pub use context::*;
 pub use conversation::*;
+pub use dispatch_event::*;
 pub use env::*;
 pub use error::*;
 pub use file::*;
@@ -67,6 +69,19 @@ pub trait ToolService: Send + Sync {
     fn usage_prompt(&self) -> String;
 }
 
+#[async_trait::async_trait]
+pub trait ConversationService: Send + Sync {
+    async fn get(&self, id: &ConversationId) -> anyhow::Result<Option<Conversation>>;
+    async fn create(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
+    async fn inc_turn(&self, id: &ConversationId, agent: &AgentId) -> anyhow::Result<()>;
+    async fn set_context(
+        &self,
+        id: &ConversationId,
+        agent: &AgentId,
+        context: Context,
+    ) -> anyhow::Result<()>;
+}
+
 /// Core app trait providing access to services and repositories.
 /// This trait follows clean architecture principles for dependency management
 /// and service/repository composition.
@@ -77,9 +92,14 @@ pub trait App: Send + Sync + 'static {
     /// The concrete type implementing provider service capabilities
     type ProviderService: ProviderService;
 
+    /// The concrete type implementing conversation repository capabilities
+    type ConversationService: ConversationService;
+
     /// Get a reference to the tool service instance
     fn tool_service(&self) -> &Self::ToolService;
 
     /// Get a reference to the provider service instance
     fn provider_service(&self) -> &Self::ProviderService;
+
+    fn conversation_service(&self) -> &Self::ConversationService;
 }

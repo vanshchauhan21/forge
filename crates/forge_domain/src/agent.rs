@@ -3,7 +3,7 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
 use crate::prompt::Prompt;
-use crate::{Context, Environment, ModelId, ToolName, UserContext};
+use crate::{Environment, ModelId, ToolName, UserContext};
 
 #[derive(Debug, Default, Setters, Clone, Serialize, Deserialize)]
 #[setters(strip_option)]
@@ -71,16 +71,6 @@ pub struct Agent {
 
     /// Maximum number of turns the agent can take    
     pub max_turns: u64,
-
-    /// Internal state of the agent
-    #[serde(skip)]
-    pub(crate) state: AgentState,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct AgentState {
-    pub turn_count: u64,
-    pub context: Option<Context>,
 }
 
 /// Transformations that can be applied to the agent's context before sending it

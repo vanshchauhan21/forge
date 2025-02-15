@@ -2,29 +2,24 @@ use std::sync::Arc;
 
 use forge_app::{EnvironmentService, Infrastructure};
 use forge_domain::{
-    AgentMessage, App, ChatRequest, ChatResponse, ConcurrentWorkflow, SystemContext, ToolService,
+    AgentMessage, App, ChatRequest, ChatResponse, Orchestrator, SystemContext, ToolService,
 };
 use forge_stream::MpscStream;
 use forge_walker::Walker;
 
 pub struct ForgeExecutorService<F> {
     app: Arc<F>,
-    workflow: ConcurrentWorkflow,
 }
 impl<F: Infrastructure + App> ForgeExecutorService<F> {
     pub fn new(app: Arc<F>) -> Self {
-        Self { app, workflow: ConcurrentWorkflow::default() }
+        Self { app }
     }
 }
 
 impl<F: Infrastructure + App> ForgeExecutorService<F> {
-    pub async fn reset(&self) {
-        self.workflow.init(None).await;
-    }
-
     pub async fn chat(
         &self,
-        chat_request: ChatRequest,
+        request: ChatRequest,
     ) -> anyhow::Result<MpscStream<anyhow::Result<AgentMessage<ChatResponse>>>> {
         let env = self.app.environment_service().get_environment();
         let mut files = Walker::max_all()
@@ -46,6 +41,15 @@ impl<F: Infrastructure + App> ForgeExecutorService<F> {
             files,
         };
 
-        Ok(self.workflow.execute(self.app.clone(), chat_request, ctx))
+        let app = self.app.clone();
+
+        Ok(MpscStream::spawn(move |tx| async move {
+            let tx = Arc::new(tx);
+            let orch = Orchestrator::new(app, request, ctx, Some(tx.clone()));
+            match orch.execute().await {
+                Ok(_) => {}
+                Err(err) => tx.send(Err(err)).await.unwrap(),
+            }
+        }))
     }
 }

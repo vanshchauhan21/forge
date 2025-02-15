@@ -31,6 +31,7 @@ impl Fixture {
     async fn get_model_response(&self) -> String {
         let api = self.api();
         let mut workflow = api.load(&PathBuf::from(WORKFLOW_PATH)).await.unwrap();
+        let conversation_id = api.init(workflow.clone()).await.unwrap();
 
         // Reset the workflow model
         workflow
@@ -42,7 +43,7 @@ impl Fixture {
                 agent.model = self.model.clone();
             });
 
-        let request = ChatRequest::new(self.task.clone(), workflow);
+        let request = ChatRequest::new(self.task.clone(), conversation_id);
         api.chat(request)
             .await
             .unwrap()

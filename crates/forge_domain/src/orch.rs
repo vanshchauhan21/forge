@@ -4,74 +4,21 @@ use std::sync::Arc;
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use futures::{Stream, StreamExt};
-use schemars::{schema_for, JsonSchema};
-use serde::{Deserialize, Serialize};
 
 use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
-
-#[derive(Debug, JsonSchema, Deserialize, Serialize, Clone)]
-pub struct DispatchEvent {
-    pub name: String,
-    pub value: String,
-}
-
-impl From<DispatchEvent> for UserContext {
-    fn from(event: DispatchEvent) -> Self {
-        Self { event }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct UserContext {
-    event: DispatchEvent,
-}
-
-impl NamedTool for DispatchEvent {
-    fn tool_name() -> ToolName {
-        ToolName::new("forge_tool_event_dispatch")
-    }
-}
-
-impl DispatchEvent {
-    pub fn tool_definition() -> ToolDefinition {
-        ToolDefinition {
-            name: Self::tool_name(),
-            description: "Dispatches an event with the provided name and value".to_string(),
-            input_schema: schema_for!(Self),
-            output_schema: None,
-        }
-    }
-
-    pub fn parse(tool_call: &ToolCallFull) -> Option<Self> {
-        if tool_call.name != Self::tool_definition().name {
-            return None;
-        }
-        serde_json::from_value(tool_call.arguments.clone()).ok()
-    }
-
-    pub fn new(name: impl ToString, value: impl ToString) -> Self {
-        Self { name: name.to_string(), value: value.to_string() }
-    }
-
-    pub fn task(value: impl ToString) -> Self {
-        Self::new(Self::USER_TASK, value)
-    }
-
-    pub const USER_TASK: &'static str = "user_task";
-}
 
 pub struct AgentMessage<T> {
     pub agent: AgentId,
     pub message: T,
 }
 
-pub struct Orchestrator<F> {
-    app: Arc<F>,
-    workflow: ConcurrentWorkflow,
+pub struct Orchestrator<App> {
+    app: Arc<App>,
     system_context: SystemContext,
     sender: Option<Arc<ArcSender>>,
+    chat_request: ChatRequest,
 }
 
 struct ChatCompletionResult {
@@ -79,18 +26,18 @@ struct ChatCompletionResult {
     pub tool_calls: Vec<ToolCallFull>,
 }
 
-impl<F: App> Orchestrator<F> {
+impl<A: App> Orchestrator<A> {
     pub fn new(
-        svc: Arc<F>,
-        workflow: ConcurrentWorkflow,
+        svc: Arc<A>,
+        chat_request: ChatRequest,
         system_context: SystemContext,
         sender: Option<ArcSender>,
     ) -> Self {
         Self {
             app: svc,
-            workflow,
             system_context,
             sender: sender.map(Arc::new),
+            chat_request,
         }
     }
 
@@ -218,9 +165,14 @@ impl<F: App> Orchestrator<F> {
 
     async fn dispatch(&self, event: &DispatchEvent) -> anyhow::Result<()> {
         join_all(
-            self.workflow
+            self.app
+                .conversation_service()
+                .get(&self.chat_request.conversation_id)
+                .await?
+                .ok_or(Error::ConversationNotFound(
+                    self.chat_request.conversation_id.clone(),
+                ))?
                 .entries(event.name.as_str())
-                .await
                 .iter()
                 .map(|agent| self.init_agent(&agent.id, event)),
         )
@@ -266,11 +218,7 @@ impl<F: App> Orchestrator<F> {
                         let input = DispatchEvent::new(input_key, summary.get());
                         self.init_agent(agent_id, &input).await?;
 
-                        let value = self
-                            .workflow
-                            .get_event(output_key)
-                            .await
-                            .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
+                        let value = self.get_event(output_key).await?;
 
                         summary.set(serde_json::to_string(&value)?);
                     }
@@ -285,11 +233,7 @@ impl<F: App> Orchestrator<F> {
                         let task = DispatchEvent::task(content.clone());
                         self.init_agent(agent_id, &task).await?;
 
-                        let output = self
-                            .workflow
-                            .get_event(output_key)
-                            .await
-                            .ok_or(Error::UndefinedVariable(output_key.to_string()))?;
+                        let output = self.get_event(output_key).await?;
 
                         let message = serde_json::to_string(&output)?;
 
@@ -308,15 +252,52 @@ impl<F: App> Orchestrator<F> {
         Ok(context)
     }
 
+    async fn get_event(&self, name: &str) -> anyhow::Result<DispatchEvent> {
+        Ok(self
+            .get_conversation()
+            .await?
+            .workflow
+            .events
+            .get(name)
+            .ok_or(Error::UndefinedVariable(name.to_string()))?
+            .clone())
+    }
+
+    async fn get_conversation(&self) -> anyhow::Result<Conversation> {
+        Ok(self
+            .app
+            .conversation_service()
+            .get(&self.chat_request.conversation_id)
+            .await?
+            .ok_or(Error::ConversationNotFound(
+                self.chat_request.conversation_id.clone(),
+            ))?)
+    }
+
+    async fn complete_turn(&self, agent: &AgentId) -> anyhow::Result<()> {
+        self.app
+            .conversation_service()
+            .inc_turn(&self.chat_request.conversation_id, agent)
+            .await
+    }
+
+    async fn set_context(&self, agent: &AgentId, context: Context) -> anyhow::Result<()> {
+        self.app
+            .conversation_service()
+            .set_context(&self.chat_request.conversation_id, agent, context)
+            .await
+    }
+
     async fn init_agent(&self, agent: &AgentId, event: &DispatchEvent) -> anyhow::Result<()> {
-        let agent = self.workflow.get_agent(agent).await?;
+        let conversation = self.get_conversation().await?;
+        let agent = conversation.workflow.get_agent(agent)?;
 
         let mut context = if agent.ephemeral {
-            self.init_agent_context(&agent).await?
+            self.init_agent_context(agent).await?
         } else {
-            match self.workflow.context(&agent.id).await {
-                Some(context) => context,
-                None => self.init_agent_context(&agent).await?,
+            match conversation.context(&agent.id) {
+                Some(context) => context.clone(),
+                None => self.init_agent_context(agent).await?,
             }
         };
 
@@ -353,9 +334,7 @@ impl<F: App> Orchestrator<F> {
                 .add_tool_results(tool_results.clone());
 
             if !agent.ephemeral {
-                self.workflow
-                    .set_context(&agent.id, context.clone())
-                    .await?;
+                self.set_context(&agent.id, context.clone()).await?;
             }
 
             if tool_results.is_empty() {
@@ -363,14 +342,13 @@ impl<F: App> Orchestrator<F> {
             }
         }
 
-        self.workflow.complete_turn(&agent.id).await?;
+        self.complete_turn(&agent.id).await?;
 
         Ok(())
     }
 
-    pub async fn execute(&self, chat_request: ChatRequest) -> anyhow::Result<()> {
-        self.workflow.init(Some(chat_request.workflow)).await;
-        let event = DispatchEvent::task(chat_request.content);
+    pub async fn execute(&self) -> anyhow::Result<()> {
+        let event = DispatchEvent::task(self.chat_request.content.clone());
         self.dispatch(&event).await?;
         Ok(())
     }

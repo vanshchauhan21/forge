@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use colored::Colorize;
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, Model, Usage, Workflow, API};
+use forge_api::{
+    AgentMessage, ChatRequest, ChatResponse, ConversationId, Model, Usage, Workflow, API,
+};
 use forge_display::TitleFormat;
 use forge_tracker::EventKind;
 use lazy_static::lazy_static;
@@ -22,7 +24,7 @@ lazy_static! {
 #[derive(Default)]
 struct UIState {
     current_title: Option<String>,
-    current_content: Option<String>,
+    conversation_id: Option<ConversationId>,
     usage: Usage,
 }
 
@@ -46,7 +48,7 @@ pub struct UI<F> {
 }
 
 impl<F: API> UI<F> {
-    pub async fn init(cli: Cli, api: Arc<F>) -> Result<Self> {
+    pub fn init(cli: Cli, api: Arc<F>) -> Result<Self> {
         // Parse CLI arguments first to get flags
 
         let env = api.environment();
@@ -82,7 +84,6 @@ impl<F: API> UI<F> {
         loop {
             match input {
                 Command::New => {
-                    self.api.reset().await?;
                     banner::display()?;
                     self.state = Default::default();
                     input = self.console.prompt(None).await?;
@@ -100,7 +101,6 @@ impl<F: API> UI<F> {
                     continue;
                 }
                 Command::Message(ref content) => {
-                    self.state.current_content = Some(content.clone());
                     if let Err(err) = self.chat(content.clone()).await {
                         CONSOLE.writeln(
                             TitleFormat::failed(format!("{:?}", err))
@@ -133,18 +133,25 @@ impl<F: API> UI<F> {
         Ok(())
     }
 
+    async fn init_workflow(&self) -> anyhow::Result<Workflow> {
+        match self.cli.workflow {
+            Some(ref path) => self.api.load(path).await,
+            None => Ok(include_str!("../../../templates/workflows/default.toml").parse()?),
+        }
+    }
+
     async fn chat(&mut self, content: String) -> Result<()> {
-        let chat = ChatRequest {
-            content: content.clone(),
-            workflow: match self.cli.workflow {
-                Some(ref path) => self.api.load(path).await?,
-                None => {
-                    let workflow: Workflow =
-                        include_str!("../../../templates/workflows/default.toml").parse()?;
-                    workflow
-                }
-            },
+        let conversation_id = match self.state.conversation_id {
+            Some(ref id) => id.clone(),
+            None => {
+                let conversation_id = self.api.init(self.init_workflow().await?).await?;
+                self.state.conversation_id = Some(conversation_id.clone());
+
+                conversation_id
+            }
         };
+
+        let chat = ChatRequest { content: content.clone(), conversation_id };
 
         tokio::spawn({
             let content = content.clone();

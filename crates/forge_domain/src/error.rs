@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use thiserror::Error;
 
-use crate::AgentId;
+use crate::{AgentId, ConversationId};
 
 // NOTE: Deriving From for error is a really bad idea. This is because you end
 // up converting errors incorrectly without much context. For eg: You don't want
@@ -36,6 +36,9 @@ pub enum Error {
 
     #[error("Agent '{0}' has reached max turns of {1}")]
     MaxTurnsReached(AgentId, u64),
+
+    #[error("Conversation not found: {0}")]
+    ConversationNotFound(ConversationId),
 }
 
 pub type Result<A> = std::result::Result<A, Error>;

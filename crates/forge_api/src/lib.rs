@@ -31,8 +31,8 @@ pub trait API {
     /// Returns the current environment
     fn environment(&self) -> Environment;
 
-    /// Resets the state of the current workflow
-    async fn reset(&self) -> anyhow::Result<()>;
+    /// Creates a new conversation with the given workflow
+    async fn init(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
 
     /// Loads a workflow from a given path
     async fn load(&self, path: &Path) -> anyhow::Result<Workflow>;

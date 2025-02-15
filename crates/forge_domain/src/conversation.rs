@@ -1,13 +1,14 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{ChatResponse, Context, ContextMessage, Error, Role};
+use crate::{Agent, AgentId, Context, Error, Workflow};
 
-#[derive(Debug, Display, Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Display, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(transparent)]
 pub struct ConversationId(Uuid);
 
@@ -27,131 +28,47 @@ impl ConversationId {
     }
 }
 
-#[derive(Debug, Setters, Serialize, Deserialize)]
+#[derive(Debug, Setters, Serialize, Deserialize, Clone)]
 pub struct Conversation {
     pub id: ConversationId,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<ConversationMeta>,
-    pub context: Context,
+    pub workflow: Workflow,
     pub archived: bool,
     pub title: Option<String>,
+    pub state: HashMap<AgentId, AgentState>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AgentState {
+    pub turn_count: u64,
+    pub context: Option<Context>,
 }
 
 impl Conversation {
-    pub fn new(context: Context) -> Self {
+    pub fn new(id: ConversationId, workflow: Workflow) -> Self {
         Self {
-            id: ConversationId::generate(),
-            meta: None,
-            context,
+            id,
+            workflow,
             archived: false,
             title: None,
+            state: Default::default(),
         }
     }
 
-    /// Get the conversation history representation of this conversation
-    pub fn history(&self) -> ConversationHistory {
-        self.context.clone().into()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ConversationMeta {
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-/// Represents a conversation's history including user and assistant messages
-/// and tool interactions. This is a view-oriented representation of a
-/// conversation that is suitable for displaying to users or processing the
-/// conversation flow.
-#[derive(Debug, Clone, Serialize)]
-pub struct ConversationHistory {
-    pub messages: Vec<ChatResponse>,
-}
-
-impl From<Context> for ConversationHistory {
-    fn from(request: Context) -> Self {
-        let messages = request
-            .messages
-            .into_iter()
-            .filter(|message| match message {
-                ContextMessage::ContentMessage(content) => content.role != Role::System,
-                ContextMessage::ToolMessage(_) => true,
-            })
-            .flat_map(|message| match message {
-                ContextMessage::ContentMessage(content) => {
-                    let mut messages = vec![ChatResponse::Text(content.content.clone())];
-                    if let Some(tool_calls) = content.tool_calls {
-                        for tool_call in tool_calls {
-                            messages.push(ChatResponse::ToolCallStart(tool_call.clone()));
-                        }
-                    }
-                    messages
-                }
-                ContextMessage::ToolMessage(result) => {
-                    vec![ChatResponse::ToolCallEnd(result)]
-                }
-            })
-            .collect();
-        Self { messages }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::*;
-    use crate::{ContextMessage, Role, ToolCallFull, ToolName, ToolResult};
-
-    #[test]
-    fn test_conversation_history_from_context() {
-        let mut context = Context::default();
-
-        // Add system message (should be filtered out)
-        context = context.add_message(ContextMessage::system("System prompt"));
-
-        // Add user message
-        context = context.add_message(ContextMessage::ContentMessage(crate::ContentMessage {
-            role: Role::User,
-            content: "User message".to_string(),
-            tool_calls: None,
-        }));
-
-        // Add assistant message with tool call
-        let tool_call =
-            ToolCallFull::new(ToolName::new("test_tool")).arguments(json!({"arg": "value"}));
-        context = context.add_message(ContextMessage::ContentMessage(crate::ContentMessage {
-            role: Role::Assistant,
-            content: "Assistant message".to_string(),
-            tool_calls: Some(vec![tool_call.clone()]),
-        }));
-
-        // Add tool result
-        let tool_result = ToolResult::new(ToolName::new("test_tool"))
-            .success(json!({"result": "success"}).to_string());
-        context = context.add_message(ContextMessage::ToolMessage(tool_result.clone()));
-
-        let history = ConversationHistory::from(context);
-
-        assert_eq!(history.messages.len(), 4);
-        assert!(matches!(&history.messages[0], ChatResponse::Text(text) if text == "User message"));
-        assert!(
-            matches!(&history.messages[1], ChatResponse::Text(text) if text == "Assistant message")
-        );
-        assert!(
-            matches!(&history.messages[2], ChatResponse::ToolCallStart(call) if call == &tool_call)
-        );
-        assert!(
-            matches!(&history.messages[3], ChatResponse::ToolCallEnd(result) if result == &tool_result)
-        );
+    pub fn turn_count(&self, id: &AgentId) -> Option<u64> {
+        self.state.get(id).map(|s| s.turn_count)
     }
 
-    #[test]
-    fn test_conversation_history_only_system_message() {
-        let context = Context::default().add_message(ContextMessage::system("System prompt"));
+    pub fn entries(&self, event_name: &str) -> Vec<Agent> {
+        self.workflow
+            .agents
+            .iter()
+            .filter(|a| self.turn_count(&a.id).unwrap_or(0) < a.max_turns)
+            .filter(|a| a.subscribe.contains(&event_name.to_string()))
+            .cloned()
+            .collect::<Vec<_>>()
+    }
 
-        let history = ConversationHistory::from(context);
-        assert!(history.messages.is_empty());
+    pub fn context(&self, id: &AgentId) -> Option<&Context> {
+        self.state.get(id).and_then(|s| s.context.as_ref())
     }
 }
