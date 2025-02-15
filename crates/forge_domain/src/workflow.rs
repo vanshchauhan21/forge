@@ -93,6 +93,11 @@ impl ConcurrentWorkflow {
         guard.entries(event_name)
     }
 
+    pub async fn agents(&self) -> Vec<Agent> {
+        let guard = self.workflow.read().await;
+        guard.agents.clone()
+    }
+
     pub async fn complete_turn(&self, agent: &AgentId) -> crate::Result<()> {
         let mut guard = self.workflow.write().await;
         let agent = guard.get_agent_mut(agent)?;
@@ -126,7 +131,14 @@ impl ConcurrentWorkflow {
 
     /// Initialize the concurrent workflow with the given workflow. If None is
     /// provided then it's initialized to an empty workflow.
-    pub async fn init(&self, workflow: Option<Workflow>) {
+    pub async fn init(&self, mut workflow: Option<Workflow>) {
+        if let Some(ref mut workflow) = workflow {
+            for agent in self.agents().await {
+                if let Some(a) = workflow.find_agent_mut(&agent.id) {
+                    a.state = agent.state;
+                }
+            }
+        }
         let mut guard = self.workflow.write().await;
         if let Some(workflow) = workflow {
             *guard = workflow;
@@ -143,5 +155,58 @@ impl FromStr for Workflow {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         toml::de::from_str(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Agent, AgentId, AgentState, Context, ModelId, Prompt};
+
+    fn workflow_with(turn_count: u64, ctx: Option<Context>) -> Workflow {
+        Workflow {
+            agents: vec![Agent {
+                id: AgentId::new("test_agent"),
+                state: AgentState { turn_count, context: ctx },
+                model: ModelId::new("test_model"),
+                description: None,
+                system_prompt: Prompt::new("test_system_prompt"),
+                user_prompt: Prompt::new("test_user_prompt"),
+                ephemeral: false,
+                tools: Default::default(),
+                transforms: Default::default(),
+                subscribe: Default::default(),
+                max_turns: 5,
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn init_with_existing_workflow_preserves_agent_state() {
+        let cwf = ConcurrentWorkflow::new(workflow_with(2, Some(Context::default())));
+        cwf.init(Some(workflow_with(0, None))).await;
+        assert_eq!(
+            cwf.find_agent(&AgentId::new("test_agent"))
+                .await
+                .unwrap()
+                .state
+                .turn_count,
+            2
+        );
+    }
+
+    #[tokio::test]
+    async fn init_with_none_resets_agent_states() {
+        let cwf = ConcurrentWorkflow::new(workflow_with(3, None));
+        cwf.init(None).await;
+        assert_eq!(
+            cwf.find_agent(&AgentId::new("test_agent"))
+                .await
+                .unwrap()
+                .state
+                .turn_count,
+            0
+        );
     }
 }

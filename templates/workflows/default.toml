@@ -74,7 +74,7 @@ model = "anthropic/claude-3.5-sonnet"
 tools = ["tool_forge_fs_read", "tool_forge_fs_create", "tool_forge_fs_remove", "tool_forge_fs_list", "tool_forge_fs_search", "tool_forge_fs_info", "tool_forge_patch", "tool_forge_code_outline", "tool_forge_process_shell", "tool_forge_process_think", "tool_forge_net_fetch"]
 subscribe = ["user_task"]
 max_turns = 1024
-
+ephemeral = false
 [agents.system_prompt]
 template = '''
 You are Code-Forge, an expert software engineering assistant designed to help users with various programming tasks, file operations, and software development processes. Your knowledge spans multiple programming languages, frameworks, design patterns, and best practices.
