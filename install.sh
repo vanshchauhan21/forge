@@ -41,27 +41,18 @@ else
     LIBC_SUFFIX="-gnu"
 fi
 
-# Get the latest release version from GitHub
-echo -e "${BLUE}Fetching latest release...${NC}"
-LATEST_RELEASE=$(curl -s https://api.github.com/repos/antinomyhq/forge/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
+# Allow optional version argument, defaulting to "latest"
+VERSION="${1:-latest}"
 
-if [ -z "$LATEST_RELEASE" ]; then
-    echo -e "${RED}Failed to fetch latest release version${NC}"
-    exit 1
-fi
+# Construct download URL
+DOWNLOAD_URL="https://release-download.tailcall.workers.dev/download/$VERSION/forge-$ARCH-unknown-linux$LIBC_SUFFIX"
 
-echo -e "${GREEN}Latest release: $LATEST_RELEASE${NC}"
-
-# Download URL
-DOWNLOAD_URL="https://github.com/antinomyhq/forge/releases/download/$LATEST_RELEASE/forge-$ARCH-unknown-linux$LIBC_SUFFIX"
 # Create temp directory
 TMP_DIR=$(mktemp -d)
 
-# Download and extract
-echo -e "${BLUE}Downloading Forge...${NC}"
+# Download Forge
+echo -e "${BLUE}Downloading Forge from $DOWNLOAD_URL...${NC}"
 curl -L "$DOWNLOAD_URL" -o "$TMP_DIR/forge"
-
-echo -e "${BLUE}Extracting...${NC}"
 
 # Install
 echo -e "${BLUE}Installing to /usr/local/bin...${NC}"
