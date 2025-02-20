@@ -218,9 +218,10 @@ impl<A: App> Orchestrator<A> {
                         let input = DispatchEvent::new(input_key, summary.get());
                         self.init_agent(agent_id, &input).await?;
 
-                        let value = self.get_event(output_key).await?;
-
-                        summary.set(serde_json::to_string(&value)?);
+                        // note: it's okay if event doesn't exits.
+                        if let Ok(event) = self.get_event(output_key).await {
+                            summary.set(event.value);
+                        }
                     }
                 }
                 Transform::User { agent_id, output: output_key } => {
@@ -233,11 +234,12 @@ impl<A: App> Orchestrator<A> {
                         let task = DispatchEvent::task(content.clone());
                         self.init_agent(agent_id, &task).await?;
 
-                        let output = self.get_event(output_key).await?;
-
-                        let message = serde_json::to_string(&output)?;
-
-                        content.push_str(&format!("\n<{output_key}>\n{message}\n</{output_key}>"));
+                        // note: it's okay if event doesn't exits.
+                        if let Ok(event) = self.get_event(output_key).await {
+                            let message = event.value;
+                            content
+                                .push_str(&format!("\n<{output_key}>\n{message}\n</{output_key}>"));
+                        }
                     }
                 }
                 Transform::PassThrough { agent_id, input: input_key } => {
