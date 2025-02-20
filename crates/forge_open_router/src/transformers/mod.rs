@@ -1,11 +1,14 @@
 mod drop_tool_call;
+mod open_ai;
 mod set_cache;
 mod tool_choice;
 
 use drop_tool_call::DropToolCalls;
+use open_ai::OpenAITransformer;
 use set_cache::SetCache;
 use tool_choice::SetToolChoice;
 
+use crate::provider::Provider;
 use crate::request::OpenRouterRequest;
 use crate::tool_choice::ToolChoice;
 
@@ -30,12 +33,12 @@ pub trait Transformer {
 
     fn when_name(
         self,
-        models: impl Fn(&str) -> bool,
+        model: impl Fn(&str) -> bool,
     ) -> When<Self, impl Fn(&OpenRouterRequest) -> bool>
     where
         Self: Sized,
     {
-        self.when(move |r| r.model.as_ref().is_some_and(|m| models(m.as_str())))
+        self.when(move |r| r.model.as_ref().is_some_and(|m| model(m.as_str())))
     }
 }
 
@@ -67,13 +70,28 @@ impl<A: Transformer, B: Transformer> Transformer for Combine<A, B> {
     }
 }
 
-pub fn pipeline() -> impl Transformer {
-    Identity
-        .combine(DropToolCalls.when_name(|name| name.contains("mistral")))
-        .combine(SetToolChoice::new(ToolChoice::Auto).when_name(|name| name.contains("gemini")))
-        .combine(SetCache.when_name(|name| {
-            ["mistral", "gemini", "gpt"]
-                .iter()
-                .all(|p| !name.contains(p))
-        }))
+pub struct ProviderPipeline<'a>(&'a Provider);
+
+impl<'a> ProviderPipeline<'a> {
+    pub fn new(provider: &'a Provider) -> Self {
+        Self(provider)
+    }
+}
+
+impl Transformer for ProviderPipeline<'_> {
+    fn transform(&self, request: OpenRouterRequest) -> OpenRouterRequest {
+        let or_transformers = Identity
+            .combine(DropToolCalls.when_name(|name| name.contains("mistral")))
+            .combine(SetToolChoice::new(ToolChoice::Auto).when_name(|name| name.contains("gemini")))
+            .combine(
+                SetCache.when_name(|name| ["mistral", "gemini"].iter().all(|p| !name.contains(p))),
+            )
+            .when(move |_| self.0.is_open_router());
+
+        let openai_transformers = OpenAITransformer.when(move |_| self.0.is_openai());
+
+        or_transformers
+            .combine(openai_transformers)
+            .transform(request)
+    }
 }

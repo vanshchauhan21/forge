@@ -16,7 +16,7 @@ use crate::error::Error;
 pub enum OpenRouterResponse {
     Success {
         id: String,
-        provider: String,
+        provider: Option<String>,
         model: String,
         choices: Vec<Choice>,
         created: u64,
@@ -183,5 +183,40 @@ impl TryFrom<OpenRouterResponse> for ModelResponse {
             }
             OpenRouterResponse::Failure { error } => Err(Error::Upstream(error)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Context;
+    use forge_domain::ChatCompletionMessage;
+
+    use super::*;
+
+    struct Fixture;
+
+    impl Fixture {
+        // check if the response is compatible with the OpenRouterResponse
+        fn test_response_compatibility(event: &str) -> bool {
+            let open_router_response = serde_json::from_str::<OpenRouterResponse>(event)
+                .with_context(|| "Failed to parse OpenRouter response")
+                .and_then(|message| {
+                    ChatCompletionMessage::try_from(message.clone())
+                        .with_context(|| "Failed to create completion message")
+                });
+            open_router_response.is_ok()
+        }
+    }
+
+    #[test]
+    fn test_open_ai_response_event() {
+        let event = "{\"id\":\"chatcmpl-B2YVxGR9TaLBrEcFMVCv2B4IcNe4g\",\"object\":\"chat.completion.chunk\",\"created\":1739949029,\"model\":\"gpt-4o-mini-2024-07-18\",\"service_tier\":\"default\",\"system_fingerprint\":\"fp_00428b782a\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"index\":0,\"id\":\"call_fmuXMsHhKD5eM2k0CvgNed53\",\"type\":\"function\",\"function\":{\"name\":\"tool_forge_process_shell\",\"arguments\":\"\"}}],\"refusal\":null},\"logprobs\":null,\"finish_reason\":null}]}";
+        assert!(Fixture::test_response_compatibility(event));
+    }
+
+    #[test]
+    fn test_open_router_response_event() {
+        let event = "{\"id\":\"gen-1739949430-JZMcABaj4fg8oFDtRNDZ\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion.chunk\",\"created\":1739949430,\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"index\":0,\"id\":\"call_bhjvz9w48ov4DSRhM15qLMmh\",\"type\":\"function\",\"function\":{\"name\":\"tool_forge_process_shell\",\"arguments\":\"\"}}],\"refusal\":null},\"logprobs\":null,\"finish_reason\":null,\"native_finish_reason\":null}],\"system_fingerprint\":\"fp_00428b782a\"}";
+        assert!(Fixture::test_response_compatibility(event));
     }
 }
