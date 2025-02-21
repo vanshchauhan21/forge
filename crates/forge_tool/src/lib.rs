@@ -55,7 +55,8 @@ mod tests {
             } else {
                 "/bin/sh".to_string()
             },
-            api_key: String::new(),
+            provider_key: String::default(),
+            provider_url: Default::default(),
             base_path: PathBuf::new(),
         }
     }

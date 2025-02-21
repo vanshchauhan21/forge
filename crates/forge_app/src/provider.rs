@@ -5,22 +5,24 @@ use forge_domain::{
     ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ProviderService,
     ResultStream,
 };
-use forge_open_router::OpenRouter;
+use forge_open_router::ProviderBuilder;
 use moka2::future::Cache;
 
 use crate::{EnvironmentService, Infrastructure};
 
 pub struct ForgeProviderService {
-    or: OpenRouter,
+    or: Box<dyn ProviderService>,
     cache: Cache<ModelId, Parameters>,
 }
 
 impl ForgeProviderService {
     pub fn new<F: Infrastructure>(infra: Arc<F>) -> Self {
-        let or = OpenRouter::builder()
-            .api_key(infra.environment_service().get_environment().api_key)
+        let env = infra.environment_service().get_environment();
+        let or = ProviderBuilder::from_url(env.provider_url)
+            .with_key(env.provider_key)
             .build()
-            .unwrap();
+            .expect("Failed to build provider");
+
         Self { or, cache: Cache::new(1024) }
     }
 }

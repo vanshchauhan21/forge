@@ -11,27 +11,24 @@ use tokio_stream::StreamExt;
 
 use super::model::{ListModelResponse, OpenRouterModel};
 use super::parameters::ParameterResponse;
+use super::provider::Provider;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
-use super::transformers::Transformer;
-use crate::provider::Provider;
-use crate::transformers::ProviderPipeline;
+use super::transformers::{ProviderPipeline, Transformer};
 
 #[derive(Debug, Default, Clone, Setters)]
 #[setters(into, strip_option)]
 pub struct OpenRouterBuilder {
     api_key: Option<String>,
-    base_url: Option<String>,
+    provider: Option<Provider>,
 }
 
 impl OpenRouterBuilder {
     pub fn build(self) -> anyhow::Result<OpenRouter> {
         let client = Client::builder().build()?;
-        let base_url = self
-            .base_url
-            .as_deref()
-            .unwrap_or("https://openrouter.ai/api/v1/");
-        let provider = Provider::parse(base_url)?;
+        let provider = self
+            .provider
+            .ok_or_else(|| anyhow::anyhow!("Provider is required"))?;
         Ok(OpenRouter { client, api_key: self.api_key, provider })
     }
 }
@@ -171,12 +168,12 @@ impl ProviderService for OpenRouter {
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
         match self.provider {
-            Provider::OpenAI(_) => {
+            Provider::OpenAI => {
                 // TODO: open-ai provider doesn't support parameters endpoint, so we return true
                 // for now.
                 return Ok(Parameters { tool_supported: true });
             }
-            Provider::OpenRouter(_) => {
+            Provider::OpenRouter => {
                 // // For Eg: https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
                 let path = format!("parameters/{}", model.as_str());
 
@@ -214,7 +211,7 @@ impl From<OpenRouterModel> for Model {
             id: value.id,
             name: value.name,
             description: value.description,
-            context_length: value.context_length,
+            context_length: Some(value.context_length),
         }
     }
 }
@@ -222,7 +219,6 @@ impl From<OpenRouterModel> for Model {
 #[cfg(test)]
 mod tests {
     use anyhow::Context;
-    use reqwest::Url;
 
     use super::*;
 
@@ -230,7 +226,7 @@ mod tests {
         OpenRouter {
             client: Client::new(),
             api_key: None,
-            provider: Provider::OpenRouter(Url::parse("https://openrouter.ai/api/v1/").unwrap()),
+            provider: Provider::OpenRouter,
         }
     }
 

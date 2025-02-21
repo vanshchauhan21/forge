@@ -8,9 +8,9 @@ use open_ai::OpenAITransformer;
 use set_cache::SetCache;
 use tool_choice::SetToolChoice;
 
-use crate::provider::Provider;
-use crate::request::OpenRouterRequest;
-use crate::tool_choice::ToolChoice;
+use crate::open_router::provider::Provider;
+use crate::open_router::request::OpenRouterRequest;
+use crate::open_router::tool_choice::ToolChoice;
 
 /// A trait for transforming OpenRouterRequest based on model-specific
 /// requirements

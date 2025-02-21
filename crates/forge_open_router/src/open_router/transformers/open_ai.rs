@@ -1,5 +1,5 @@
 use super::Transformer;
-use crate::request::OpenRouterRequest;
+use crate::open_router::request::OpenRouterRequest;
 
 /// makes the OpenRouterRequest compatible with the OpenAI API.
 pub struct OpenAITransformer;

@@ -16,10 +16,12 @@ pub struct Environment {
     pub home: Option<PathBuf>,
     /// The shell being used.
     pub shell: String,
-    /// The Forge API key.
-    pub api_key: String,
     /// The base path relative to which everything else stored.
     pub base_path: PathBuf,
+    /// The Forge API key.
+    pub provider_key: String,
+    /// The base url for provider
+    pub provider_url: String,
 }
 
 impl Environment {

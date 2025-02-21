@@ -7,7 +7,7 @@ pub struct Model {
     pub id: ModelId,
     pub name: String,
     pub description: Option<String>,
-    pub context_length: u64,
+    pub context_length: Option<u64>,
     // TODO: add provider information to the model
 }
 

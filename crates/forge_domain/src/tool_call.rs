@@ -15,6 +15,10 @@ impl ToolCallId {
     pub fn new(value: impl ToString) -> Self {
         ToolCallId(value.to_string())
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 /// Contains a part message for using a tool. This is received as a part of the

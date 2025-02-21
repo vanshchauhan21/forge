@@ -1,5 +1,5 @@
-use crate::request::{OpenRouterRequest, OpenRouterRole};
-use crate::transformers::Transformer;
+use crate::open_router::request::{OpenRouterRequest, OpenRouterRole};
+use crate::open_router::transformers::Transformer;
 
 /// Transformer that caches the last user/system message for supported models
 pub struct SetCache;
@@ -27,7 +27,7 @@ mod tests {
     use forge_domain::{ContentMessage, Context, ContextMessage, ModelId, Role};
 
     use super::*;
-    use crate::request::MessageContent;
+    use crate::open_router::request::MessageContent;
 
     #[test]
     fn test_sonnet_transformer_caching() {

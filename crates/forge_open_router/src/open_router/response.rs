@@ -8,8 +8,8 @@ use forge_domain::{
 };
 use serde::{Deserialize, Serialize};
 
+use super::error::Error;
 use super::tool_choice::FunctionType;
-use crate::error::Error;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
