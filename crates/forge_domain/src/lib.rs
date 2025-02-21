@@ -1,14 +1,13 @@
 mod agent;
 mod chat_request;
 mod chat_response;
-mod config;
 mod context;
 mod conversation;
 mod dispatch_event;
 mod env;
 mod error;
 mod file;
-mod learning;
+mod knowledge;
 mod message;
 mod model;
 mod orch;
@@ -28,19 +27,19 @@ mod workflow;
 pub use agent::*;
 pub use chat_request::*;
 pub use chat_response::*;
-pub use config::*;
 pub use context::*;
 pub use conversation::*;
 pub use dispatch_event::*;
 pub use env::*;
 pub use error::*;
 pub use file::*;
-pub use learning::*;
+pub use knowledge::*;
 pub use message::*;
 pub use model::*;
 pub use orch::*;
 pub use prompt::*;
 pub use provider::*;
+use serde::Serialize;
 pub use summarize::*;
 pub use tool::*;
 pub use tool_call::*;
@@ -82,26 +81,33 @@ pub trait ConversationService: Send + Sync {
         agent: &AgentId,
         context: Context,
     ) -> anyhow::Result<()>;
+    async fn insert_event(
+        &self,
+        conversation_id: &ConversationId,
+        event: DispatchEvent,
+    ) -> anyhow::Result<()>;
+}
+
+#[async_trait::async_trait]
+pub trait PromptService: Send + Sync {
+    async fn render<T: Serialize + Send + Sync>(
+        &self,
+        prompt: &Prompt<T>,
+        value: &T,
+    ) -> anyhow::Result<String>;
 }
 
 /// Core app trait providing access to services and repositories.
 /// This trait follows clean architecture principles for dependency management
 /// and service/repository composition.
 pub trait App: Send + Sync + 'static {
-    /// The concrete type implementing tool service capabilities
     type ToolService: ToolService;
-
-    /// The concrete type implementing provider service capabilities
     type ProviderService: ProviderService;
-
-    /// The concrete type implementing conversation repository capabilities
     type ConversationService: ConversationService;
+    type PromptService: PromptService;
 
-    /// Get a reference to the tool service instance
     fn tool_service(&self) -> &Self::ToolService;
-
-    /// Get a reference to the provider service instance
     fn provider_service(&self) -> &Self::ProviderService;
-
     fn conversation_service(&self) -> &Self::ConversationService;
+    fn prompt_service(&self) -> &Self::PromptService;
 }

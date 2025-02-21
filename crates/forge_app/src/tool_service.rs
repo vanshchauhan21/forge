@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use forge_domain::{Tool, ToolCallFull, ToolDefinition, ToolName, ToolResult, ToolService};
 use tokio::time::{timeout, Duration};
-use tracing::debug;
+use tracing::{debug, error};
 
-use crate::{EnvironmentService, Infrastructure};
+use crate::Infrastructure;
 
 // Timeout duration for tool calls
 const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(300);
@@ -16,8 +16,7 @@ pub struct ForgeToolService {
 
 impl ForgeToolService {
     pub fn new<F: Infrastructure>(infra: Arc<F>) -> Self {
-        let env = infra.environment_service().get_environment();
-        ForgeToolService::from_iter(forge_tool::tools(&env))
+        ForgeToolService::from_iter(crate::tools::tools(infra.clone()))
     }
 }
 
@@ -37,7 +36,7 @@ impl ToolService for ForgeToolService {
     async fn call(&self, call: ToolCallFull) -> ToolResult {
         let name = call.name.clone();
         let input = call.arguments.clone();
-        debug!("{:?}", call);
+        debug!(tool_name = ?call.name, arguments = ?call.arguments, "Executing tool call");
         let mut available_tools = self
             .tools
             .keys()
@@ -50,28 +49,30 @@ impl ToolService for ForgeToolService {
                 // Wrap tool call with timeout
                 match timeout(TOOL_CALL_TIMEOUT, tool.executable.call(input)).await {
                     Ok(result) => result,
-                    Err(_) => Err(format!(
+                    Err(_) => Err(anyhow::anyhow!(
                         "Tool '{}' timed out after {} minutes",
                         name.as_str(),
                         TOOL_CALL_TIMEOUT.as_secs() / 60
                     )),
                 }
             }
-            None => Err(format!(
+            None => Err(anyhow::anyhow!(
                 "No tool with name '{}' was found. Please try again with one of these tools {}",
                 name.as_str(),
                 available_tools.join(", ")
             )),
         };
 
-        let result = match output {
-            Ok(output) => ToolResult::from(call).success(output),
-            Err(output) => ToolResult::from(call).failure(output),
-        };
-
-        debug!("{:?}", result);
-
-        result
+        match output {
+            Ok(output) => {
+                debug!(result = ?output, "Tool call completed successfully");
+                ToolResult::from(call).success(output)
+            }
+            Err(output) => {
+                error!(error = ?output, "Tool call failed");
+                ToolResult::from(call).failure(output)
+            }
+        }
     }
 
     fn list(&self) -> Vec<ToolDefinition> {
@@ -106,6 +107,7 @@ impl ToolService for ForgeToolService {
 
 #[cfg(test)]
 mod test {
+    use anyhow::bail;
     use forge_domain::{Tool, ToolCallId, ToolDefinition};
     use serde_json::{json, Value};
     use tokio::time;
@@ -118,7 +120,7 @@ mod test {
     impl forge_domain::ExecutableTool for SuccessTool {
         type Input = Value;
 
-        async fn call(&self, input: Self::Input) -> Result<String, String> {
+        async fn call(&self, input: Self::Input) -> anyhow::Result<String> {
             Ok(format!("Success with input: {}", input))
         }
     }
@@ -129,8 +131,8 @@ mod test {
     impl forge_domain::ExecutableTool for FailureTool {
         type Input = Value;
 
-        async fn call(&self, _input: Self::Input) -> Result<String, String> {
-            Err("Tool call failed with simulated failure".to_string())
+        async fn call(&self, _input: Self::Input) -> anyhow::Result<String> {
+            bail!("Tool call failed with simulated failure".to_string())
         }
     }
 
@@ -203,7 +205,7 @@ mod test {
     impl forge_domain::ExecutableTool for SlowTool {
         type Input = Value;
 
-        async fn call(&self, _input: Self::Input) -> Result<String, String> {
+        async fn call(&self, _input: Self::Input) -> anyhow::Result<String> {
             // Simulate a long-running task that exceeds the timeout
             tokio::time::sleep(Duration::from_secs(400)).await;
             Ok("Slow tool completed".to_string())

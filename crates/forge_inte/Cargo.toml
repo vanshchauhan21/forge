@@ -3,7 +3,7 @@ name = "forge_inte"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+[dev-dependencies]
 anyhow = "1.0"
 forge_api = { path = "../forge_api" }
 futures = "0.3"

@@ -45,6 +45,10 @@ fn truth() -> bool {
     true
 }
 
+fn u64_max() -> u64 {
+    u64::MAX
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     pub id: AgentId,
@@ -58,6 +62,11 @@ pub struct Agent {
     #[serde(skip_serializing_if = "is_true", default = "truth")]
     pub ephemeral: bool,
 
+    /// Flag to enable/disable the agent. When disabled (false), the agent will
+    /// be completely ignored during orchestration execution.
+    #[serde(skip_serializing_if = "is_true", default = "truth")]
+    pub enable: bool,
+
     /// Tools that the agent can use    
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub tools: Vec<ToolName>,
@@ -66,10 +75,11 @@ pub struct Agent {
     pub transforms: Vec<Transform>,
 
     /// Used to specify the events the agent is interested in    
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub subscribe: Vec<String>,
 
     /// Maximum number of turns the agent can take    
+    #[serde(default = "u64_max")]
     pub max_turns: u64,
 }
 

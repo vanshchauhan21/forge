@@ -15,7 +15,6 @@ tokio-stream = "0.1.17"
 colored = "3.0.0"
 crossterm = { version = "0.28", features = ["event-stream"] }
 async-trait = "0.1"
-inquire = "0.7.5"
 regex = "1.10.2"
 strum = "0.26.3"
 strum_macros = "0.26.4"

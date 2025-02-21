@@ -22,9 +22,6 @@ pub enum Error {
     #[error("Invalid conversation id: {0}")]
     ConversationId(uuid::Error),
 
-    #[error("Invalid template rendering params: {0}")]
-    Template(handlebars::RenderError),
-
     #[error("Agent not found in the arena: {0}")]
     AgentUndefined(AgentId),
 

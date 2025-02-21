@@ -8,6 +8,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Url};
 use reqwest_eventsource::{Event, RequestBuilderExt};
 use tokio_stream::StreamExt;
+use tracing::debug;
 
 use super::model::{ListModelResponse, OpenRouterModel};
 use super::parameters::ParameterResponse;
@@ -90,9 +91,11 @@ impl ProviderService for OpenRouter {
 
         request = ProviderPipeline::new(&self.provider).transform(request);
 
+        let url = self.url("chat/completions")?;
+        debug!(url = %url, model = %model_id, "Connecting to OpenRouter API");
         let es = self
             .client
-            .post(self.url("chat/completions")?)
+            .post(url)
             .headers(self.headers())
             .json(&request)
             .eventsource()?;

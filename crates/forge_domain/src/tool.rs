@@ -18,8 +18,8 @@ where
 {
     type Input = Value;
 
-    async fn call(&self, input: Self::Input) -> Result<String, String> {
-        let input: T::Input = serde_json::from_value(input).map_err(|e| e.to_string())?;
+    async fn call(&self, input: Self::Input) -> anyhow::Result<String> {
+        let input: T::Input = serde_json::from_value(input)?;
         self.0.call(input).await
     }
 }

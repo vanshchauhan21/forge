@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use colored::Colorize;
-use forge_api::{
-    AgentMessage, ChatRequest, ChatResponse, ConversationId, Model, Usage, Workflow, API,
-};
+use forge_api::{AgentMessage, ChatRequest, ChatResponse, ConversationId, Model, Usage, API};
 use forge_display::TitleFormat;
 use forge_tracker::EventKind;
 use lazy_static::lazy_static;
@@ -52,15 +50,13 @@ impl<F: API> UI<F> {
         // Parse CLI arguments first to get flags
 
         let env = api.environment();
-        let guard = log::init_tracing(env.clone())?;
-
         Ok(Self {
             state: Default::default(),
             api,
-            console: Console::new(env),
+            console: Console::new(env.clone()),
             cli,
             models: None,
-            _guard: guard,
+            _guard: log::init_tracing(env.clone())?,
         })
     }
 
@@ -133,18 +129,14 @@ impl<F: API> UI<F> {
         Ok(())
     }
 
-    async fn init_workflow(&self) -> anyhow::Result<Workflow> {
-        match self.cli.workflow {
-            Some(ref path) => self.api.load(path).await,
-            None => Ok(include_str!("../../../templates/workflows/default.toml").parse()?),
-        }
-    }
-
     async fn chat(&mut self, content: String) -> Result<()> {
         let conversation_id = match self.state.conversation_id {
             Some(ref id) => id.clone(),
             None => {
-                let conversation_id = self.api.init(self.init_workflow().await?).await?;
+                let conversation_id = self
+                    .api
+                    .init(self.api.load(self.cli.workflow.as_deref()).await?)
+                    .await?;
                 self.state.conversation_id = Some(conversation_id.clone());
 
                 conversation_id
@@ -153,12 +145,7 @@ impl<F: API> UI<F> {
 
         let chat = ChatRequest { content: content.clone(), conversation_id };
 
-        tokio::spawn({
-            let content = content.clone();
-            async move {
-                let _ = TRACKER.dispatch(EventKind::Prompt(content)).await;
-            }
-        });
+        tokio::spawn(TRACKER.dispatch(EventKind::Prompt(content)));
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
             Err(err) => Err(err),

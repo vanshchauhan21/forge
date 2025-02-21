@@ -49,6 +49,7 @@ impl From<&Environment> for Info {
         Info::new()
             .add_title("Environment")
             .add_item("OS", &env.os)
+            .add_item("PID", env.pid)
             .add_item("Working Directory", env.cwd.display())
             .add_item("Shell", &env.shell)
             .add_title("Paths")

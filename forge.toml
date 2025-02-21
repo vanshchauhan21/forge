@@ -1,0 +1,54 @@
+[[agents]]
+id = "title"
+model = "anthropic/claude-3.5-haiku"
+tools = ["forge_tool_event_dispatch"]
+subscribe = ["user_task"]
+max_turns = 1
+[agents.system_prompt]
+template = "{{> title-generator.mustache }}"
+[agents.user_prompt]
+template = "<technical_content>{{event.value}}</technical_content>"
+
+[[agents]]
+id = "developer"
+model = "anthropic/claude-3.5-sonnet"
+tools = [
+  "tool_forge_fs_read",
+  "tool_forge_fs_create",
+  "tool_forge_fs_remove",
+  "tool_forge_fs_patch",
+  "tool_forge_process_shell",
+  "tool_forge_net_fetch",
+]
+subscribe = ["user_task"]
+max_turns = 1024
+ephemeral = false
+# TODO: Enable once qdrant starts to work
+# transforms = [
+#   { type = "User", agent_id = "knowledge_recall", output = "learnings" },
+# ]
+[agents.system_prompt]
+template = "{{> software-engineer.mustache }}"
+[agents.user_prompt]
+template = "<task>{{event.value}}</task>"
+
+[[agents]]
+id = "knowledge_store"
+model = "anthropic/claude-3.5-sonnet"
+tools = ["forge_tool_knowledge_set"]
+# TODO: Enable once qdrant starts to work
+# subscribe = ["user_task"]
+[agents.system_prompt]
+template = "{{> knowledge-storage.mustache }}"
+[agents.user_prompt]
+template = "<feedback>{{event.value}}</feedback>"
+
+[[agents]]
+id = "knowledge_recall"
+model = "anthropic/claude-3.5-sonnet"
+tools = ["forge_tool_knowledge_get", "forge_tool_event_dispatch"]
+subscribe = []
+[agents.system_prompt]
+template = "{{> knowledge-recall.mustache }}"
+[agents.user_prompt]
+template = "{{event.value}}"

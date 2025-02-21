@@ -7,7 +7,6 @@ use serde_json::json;
 fn generate() {
     let mut workflow = StandardWorkflow::default()
         .auto_fix(true)
-        .add_setup(Step::run("sudo apt-get install -y libsqlite3-dev"))
         .to_ci_workflow()
         .concurrency(Concurrency {
             group: "${{ github.workflow }}-${{ github.ref }}".to_string(),

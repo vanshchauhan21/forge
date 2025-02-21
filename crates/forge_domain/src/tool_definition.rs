@@ -125,5 +125,5 @@ pub trait ToolDescription {
 pub trait ExecutableTool {
     type Input: DeserializeOwned;
 
-    async fn call(&self, input: Self::Input) -> Result<String, String>;
+    async fn call(&self, input: Self::Input) -> anyhow::Result<String>;
 }

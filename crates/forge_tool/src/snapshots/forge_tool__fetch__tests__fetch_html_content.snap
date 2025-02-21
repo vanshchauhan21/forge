@@ -1,9 +1,0 @@
----
-source: crates/forge_tool/src/fetch.rs
-expression: normalized_result
----
-Contents of http://127.0.0.1:PORT/test.html:
-Test Title
-==========
-
-Test paragraph

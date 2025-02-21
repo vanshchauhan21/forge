@@ -7,6 +7,7 @@ use sysinfo::System;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::time::Duration;
+use tracing::debug;
 
 use super::Result;
 use crate::can_track::can_track;
@@ -83,7 +84,7 @@ impl Tracker {
                 collector.collect(event.clone()).await?;
             }
 
-            tracing::debug!("Event dispatched: {:?}", event);
+            debug!(event = ?event, "Event dispatched");
         }
 
         Ok(())

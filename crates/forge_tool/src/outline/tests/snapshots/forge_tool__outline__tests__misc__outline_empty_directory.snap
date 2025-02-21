@@ -1,6 +1,0 @@
----
-source: crates/forge_tool/src/outline/tests/misc.rs
-expression: result
-snapshot_kind: text
----
-No source code definitions found.

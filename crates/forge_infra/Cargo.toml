@@ -11,3 +11,6 @@ dotenv = "0.15.0"
 forge_domain = { path = "../forge_domain" }
 forge_app = { path = "../forge_app" }
 tokio = "1.43.0"
+serde_json = "1.0.138"
+qdrant-client = "1.13.0"
+rust-bert = "0.23.0"

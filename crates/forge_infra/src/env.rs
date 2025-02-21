@@ -30,7 +30,7 @@ impl ForgeEnvironmentService {
         }
     }
 
-    pub fn get(&self) -> Environment {
+    fn get(&self) -> Environment {
         dotenv::dotenv().ok();
         let cwd = std::env::current_dir().unwrap_or(PathBuf::from("."));
 
@@ -43,12 +43,16 @@ impl ForgeEnvironmentService {
         let provider = Provider::from_env().unwrap();
         Environment {
             os: std::env::consts::OS.to_string(),
+            pid: std::process::id(),
             cwd,
             shell: self.get_shell_path(),
             base_path: dirs::config_dir()
                 .map(|a| a.join("forge"))
                 .unwrap_or(PathBuf::from(".").join(".forge")),
             home: dirs::home_dir(),
+
+            qdrant_key: std::env::var("QDRANT_KEY").ok(),
+            qdrant_cluster: std::env::var("QDRANT_CLUSTER").ok(),
             provider_key,
             provider_url: provider.to_base_url().to_string(),
         }

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use futures::{Stream, StreamExt};
+use tracing::debug;
 
 use crate::*;
 
@@ -99,9 +100,14 @@ impl<A: App> Orchestrator<A> {
             .tool_supported;
         system_context.tool_supported = Some(tool_supported);
 
-        let system_message = agent
-            .system_prompt
-            .render(&system_context.tool_information(tool_usage_prompt))?;
+        let system_message = self
+            .app
+            .prompt_service()
+            .render(
+                &agent.system_prompt,
+                &system_context.tool_information(tool_usage_prompt),
+            )
+            .await?;
 
         Ok(Context::default()
             .set_first_system_message(system_message)
@@ -164,6 +170,7 @@ impl<A: App> Orchestrator<A> {
     }
 
     async fn dispatch(&self, event: &DispatchEvent) -> anyhow::Result<()> {
+        self.insert_event(event.clone()).await?;
         join_all(
             self.app
                 .conversation_service()
@@ -191,8 +198,8 @@ impl<A: App> Orchestrator<A> {
         if let Some(event) = DispatchEvent::parse(tool_call) {
             self.send(agent_id, ChatResponse::Custom(event.clone()))
                 .await?;
-            self.dispatch(&event).await?;
 
+            self.dispatch(&event).await?;
             Ok(None)
         } else {
             Ok(Some(self.app.tool_service().call(tool_call.clone()).await))
@@ -218,9 +225,8 @@ impl<A: App> Orchestrator<A> {
                         let input = DispatchEvent::new(input_key, summary.get());
                         self.init_agent(agent_id, &input).await?;
 
-                        // note: it's okay if event doesn't exits.
-                        if let Ok(event) = self.get_event(output_key).await {
-                            summary.set(event.value);
+                        if let Some(value) = self.get_event(output_key).await? {
+                            summary.set(serde_json::to_string(&value)?);
                         }
                     }
                 }
@@ -233,13 +239,12 @@ impl<A: App> Orchestrator<A> {
                     {
                         let task = DispatchEvent::task(content.clone());
                         self.init_agent(agent_id, &task).await?;
-
-                        // note: it's okay if event doesn't exits.
-                        if let Ok(event) = self.get_event(output_key).await {
-                            let message = event.value;
+                        if let Some(output) = self.get_event(output_key).await? {
+                            let message = &output.value;
                             content
                                 .push_str(&format!("\n<{output_key}>\n{message}\n</{output_key}>"));
                         }
+                        debug!(content = %content, "Transforming user input");
                     }
                 }
                 Transform::PassThrough { agent_id, input: input_key } => {
@@ -254,15 +259,15 @@ impl<A: App> Orchestrator<A> {
         Ok(context)
     }
 
-    async fn get_event(&self, name: &str) -> anyhow::Result<DispatchEvent> {
-        Ok(self
-            .get_conversation()
-            .await?
-            .workflow
-            .events
-            .get(name)
-            .ok_or(Error::UndefinedVariable(name.to_string()))?
-            .clone())
+    async fn get_event(&self, name: &str) -> anyhow::Result<Option<DispatchEvent>> {
+        Ok(self.get_conversation().await?.events.get(name).cloned())
+    }
+
+    async fn insert_event(&self, event: DispatchEvent) -> anyhow::Result<()> {
+        self.app
+            .conversation_service()
+            .insert_event(&self.chat_request.conversation_id, event)
+            .await
     }
 
     async fn get_conversation(&self) -> anyhow::Result<Conversation> {
@@ -291,6 +296,12 @@ impl<A: App> Orchestrator<A> {
     }
 
     async fn init_agent(&self, agent: &AgentId, event: &DispatchEvent) -> anyhow::Result<()> {
+        debug!(
+            conversation_id = %self.chat_request.conversation_id,
+            agent = %agent,
+            event = ?event,
+            "Initializing agent"
+        );
         let conversation = self.get_conversation().await?;
         let agent = conversation.workflow.get_agent(agent)?;
 
@@ -303,14 +314,16 @@ impl<A: App> Orchestrator<A> {
             }
         };
 
-        let content = agent
-            .user_prompt
-            .render(&UserContext::from(event.clone()))?;
+        let content = self
+            .app
+            .prompt_service()
+            .render(&agent.user_prompt, &UserContext::from(event.clone()))
+            .await?;
+
         context = context.add_message(ContextMessage::user(content));
 
         loop {
             context = self.execute_transform(&agent.transforms, context).await?;
-
             let response = self
                 .app
                 .provider_service()

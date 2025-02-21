@@ -1,6 +1,5 @@
 ---
 source: crates/forge_domain/src/tool_result.rs
 expression: result.to_string()
-snapshot_kind: text
 ---
-<tool_result><tool_name>xml_tool</tool_name><success>{"nested":{"html":"&lt;div&gt;Test&lt;/div&gt;"},"text":"Special chars: &lt; &gt; &amp; ' \""}</success></tool_result>
+<tool_result><tool_name>xml_tool</tool_name><success><![CDATA[{"nested":{"html":"<div>Test</div>"},"text":"Special chars: < > & ' \""}]]></success></tool_result>
