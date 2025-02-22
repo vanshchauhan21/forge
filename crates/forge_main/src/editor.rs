@@ -4,7 +4,6 @@ use reedline::{
     default_emacs_keybindings, ColumnarMenu, DefaultHinter, EditCommand, Emacs, FileBackedHistory,
     KeyCode, KeyModifiers, MenuBuilder, Prompt, Reedline, ReedlineEvent, ReedlineMenu, Signal,
 };
-use tracing::debug;
 
 use super::completer::InputCompleter;
 
@@ -94,7 +93,6 @@ impl ForgeEditor {
 
     pub fn prompt(&mut self, prompt: &dyn Prompt) -> anyhow::Result<ReadResult> {
         let signal = self.editor.read_line(prompt);
-        debug!(signal = ?signal, "Processing prompt signal");
         signal.map(Into::into).map_err(|e| anyhow::anyhow!(e))
     }
 }

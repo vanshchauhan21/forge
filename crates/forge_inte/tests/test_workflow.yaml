@@ -1,0 +1,11 @@
+agents:
+  - id: developer
+    model: anthropic/claude-3.5-sonnet
+    tools:
+      - tool_forge_fs_read
+    subscribe:
+      - user_task
+    ephemeral: false
+    system_prompt: |
+      You are supposed to read files and solve the puzzle given by the user.
+    user_prompt: <task>{{event.value}}</task>

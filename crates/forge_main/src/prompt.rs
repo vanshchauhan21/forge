@@ -6,11 +6,9 @@ use nu_ansi_term::{Color, Style};
 use reedline::{Prompt, PromptHistorySearchStatus};
 
 // Constants
-pub const MAX_LEN: usize = 30;
 const AI_INDICATOR: &str = "⚡";
 const MULTILINE_INDICATOR: &str = "::: ";
 const RIGHT_CHEVRON: &str = "❯";
-const TRUNCATION_INDICATOR: &str = "…";
 
 /// Very Specialized Prompt for the Agent Chat
 #[derive(Clone, Default, Setters)]
@@ -23,15 +21,6 @@ pub struct ForgePrompt {
 impl Prompt for ForgePrompt {
     fn render_prompt_left(&self) -> Cow<str> {
         if let Some(title) = self.title.as_ref() {
-            let title = if title.len() > MAX_LEN {
-                format!(
-                    "{}{}",
-                    &title[..MAX_LEN - TRUNCATION_INDICATOR.len()],
-                    TRUNCATION_INDICATOR
-                )
-            } else {
-                title.clone()
-            };
             Cow::Owned(format!(
                 "{AI_INDICATOR} {} {} ",
                 Style::new().fg(Color::Cyan).paint(title),
@@ -111,29 +100,6 @@ mod tests {
     }
 
     #[test]
-    fn test_render_prompt_left_with_long_title() {
-        let long_title = "a".repeat(MAX_LEN + 10);
-        let mut prompt = ForgePrompt::default();
-        prompt.title(long_title);
-        let truncated_title = format!(
-            "{}{}",
-            "a".repeat(MAX_LEN - TRUNCATION_INDICATOR.len()),
-            TRUNCATION_INDICATOR
-        );
-        let title_style = Style::new()
-            .fg(Color::Cyan)
-            .paint(truncated_title)
-            .to_string();
-        let actual = prompt.render_prompt_left();
-        let chevron_style = Style::new()
-            .fg(Color::LightYellow)
-            .paint(RIGHT_CHEVRON)
-            .to_string();
-        let expected = format!("{AI_INDICATOR} {title_style} {chevron_style} ");
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
     fn test_render_prompt_right_with_usage() {
         let usage = Usage { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 };
         let mut prompt = ForgePrompt::default();
@@ -195,30 +161,6 @@ mod tests {
             .paint("(reverse-search: test) ")
             .to_string();
         assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_render_prompt_left_with_long_title_length() {
-        let long_title = "a".repeat(MAX_LEN * 2); // Much longer than MAX_LEN
-        let mut prompt = ForgePrompt::default();
-        prompt.title(long_title);
-        let actual = prompt.render_prompt_left().into_owned();
-
-        // Extract just the title part (remove the AI_INDICATOR and formatting)
-        let title_start = actual.find('a').unwrap_or(0);
-        let title_end = actual
-            .rfind(TRUNCATION_INDICATOR)
-            .map(|i| i + TRUNCATION_INDICATOR.len())
-            .unwrap_or(actual.len());
-        let just_title = &actual[title_start..title_end];
-
-        assert!(
-            just_title.len() <= MAX_LEN,
-            "Title length {} exceeds MAX_LEN {}: '{}'",
-            just_title.len(),
-            MAX_LEN,
-            just_title
-        );
     }
 
     #[test]

@@ -35,7 +35,7 @@ pub trait API {
     async fn init(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
 
     /// Loads a workflow configuration from the given path, current directory's
-    /// forge.toml, or embedded default configuration in that order of
+    /// forge.yaml, or embedded default configuration in that order of
     /// precedence
     async fn load(&self, path: Option<&Path>) -> anyhow::Result<Workflow>;
 

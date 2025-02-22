@@ -10,6 +10,7 @@ use crate::{ToolChoice, ToolDefinition};
 /// NOTE: ToolResults message are part of the larger Request object and not part
 /// of the message.
 #[derive(Clone, Debug, Deserialize, From, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ContextMessage {
     ContentMessage(ContentMessage),
     ToolMessage(ToolResult),
@@ -66,6 +67,7 @@ impl ContextMessage {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Setters)]
 #[setters(strip_option, into)]
+#[serde(rename_all = "snake_case")]
 pub struct ContentMessage {
     pub role: Role,
     pub content: String,

@@ -184,16 +184,20 @@ impl<F: API> UI<F> {
         if let Some(conversation_id) = self.state.conversation_id.clone() {
             let conversation = self.api.conversation(&conversation_id).await?;
             if let Some(conversation) = conversation {
-                let contents = serde_json::to_string_pretty(&conversation)?;
                 let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
                 let path = self
                     .state
                     .current_title
                     .as_ref()
-                    .map_or(format!("{timestamp}.json"), |title| {
-                        format!("{timestamp}-{title}.json")
+                    .map_or(format!("{timestamp}"), |title| {
+                        format!("{timestamp}-{title}")
                     });
-                tokio::fs::write(path.as_str(), contents).await?;
+
+                let path = format!("{path}.yaml");
+
+                let content = serde_json::to_string(&conversation)?;
+                tokio::fs::write(path.as_str(), content).await?;
+
                 CONSOLE.writeln(
                     TitleFormat::success("dump")
                         .sub_title(format!("path: {path}"))

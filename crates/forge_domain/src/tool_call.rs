@@ -62,6 +62,7 @@ impl ToolCall {
 /// of the response from the model when streaming is disabled.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
 #[setters(strip_option, into)]
+#[serde(rename_all = "snake_case")]
 pub struct ToolCallFull {
     pub name: ToolName,
     pub call_id: Option<ToolCallId>,

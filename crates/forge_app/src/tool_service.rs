@@ -63,16 +63,16 @@ impl ToolService for ForgeToolService {
             )),
         };
 
-        match output {
-            Ok(output) => {
-                debug!(result = ?output, "Tool call completed successfully");
-                ToolResult::from(call).success(output)
-            }
+        let result = match output {
+            Ok(output) => ToolResult::from(call).success(output),
             Err(output) => {
                 error!(error = ?output, "Tool call failed");
                 ToolResult::from(call).failure(output)
             }
-        }
+        };
+
+        debug!(result = ?result, "Tool call result");
+        result
     }
 
     fn list(&self) -> Vec<ToolDefinition> {

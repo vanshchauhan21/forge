@@ -4,7 +4,7 @@ use forge_api::{AgentMessage, ChatRequest, ChatResponse, ForgeAPI, ModelId, API}
 use tokio_stream::StreamExt;
 
 const MAX_RETRIES: usize = 5;
-const WORKFLOW_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../forge.toml");
+const WORKFLOW_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/test_workflow.yaml");
 
 /// Test fixture for API testing that supports parallel model validation
 struct Fixture {

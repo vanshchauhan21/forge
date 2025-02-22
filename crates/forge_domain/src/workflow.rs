@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{Agent, AgentId};
@@ -20,13 +18,5 @@ impl Workflow {
     pub fn get_agent(&self, id: &AgentId) -> crate::Result<&Agent> {
         self.find_agent(id)
             .ok_or_else(|| crate::Error::AgentUndefined(id.clone()))
-    }
-}
-
-impl FromStr for Workflow {
-    type Err = toml::de::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        toml::de::from_str(s)
     }
 }

@@ -26,7 +26,6 @@ uuid = { version = "1.11.0", features = [
     "serde",
 ] }
 async-recursion = "1.1.1"
-toml = "0.8.20"
 tracing = "0.1.41"
 
 [dev-dependencies]
