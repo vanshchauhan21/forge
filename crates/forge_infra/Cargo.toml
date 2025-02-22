@@ -13,4 +13,4 @@ forge_app = { path = "../forge_app" }
 tokio = "1.43.0"
 serde_json = "1.0.138"
 qdrant-client = "1.13.0"
-rust-bert = "0.23.0"
+rust-bert = {version="0.23.0", default-features = false, features = ["rustls-tls", "remote"]}
