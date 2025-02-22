@@ -4,7 +4,7 @@ use indexmap::indexmap;
 use serde_json::json;
 
 /// Helper function to generate an apt-get install command for multiple packages
-/// 
+///
 /// # Examples
 /// ```
 /// let command = apt_get_install(&["pkg1", "pkg2"]);
