@@ -51,9 +51,9 @@ impl ForgeEditor {
             ReedlineEvent::SearchHistory,
         );
 
-        // on ALT + Enter press inserts a newline
+        // on Shift + Enter press inserts a newline
         keybindings.add_binding(
-            KeyModifiers::ALT,
+            KeyModifiers::SHIFT,
             KeyCode::Enter,
             ReedlineEvent::Edit(vec![EditCommand::InsertNewline]),
         );
