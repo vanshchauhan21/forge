@@ -3,6 +3,24 @@ use gh_workflow_tailcall::*;
 use indexmap::indexmap;
 use serde_json::json;
 
+/// Helper function to generate an apt-get install command for multiple packages
+/// 
+/// # Examples
+/// ```
+/// let command = apt_get_install(&["pkg1", "pkg2"]);
+/// assert_eq!(command, "sudo apt-get update && \\\nsudo apt-get install -y \\\n  pkg1 \\\n  pkg2");
+/// ```
+fn apt_get_install(packages: &[&str]) -> String {
+    format!(
+        "sudo apt-get update && \\\nsudo apt-get install -y \\\n{}",
+        packages
+            .iter()
+            .map(|pkg| format!("  {}", pkg))
+            .collect::<Vec<_>>()
+            .join(" \\\n")
+    )
+}
+
 #[test]
 fn generate() {
     let mut workflow = StandardWorkflow::default()
@@ -135,10 +153,16 @@ fn generate() {
                     )),
             )
             .add_step(
-                Step::run(r#"sudo apt-get update; sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools"#)
+                Step::run(apt_get_install(&[
+                    "gcc-aarch64-linux-gnu",
+                    "musl-tools",
+                    "musl-dev",
+                    "pkg-config",
+                    "libssl-dev",
+                ]))
                 .if_condition(Expression::new(
-        "contains(matrix.target, 'aarch64-unknown-linux-musl')",
-            )),
+                    "contains(matrix.target, '-unknown-linux-musl')",
+                )),
             )
             // Build release binary
             .add_step(
@@ -227,6 +251,16 @@ fn generate() {
 
     workflow.generate().unwrap();
 }
+#[test]
+fn test_apt_get_install() {
+    let packages = &["pkg1", "pkg2", "pkg3"];
+    let command = apt_get_install(packages);
+    assert_eq!(
+        command,
+        "sudo apt-get update && \\\nsudo apt-get install -y \\\n  pkg1 \\\n  pkg2 \\\n  pkg3"
+    );
+}
+
 #[test]
 fn test_release_drafter() {
     // Generate Release Drafter workflow
