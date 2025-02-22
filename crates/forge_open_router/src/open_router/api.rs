@@ -15,7 +15,7 @@ use super::parameters::ParameterResponse;
 use super::provider::Provider;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
-use super::transformers::{ProviderPipeline, Transformer};
+use crate::open_router::transformers::{ProviderPipeline, Transformer};
 
 #[derive(Debug, Default, Clone, Setters)]
 #[setters(into, strip_option)]

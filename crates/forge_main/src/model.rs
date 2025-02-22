@@ -73,6 +73,8 @@ pub enum Command {
     Exit,
     /// Lists the models available for use.
     Models,
+    /// Dumps the current conversation into a json file
+    Dump,
 }
 
 impl Command {
@@ -88,6 +90,7 @@ impl Command {
             "/info".to_string(),
             "/exit".to_string(),
             "/models".to_string(),
+            "/dump".to_string(),
         ]
     }
 
@@ -109,6 +112,7 @@ impl Command {
             "/info" => Command::Info,
             "/exit" => Command::Exit,
             "/models" => Command::Models,
+            "/dump" => Command::Dump,
             text => Command::Message(text.to_string()),
         }
     }

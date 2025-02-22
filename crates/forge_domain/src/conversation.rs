@@ -33,7 +33,6 @@ pub struct Conversation {
     pub id: ConversationId,
     pub workflow: Workflow,
     pub archived: bool,
-    pub title: Option<String>,
     pub state: HashMap<AgentId, AgentState>,
     pub events: HashMap<String, DispatchEvent>,
 }
@@ -50,7 +49,6 @@ impl Conversation {
             id,
             workflow,
             archived: false,
-            title: None,
             state: Default::default(),
             events: Default::default(),
         }

@@ -38,4 +38,10 @@ pub trait API {
     /// forge.toml, or embedded default configuration in that order of
     /// precedence
     async fn load(&self, path: Option<&Path>) -> anyhow::Result<Workflow>;
+
+    /// Returns the conversation with the given ID
+    async fn conversation(
+        &self,
+        conversation_id: &ConversationId,
+    ) -> anyhow::Result<Option<Conversation>>;
 }

@@ -19,6 +19,7 @@ tools = [
   "tool_forge_fs_patch",
   "tool_forge_process_shell",
   "tool_forge_net_fetch",
+  "tool_forge_fs_search",
 ]
 subscribe = ["user_task"]
 max_turns = 1024
