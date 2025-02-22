@@ -53,7 +53,7 @@ impl ForgeEditor {
 
         // on Shift + Enter press inserts a newline
         keybindings.add_binding(
-            KeyModifiers::SHIFT,
+            KeyModifiers::ALT,
             KeyCode::Enter,
             ReedlineEvent::Edit(vec![EditCommand::InsertNewline]),
         );
