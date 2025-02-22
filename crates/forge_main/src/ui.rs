@@ -193,9 +193,9 @@ impl<F: API> UI<F> {
                         format!("{timestamp}-{title}")
                     });
 
-                let path = format!("{path}.yaml");
+                let path = format!("{path}.json");
 
-                let content = serde_json::to_string(&conversation)?;
+                let content = serde_json::to_string_pretty(&conversation)?;
                 tokio::fs::write(path.as_str(), content).await?;
 
                 CONSOLE.writeln(
