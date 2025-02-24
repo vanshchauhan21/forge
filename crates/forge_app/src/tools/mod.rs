@@ -67,6 +67,7 @@ mod tests {
                 pid: std::process::id(),
                 provider_url: Default::default(),
                 provider_key: Default::default(),
+                openai_key: Default::default(),
             },
         }
     }

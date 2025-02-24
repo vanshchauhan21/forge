@@ -28,6 +28,8 @@ pub struct Environment {
     pub provider_key: String,
     /// The base url for provider
     pub provider_url: String,
+    /// The OpenAI API key required to use embedding models.
+    pub openai_key: Option<String>,
 }
 
 impl Environment {

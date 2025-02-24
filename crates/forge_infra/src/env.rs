@@ -55,6 +55,7 @@ impl ForgeEnvironmentService {
             qdrant_cluster: std::env::var("QDRANT_CLUSTER").ok(),
             provider_key,
             provider_url: provider.to_base_url().to_string(),
+            openai_key: std::env::var("OPENAI_API_KEY").ok(),
         }
     }
 }

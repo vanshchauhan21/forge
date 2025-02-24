@@ -36,3 +36,4 @@ Cargo.lock
 .tasks
 *.new
 .vscode/
+.fastembed_cache/
