@@ -8,7 +8,7 @@ Best Practices:
 [![CI Status](https://img.shields.io/github/actions/workflow/status/antinomyhq/forge/ci.yml?style=for-the-badge)](https://github.com/antinomyhq/forge/actions)
 [![GitHub Release](https://img.shields.io/github/v/release/antinomyhq/forge?style=for-the-badge)](https://github.com/antinomyhq/forge/releases)
 
-Code-Forge is an AI-powered interactive shell that stands out through:
+Forge is an **AI-powered** interactive shell that stands out through:
 
 - Lightning-fast performance with sub-50ms startup times
 - Seamless integration with existing Unix tools and workflows
