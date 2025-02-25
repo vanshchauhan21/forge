@@ -124,60 +124,70 @@ fn generate() {
                 "create_release_id".to_string() => "${{ steps.set_output.outputs.create_release_id }}".to_string()
             });
     workflow = workflow.add_job("draft_release", draft_release_job.clone());
-
     // Build and upload release job
+    // Store reference to build-release job
+    let build_release_job = Job::new("build-release")
+        .strategy(Strategy {
+            fail_fast: None,
+            max_parallel: None,
+            matrix: Some(matrix.clone()),
+        })
+        .runs_on("${{ matrix.os }}")
+        .permissions(
+            Permissions::default()
+                .contents(Level::Write)
+                .pull_requests(Level::Write),
+        )
+        .add_step(Step::uses("actions", "checkout", "v4"))
+        // Install Rust with cross-compilation target
+        .add_step(
+            Step::uses("taiki-e", "setup-cross-toolchain-action", "v1")
+                .with(("target", "${{ matrix.target }}")),
+        )
+        // Build add link flags
+        .add_step(
+            Step::run(r#"echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV"#)
+                .if_condition(Expression::new(
+                    "!contains(matrix.target, '-unknown-linux-gnu')",
+                )),
+        )
+        .add_step(
+            Step::run(apt_get_install(&[
+                "gcc-aarch64-linux-gnu",
+                "musl-tools",
+                "musl-dev",
+                "pkg-config",
+                "libssl-dev",
+            ]))
+            .if_condition(Expression::new(
+                "contains(matrix.target, '-unknown-linux-musl')",
+            )),
+        )
+        // Build release binary
+        .add_step(
+            Step::uses("ClementTsang", "cargo-action", "v0.0.6")
+                .add_with(("command", "build --release"))
+                .add_with(("args", "--target ${{ matrix.target }}"))
+                .add_with(("use-cross", "${{ matrix.cross }}"))
+                .add_with(("cross-version", "0.2.4"))
+                .add_env(("RUSTFLAGS", "${{ env.RUSTFLAGS }}"))
+                .add_env(("POSTHOG_API_SECRET", "${{secrets.POSTHOG_API_SECRET}}"))
+                .add_env((
+                    "APP_VERSION",
+                    "${{ needs.draft_release.outputs.create_release_name }}",
+                )),
+        );
+    let label_cond = Expression::new("github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-all-targets')");
+    workflow = workflow.add_job(
+        "build-release-pr",
+        build_release_job.clone().cond(label_cond),
+    );
     workflow = workflow.add_job(
         "build-release",
-        Job::new("build-release")
+        build_release_job
             .add_needs(build_job.clone())
             .add_needs(draft_release_job.clone())
             .cond(main_cond.clone())
-            .strategy(Strategy { fail_fast: None, max_parallel: None, matrix: Some(matrix) })
-            .runs_on("${{ matrix.os }}")
-            .permissions(
-                Permissions::default()
-                    .contents(Level::Write)
-                    .pull_requests(Level::Write),
-            )
-            .add_step(Step::uses("actions", "checkout", "v4"))
-            // Install Rust with cross-compilation target
-            .add_step(
-                Step::uses("taiki-e", "setup-cross-toolchain-action", "v1")
-                    .with(("target", "${{ matrix.target }}")),
-            )
-            // Build add link flags
-            .add_step(
-                Step::run(r#"echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV"#)
-                    .if_condition(Expression::new(
-                        "!contains(matrix.target, '-unknown-linux-gnu')",
-                    )),
-            )
-            .add_step(
-                Step::run(apt_get_install(&[
-                    "gcc-aarch64-linux-gnu",
-                    "musl-tools",
-                    "musl-dev",
-                    "pkg-config",
-                    "libssl-dev",
-                ]))
-                .if_condition(Expression::new(
-                    "contains(matrix.target, '-unknown-linux-musl')",
-                )),
-            )
-            // Build release binary
-            .add_step(
-                Step::uses("ClementTsang", "cargo-action", "v0.0.6")
-                    .add_with(("command", "build --release"))
-                    .add_with(("args", "--target ${{ matrix.target }}"))
-                    .add_with(("use-cross", "${{ matrix.cross }}"))
-                    .add_with(("cross-version", "0.2.4"))
-                    .add_env(("RUSTFLAGS", "${{ env.RUSTFLAGS }}"))
-                    .add_env(("POSTHOG_API_SECRET", "${{secrets.POSTHOG_API_SECRET}}"))
-                    .add_env((
-                        "APP_VERSION",
-                        "${{ needs.draft_release.outputs.create_release_name }}",
-                    )),
-            )
             // Rename binary to target name
             .add_step(Step::run(
                 "cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}",
