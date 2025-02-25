@@ -1,12 +1,11 @@
-use forge_api::Environment;
+use std::path::PathBuf;
+
 use tracing::debug;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{self};
 
-#[tracing::instrument(name = "init_logging", skip(env))]
-pub fn init_tracing(env: Environment) -> anyhow::Result<WorkerGuard> {
-    let log_path = env.log_path();
+pub fn init_tracing(log_path: PathBuf) -> anyhow::Result<Guard> {
     debug!(path = %log_path.display(), "Initializing logging system");
 
     let append = tracing_appender::rolling::daily(log_path, "forge.log");
@@ -29,5 +28,7 @@ pub fn init_tracing(env: Environment) -> anyhow::Result<WorkerGuard> {
         .init();
 
     debug!("Logging system initialized successfully");
-    Ok(guard)
+    Ok(Guard(guard))
 }
+
+pub struct Guard(#[allow(dead_code)] WorkerGuard);

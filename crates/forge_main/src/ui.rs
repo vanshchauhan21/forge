@@ -8,12 +8,12 @@ use forge_tracker::EventKind;
 use lazy_static::lazy_static;
 use tokio_stream::StreamExt;
 
+use crate::banner;
 use crate::cli::Cli;
 use crate::console::CONSOLE;
 use crate::info::Info;
 use crate::input::{Console, PromptInput};
 use crate::model::{Command, UserInput};
-use crate::{banner, log};
 
 lazy_static! {
     pub static ref TRACKER: forge_tracker::Tracker = forge_tracker::Tracker::default();
@@ -42,7 +42,7 @@ pub struct UI<F> {
     cli: Cli,
     models: Option<Vec<Model>>,
     #[allow(dead_code)] // The guard is kept alive by being held in the struct
-    _guard: tracing_appender::non_blocking::WorkerGuard,
+    _guard: forge_tracker::Guard,
 }
 
 impl<F: API> UI<F> {
@@ -56,7 +56,7 @@ impl<F: API> UI<F> {
             console: Console::new(env.clone()),
             cli,
             models: None,
-            _guard: log::init_tracing(env.clone())?,
+            _guard: forge_tracker::init_tracing(env.log_path())?,
         })
     }
 
@@ -218,7 +218,9 @@ impl<F: API> UI<F> {
     fn handle_chat_response(&mut self, message: AgentMessage<ChatResponse>) -> Result<()> {
         match message.message {
             ChatResponse::Text(text) => {
-                if message.agent.as_str() == "developer" {
+                // Any agent that ends with "worker" is considered a worker agent.
+                // Worker agents don't print anything to the console.
+                if !message.agent.as_str().to_lowercase().ends_with("worker") {
                     CONSOLE.write(&text)?;
                 }
             }

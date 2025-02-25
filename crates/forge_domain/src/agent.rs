@@ -2,7 +2,7 @@ use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use crate::prompt::Prompt;
+use crate::template::Template;
 use crate::{Environment, ModelId, ToolName, UserContext};
 
 #[derive(Debug, Default, Setters, Clone, Serialize, Deserialize)]
@@ -50,8 +50,13 @@ pub struct Agent {
     pub id: AgentId,
     pub model: ModelId,
     pub description: Option<String>,
-    pub system_prompt: Prompt<SystemContext>,
-    pub user_prompt: Prompt<UserContext>,
+    pub system_prompt: Template<SystemContext>,
+    pub user_prompt: Template<UserContext>,
+
+    /// When set to true all user events will also contain a suggestions field
+    /// that is prefilled with the matching information from vector store.
+    #[serde(skip_serializing_if = "is_true", default)]
+    pub suggestions: bool,
 
     /// Suggests if the agent needs to maintain its state for the lifetime of
     /// the program.    

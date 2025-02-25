@@ -24,6 +24,8 @@ pub struct FSWriteInput {
 /// Always provide absolute paths for file locations. The tool
 /// automatically handles the creation of any missing intermediary directories
 /// in the specified path.
+/// IMPORTANT: DO NOT attempt to use this tool to move or rename files, use the
+/// shell tool instead.
 #[derive(ToolDescription)]
 pub struct FSWrite;
 

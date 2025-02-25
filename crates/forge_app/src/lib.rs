@@ -1,15 +1,15 @@
 mod app;
 mod conversation;
-mod prompt;
 mod provider;
+mod suggestion;
+mod template;
 mod tool_service;
 mod tools;
 
 use std::path::Path;
 
 pub use app::*;
-use forge_domain::{Knowledge, Query};
-use serde_json::Value;
+use forge_domain::{Point, Query, Suggestion};
 
 /// Repository for accessing system environment information
 #[async_trait::async_trait]
@@ -33,9 +33,9 @@ pub trait FileReadService: Send + Sync {
 }
 
 #[async_trait::async_trait]
-pub trait KnowledgeRepository<T>: Send + Sync {
-    async fn store(&self, information: Vec<Knowledge<T>>) -> anyhow::Result<()>;
-    async fn search(&self, query: Query) -> anyhow::Result<Vec<Value>>;
+pub trait VectorIndex<T>: Send + Sync {
+    async fn store(&self, point: Point<T>) -> anyhow::Result<()>;
+    async fn search(&self, query: Query) -> anyhow::Result<Vec<Point<T>>>;
 }
 
 #[async_trait::async_trait]
@@ -46,11 +46,11 @@ pub trait EmbeddingService: Send + Sync {
 pub trait Infrastructure: Send + Sync + 'static {
     type EnvironmentService: EnvironmentService;
     type FileReadService: FileReadService;
-    type KnowledgeRepository: KnowledgeRepository<Value>;
+    type VectorIndex: VectorIndex<Suggestion>;
     type EmbeddingService: EmbeddingService;
 
     fn environment_service(&self) -> &Self::EnvironmentService;
     fn file_read_service(&self) -> &Self::FileReadService;
-    fn textual_knowledge_repo(&self) -> &Self::KnowledgeRepository;
+    fn vector_index(&self) -> &Self::VectorIndex;
     fn embedding_service(&self) -> &Self::EmbeddingService;
 }

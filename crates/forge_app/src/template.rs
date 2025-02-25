@@ -1,4 +1,4 @@
-use forge_domain::{Prompt, PromptService};
+use forge_domain::{Template, TemplateService};
 use handlebars::Handlebars;
 use rust_embed::Embed;
 use serde::Serialize;
@@ -7,17 +7,17 @@ use serde::Serialize;
 #[folder = "../../templates/"]
 struct Templates;
 
-pub struct ForgePromptService {
+pub struct ForgeTemplateService {
     hb: Handlebars<'static>,
 }
 
-impl Default for ForgePromptService {
+impl Default for ForgeTemplateService {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ForgePromptService {
+impl ForgeTemplateService {
     pub fn new() -> Self {
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
@@ -31,10 +31,10 @@ impl ForgePromptService {
 }
 
 #[async_trait::async_trait]
-impl PromptService for ForgePromptService {
+impl TemplateService for ForgeTemplateService {
     async fn render<T: Serialize + Send + Sync>(
         &self,
-        prompt: &Prompt<T>,
+        prompt: &Template<T>,
         ctx: &T,
     ) -> anyhow::Result<String> {
         Ok(self.hb.render_template(prompt.template.as_str(), ctx)?)

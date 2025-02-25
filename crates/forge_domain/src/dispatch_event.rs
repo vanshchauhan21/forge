@@ -1,28 +1,33 @@
+use derive_setters::Setters;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{NamedTool, ToolCallFull, ToolDefinition, ToolName};
 
+// We'll use simple strings for JSON schema compatibility
 #[derive(Debug, JsonSchema, Deserialize, Serialize, Clone)]
 pub struct DispatchEvent {
+    pub id: String,
     pub name: String,
     pub value: String,
+    pub timestamp: String,
 }
 
-impl From<DispatchEvent> for UserContext {
-    fn from(event: DispatchEvent) -> Self {
-        Self { event }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Setters)]
 pub struct UserContext {
     event: DispatchEvent,
+    suggestions: Vec<String>,
+}
+
+impl UserContext {
+    pub fn new(event: DispatchEvent) -> Self {
+        Self { event, suggestions: Default::default() }
+    }
 }
 
 impl NamedTool for DispatchEvent {
     fn tool_name() -> ToolName {
-        ToolName::new("forge_tool_event_dispatch")
+        ToolName::new("tool_forge_event_dispatch")
     }
 }
 
@@ -44,12 +49,25 @@ impl DispatchEvent {
     }
 
     pub fn new(name: impl ToString, value: impl ToString) -> Self {
-        Self { name: name.to_string(), value: value.to_string() }
+        let id = uuid::Uuid::new_v4().to_string();
+        let timestamp = chrono::Utc::now().to_rfc3339();
+
+        Self {
+            id,
+            name: name.to_string(),
+            value: value.to_string(),
+            timestamp,
+        }
     }
 
-    pub fn task(value: impl ToString) -> Self {
-        Self::new(Self::USER_TASK, value)
+    pub fn task_init(value: impl ToString) -> Self {
+        Self::new(Self::USER_TASK_INIT, value)
     }
 
-    pub const USER_TASK: &'static str = "user_task";
+    pub fn task_update(value: impl ToString) -> Self {
+        Self::new(Self::USER_TASK_UPDATE, value)
+    }
+
+    pub const USER_TASK_INIT: &'static str = "user_task_init";
+    pub const USER_TASK_UPDATE: &'static str = "user_task_update";
 }

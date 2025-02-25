@@ -3,6 +3,8 @@ mod collect;
 mod dispatch;
 mod error;
 mod event;
+mod log;
 pub use dispatch::Tracker;
 use error::Result;
 pub use event::{Event, EventKind};
+pub use log::{init_tracing, Guard};

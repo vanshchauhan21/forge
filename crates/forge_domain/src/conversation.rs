@@ -31,10 +31,10 @@ impl ConversationId {
 #[derive(Debug, Setters, Serialize, Deserialize, Clone)]
 pub struct Conversation {
     pub id: ConversationId,
-    pub workflow: Workflow,
     pub archived: bool,
     pub state: HashMap<AgentId, AgentState>,
-    pub events: HashMap<String, DispatchEvent>,
+    pub events: Vec<DispatchEvent>,
+    pub workflow: Workflow,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -71,5 +71,9 @@ impl Conversation {
 
     pub fn context(&self, id: &AgentId) -> Option<&Context> {
         self.state.get(id).and_then(|s| s.context.as_ref())
+    }
+
+    pub fn rfind_event(&self, event_name: &str) -> Option<&DispatchEvent> {
+        self.events.iter().rfind(|event| event.name == event_name)
     }
 }

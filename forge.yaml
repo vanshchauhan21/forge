@@ -1,15 +1,20 @@
+variables:
+  models:
+    advanced_model: &advanced_model anthropic/claude-3.7-sonnet
+    efficiency_model: &efficiency_model anthropic/claude-3.5-haiku
+
 agents:
-  - id: title
-    model: anthropic/claude-3.5-haiku
+  - id: title_generation_worker
+    model: *efficiency_model
     tools:
-      - forge_tool_event_dispatch
+      - tool_forge_event_dispatch
     subscribe:
-      - user_task
-    max_turns: 1
+      - user_task_init
     system_prompt: "{{> title-generator.hbs }}"
     user_prompt: <technical_content>{{event.value}}</technical_content>
+
   - id: developer
-    model: anthropic/claude-3.5-sonnet
+    model: *advanced_model
     tools:
       - tool_forge_fs_read
       - tool_forge_fs_create
@@ -19,27 +24,9 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
     subscribe:
-      - user_task
+      - user_task_init
+      - user_task_update
     ephemeral: false
-    transforms:
-      - type: user
-        agent_id: knowledge_recall
-        output: learnings
     system_prompt: "{{> software-engineer.hbs }}"
-    user_prompt: <task>{{event.value}}</task>
-  - id: knowledge_store
-    model: anthropic/claude-3.5-sonnet
-    tools:
-      - forge_tool_knowledge_set
-    subscribe:
-      - user_task
-    system_prompt: "{{> knowledge-storage.hbs }}"
-    user_prompt: <feedback>{{event.value}}</feedback>
-  - id: knowledge_recall
-    model: anthropic/claude-3.5-sonnet
-    tools:
-      - forge_tool_knowledge_get
-      - forge_tool_event_dispatch
-    subscribe: []
-    system_prompt: "{{> knowledge-recall.hbs }}"
-    user_prompt: "{{event.value}}"
+    user_prompt: |
+      <task>{{event.value}}</task>

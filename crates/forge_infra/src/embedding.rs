@@ -26,6 +26,7 @@ pub struct OpenAIEmbeddingService {
 }
 
 impl OpenAIEmbeddingService {
+    pub const EMBEDDING_MODEL: &str = "text-embedding-ada-002";
     pub fn new(env: Environment) -> Self {
         let client = reqwest::Client::new();
         Self { client, env }
@@ -49,7 +50,7 @@ impl EmbeddingService for OpenAIEmbeddingService {
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
         let request = EmbeddingRequest {
-            model: "text-embedding-ada-002".to_string(),
+            model: Self::EMBEDDING_MODEL.to_string(),
             input: sentence.to_string(),
         };
 
@@ -61,6 +62,7 @@ impl EmbeddingService for OpenAIEmbeddingService {
             .send()
             .await
             .context("Failed to send request to OpenAI")?
+            .error_for_status()?
             .json()
             .await
             .context("Failed to parse OpenAI response")?;

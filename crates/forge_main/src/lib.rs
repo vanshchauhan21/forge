@@ -5,7 +5,6 @@ mod console;
 mod editor;
 mod info;
 mod input;
-mod log;
 mod model;
 mod normalize;
 mod prompt;

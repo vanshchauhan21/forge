@@ -10,6 +10,7 @@ use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
 
+#[derive(Debug, Clone)]
 pub struct AgentMessage<T> {
     pub agent: AgentId,
     pub message: T,
@@ -40,16 +41,6 @@ impl<A: App> Orchestrator<A> {
             sender: sender.map(Arc::new),
             chat_request,
         }
-    }
-
-    pub fn system_context(mut self, system_context: SystemContext) -> Self {
-        self.system_context = system_context;
-        self
-    }
-
-    pub fn sender(mut self, sender: ArcSender) -> Self {
-        self.sender = Some(Arc::new(sender));
-        self
     }
 
     async fn send_message(&self, agent_id: &AgentId, message: ChatResponse) -> anyhow::Result<()> {
@@ -170,6 +161,13 @@ impl<A: App> Orchestrator<A> {
     }
 
     async fn dispatch(&self, event: &DispatchEvent) -> anyhow::Result<()> {
+        debug!(
+            conversation_id = %self.chat_request.conversation_id,
+            event_name = %event.name,
+            event_value = %event.value,
+            "Dispatching event"
+        );
+
         self.insert_event(event.clone()).await?;
         join_all(
             self.app
@@ -225,7 +223,7 @@ impl<A: App> Orchestrator<A> {
                         let input = DispatchEvent::new(input_key, summary.get());
                         self.init_agent(agent_id, &input).await?;
 
-                        if let Some(value) = self.get_event(output_key).await? {
+                        if let Some(value) = self.get_last_event(output_key).await? {
                             summary.set(serde_json::to_string(&value)?);
                         }
                     }
@@ -237,9 +235,9 @@ impl<A: App> Orchestrator<A> {
                         ..
                     })) = context.messages.last_mut()
                     {
-                        let task = DispatchEvent::task(content.clone());
+                        let task = DispatchEvent::task_init(content.clone());
                         self.init_agent(agent_id, &task).await?;
-                        if let Some(output) = self.get_event(output_key).await? {
+                        if let Some(output) = self.get_last_event(output_key).await? {
                             let message = &output.value;
                             content
                                 .push_str(&format!("\n<{output_key}>\n{message}\n</{output_key}>"));
@@ -259,8 +257,8 @@ impl<A: App> Orchestrator<A> {
         Ok(context)
     }
 
-    async fn get_event(&self, name: &str) -> anyhow::Result<Option<DispatchEvent>> {
-        Ok(self.get_conversation().await?.events.get(name).cloned())
+    async fn get_last_event(&self, name: &str) -> anyhow::Result<Option<DispatchEvent>> {
+        Ok(self.get_conversation().await?.rfind_event(name).cloned())
     }
 
     async fn insert_event(&self, event: DispatchEvent) -> anyhow::Result<()> {
@@ -314,10 +312,18 @@ impl<A: App> Orchestrator<A> {
             }
         };
 
+        let mut user_context = UserContext::new(event.clone());
+
+        if agent.suggestions {
+            let suggestions = self.init_suggestions().await?;
+            debug!(suggestions = ?suggestions, "Suggestions received");
+            user_context = user_context.suggestions(suggestions);
+        }
+
         let content = self
             .app
             .prompt_service()
-            .render(&agent.user_prompt, &UserContext::from(event.clone()))
+            .render(&agent.user_prompt, &user_context)
             .await?;
 
         context = context.add_message(ContextMessage::user(content));
@@ -348,9 +354,7 @@ impl<A: App> Orchestrator<A> {
                 .add_message(ContextMessage::assistant(content, Some(tool_calls)))
                 .add_tool_results(tool_results.clone());
 
-            if !agent.ephemeral {
-                self.set_context(&agent.id, context.clone()).await?;
-            }
+            self.set_context(&agent.id, context.clone()).await?;
 
             if tool_results.is_empty() {
                 break;
@@ -362,9 +366,34 @@ impl<A: App> Orchestrator<A> {
         Ok(())
     }
 
+    async fn init_suggestions(&self) -> anyhow::Result<Vec<String>> {
+        Ok(self
+            .app
+            .suggestion_service()
+            .search(&self.chat_request.content)
+            .await?
+            .into_iter()
+            .map(|suggestion| suggestion.suggestion)
+            .collect())
+    }
+
+    /// Initializes the appropriate dispatch event based on whether this is the
+    /// first message in the workflow
+    async fn init_dispatch_event(&self) -> anyhow::Result<DispatchEvent> {
+        let has_task = self
+            .get_last_event(DispatchEvent::USER_TASK_INIT)
+            .await?
+            .is_some();
+
+        Ok(if has_task {
+            DispatchEvent::task_update(self.chat_request.content.clone())
+        } else {
+            DispatchEvent::task_init(self.chat_request.content.clone())
+        })
+    }
+
     pub async fn execute(&self) -> anyhow::Result<()> {
-        let event = DispatchEvent::task(self.chat_request.content.clone());
-        self.dispatch(&event).await?;
-        Ok(())
+        let event = self.init_dispatch_event().await?;
+        self.dispatch(&event).await
     }
 }

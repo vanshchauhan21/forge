@@ -10,16 +10,16 @@ mod utils;
 use std::sync::Arc;
 
 use fetch::Fetch;
-use forge_domain::Tool;
+use forge_domain::{SuggestionService, Tool};
 use fs::*;
-use knowledge::{RecallKnowledge, StoreKnowledge};
+use knowledge::{RecallSuggestions, StoreSuggestion};
 use patch::*;
 use shell::Shell;
 use think::Think;
 
 use crate::{EnvironmentService, Infrastructure};
 
-pub fn tools<F: Infrastructure>(infra: Arc<F>) -> Vec<Tool> {
+pub fn tools<F: Infrastructure, S: SuggestionService>(infra: Arc<F>, suggest: Arc<S>) -> Vec<Tool> {
     let env = infra.environment_service().get_environment();
     vec![
         FSRead.into(),
@@ -34,8 +34,8 @@ pub fn tools<F: Infrastructure>(infra: Arc<F>) -> Vec<Tool> {
         Shell::new(env.clone()).into(),
         Think::default().into(),
         Fetch::default().into(),
-        RecallKnowledge::new(infra.clone()).into(),
-        StoreKnowledge::new(infra.clone()).into(),
+        RecallSuggestions::new(suggest.clone()).into(),
+        StoreSuggestion::new(suggest.clone()).into(),
     ]
 }
 
@@ -43,11 +43,10 @@ pub fn tools<F: Infrastructure>(infra: Arc<F>) -> Vec<Tool> {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use forge_domain::{Environment, Knowledge, Query};
-    use serde_json::Value;
+    use forge_domain::{Environment, Point, Query, Suggestion};
 
     use super::*;
-    use crate::{EmbeddingService, FileReadService, KnowledgeRepository};
+    use crate::{EmbeddingService, FileReadService, VectorIndex};
 
     /// Create a default test environment
     fn stub() -> Stub {
@@ -96,12 +95,12 @@ mod tests {
         }
     }
     #[async_trait::async_trait]
-    impl KnowledgeRepository<Value> for Stub {
-        async fn store(&self, _information: Vec<Knowledge<Value>>) -> anyhow::Result<()> {
+    impl VectorIndex<Suggestion> for Stub {
+        async fn store(&self, _information: Point<Suggestion>) -> anyhow::Result<()> {
             unimplemented!()
         }
 
-        async fn search(&self, _query: Query) -> anyhow::Result<Vec<Value>> {
+        async fn search(&self, _query: Query) -> anyhow::Result<Vec<Point<Suggestion>>> {
             unimplemented!()
         }
     }
@@ -110,7 +109,7 @@ mod tests {
     impl Infrastructure for Stub {
         type EnvironmentService = Stub;
         type FileReadService = Stub;
-        type KnowledgeRepository = Stub;
+        type VectorIndex = Stub;
         type EmbeddingService = Stub;
 
         fn environment_service(&self) -> &Self::EnvironmentService {
@@ -121,12 +120,22 @@ mod tests {
             self
         }
 
-        fn textual_knowledge_repo(&self) -> &Self::KnowledgeRepository {
+        fn vector_index(&self) -> &Self::VectorIndex {
             self
         }
 
         fn embedding_service(&self) -> &Self::EmbeddingService {
             self
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl SuggestionService for Stub {
+        async fn search(&self, _request: &str) -> anyhow::Result<Vec<Suggestion>> {
+            unimplemented!()
+        }
+        async fn insert(&self, _suggestion: Suggestion) -> anyhow::Result<()> {
+            unimplemented!()
         }
     }
 
@@ -138,7 +147,7 @@ mod tests {
 
         let mut any_exceeded = false;
         let stub = Arc::new(stub());
-        for tool in tools(stub) {
+        for tool in tools(stub.clone(), stub.clone()) {
             let desc_len = tool.definition.description.len();
             println!(
                 "{:?}: {} chars {}",

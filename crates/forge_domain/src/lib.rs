@@ -7,13 +7,14 @@ mod dispatch_event;
 mod env;
 mod error;
 mod file;
-mod knowledge;
 mod message;
 mod model;
 mod orch;
-mod prompt;
+mod point;
 mod provider;
+mod suggestion;
 mod summarize;
+mod template;
 mod tool;
 mod tool_call;
 mod tool_call_parser;
@@ -33,14 +34,15 @@ pub use dispatch_event::*;
 pub use env::*;
 pub use error::*;
 pub use file::*;
-pub use knowledge::*;
 pub use message::*;
 pub use model::*;
 pub use orch::*;
-pub use prompt::*;
+pub use point::*;
 pub use provider::*;
 use serde::Serialize;
+pub use suggestion::*;
 pub use summarize::*;
+pub use template::*;
 pub use tool::*;
 pub use tool_call::*;
 pub use tool_call_parser::*;
@@ -89,12 +91,18 @@ pub trait ConversationService: Send + Sync {
 }
 
 #[async_trait::async_trait]
-pub trait PromptService: Send + Sync {
+pub trait TemplateService: Send + Sync {
     async fn render<T: Serialize + Send + Sync>(
         &self,
-        prompt: &Prompt<T>,
+        prompt: &Template<T>,
         value: &T,
     ) -> anyhow::Result<String>;
+}
+
+#[async_trait::async_trait]
+pub trait SuggestionService: Send + Sync + 'static {
+    async fn search(&self, request: &str) -> anyhow::Result<Vec<Suggestion>>;
+    async fn insert(&self, suggestion: Suggestion) -> anyhow::Result<()>;
 }
 
 /// Core app trait providing access to services and repositories.
@@ -104,10 +112,12 @@ pub trait App: Send + Sync + 'static {
     type ToolService: ToolService;
     type ProviderService: ProviderService;
     type ConversationService: ConversationService;
-    type PromptService: PromptService;
+    type PromptService: TemplateService;
+    type SuggestionService: SuggestionService;
 
     fn tool_service(&self) -> &Self::ToolService;
     fn provider_service(&self) -> &Self::ProviderService;
     fn conversation_service(&self) -> &Self::ConversationService;
     fn prompt_service(&self) -> &Self::PromptService;
+    fn suggestion_service(&self) -> &Self::SuggestionService;
 }

@@ -1,20 +1,21 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
-use forge_app::KnowledgeRepository;
-use forge_domain::{Environment, Knowledge, Query};
+use forge_app::VectorIndex;
+use forge_domain::{Environment, Point, Query};
 use qdrant_client::qdrant::{PointStruct, SearchPointsBuilder, UpsertPointsBuilder};
 use qdrant_client::{Payload, Qdrant};
-use serde_json::Value;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use tokio::sync::Mutex;
 
-pub struct QdrantKnowledgeRepository {
+pub struct QdrantVectorIndex {
     env: Environment,
     client: Arc<Mutex<Option<Arc<Qdrant>>>>,
     collection: String,
 }
 
-impl QdrantKnowledgeRepository {
+impl QdrantVectorIndex {
     pub fn new(env: Environment, collection: impl ToString) -> Self {
         Self {
             env,
@@ -54,20 +55,21 @@ impl QdrantKnowledgeRepository {
 }
 
 #[async_trait::async_trait]
-impl KnowledgeRepository<Value> for QdrantKnowledgeRepository {
-    async fn store(&self, info: Vec<Knowledge<Value>>) -> anyhow::Result<()> {
-        let points = info
-            .into_iter()
-            .map(|info| {
-                let id = info.id.into_uuid().to_string();
-                let vectors = info.embedding;
-                let payload: anyhow::Result<Payload> = Ok(serde_json::from_value(info.content)?);
-                Ok(PointStruct::new(id, vectors, payload?))
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
+impl<T: Serialize + DeserializeOwned + Send + Sync + 'static> VectorIndex<T> for QdrantVectorIndex {
+    async fn store(&self, info: Point<T>) -> anyhow::Result<()> {
+        let id = info.id.into_uuid().to_string();
+        let vectors = info.embedding;
+
+        let mut payload = Payload::new();
+        payload.insert("content", serde_json::to_string(&info.content)?);
+
+        let point = PointStruct::new(id, vectors, payload);
         self.client()
             .await?
-            .upsert_points(UpsertPointsBuilder::new(self.collection.clone(), points))
+            .upsert_points(UpsertPointsBuilder::new(
+                self.collection.clone(),
+                vec![point],
+            ))
             .await
             .with_context(|| {
                 format!("Failed to upsert points to collection: {}", self.collection)
@@ -76,7 +78,7 @@ impl KnowledgeRepository<Value> for QdrantKnowledgeRepository {
         Ok(())
     }
 
-    async fn search(&self, query: Query) -> anyhow::Result<Vec<Value>> {
+    async fn search(&self, query: Query) -> anyhow::Result<Vec<Point<T>>> {
         let points = SearchPointsBuilder::new(
             self.collection.clone(),
             query.embedding,
@@ -95,7 +97,10 @@ impl KnowledgeRepository<Value> for QdrantKnowledgeRepository {
         results
             .result
             .into_iter()
-            .map(|point| Ok(serde_json::to_value(point.payload)?))
+            .map(|point| {
+                let content = point.payload.get("content").unwrap().clone();
+                Ok(serde_json::from_str(content.as_str().unwrap())?)
+            })
             .collect::<anyhow::Result<Vec<_>>>()
     }
 }

@@ -37,3 +37,4 @@ Cargo.lock
 *.new
 .vscode/
 .fastembed_cache/
+*.log*

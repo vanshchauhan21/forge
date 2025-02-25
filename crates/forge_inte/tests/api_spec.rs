@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use anyhow::Context;
 use forge_api::{AgentMessage, ChatRequest, ChatResponse, ForgeAPI, ModelId, API};
 use tokio_stream::StreamExt;
 
@@ -8,14 +9,18 @@ const WORKFLOW_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/test_wor
 
 /// Test fixture for API testing that supports parallel model validation
 struct Fixture {
-    task: String,
     model: ModelId,
+    #[allow(dead_code)] // The guard is kept alive by being held in the struct
+    _guard: forge_tracker::Guard,
 }
 
 impl Fixture {
     /// Create a new test fixture with the given task
-    fn new(task: impl Into<String>, model: ModelId) -> Self {
-        Self { task: task.into(), model }
+    fn new(model: ModelId) -> Self {
+        Self {
+            model,
+            _guard: forge_tracker::init_tracing(PathBuf::from(".")).unwrap(),
+        }
     }
 
     /// Get the API service, panicking if not validated
@@ -37,20 +42,17 @@ impl Fixture {
 
         // initialize the conversation by storing the workflow.
         let conversation_id = api.init(workflow).await.unwrap();
+        let request = ChatRequest::new(
+            "There is a cat hidden in the codebase. What is its name?",
+            conversation_id,
+        );
 
-        let request = ChatRequest::new(self.task.clone(), conversation_id);
         api.chat(request)
             .await
+            .with_context(|| "Failed to initialize chat")
             .unwrap()
             .filter_map(|message| match message.unwrap() {
-                AgentMessage { agent, message: ChatResponse::Text(text) } => {
-                    // TODO: don't hard code agent id here
-                    if agent.as_str() == "developer" {
-                        Some(text)
-                    } else {
-                        None
-                    }
-                }
+                AgentMessage { message: ChatResponse::Text(text), .. } => Some(text),
                 _ => None,
             })
             .collect::<Vec<_>>()
@@ -90,10 +92,7 @@ macro_rules! generate_model_test {
     ($model:expr) => {
         #[tokio::test]
         async fn test_find_cat_name() {
-            let fixture = Fixture::new(
-                "There is a cat hidden in the codebase. What is its name? hint: it's present in juniper.md file. You can use any tool at your disposal to find it. Do not ask me any questions.",
-                ModelId::new($model),
-            );
+            let fixture = Fixture::new(ModelId::new($model));
 
             let result = fixture
                 .test_single_model(|response| response.to_lowercase().contains("juniper"))
@@ -107,6 +106,11 @@ macro_rules! generate_model_test {
 mod anthropic_claude_3_5_sonnet {
     use super::*;
     generate_model_test!("anthropic/claude-3.5-sonnet");
+}
+
+mod anthropic_claude_3_7_sonnet {
+    use super::*;
+    generate_model_test!("anthropic/claude-3.7-sonnet");
 }
 
 mod openai_gpt_4o {

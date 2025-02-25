@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct KnowledgeId(Uuid);
+pub struct PointId(Uuid);
 
-impl KnowledgeId {
+impl PointId {
     pub fn generate() -> Self {
         Self(Uuid::new_v4())
     }
@@ -17,20 +17,20 @@ impl KnowledgeId {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Knowledge<C> {
-    pub id: KnowledgeId,
+pub struct Point<C> {
+    pub id: PointId,
     pub content: C,
     pub embedding: Vec<f32>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl<C> Knowledge<C> {
+impl<C> Point<C> {
     /// Embedding can be created from a part or more of the actual content.
     pub fn new(content: C, embedding: Vec<f32>) -> Self {
         let now = Utc::now();
         Self {
-            id: KnowledgeId::generate(),
+            id: PointId::generate(),
             content,
             embedding,
             created_at: now,
@@ -41,8 +41,8 @@ impl<C> Knowledge<C> {
     pub fn try_map<D, E>(
         self,
         f: impl FnOnce(C) -> std::result::Result<D, E>,
-    ) -> std::result::Result<Knowledge<D>, E> {
-        Ok(Knowledge {
+    ) -> std::result::Result<Point<D>, E> {
+        Ok(Point {
             content: f(self.content)?,
             id: self.id,
             embedding: self.embedding,

@@ -59,7 +59,7 @@ impl ConversationService for ForgeConversationService {
             .get_mut(id)
             .ok_or_else(|| anyhow::anyhow!("Conversation not found"))?
             .events
-            .insert(event.name.clone(), event);
+            .push(event);
         Ok(())
     }
 }

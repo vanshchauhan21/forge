@@ -93,9 +93,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.95"
+version = "1.0.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
+checksum = "6b964d184e89d9b6b67dd2715bc8e74cf3107fb2b529990c90cf517326150bf4"
 
 [[package]]
 name = "assert-json-diff"
@@ -902,8 +902,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1048,6 +1046,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "forge_api",
+ "forge_tracker",
  "futures",
  "serde_yaml",
  "tokio",
@@ -1099,6 +1098,7 @@ dependencies = [
 name = "forge_tracker"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "chrono",
  "convert_case 0.7.1",
@@ -1115,6 +1115,8 @@ dependencies = [
  "sysinfo 0.33.1",
  "tokio",
  "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
  "url",
  "whoami",
 ]
