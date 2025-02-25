@@ -22,6 +22,8 @@ Code-Forge is an AI-powered interactive shell that stands out through:
   - [Mac](#mac)
   - [Linux](#linux)
 - [Get Started](#get-started)
+- [Environment Configuration](#environment-configuration)
+  - [API Keys](#api-keys)
 - [Features](#features)
   - [1. Interactive Shell](#1-interactive-shell)
   - [2. Enhanced Security](#2-enhanced-security)
@@ -60,17 +62,11 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
 
 ## Get Started
 
-1. Create a `.env` file in your home directory with your API credentials and model preferences:
+1. Create a `.env` file in your home directory with your API credentials:
 
 ```bash
-# Your OpenRouter API key for accessing AI models
+# Your API key for accessing AI models (see Environment Configuration section)
 OPEN_ROUTER_KEY=<Enter your Open Router Key>
-
-# Preferred model for complex tasks requiring deeper analysis
-FORGE_LARGE_MODEL=anthropic/claude-3.5-sonnet
-
-# Efficient model for quick, routine tasks
-FORGE_SMALL_MODEL=anthropic/claude-3.5-haiku
 ```
 
 2. Start an interactive shell by typing `forge`:
@@ -81,6 +77,30 @@ forge
 ```
 
 For additional configuration options and features, use `forge --help`.
+
+## Environment Configuration
+
+Code-Forge can be configured through environment variables. You can set these in your shell profile (e.g., `.bashrc`, `.zshrc`) or by creating a `.env` file in your home directory.
+
+### API Keys
+
+Code-Forge will look for API keys in the following order of precedence:
+
+```bash
+# Primary Forge API key (highest precedence)
+FORGE_KEY=<your-forge-api-key>
+
+# OpenRouter API key (used if FORGE_KEY is not set)
+OPEN_ROUTER_KEY=<your-openrouter-api-key>
+
+# OpenAI API key (used if FORGE_KEY and OPEN_ROUTER_KEY are not set)
+OPENAI_API_KEY=<your-openai-api-key>
+
+# Anthropic API key (used if none of the above are set)
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
+```
+
+At least one of these API keys must be set for Code-Forge to function properly.
 
 ## Features
 
