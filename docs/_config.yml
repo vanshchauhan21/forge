@@ -1,36 +1,3 @@
-title: Code-Forge Documentation
-description: Documentation for the Code-Forge AI-powered coding assistant platform
-theme: just-the-docs
-
-url: https://github.com/antinomyhq/forge
-
-aux_links:
-  "Code-Forge on GitHub":
-    - "https://github.com/antinomyhq/forge"
-
-# Enable or disable the site search
-search_enabled: true
-
-# Set the search token separator
-search_tokenizer_separator: /[\s/]+/
-
-# Heading anchor links appear on hover over h1-h6 tags
-heading_anchors: true
-
-# Footer content
-footer_content: "Copyright &copy; 2023 Code-Forge Team. Distributed by an MIT license."
-
-# Color scheme supports "light" (default) and "dark"
-color_scheme: light
-
-# Callout block feature (left, right)
-callouts:
-  note:
-    title: Note
-    color: blue
-  warning:
-    title: Warning
-    color: yellow
-  danger:
-    title: Caution
-    color: red
+remote_theme: pages-themes/hacker@v0.2.0
+plugins:
+- jekyll-remote-theme
