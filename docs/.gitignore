@@ -1,0 +1,12 @@
+# Jekyll specific files
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+.bundle/
+vendor/
+
+# Ruby environment files
+.ruby-version
+.ruby-gemset
+Gemfile.lock
