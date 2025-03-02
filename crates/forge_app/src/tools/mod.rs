@@ -27,8 +27,8 @@ pub fn tools<F: Infrastructure>(infra: Arc<F>) -> Vec<Tool> {
         FSSearch.into(),
         FSFileInfo.into(),
         // TODO: once ApplyPatchJson is stable we can delete ApplyPatch
-        ApplyPatch.into(),
-        // ApplyPatchJson.into(),
+        // ApplyPatch.into(),
+        ApplyPatchJson.into(),
         Shell::new(env.clone()).into(),
         Think::default().into(),
         Fetch::default().into(),
