@@ -105,7 +105,11 @@ pub enum Transform {
     },
 
     /// Works on the user prompt by enriching it with additional information
-    User { agent_id: AgentId, output: String },
+    User {
+        agent_id: AgentId,
+        output: String,
+        input: String,
+    },
 
     /// Intercepts the context and performs an operation without changing the
     /// context

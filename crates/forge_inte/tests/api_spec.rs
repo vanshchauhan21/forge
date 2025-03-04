@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Context;
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, ForgeAPI, ModelId, API};
+use forge_api::{AgentMessage, ChatRequest, ChatResponse, Event, ForgeAPI, ModelId, API};
 use tokio_stream::StreamExt;
 
 const MAX_RETRIES: usize = 5;
@@ -49,7 +49,10 @@ impl Fixture {
         // initialize the conversation by storing the workflow.
         let conversation_id = api.init(workflow).await.unwrap();
         let request = ChatRequest::new(
-            "There is a cat hidden in the codebase. What is its name?",
+            Event::new(
+                "user_task_init",
+                "There is a cat hidden in the codebase. What is its name?",
+            ),
             conversation_id,
         );
 
