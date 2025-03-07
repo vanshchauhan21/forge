@@ -146,7 +146,6 @@ mod tests {
             qdrant_cluster: None,
             pid: std::process::id(),
             openai_key: None,
-            force_antinomy: None,
         }
     }
 

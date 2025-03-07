@@ -1,8 +1,8 @@
 use anyhow::{Context as _, Result};
 use derive_setters::Setters;
 use forge_domain::{
-    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, OpenAiCompat, Parameters,
-    Provider, ProviderService, ResultStream,
+    self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters,
+    ProviderService, ResultStream,
 };
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Url};
@@ -12,6 +12,7 @@ use tracing::debug;
 
 use super::model::{ListModelResponse, OpenRouterModel};
 use super::parameters::ParameterResponse;
+use super::provider::Provider;
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use crate::open_router::transformers::{ProviderPipeline, Transformer};
@@ -20,7 +21,7 @@ use crate::open_router::transformers::{ProviderPipeline, Transformer};
 #[setters(into, strip_option)]
 pub struct OpenRouterBuilder {
     api_key: Option<String>,
-    provider: Option<OpenAiCompat>,
+    provider: Option<Provider>,
 }
 
 impl OpenRouterBuilder {
@@ -37,7 +38,7 @@ impl OpenRouterBuilder {
 pub struct OpenRouter {
     client: Client,
     api_key: Option<String>,
-    provider: OpenAiCompat,
+    provider: Provider,
 }
 
 impl OpenRouter {
@@ -54,17 +55,18 @@ impl OpenRouter {
         // Remove leading slash to avoid double slashes
         let path = path.trim_start_matches('/');
 
-        self.provider.to_base_url().join(path).with_context(|| {
+        self.provider.base_url().join(path).with_context(|| {
             format!(
                 "Failed to append {} to base URL: {}",
                 path,
-                self.provider.to_base_url()
+                self.provider.base_url()
             )
         })
     }
 
     fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
+
         if let Some(ref api_key) = self.api_key {
             headers.insert(
                 AUTHORIZATION,
@@ -86,7 +88,8 @@ impl ProviderService for OpenRouter {
         let mut request = OpenRouterRequest::from(request)
             .model(model_id.clone())
             .stream(true);
-        request = ProviderPipeline::new(&Provider::from(self.provider.clone())).transform(request);
+
+        request = ProviderPipeline::new(&self.provider).transform(request);
 
         let url = self.url("chat/completions")?;
         debug!(url = %url, model = %model_id, "Connecting to OpenRouter API");
@@ -146,7 +149,7 @@ impl ProviderService for OpenRouter {
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
-        let response = self
+        let text = self
             .client
             .get(self.url("models")?)
             .headers(self.headers())
@@ -157,53 +160,23 @@ impl ProviderService for OpenRouter {
             .text()
             .await?;
 
-        match self.provider {
-            OpenAiCompat::Antinomy => {
-                let models: Vec<OpenRouterModel> = serde_json::from_str(&response)?;
-                Ok(models.into_iter().map(Into::into).collect())
-            }
-            _ => {
-                let list: ListModelResponse = serde_json::from_str(&response)?;
-                Ok(list.data.into_iter().map(Into::into).collect())
-            }
-        }
+        let response: ListModelResponse = serde_json::from_str(&text)?;
+
+        Ok(response
+            .data
+            .iter()
+            .map(|r| r.clone().into())
+            .collect::<Vec<Model>>())
     }
 
     async fn parameters(&self, model: &ModelId) -> Result<Parameters> {
         match self.provider {
-            OpenAiCompat::Antinomy => {
-                // // For Eg: https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
-                let path = format!("model/{}/parameters", model.as_str());
-
-                let url = self.url(&path)?;
-                let text = self
-                    .client
-                    .get(url)
-                    .headers(self.headers())
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .text()
-                    .await?;
-
-                let response: ParameterResponse = serde_json::from_str(&text)
-                    .with_context(|| "Failed to parse parameter response".to_string())?;
-
-                Ok(Parameters {
-                    tool_supported: response
-                        .data
-                        .supported_parameters
-                        .iter()
-                        .flat_map(|parameter| parameter.iter())
-                        .any(|parameter| parameter == "tools"),
-                })
-            }
-            OpenAiCompat::OpenAI => {
+            Provider::OpenAI => {
                 // TODO: open-ai provider doesn't support parameters endpoint, so we return true
                 // for now.
                 return Ok(Parameters { tool_supported: true });
             }
-            OpenAiCompat::OpenRouter => {
+            Provider::OpenRouter => {
                 // // For Eg: https://openrouter.ai/api/v1/parameters/google/gemini-pro-1.5-exp
                 let path = format!("parameters/{}", model.as_str());
 
@@ -256,7 +229,7 @@ mod tests {
         OpenRouter {
             client: Client::new(),
             api_key: None,
-            provider: OpenAiCompat::OpenRouter,
+            provider: Provider::OpenRouter,
         }
     }
 

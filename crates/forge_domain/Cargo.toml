@@ -27,7 +27,6 @@ uuid = { version = "1.11.0", features = [
 ] }
 async-recursion = "1.1.1"
 tracing = "0.1.41"
-url = "2.5.4"
 
 [dev-dependencies]
 insta = { version = "1.34.0", features = ["json"] }

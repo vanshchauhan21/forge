@@ -2,10 +2,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
-use forge_app::{CredentialRepository, EnvironmentService, ForgeApp, Infrastructure};
+use forge_app::{EnvironmentService, ForgeApp, Infrastructure};
 use forge_domain::*;
 use forge_infra::ForgeInfra;
-use forge_oauth::AuthFlowState;
 use forge_stream::MpscStream;
 use serde_json::Value;
 
@@ -63,21 +62,6 @@ impl<F: App + Infrastructure> API for ForgeAPI<F> {
 
     async fn init(&self, workflow: Workflow) -> anyhow::Result<ConversationId> {
         self.app.conversation_service().create(workflow).await
-    }
-
-    fn init_login(&self) -> AuthFlowState {
-        self.app.credential_repository().create()
-    }
-
-    async fn login(&self, auth_flow_state: AuthFlowState) -> anyhow::Result<()> {
-        self.app
-            .credential_repository()
-            .authenticate(auth_flow_state)
-            .await
-    }
-
-    fn logout(&self) -> anyhow::Result<bool> {
-        self.app.credential_repository().delete()
     }
 
     fn environment(&self) -> Environment {

@@ -11,24 +11,6 @@ use std::path::Path;
 pub use app::*;
 use bytes::Bytes;
 use forge_domain::{Point, Query, Suggestion};
-use forge_oauth::AuthFlowState;
-
-#[async_trait::async_trait]
-pub trait CredentialRepository: Send + Sync + 'static {
-    /// Returns the current authentication state
-    fn create(&self) -> AuthFlowState;
-
-    /// Authenticates the user and stores credentials
-    async fn authenticate(&self, state: AuthFlowState) -> anyhow::Result<()>;
-
-    /// Logs out the user by removing stored credentials
-    /// Returns true if credentials were found and removed, false otherwise
-    fn delete(&self) -> anyhow::Result<bool>;
-
-    /// Retrieves the current authentication token if available
-    /// Returns the token as a string if found, or an error if not authenticated
-    fn credentials(&self) -> Option<String>;
-}
 
 /// Repository for accessing system environment information
 #[async_trait::async_trait]
@@ -63,13 +45,11 @@ pub trait EmbeddingService: Send + Sync {
 }
 
 pub trait Infrastructure: Send + Sync + 'static {
-    type CredentialRepository: CredentialRepository;
     type EnvironmentService: EnvironmentService;
     type FileReadService: FileReadService;
     type VectorIndex: VectorIndex<Suggestion>;
     type EmbeddingService: EmbeddingService;
 
-    fn credential_repository(&self) -> &Self::CredentialRepository;
     fn environment_service(&self) -> &Self::EnvironmentService;
     fn file_read_service(&self) -> &Self::FileReadService;
     fn vector_index(&self) -> &Self::VectorIndex;

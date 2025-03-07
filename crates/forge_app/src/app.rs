@@ -18,7 +18,7 @@ use crate::Infrastructure;
 pub struct ForgeApp<F> {
     infra: Arc<F>,
     tool_service: Arc<ForgeToolService>,
-    provider_service: ForgeProviderService<F>,
+    provider_service: ForgeProviderService,
     conversation_service: ForgeConversationService,
     prompt_service: ForgeTemplateService<F, ForgeToolService>,
     attachment_service: ForgeChatRequest<F>,
@@ -40,7 +40,7 @@ impl<F: Infrastructure> ForgeApp<F> {
 
 impl<F: Infrastructure> App for ForgeApp<F> {
     type ToolService = ForgeToolService;
-    type ProviderService = ForgeProviderService<F>;
+    type ProviderService = ForgeProviderService;
     type ConversationService = ForgeConversationService;
     type TemplateService = ForgeTemplateService<F, ForgeToolService>;
     type AttachmentService = ForgeChatRequest<F>;
@@ -67,15 +67,10 @@ impl<F: Infrastructure> App for ForgeApp<F> {
 }
 
 impl<F: Infrastructure> Infrastructure for ForgeApp<F> {
-    type CredentialRepository = F::CredentialRepository;
     type EnvironmentService = F::EnvironmentService;
     type FileReadService = F::FileReadService;
     type VectorIndex = F::VectorIndex;
     type EmbeddingService = F::EmbeddingService;
-
-    fn credential_repository(&self) -> &Self::CredentialRepository {
-        self.infra.credential_repository()
-    }
 
     fn environment_service(&self) -> &Self::EnvironmentService {
         self.infra.environment_service()

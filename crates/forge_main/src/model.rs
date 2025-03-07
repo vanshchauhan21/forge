@@ -79,10 +79,6 @@ pub enum Command {
     Plan,
     /// Dumps the current conversation into a json file
     Dump,
-    /// Logs the user into the system
-    Login,
-    /// Log the user out of the system
-    Logout,
 }
 
 impl Command {
@@ -101,8 +97,6 @@ impl Command {
             "/act".to_string(),
             "/plan".to_string(),
             "/dump".to_string(),
-            "/login".to_string(),
-            "/logout".to_string(),
         ]
     }
 
@@ -125,8 +119,6 @@ impl Command {
             "/exit" => Command::Exit,
             "/models" => Command::Models,
             "/dump" => Command::Dump,
-            "/login" => Command::Login,
-            "/logout" => Command::Logout,
             "/act" => Command::Act,
             "/plan" => Command::Plan,
             text => Command::Message(text.to_string()),

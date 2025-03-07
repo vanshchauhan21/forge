@@ -128,68 +128,6 @@ impl<F: API> UI<F> {
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
-                Command::Login => {
-                    let auth_flow_state = self.api.init_login();
-                    CONSOLE.writeln(
-                        TitleFormat::execute("Opening browser for authentication")
-                            .sub_title(format!(
-                                "If the browser does not open, please visit the URL below \n {}",
-                                &auth_flow_state.url()
-                            ))
-                            .format(),
-                    )?;
-                    match self.api.login(auth_flow_state).await {
-                        Ok(_message) => {
-                            CONSOLE.writeln(
-                                TitleFormat::success("login")
-                                    .sub_title("You have been logged in successfully")
-                                    .format(),
-                            )?;
-                        }
-                        Err(err) => {
-                            CONSOLE.writeln(
-                                TitleFormat::failed("login")
-                                    .error(format!("{}", err))
-                                    .format(),
-                            )?;
-                        }
-                    }
-
-                    // Get new input after login process completes
-                    let prompt_input = Some((&self.state).into());
-                    input = self.console.prompt(prompt_input).await?;
-                    continue;
-                }
-                Command::Logout => {
-                    match self.api.logout() {
-                        Ok(true) => {
-                            CONSOLE.writeln(
-                                TitleFormat::success("logout")
-                                    .sub_title("User has been logged out successfully")
-                                    .format(),
-                            )?;
-                        }
-                        Ok(false) => {
-                            CONSOLE.writeln(
-                                TitleFormat::failed("logout")
-                                    .error("No active session found")
-                                    .format(),
-                            )?;
-                        }
-                        Err(err) => {
-                            CONSOLE.writeln(
-                                TitleFormat::failed("logout")
-                                    .error(format!("{}", err))
-                                    .format(),
-                            )?;
-                        }
-                    }
-
-                    // Get new input after logout process completes
-                    let prompt_input = Some((&self.state).into());
-                    input = self.console.prompt(prompt_input).await?;
-                    continue;
-                }
                 Command::Message(ref content) => {
                     let chat_result = self.chat(content.clone()).await;
                     if let Err(err) = chat_result {

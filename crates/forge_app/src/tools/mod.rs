@@ -41,10 +41,9 @@ mod tests {
 
     use bytes::Bytes;
     use forge_domain::{Environment, Point, Query, Suggestion};
-    use forge_oauth::AuthFlowState;
 
     use super::*;
-    use crate::{CredentialRepository, EmbeddingService, FileReadService, VectorIndex};
+    use crate::{EmbeddingService, FileReadService, VectorIndex};
 
     /// Create a default test environment
     fn stub() -> Stub {
@@ -65,7 +64,6 @@ mod tests {
                 provider_url: Default::default(),
                 provider_key: Default::default(),
                 openai_key: Default::default(),
-                force_antinomy: None,
             },
         }
     }
@@ -105,34 +103,11 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl CredentialRepository for Stub {
-        fn create(&self) -> AuthFlowState {
-            unimplemented!()
-        }
-        async fn authenticate(&self, _auth_flow_state: AuthFlowState) -> anyhow::Result<()> {
-            unimplemented!()
-        }
-
-        fn delete(&self) -> anyhow::Result<bool> {
-            unimplemented!()
-        }
-
-        fn credentials(&self) -> Option<String> {
-            unimplemented!()
-        }
-    }
-
-    #[async_trait::async_trait]
     impl Infrastructure for Stub {
-        type CredentialRepository = Stub;
         type EnvironmentService = Stub;
         type FileReadService = Stub;
         type VectorIndex = Stub;
         type EmbeddingService = Stub;
-
-        fn credential_repository(&self) -> &Self::CredentialRepository {
-            self
-        }
 
         fn environment_service(&self) -> &Self::EnvironmentService {
             self

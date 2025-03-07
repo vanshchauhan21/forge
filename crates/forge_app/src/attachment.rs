@@ -60,7 +60,6 @@ impl<F: Infrastructure> AttachmentService for ForgeChatRequest<F> {
 
 #[cfg(test)]
 mod tests {
-    use core::str;
     use std::collections::HashMap;
     use std::path::{Path, PathBuf};
     use std::sync::{Arc, Mutex};
@@ -68,12 +67,10 @@ mod tests {
     use base64::Engine;
     use bytes::Bytes;
     use forge_domain::{AttachmentService, ContentType, Environment, Point, Query, Suggestion};
-    use forge_oauth::AuthFlowState;
 
     use crate::attachment::ForgeChatRequest;
     use crate::{
-        CredentialRepository, EmbeddingService, EnvironmentService, FileReadService,
-        Infrastructure, VectorIndex,
+        EmbeddingService, EnvironmentService, FileReadService, Infrastructure, VectorIndex,
     };
 
     struct MockEnvironmentService {}
@@ -93,7 +90,6 @@ mod tests {
                 provider_key: "key".to_string(),
                 provider_url: "url".to_string(),
                 openai_key: None,
-                force_antinomy: None,
             }
         }
     }
@@ -166,7 +162,6 @@ mod tests {
         file_service: MockFileReadService,
         vector_index: MockVectorIndex,
         embedding_service: MockEmbeddingService,
-        auth_service: MockAuthService,
     }
 
     impl MockInfrastructure {
@@ -176,28 +171,7 @@ mod tests {
                 file_service: MockFileReadService::new(),
                 vector_index: MockVectorIndex {},
                 embedding_service: MockEmbeddingService {},
-                auth_service: MockAuthService {},
             }
-        }
-    }
-
-    struct MockAuthService {}
-
-    #[async_trait::async_trait]
-    impl CredentialRepository for MockAuthService {
-        fn create(&self) -> AuthFlowState {
-            unimplemented!()
-        }
-        async fn authenticate(&self, _: AuthFlowState) -> Result<(), anyhow::Error> {
-            Ok(())
-        }
-
-        fn delete(&self) -> Result<bool, anyhow::Error> {
-            Ok(false)
-        }
-
-        fn credentials(&self) -> Option<String> {
-            None
         }
     }
 
@@ -206,7 +180,7 @@ mod tests {
         type FileReadService = MockFileReadService;
         type VectorIndex = MockVectorIndex;
         type EmbeddingService = MockEmbeddingService;
-        type CredentialRepository = MockAuthService;
+
         fn environment_service(&self) -> &Self::EnvironmentService {
             &self.env_service
         }
@@ -221,10 +195,6 @@ mod tests {
 
         fn embedding_service(&self) -> &Self::EmbeddingService {
             &self.embedding_service
-        }
-
-        fn credential_repository(&self) -> &Self::CredentialRepository {
-            &self.auth_service
         }
     }
 
