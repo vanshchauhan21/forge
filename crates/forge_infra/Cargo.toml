@@ -10,6 +10,7 @@ dirs = "6.0.0"
 dotenv = "0.15.0"
 forge_domain = { path = "../forge_domain" }
 forge_app = { path = "../forge_app" }
+forge_oauth = { path = "../forge_oauth" }
 tokio = "1.43.0"
 serde_json = "1.0.138"
 qdrant-client = "1.13.0"

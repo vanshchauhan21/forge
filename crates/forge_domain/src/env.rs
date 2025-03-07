@@ -30,6 +30,8 @@ pub struct Environment {
     pub provider_url: String,
     /// The OpenAI API key required to use embedding models.
     pub openai_key: Option<String>,
+    /// feature flag to enable antinomy provider
+    pub force_antinomy: Option<bool>,
 }
 
 impl Environment {

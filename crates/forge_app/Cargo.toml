@@ -14,6 +14,7 @@ forge_open_router = { path = "../forge_open_router" }
 forge_tool_macros = { path = "../forge_tool_macros" }
 forge_display = { path = "../forge_display" }
 forge_walker = { path = "../forge_walker" }
+forge_oauth = { path = "../forge_oauth" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.133"
 derive_setters = "0.1.6"

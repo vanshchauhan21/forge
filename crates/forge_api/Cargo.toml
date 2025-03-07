@@ -11,6 +11,7 @@ forge_stream = { path = "../forge_stream" }
 forge_app = { path = "../forge_app" }
 forge_walker = { path = "../forge_walker" }
 forge_infra = { path = "../forge_infra" }
+forge_oauth = { path = "../forge_oauth" }
 serde_yaml = "0.9.34"
 serde_json = { version = "1.0" }
 
