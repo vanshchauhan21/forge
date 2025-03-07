@@ -23,6 +23,7 @@ strum_macros = "0.26.4"
 forge_domain = { path = "../forge_domain" }
 anyhow = "1.0.75"
 thiserror = "2.0.11"
+derive_builder = "0.20.2"
 
 [dev-dependencies]
 insta = { version = "1.36.1", features = ["json"] }

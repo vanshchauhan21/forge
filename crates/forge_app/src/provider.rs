@@ -5,25 +5,29 @@ use forge_domain::{
     ChatCompletionMessage, Context as ChatContext, Model, ModelId, Parameters, ProviderService,
     ResultStream,
 };
-use forge_open_router::ProviderBuilder;
+use forge_open_router::Client;
 use moka2::future::Cache;
 
 use crate::{EnvironmentService, Infrastructure};
 
 pub struct ForgeProviderService {
-    or: Box<dyn ProviderService>,
+    // The provider service implementation
+    client: Client,
     cache: Cache<ModelId, Parameters>,
 }
 
 impl ForgeProviderService {
     pub fn new<F: Infrastructure>(infra: Arc<F>) -> Self {
-        let env = infra.environment_service().get_environment();
-        let or = ProviderBuilder::from_url(env.provider_url)
-            .with_key(env.provider_key)
-            .build()
-            .expect("Failed to build provider");
-
-        Self { or, cache: Cache::new(1024) }
+        let infra = infra.clone();
+        let provider = infra
+            .environment_service()
+            .get_environment()
+            .provider
+            .clone();
+        Self {
+            client: Client::new(provider).unwrap(),
+            cache: Cache::new(1024),
+        }
     }
 }
 
@@ -34,26 +38,25 @@ impl ProviderService for ForgeProviderService {
         model_id: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        self.or
+        self.client
             .chat(model_id, request)
             .await
             .with_context(|| format!("Failed to chat with model: {}", model_id))
     }
 
     async fn models(&self) -> Result<Vec<Model>> {
-        self.or.models().await
+        self.client.models().await
     }
 
     async fn parameters(&self, model: &ModelId) -> anyhow::Result<Parameters> {
-        Ok(self
-            .cache
+        self.cache
             .try_get_with_by_ref(model, async {
-                self.or
+                self.client
                     .parameters(model)
                     .await
                     .with_context(|| format!("Failed to get parameters for model: {}", model))
             })
             .await
-            .map_err(|e| anyhow::anyhow!(e))?)
+            .map_err(|e| anyhow::anyhow!(e))
     }
 }
