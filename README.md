@@ -11,6 +11,8 @@ Best Practices:
 
 **Forge: AI-Enhanced Terminal Development Environment**
 
+![Code-Forge Demo](https://antinomy.ai/images/forge_demo_2x.gif)
+
 Forge is a comprehensive coding agent that integrates AI capabilities with your development environment, offering sophisticated assistance while maintaining the efficiency of your existing workflow.
 
 - Advanced AI coding assistant with comprehensive understanding, planning, and execution of complex development tasks
@@ -37,6 +39,9 @@ Forge is a comprehensive coding agent that integrates AI capabilities with your 
   - [WYSIWYG Shell Experience](#wysiwyg-shell-experience)
   - [Command Interruption](#command-interruption)
   - [Operation Modes](#operation-modes)
+    - [ACT Mode (Default)](#act-mode-default)
+    - [PLAN Mode](#plan-mode)
+  - [Application Logs](#application-logs)
 - [Custom Workflows and Multi-Agent Systems](#custom-workflows-and-multi-agent-systems)
   - [Creating Custom Workflows](#creating-custom-workflows)
   - [Workflow Configuration](#workflow-configuration)
@@ -201,6 +206,38 @@ In PLAN mode, Forge analyzes and plans but doesn't modify your codebase:
 ```
 
 You can easily switch between modes during a session using the `/act` and `/plan` commands. PLAN mode is especially useful for reviewing potential changes before they're implemented, while ACT mode streamlines the development process by handling implementation details for you.
+
+### Application Logs
+
+Forge generates detailed JSON-formatted logs that help with troubleshooting and understanding the application's behavior. These logs provide valuable insights into system operations and API interactions.
+
+**Log Location and Access**
+
+Logs are stored in your application support directory with date-based filenames. The typical path looks like:
+
+```bash
+/Users/username/Library/Application Support/forge/logs/forge.log.YYYY-MM-DD
+```
+
+You can easily locate log files using the built-in command `/info`, which displays system information including the exact path to your log files.
+
+**Viewing and Filtering Logs**
+
+To view logs in real-time with automatic updates, use the `tail` command:
+
+```bash
+tail -f /Users/tushar/Library/Application Support/forge/logs/forge.log.2025-03-07
+```
+
+**Formatted Log Viewing with jq**
+
+Since Forge logs are in JSON format, you can pipe them through `jq` for better readability:
+
+```bash
+tail -f /Users/tushar/Library/Application Support/forge/logs/forge.log.2025-03-07 | jq
+```
+
+This displays the logs in a nicely color-coded structure that's much easier to analyze, helping you quickly identify patterns, errors, or specific behavior during development and debugging.
 
 ## Custom Workflows and Multi-Agent Systems
 
