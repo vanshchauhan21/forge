@@ -64,7 +64,7 @@ impl<F: Infrastructure, T: ToolService> TemplateService for ForgeTemplateService
         let ctx = SystemContext {
             env: Some(env),
             tool_information: Some(self.tool_service.usage_prompt()),
-            tool_supported: Some(true),
+            tool_supported: agent.tool_supported,
             files,
         };
 

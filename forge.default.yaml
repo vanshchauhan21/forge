@@ -7,6 +7,7 @@ variables:
 agents:
   - id: title_generation_worker
     model: *efficiency_model
+    tool_supported: true
     tools:
       - tool_forge_event_dispatch
     subscribe:
@@ -16,6 +17,7 @@ agents:
 
   - id: software-engineer
     model: *advanced_model
+    tool_supported: true
     tools:
       - tool_forge_fs_read
       - tool_forge_fs_create

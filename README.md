@@ -347,6 +347,7 @@ Each agent needs tools to perform tasks, configured in the `tools` field:
 - `tools` - List of tools the agent can use
 - `subscribe` - Events the agent listens to
 - `ephemeral` - If true, agent is destroyed after task completion
+- `tool_supported` - (Optional) Boolean flag that determines whether tools defined in the agent configuration are actually made available to the LLM. When set to `false`, tools are listed in the configuration but not included in AI model requests, causing the agent to format tool calls in XML rather than in the model's native format. Default: `true`.
 - `system_prompt` - (Optional) Instructions for how the agent should behave. While optional, it's recommended to provide clear instructions for best results.
 - `user_prompt` - (Optional) Format for user inputs. If not provided, the raw event value is used.
 
@@ -377,6 +378,7 @@ agents:
       - tool_forge_event_dispatch
     subscribe:
       - user_task_init
+    tool_supported: false # Force XML-based tool call formatting
     system_prompt: "{{> system-prompt-title-generator.hbs }}"
     user_prompt: <technical_content>{{event.value}}</technical_content>
 
@@ -394,6 +396,7 @@ agents:
       - user_task_init
       - user_task_update
     ephemeral: false
+    tool_supported: true # Use model's native tool call format (default)
     system_prompt: "{{> system-prompt-engineer.hbs }}"
     user_prompt: |
       <task>{{event.value}}</task>
