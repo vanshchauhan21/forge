@@ -18,6 +18,7 @@ pub struct SystemContext {
     pub tool_supported: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<String>,
+    pub readme: String,
 }
 
 #[derive(Debug, Display, Eq, PartialEq, Hash, Clone, Serialize, Deserialize)]
