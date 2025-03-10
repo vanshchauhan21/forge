@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
-use forge_app::{FileReadService, Infrastructure};
+use forge_app::{FsReadService, Infrastructure};
 use forge_domain::Workflow;
 
 // Default forge.yaml content embedded in the binary
