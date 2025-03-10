@@ -26,7 +26,7 @@ impl SnapshotService {
         }
     }
 
-    /// Calculates a SHA-256 hash of the file path for storage organization
+    /// Calculates a blake3 hash of the file path for storage organization
     fn hash_path(&self, file_path: &Path) -> String {
         let path_str = file_path.to_string_lossy().to_string();
         let mut hasher = blake3::Hasher::new();

@@ -80,6 +80,7 @@ tree-sitter-ruby = "0.23"
 url = { version = "2.5.4", features = ["serde"] }
 uuid = { version = "1.11.0", features = ["v4", "fast-rng", "macro-diagnostics", "serde"] }
 whoami = "1.5.2"
+blake3 = "1.6.1"
 
 # Internal crates
 forge_api = { path = "crates/forge_api" }
