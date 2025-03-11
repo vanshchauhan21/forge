@@ -61,16 +61,16 @@ impl OpenRouter {
 impl ProviderService for OpenRouter {
     async fn chat(
         &self,
-        model_id: &ModelId,
+        model: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
         let mut request = OpenRouterRequest::from(request)
-            .model(model_id.clone())
+            .model(model.clone())
             .stream(true);
         request = ProviderPipeline::new(&self.provider).transform(request);
 
         let url = self.url("chat/completions")?;
-        debug!(url = %url, model = %model_id, "Connecting to OpenRouter API");
+        debug!(url = %url, model = %model, "Connecting to OpenRouter API");
         let es = self
             .client
             .post(url)

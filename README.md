@@ -42,17 +42,18 @@ Forge is a comprehensive coding agent that integrates AI capabilities with your 
     - [ACT Mode (Default)](#act-mode-default)
     - [PLAN Mode](#plan-mode)
   - [Application Logs](#application-logs)
+- [Provider Configuration](#provider-configuration)
+  - [Supported Providers](#supported-providers)
+  - [Custom Provider URLs](#custom-provider-urls)
 - [Custom Workflows and Multi-Agent Systems](#custom-workflows-and-multi-agent-systems)
   - [Creating Custom Workflows](#creating-custom-workflows)
+  - [Configuration Loading and Precedence](#configuration-loading-and-precedence)
   - [Workflow Configuration](#workflow-configuration)
     - [Event System](#event-system)
     - [Agent Tools](#agent-tools)
     - [Agent Configuration Options](#agent-configuration-options)
     - [Built-in Templates](#built-in-templates)
     - [Example Workflow Configuration](#example-workflow-configuration)
-- [Provider Configuration](#provider-configuration)
-  - [Supported Providers](#supported-providers)
-  - [Custom Provider URLs](#custom-provider-urls)
 - [Why Shell?](#why-shell)
 - [Community](#community)
 - [Support Us](#support-us)
@@ -308,6 +309,20 @@ You can configure your own workflows by creating a YAML file and pointing to it 
 ```bash
 forge -w /path/to/your/workflow.yaml
 ```
+
+### Configuration Loading and Precedence
+
+Forge loads workflow configurations using the following precedence rules:
+
+1. **Explicit Path**: When a path is provided with the `-w` flag, Forge loads that configuration directly without any merging
+2. **Project Configuration**: If no explicit path is provided, Forge looks for `forge.yaml` in the current directory
+3. **Default Configuration**: An embedded default configuration is always available as a fallback
+
+When a project configuration exists in the current directory, Forge creates a merged configuration where:
+- Project settings in `forge.yaml` take precedence over default settings
+- Any settings not specified in the project configuration inherit from defaults
+
+This approach allows you to customize only the parts of the configuration you need while inheriting sensible defaults for everything else.
 
 ### Workflow Configuration
 

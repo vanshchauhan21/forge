@@ -43,12 +43,12 @@ impl Client {
 impl ProviderService for Client {
     async fn chat(
         &self,
-        id: &ModelId,
+        model: &ModelId,
         context: Context,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
         match self {
-            Client::OpenAICompat(provider) => provider.chat(id, context).await,
-            Client::Anthropic(provider) => provider.chat(id, context).await,
+            Client::OpenAICompat(provider) => provider.chat(model, context).await,
+            Client::Anthropic(provider) => provider.chat(model, context).await,
         }
     }
 

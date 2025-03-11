@@ -29,13 +29,13 @@ impl ForgeProviderService {
 impl ProviderService for ForgeProviderService {
     async fn chat(
         &self,
-        model_id: &ModelId,
+        model: &ModelId,
         request: ChatContext,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
         self.client
-            .chat(model_id, request)
+            .chat(model, request)
             .await
-            .with_context(|| format!("Failed to chat with model: {}", model_id))
+            .with_context(|| format!("Failed to chat with model: {}", model))
     }
 
     async fn models(&self) -> Result<Vec<Model>> {

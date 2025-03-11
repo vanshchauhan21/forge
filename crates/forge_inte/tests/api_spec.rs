@@ -43,7 +43,7 @@ impl Fixture {
 
         // in workflow, replace all models with the model we want to test.
         workflow.agents.iter_mut().for_each(|agent| {
-            agent.model = self.model.clone();
+            agent.model = Some(self.model.clone());
         });
 
         // initialize the conversation by storing the workflow.

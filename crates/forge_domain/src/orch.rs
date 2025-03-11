@@ -338,7 +338,13 @@ impl<A: App> Orchestrator<A> {
             let response = self
                 .app
                 .provider_service()
-                .chat(&agent.model, context.clone())
+                .chat(
+                    agent
+                        .model
+                        .as_ref()
+                        .ok_or(Error::MissingModel(agent.id.clone()))?,
+                    context.clone(),
+                )
                 .await?;
             let ChatCompletionResult { tool_calls, content } =
                 self.collect_messages(&agent.id, response).await?;

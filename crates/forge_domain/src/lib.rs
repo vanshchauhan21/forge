@@ -10,6 +10,7 @@ mod env;
 mod error;
 mod event;
 mod file;
+mod merge;
 mod message;
 mod model;
 mod orch;

@@ -926,6 +926,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bytes",
  "forge_app",
  "forge_domain",
  "forge_infra",
@@ -933,6 +934,7 @@ dependencies = [
  "forge_stream",
  "forge_walker",
  "insta",
+ "merge",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1031,6 +1033,7 @@ dependencies = [
  "derive_setters",
  "futures",
  "insta",
+ "merge",
  "nom 8.0.0",
  "pretty_assertions",
  "schemars",
