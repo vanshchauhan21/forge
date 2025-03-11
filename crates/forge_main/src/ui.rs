@@ -5,7 +5,6 @@ use colored::Colorize;
 use forge_api::{AgentMessage, ChatRequest, ChatResponse, ConversationId, Event, Model, API};
 use forge_display::TitleFormat;
 use forge_snaps::SnapshotInfo;
-use forge_tracker::EventKind;
 use lazy_static::lazy_static;
 use serde_json::Value;
 use tokio_stream::StreamExt;
@@ -406,8 +405,6 @@ impl<F: API> UI<F> {
         // Create the chat request with the event
         let chat = ChatRequest::new(event, conversation_id);
 
-        tokio::spawn(TRACKER.dispatch(EventKind::Prompt(content)));
-
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
             Err(err) => Err(err),
@@ -518,9 +515,6 @@ impl<F: API> UI<F> {
 
         // Create the chat request with the help query event
         let chat = ChatRequest::new(event, conversation_id);
-
-        tokio::spawn(TRACKER.dispatch(EventKind::Prompt(content)));
-
         match self.api.chat(chat).await {
             Ok(mut stream) => self.handle_chat_stream(&mut stream).await,
             Err(err) => Err(err),

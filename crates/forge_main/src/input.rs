@@ -47,6 +47,9 @@ impl UserInput for Console {
                 Ok(ReadResult::Exit) => return Ok(Command::Exit),
                 Ok(ReadResult::Empty) => continue,
                 Ok(ReadResult::Success(text)) => {
+                    tokio::spawn(
+                        crate::ui::TRACKER.dispatch(forge_tracker::EventKind::Prompt(text.clone())),
+                    );
                     return Ok(Command::parse(&text));
                 }
                 Err(e) => {
