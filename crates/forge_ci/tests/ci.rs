@@ -301,10 +301,9 @@ fn test_forge_automation() {
                     .name("Install Forge CLI"),
             )
             .add_step(
-                Step::run("forge --dispatch {fix_issue: ${{ github.event.issue.number }}, min_proposals: ${{ env.MIN_PROPOSALS}} }")
+                Step::run("forge --event='{\"name\": \"fix_issue\", \"value\": \"${{ github.event.issue.number }}\"}'")
                     .name("Run Forge to process issue")
                     .add_env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
-                    .add_env(("MIN_PROPOSALS", 1))
                     .add_env(("FORGE_KEY", "${{ secrets.FORGE_KEY }}")),
             ),
     );
@@ -326,7 +325,7 @@ fn test_forge_automation() {
                     .name("Install Forge CLI"),
             )
             .add_step(
-                Step::run("forge --dispatch {update_pr: ${{ github.event.issue.number }}}") 
+                Step::run("forge --event='{\"name\": \"update_pr\", \"value\": \"${{ github.event.issue.number }}\"}'") 
                     .name("Run Forge to update PR based on comment")
                     .add_env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_env(("FORGE_KEY", "${{ secrets.FORGE_KEY }}"))

@@ -37,10 +37,9 @@ jobs:
     - name: Install Forge CLI
       run: curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
     - name: Run Forge to process issue
-      run: 'forge --dispatch {fix_issue: ${{ github.event.issue.number }}, min_proposals: ${{ env.MIN_PROPOSALS}} }'
+      run: 'forge --event=''{"name": "fix_issue", "value": "${{ github.event.issue.number }}"}'''
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        MIN_PROPOSALS: '1'
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
   update_pr:
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-just-do-it')
@@ -51,7 +50,7 @@ jobs:
     - name: Install Forge CLI
       run: curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
     - name: Run Forge to update PR based on comment
-      run: 'forge --dispatch {update_pr: ${{ github.event.issue.number }}}'
+      run: 'forge --event=''{"name": "update_pr", "value": "${{ github.event.issue.number }}"}'''
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
