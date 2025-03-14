@@ -41,7 +41,7 @@ impl Prompt for ForgePrompt {
             .as_ref()
             .unwrap_or(&Usage::default())
             .total_tokens;
-        let usage_text = format!("[{}/v{}/{}]", self.mode, VERSION, usage);
+        let usage_text = format!("[{}/{}/{}]", self.mode, VERSION, usage);
         Cow::Owned(
             Style::new()
                 .bold()
@@ -109,7 +109,7 @@ mod tests {
         let usage_style = Style::new()
             .bold()
             .fg(Color::DarkGray)
-            .paint(format!("[ACT/v{}/30]", VERSION))
+            .paint(format!("[ACT/{}/30]", VERSION))
             .to_string();
         let actual = prompt.render_prompt_right();
         let expected = usage_style;
@@ -123,7 +123,7 @@ mod tests {
         let expected = Style::new()
             .bold()
             .fg(Color::DarkGray)
-            .paint(format!("[ACT/v{}/0]", VERSION))
+            .paint(format!("[ACT/{}/0]", VERSION))
             .to_string();
         assert_eq!(actual, expected);
     }
