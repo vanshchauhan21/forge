@@ -295,12 +295,20 @@ fn test_forge_automation() {
         Job::new("process_issue")
             .runs_on("ubuntu-latest")
             .cond(Expression::new("github.event_name == 'issues' && github.event.label.name == 'forge-just-do-it'"))
+            .add_step(Step::uses("tibdex", "github-app-token", "v2")
+            .add_with(("private_key", "${{ secrets.FORGE_BOT_PRIVATE_KEY }}"))
+            .add_with(("app_id", "${{secrets.FORGE_BOT_APP_ID}}")))
             .add_step(Step::uses("actions", "checkout", "v4"))
             .add_step(
                 Step::run("curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash")
                     .name("Install Forge CLI"),
             )
             .add_step(
+                Step::uses("peter-evans", "create-or-update-comment", "v4")
+                    .name("Add comment to issue with action link")
+                    .add_with(("issue-number", "${{ github.event.issue.number }}"))
+                    .add_with(("body", "✨ **Forge Automation Engaged!** ✨\n\nI've started working on this issue with the power of AI. You can watch my progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n\nI'll analyze the issue and submit a solution shortly. Stay tuned for updates!")),
+            ).add_step(
                 Step::run("forge --event='{\"name\": \"fix_issue\", \"value\": \"${{ github.event.issue.number }}\"}'")
                     .name("Run Forge to process issue")
                     .add_env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
@@ -319,17 +327,28 @@ fn test_forge_automation() {
                  github.event.issue.pull_request && \
                  contains(github.event.issue.labels.*.name, 'forge-just-do-it')",
             ))
+            .add_step(Step::uses("tibdex", "github-app-token", "v2")
+            .add_with(("private_key", "${{ secrets.FORGE_BOT_PRIVATE_KEY }}"))
+            .add_with(("app_id", "${{secrets.FORGE_BOT_APP_ID}}"))
+        )
             .add_step(Step::uses("actions", "checkout", "v4"))
             .add_step(
                 Step::run("curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash")
                     .name("Install Forge CLI"),
             )
             .add_step(
+                Step::uses("peter-evans", "create-or-update-comment", "v4")
+                    .name("Add comment to PR with action link")
+                    .add_with(("issue-number", "${{ github.event.issue.number }}"))
+                    .add_with(("body", "🔧 **Forge at your service!** 🔧\n\nI'm processing your comment and updating this PR accordingly. Watch the magic happen in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n\nI'll analyze your request and implement the suggested changes. Check back soon for updates!")),
+            )
+            .add_step(
                 Step::run("forge --event='{\"name\": \"update_pr\", \"value\": \"${{ github.event.issue.number }}\"}'") 
                     .name("Run Forge to update PR based on comment")
                     .add_env(("GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"))
                     .add_env(("FORGE_KEY", "${{ secrets.FORGE_KEY }}"))
-            ),
+            )
+            ,
     );
 
     Generate::new(forge_automation)
