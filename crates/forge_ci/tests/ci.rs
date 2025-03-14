@@ -296,6 +296,7 @@ fn test_forge_automation() {
             .runs_on("ubuntu-latest")
             .cond(Expression::new("github.event_name == 'issues' && github.event.label.name == 'forge-just-do-it'"))
             .add_step(Step::uses("tibdex", "github-app-token", "v2")
+            .id("generate-token")
             .add_with(("private_key", "${{ secrets.FORGE_BOT_PRIVATE_KEY }}"))
             .add_with(("app_id", "${{secrets.FORGE_BOT_APP_ID}}")))
             .add_step(Step::uses("actions", "checkout", "v4"))
@@ -329,6 +330,7 @@ fn test_forge_automation() {
                  contains(github.event.issue.labels.*.name, 'forge-just-do-it')",
             ))
             .add_step(Step::uses("tibdex", "github-app-token", "v2")
+            .id("generate-token")
             .add_with(("private_key", "${{ secrets.FORGE_BOT_PRIVATE_KEY }}"))
             .add_with(("app_id", "${{secrets.FORGE_BOT_APP_ID}}"))
         )
