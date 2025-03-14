@@ -11,7 +11,7 @@ Best Practices:
 
 **Forge: AI-Enhanced Terminal Development Environment**
 
-![Code-Forge Demo](https://antinomy.ai/images/forge_demo_2x.gif)
+![Code-Forge Demo](https://assets.antinomy.ai/forge_demo_2x.gif)
 
 Forge is a comprehensive coding agent that integrates AI capabilities with your development environment, offering sophisticated assistance while maintaining the efficiency of your existing workflow.
 
@@ -99,7 +99,7 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
 
 2. Launch Code Forge:
 
-   ![Code-Forge Demo](https://antinomy.ai/images/forge_demo_2x.gif)
+   ![Code-Forge Demo](https://assets.antinomy.ai/forge_demo_2x.gif)
 
 ## Features
 
