@@ -58,7 +58,7 @@ jobs:
         GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
   update_pr:
-    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-just-do-it')
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-just-do-it') && github.actor != 'forge-at-your-service[bot]'
     name: update_pr
     runs-on: ubuntu-latest
     steps:

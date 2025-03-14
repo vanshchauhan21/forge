@@ -327,7 +327,8 @@ fn test_forge_automation() {
             .cond(Expression::new(
                 "github.event_name == 'issue_comment' && \
                  github.event.issue.pull_request && \
-                 contains(github.event.issue.labels.*.name, 'forge-just-do-it')",
+                 contains(github.event.issue.labels.*.name, 'forge-just-do-it') && \
+                 github.actor != 'forge-at-your-service[bot]'",
             ))
             .add_step(Step::uses("tibdex", "github-app-token", "v2")
             .id("generate-token")
