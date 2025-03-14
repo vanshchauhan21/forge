@@ -40,7 +40,7 @@ mod tests {
 
     use bytes::Bytes;
     use forge_domain::{Environment, Point, Provider, Query, Suggestion};
-    use forge_snaps::{SnapshotInfo, SnapshotMetadata};
+    use forge_snaps::Snapshot;
 
     use super::*;
     use crate::{
@@ -114,47 +114,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl FsSnapshotService for Stub {
-        fn snapshot_dir(&self) -> PathBuf {
-            unimplemented!()
-        }
-
-        async fn create_snapshot(&self, _: &Path) -> anyhow::Result<SnapshotInfo> {
-            unimplemented!()
-        }
-
-        async fn list_snapshots(&self, _: &Path) -> anyhow::Result<Vec<SnapshotInfo>> {
-            unimplemented!()
-        }
-
-        async fn restore_by_timestamp(&self, _: &Path, _: &str) -> anyhow::Result<()> {
-            unimplemented!()
-        }
-
-        async fn restore_by_index(&self, _: &Path, _: isize) -> anyhow::Result<()> {
-            unimplemented!()
-        }
-
-        async fn restore_previous(&self, _: &Path) -> anyhow::Result<()> {
-            unimplemented!()
-        }
-
-        async fn get_snapshot_by_timestamp(
-            &self,
-            _: &Path,
-            _: &str,
-        ) -> anyhow::Result<SnapshotMetadata> {
-            unimplemented!()
-        }
-
-        async fn get_snapshot_by_index(
-            &self,
-            _: &Path,
-            _: isize,
-        ) -> anyhow::Result<SnapshotMetadata> {
-            unimplemented!()
-        }
-
-        async fn purge_older_than(&self, _: u32) -> anyhow::Result<usize> {
+        async fn create_snapshot(&self, _: &Path) -> anyhow::Result<Snapshot> {
             unimplemented!()
         }
     }
