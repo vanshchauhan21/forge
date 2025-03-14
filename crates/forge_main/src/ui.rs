@@ -274,15 +274,9 @@ impl<F: API> UI<F> {
     async fn chat(&mut self, content: String) -> Result<()> {
         let conversation_id = self.init_conversation().await?;
 
-        // Determine if this is the first message or an update based on conversation
-        // history
-        let conversation = self.api.conversation(&conversation_id).await?;
-
         // Create a ChatRequest with the appropriate event type
-        let event = if conversation
-            .as_ref()
-            .is_none_or(|c| c.rfind_event(EVENT_USER_TASK_INIT).is_none())
-        {
+        let event = if self.state.is_first {
+            self.state.is_first = false;
             Self::create_task_init_event(content.clone())
         } else {
             Self::create_task_update_event(content.clone())
