@@ -25,7 +25,7 @@ on:
     - labeled
 permissions:
   contents: write
-  issues: read
+  issues: write
   pull-requests: write
 jobs:
   process_issue:
@@ -43,6 +43,7 @@ jobs:
     - name: Add comment to issue with action link
       uses: peter-evans/create-or-update-comment@v4
       with:
+        token: ${{ steps.generate-token.outputs.token }}
         issue-number: ${{ github.event.issue.number }}
         body: |-
           ✨ **Forge Automation Engaged!** ✨
@@ -53,7 +54,7 @@ jobs:
     - name: Run Forge to process issue
       run: 'forge --event=''{"name": "fix_issue", "value": "${{ github.event.issue.number }}"}'''
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
   update_pr:
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-just-do-it')
@@ -70,6 +71,7 @@ jobs:
     - name: Add comment to PR with action link
       uses: peter-evans/create-or-update-comment@v4
       with:
+        token: ${{ steps.generate-token.outputs.token }}
         issue-number: ${{ github.event.issue.number }}
         body: |-
           🔧 **Forge at your service!** 🔧
@@ -80,5 +82,5 @@ jobs:
     - name: Run Forge to update PR based on comment
       run: 'forge --event=''{"name": "update_pr", "value": "${{ github.event.issue.number }}"}'''
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
