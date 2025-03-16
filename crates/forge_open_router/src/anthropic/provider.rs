@@ -84,12 +84,16 @@ impl ProviderService for Anthropic {
                         Event::Message(event) if ["[DONE]", ""].contains(&event.data.as_str()) => {
                             None
                         }
-                        Event::Message(_event) => Some(
-                            serde_json::from_str::<EventData>(&_event.data)
+                        Event::Message(message) => Some(
+                            serde_json::from_str::<EventData>(&message.data)
                                 .with_context(|| "Failed to parse Anthropic event")
                                 .and_then(|event| {
-                                    ChatCompletionMessage::try_from(event)
-                                        .with_context(|| "Failed to create completion message")
+                                    ChatCompletionMessage::try_from(event).with_context(|| {
+                                        format!(
+                                            "Failed to create completion message: {}",
+                                            message.data
+                                        )
+                                    })
                                 }),
                         ),
                     },

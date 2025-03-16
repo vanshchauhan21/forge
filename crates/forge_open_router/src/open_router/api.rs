@@ -84,12 +84,12 @@ impl OpenRouter {
                         Event::Message(event) if ["[DONE]", ""].contains(&event.data.as_str()) => {
                             None
                         }
-                        Event::Message(event) => Some(
-                            serde_json::from_str::<OpenRouterResponse>(&event.data)
-                                .with_context(|| format!("Failed to parse OpenRouter response: {}", event.data))
-                                .and_then(|message| {
-                                    ChatCompletionMessage::try_from(message.clone())
-                                        .with_context(|| "Failed to create completion message")
+                        Event::Message(message) => Some(
+                            serde_json::from_str::<OpenRouterResponse>(&message.data)
+                                .with_context(|| format!("Failed to parse OpenRouter response: {}", message.data))
+                                .and_then(|event| {
+                                    ChatCompletionMessage::try_from(event.clone())
+                                        .with_context(|| format!("Failed to create completion message: {}", message.data))
                                 }),
                         ),
                     },

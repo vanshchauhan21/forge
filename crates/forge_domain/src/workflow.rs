@@ -22,6 +22,7 @@ pub struct Workflow {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Merge, Setters)]
+#[setters(strip_option, into)]
 pub struct Command {
     #[merge(strategy = crate::merge::std::overwrite)]
     pub name: String,

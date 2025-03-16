@@ -309,7 +309,9 @@ impl<A: App> Orchestrator<A> {
             event.value.clone()
         };
 
-        context = context.add_message(ContextMessage::user(content));
+        if !content.is_empty() {
+            context = context.add_message(ContextMessage::user(content));
+        }
 
         // Process attachments
         let attachments = self
