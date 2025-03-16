@@ -98,6 +98,9 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
 
    # Optional: Set a custom URL for OpenAI-compatible providers
    #OPENAI_URL=https://custom-openai-provider.com/v1
+   
+   # Optional: Set a custom URL for Anthropic
+   #ANTHROPIC_URL=https://custom-anthropic-provider.com/v1
    ```
 
    _You can get a Key at [Open Router](https://openrouter.ai/)_
@@ -304,6 +307,14 @@ OPENAI_URL=https://your-custom-provider.com/v1
 # Or with Open Router but custom endpoint
 OPENROUTER_API_KEY=your_openrouter_key_here
 OPENAI_URL=https://alternative-openrouter-endpoint.com/v1
+```
+
+For Anthropic, you can customize the API endpoint URL by setting the `ANTHROPIC_URL` environment variable:
+
+```bash
+# Custom Anthropic endpoint
+ANTHROPIC_API_KEY=your_anthropic_key_here
+ANTHROPIC_URL=https://your-custom-anthropic-endpoint.com/v1
 ```
 
 This is particularly useful when:

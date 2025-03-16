@@ -94,7 +94,7 @@ agents:
     id: github-pull-request-create
     model: *standard_model
     ephemeral: true
-    system_prompt: "{{> system-prompt-github-pr.hbs }}"
+    system_prompt: "{{> system-prompt-github-pull-request.hbs }}"
     user_prompt: "Go ahead and create a PR"
     tools:
       - tool_forge_process_shell
