@@ -5,17 +5,11 @@ use forge_domain::{
 /// System prompt for the developer agent
 const SYSTEM_PROMPT: &str = r#"
 Use the tools at your disposal and solve the user given task.
+
 First, let's establish the current system information:
-<system_info>
-<operating_system>{{env.os}}</operating_system>
-<current_working_directory>{{env.cwd}}</current_working_directory>
-<default_shell>{{env.shell}}</default_shell>
-<home_directory>{{env.home}}</home_directory>
-<file_list>
-{{#each files}} - {{this}}
-{{/each}}
-</file_list>
-</system_info>
+
+{{> partial-system-info.hbs}}
+
 "#;
 
 /// User prompt for the developer agent

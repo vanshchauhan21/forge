@@ -80,8 +80,8 @@ agents:
     max_walker_depth: 4
 
   - tool_supported: true
-    id: git-commit-agent
-    model: *standard_model
+    id: git-commit-worker
+    model: *advanced_model
     ephemeral: true
     system_prompt: "{{> system-prompt-git-commit.hbs }}"
     user_prompt: "Go ahead and make the commit, {{event.value}}"
@@ -91,8 +91,8 @@ agents:
       - commit
 
   - tool_supported: true
-    id: github-pull-request-create
-    model: *standard_model
+    id: github-pull-request-create-worker
+    model: *advanced_model
     ephemeral: true
     system_prompt: "{{> system-prompt-github-pull-request.hbs }}"
     user_prompt: "Go ahead and create a PR"
