@@ -105,7 +105,7 @@ wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | b
 
    _You can get a Key at [Open Router](https://openrouter.ai/)_
 
-2. Launch Code Forge:
+2. Launch Code Forge: Type `@` and press `[tab]` to tag files. You can also use and define custom slash commands.
 
    ![Code-Forge Demo](https://assets.antinomy.ai/images/forge_demo_2x.gif)
 
