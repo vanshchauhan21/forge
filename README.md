@@ -27,8 +27,7 @@ Forge is a comprehensive coding agent that integrates AI capabilities with your 
 **Table of Contents**
 
 - [Installation](#installation)
-  - [Mac](#mac)
-  - [Linux](#linux)
+  - [NPM](#npm)
 - [Get Started](#get-started)
 - [Features](#features)
   - [Complete Coding Agent](#complete-coding-agent)
@@ -65,28 +64,19 @@ Forge is a comprehensive coding agent that integrates AI capabilities with your 
 
 ## Installation
 
-### Mac
+### NPM
 
-Using Homebrew (macOS package manager):
-
-```bash
-# Add Code-Forge's package repository to Homebrew
-brew tap antinomyhq/code-forge
-# Install Code-Forge
-brew install code-forge
-```
-
-### Linux
-
-Choose either method to install:
+Install Forge globally using npm:
 
 ```bash
-# Using curl (common download tool)
-curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
+# Install Forge globally using npm
+npm install -g @antinomyhq/forge
 
-# Or using wget (alternative download tool)
-wget -qO- https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
+# Or run directly without installation using npx
+npx @antinomyhq/forge
 ```
+
+This method works on **Windows**, **macOS**, and **Linux**, providing a consistent installation experience across all platforms.
 
 ## Get Started
 
