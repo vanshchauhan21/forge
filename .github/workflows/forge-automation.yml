@@ -23,6 +23,13 @@ on:
   issues:
     types:
     - labeled
+  pull_request:
+    types:
+    - opened
+    - reopened
+    - labeled
+    - unlabeled
+    - edited
   pull_request_review:
     types:
     - submitted
@@ -37,7 +44,7 @@ permissions:
   pull-requests: write
 jobs:
   process_issue:
-    if: github.event_name == 'issues' && github.event.label.name == 'forge-just-do-it'
+    if: github.event_name == 'issues' && github.event.label.name == 'forge-automate'
     name: process_issue
     runs-on: ubuntu-latest
     steps:
@@ -57,17 +64,17 @@ jobs:
         body: |-
           ✨ **Forge Automation Engaged!** ✨
 
-          I've started working on this issue with the power of AI. You can watch my progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          I've started working on this issue with the power of AI. I'll analyze the issue and create a plan for review. Stay tuned for updates You can track progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
 
-          I'll analyze the issue and submit a solution shortly. Stay tuned for updates!
+          .
     - name: Run Forge to process issue
       run: 'forge --event=''{"name": "fix_issue", "value": "${{ github.event.issue.number }}"}'''
       env:
         GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
-  update_pr:
-    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-just-do-it') && github.actor != 'forge-at-your-service[bot]') || (github.event_name == 'pull_request_review' && contains(github.event.pull_request.labels.*.name, 'forge-just-do-it') && github.actor != 'forge-at-your-service[bot]') || (github.event_name == 'pull_request_review_comment' && contains(github.event.pull_request.labels.*.name, 'forge-just-do-it') && github.actor != 'forge-at-your-service[bot]')
-    name: update_pr
+  revise_plan:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-plan-review') && startsWith(github.event.comment.body, '/forge revise-plan')
+    name: revise_plan
     runs-on: ubuntu-latest
     steps:
     - id: generate-token
@@ -76,21 +83,137 @@ jobs:
         private_key: ${{ secrets.FORGE_BOT_PRIVATE_KEY }}
         app_id: ${{secrets.FORGE_BOT_APP_ID}}
     - uses: actions/checkout@v4
+    - name: Fetch PR branch
+      run: git fetch origin pull/${{ github.event.issue.number }}/head:pr-${{ github.event.issue.number }}
+    - name: Checkout PR branch
+      run: git checkout pr-${{ github.event.issue.number }}
     - name: Install Forge CLI
       run: curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
-    - name: Add comment to PR with action link
+    - name: Add comment to PR about plan revision
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ steps.generate-token.outputs.token }}
+        issue-number: ${{ github.event.issue.number }}
+        body: |-
+          📝 **Revising Plan** 📝
+
+          I'm working on revising the plan based on your feedback. I'll update the task file with the revised plan shortly You can track progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+          .
+    - name: Run Forge to revise plan based on feedback
+      run: 'forge --event=''{"name": "revise_plan", "value": "${{ github.event.issue.number }}|${{ github.event.comment.body }}"}'''
+      env:
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+        FORGE_KEY: ${{ secrets.FORGE_KEY }}
+  approve_plan:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-plan-review') && startsWith(github.event.comment.body, '/forge approve-plan')
+    name: approve_plan
+    runs-on: ubuntu-latest
+    steps:
+    - id: generate-token
+      uses: tibdex/github-app-token@v2
+      with:
+        private_key: ${{ secrets.FORGE_BOT_PRIVATE_KEY }}
+        app_id: ${{secrets.FORGE_BOT_APP_ID}}
+    - uses: actions/checkout@v4
+    - name: Add comment to PR about plan approval
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ steps.generate-token.outputs.token }}
+        issue-number: ${{ github.event.issue.number }}
+        body: |-
+          ✅ **Plan Approved** ✅
+
+          Thank you for approving the plan! I'm now ready to implement the changes. You can either wait for automatic implementation or trigger it manually with `/forge continue` You can track progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+          .
+    - name: 'Update labels: remove forge-plan-review, add forge-implement'
+      uses: actions/github-script@v6
+      with:
+        script: |2
+
+          const issueNumber = context.payload.issue.number;
+
+          // Remove forge-plan-review label
+          await github.rest.issues.removeLabel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            name: 'forge-plan-review'
+          });
+
+          // Add forge-implement label
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            labels: ['forge-implement']
+          });
+      env:
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+  implement_pr:
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'forge-implement') && !contains(github.event.pull_request.labels.*.name, 'forge-plan-review') && github.event.pull_request.draft == true) || (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'forge-implement') && !contains(github.event.issue.labels.*.name, 'forge-plan-review') && startsWith(github.event.comment.body, '/forge continue'))
+    name: implement_pr
+    runs-on: ubuntu-latest
+    steps:
+    - id: generate-token
+      uses: tibdex/github-app-token@v2
+      with:
+        private_key: ${{ secrets.FORGE_BOT_PRIVATE_KEY }}
+        app_id: ${{secrets.FORGE_BOT_APP_ID}}
+    - uses: actions/checkout@v4
+    - name: Fetch PR branch
+      run: git fetch origin pull/${{ github.event_name == 'issue_comment' && github.event.issue.number || github.event.pull_request.number }}/head:pr-${{ github.event_name == 'issue_comment' && github.event.issue.number || github.event.pull_request.number }}
+    - name: Checkout PR branch
+      run: git checkout pr-${{ github.event_name == 'issue_comment' && github.event.issue.number || github.event.pull_request.number }}
+    - name: Install Forge CLI
+      run: curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
+    - name: Add comment to PR about implementation
       uses: peter-evans/create-or-update-comment@v4
       with:
         token: ${{ steps.generate-token.outputs.token }}
         issue-number: ${{ github.event_name == 'issue_comment' && github.event.issue.number || github.event.pull_request.number }}
         body: |-
-          🔧 **Forge at your service!** 🔧
+          🔨️ **Implementation In Progress** 🔨️
 
-          I'm processing your comment and updating this PR accordingly. Watch the magic happen in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          I'm now implementing the approved plan. I'll update this PR with the implementation soon You can track progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
 
-          I'll analyze your request and implement the suggested changes. Check back soon for updates!
-    - name: Run Forge to update PR based on comment
+          .
+    - name: Run Forge to implement PR based on approved plan
       run: 'forge --event=''{"name": "update_pr", "value": "${{ github.event_name == ''issue_comment'' && github.event.issue.number || github.event.pull_request.number }}"}'''
+      env:
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+        FORGE_KEY: ${{ secrets.FORGE_KEY }}
+  handle_review:
+    if: (github.event_name == 'pull_request_review_comment' || github.event_name == 'pull_request_review') && contains(github.event.pull_request.labels.*.name, 'forge-automate')
+    name: handle_review
+    runs-on: ubuntu-latest
+    steps:
+    - id: generate-token
+      uses: tibdex/github-app-token@v2
+      with:
+        private_key: ${{ secrets.FORGE_BOT_PRIVATE_KEY }}
+        app_id: ${{secrets.FORGE_BOT_APP_ID}}
+    - uses: actions/checkout@v4
+    - name: Fetch PR branch
+      run: git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-${{ github.event.pull_request.number }}
+    - name: Checkout PR branch
+      run: git checkout pr-${{ github.event.pull_request.number }}
+    - name: Install Forge CLI
+      run: curl -L https://raw.githubusercontent.com/antinomyhq/forge/main/install.sh | bash
+    - name: Add comment to PR about handling review comment
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ steps.generate-token.outputs.token }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |-
+          💬 **Processing Review Comment** 💬
+
+          I'm analyzing and addressing this review comment. I'll update the PR shortly with the requested changes You can track progress in the [GitHub Action run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+          .
+    - name: Run Forge to address review comments
+      run: 'forge --event=''{"name": "fix-review-comment", "value": "${{ github.event.pull_request.number }}"}'''
       env:
         GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         FORGE_KEY: ${{ secrets.FORGE_KEY }}
