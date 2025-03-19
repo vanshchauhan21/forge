@@ -94,7 +94,7 @@ pub struct Agent {
 
     /// Used to specify the events the agent is interested in    
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[merge(strategy = crate::merge::option)]
+    #[merge(strategy = merge_subscription)]
     pub subscribe: Option<Vec<String>>,
 
     /// Maximum number of turns the agent can take    
@@ -112,6 +112,16 @@ pub struct Agent {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[merge(strategy = crate::merge::option)]
     pub custom_rules: Option<String>,
+}
+
+fn merge_subscription(base: &mut Option<Vec<String>>, other: Option<Vec<String>>) {
+    if let Some(other) = other {
+        if let Some(base) = base {
+            base.extend(other);
+        } else {
+            *base = Some(other);
+        }
+    }
 }
 
 impl Agent {
@@ -193,6 +203,8 @@ pub enum Transform {
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[test]
@@ -356,7 +368,9 @@ mod tests {
 
         // Should have other's events
         let subscribe = base.subscribe.as_ref().unwrap();
-        assert_eq!(subscribe.len(), 2);
+        assert_eq!(subscribe.len(), 4);
+        assert!(subscribe.contains(&"event1".to_string()));
+        assert!(subscribe.contains(&"event2".to_string()));
         assert!(subscribe.contains(&"event3".to_string()));
         assert!(subscribe.contains(&"event4".to_string()));
     }
