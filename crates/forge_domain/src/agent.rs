@@ -33,6 +33,13 @@ impl From<ToolName> for AgentId {
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Setters)]
 #[setters(strip_option, into)]
 pub struct Agent {
+    /// Controls whether this agent's output should be hidden from the console
+    /// When false (default), output is not displayed
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[merge(strategy = crate::merge::option)]
+    pub hide_content: Option<bool>,
+
     /// Flag to disable this agent, when true agent will not be activated
     /// Default is false (agent is enabled)
     #[serde(default)]
@@ -142,6 +149,7 @@ impl Agent {
             max_turns: None,
             max_walker_depth: None,
             custom_rules: None,
+            hide_content: None,
         }
     }
 
@@ -199,6 +207,28 @@ pub enum Transform {
         // Input template for the transformation
         input: String,
     },
+}
+
+#[cfg(test)]
+mod hide_content_tests {
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    #[test]
+    fn test_merge_hide_content() {
+        // Base has no value, other has value
+        let mut base = Agent::new("Base"); // No hide_content set
+        let other = Agent::new("Other").hide_content(true);
+        base.merge(other);
+        assert_eq!(base.hide_content, Some(true));
+
+        // Base has a value, other has another value
+        let mut base = Agent::new("Base").hide_content(false);
+        let other = Agent::new("Other").hide_content(true);
+        base.merge(other);
+        assert_eq!(base.hide_content, Some(true));
+    }
 }
 
 #[cfg(test)]

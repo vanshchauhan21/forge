@@ -350,13 +350,7 @@ impl<F: API> UI<F> {
 
     fn handle_chat_response(&mut self, message: AgentMessage<ChatResponse>) -> Result<()> {
         match message.message {
-            ChatResponse::Text(text) => {
-                // Any agent that ends with "worker" is considered a worker agent.
-                // Worker agents don't print anything to the console.
-                if !message.agent.as_str().to_lowercase().ends_with("worker") {
-                    CONSOLE.write(&text)?;
-                }
-            }
+            ChatResponse::Text(text) => CONSOLE.write(&text)?,
             ChatResponse::ToolCallStart(_) => {
                 CONSOLE.newline()?;
                 CONSOLE.newline()?;

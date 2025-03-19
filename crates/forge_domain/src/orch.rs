@@ -34,38 +34,41 @@ impl<A: App> Orchestrator<A> {
     #[async_recursion]
     async fn get_all_tool_results(
         &self,
-        agent_id: &AgentId,
+        agent: &Agent,
         tool_calls: &[ToolCallFull],
     ) -> anyhow::Result<Vec<ToolResult>> {
         let mut tool_results = Vec::new();
 
         for tool_call in tool_calls.iter() {
-            self.send(agent_id, ChatResponse::ToolCallStart(tool_call.clone()))
+            self.send(agent, ChatResponse::ToolCallStart(tool_call.clone()))
                 .await?;
-            if let Some(tool_result) = self.execute_tool(agent_id, tool_call).await? {
-                tool_results.push(tool_result.clone());
-                self.send(agent_id, ChatResponse::ToolCallEnd(tool_result))
-                    .await?;
-            }
+            let tool_result = self.execute_tool(agent, tool_call).await?;
+            tool_results.push(tool_result.clone());
+            self.send(agent, ChatResponse::ToolCallEnd(tool_result))
+                .await?;
         }
 
         Ok(tool_results)
     }
+
     pub fn new(svc: Arc<A>, conversation_id: ConversationId, sender: Option<ArcSender>) -> Self {
         Self { app: svc, sender, conversation_id }
     }
 
-    async fn send_message(&self, agent_id: &AgentId, message: ChatResponse) -> anyhow::Result<()> {
+    async fn send_message(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
         if let Some(sender) = &self.sender {
-            sender
-                .send(Ok(AgentMessage { agent: agent_id.clone(), message }))
-                .await?
+            // Only send message if hide_content is false
+            if !agent.hide_content.unwrap_or_default() {
+                sender
+                    .send(Ok(AgentMessage { agent: agent.id.clone(), message }))
+                    .await?
+            }
         }
         Ok(())
     }
 
-    async fn send(&self, agent_id: &AgentId, message: ChatResponse) -> anyhow::Result<()> {
-        self.send_message(agent_id, message).await
+    async fn send(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
+        self.send_message(agent, message).await
     }
 
     fn init_default_tool_definitions(&self) -> Vec<ToolDefinition> {
@@ -112,7 +115,7 @@ impl<A: App> Orchestrator<A> {
 
     async fn collect_messages(
         &self,
-        agent: &AgentId,
+        agent: &Agent,
         mut response: impl Stream<Item = std::result::Result<ChatCompletionMessage, anyhow::Error>>
             + std::marker::Unpin,
     ) -> anyhow::Result<ChatCompletionResult> {
@@ -198,19 +201,17 @@ impl<A: App> Orchestrator<A> {
     #[async_recursion]
     async fn execute_tool(
         &self,
-        agent_id: &AgentId,
+        agent: &Agent,
         tool_call: &ToolCallFull,
-    ) -> anyhow::Result<Option<ToolResult>> {
+    ) -> anyhow::Result<ToolResult> {
         if let Some(event) = Event::parse(tool_call) {
-            self.send(agent_id, ChatResponse::Custom(event.clone()))
+            self.send(agent, ChatResponse::Custom(event.clone()))
                 .await?;
 
             self.dispatch_spawned(event).await?;
-            Ok(Some(
-                ToolResult::from(tool_call.clone()).success("Event Dispatched Successfully"),
-            ))
+            Ok(ToolResult::from(tool_call.clone()).success("Event Dispatched Successfully"))
         } else {
-            Ok(Some(self.app.tool_service().call(tool_call.clone()).await))
+            Ok(self.app.tool_service().call(tool_call.clone()).await)
         }
     }
 
@@ -281,17 +282,17 @@ impl<A: App> Orchestrator<A> {
             .ok_or(Error::ConversationNotFound(self.conversation_id.clone()))?)
     }
 
-    async fn complete_turn(&self, agent: &AgentId) -> anyhow::Result<()> {
+    async fn complete_turn(&self, agent_id: &AgentId) -> anyhow::Result<()> {
         self.app
             .conversation_service()
-            .inc_turn(&self.conversation_id, agent)
+            .inc_turn(&self.conversation_id, agent_id)
             .await
     }
 
-    async fn set_context(&self, agent: &AgentId, context: Context) -> anyhow::Result<()> {
+    async fn set_context(&self, agent_id: &AgentId, context: Context) -> anyhow::Result<()> {
         self.app
             .conversation_service()
-            .set_context(&self.conversation_id, agent, context)
+            .set_context(&self.conversation_id, agent_id, context)
             .await
     }
 
@@ -377,10 +378,10 @@ impl<A: App> Orchestrator<A> {
                 )
                 .await?;
             let ChatCompletionResult { tool_calls, content } =
-                self.collect_messages(&agent.id, response).await?;
+                self.collect_messages(agent, response).await?;
 
             // Get all tool results using the helper function
-            let tool_results = self.get_all_tool_results(&agent.id, &tool_calls).await?;
+            let tool_results = self.get_all_tool_results(agent, &tool_calls).await?;
 
             context = context
                 .add_message(ContextMessage::assistant(content, Some(tool_calls)))
