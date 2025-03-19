@@ -30,6 +30,27 @@ struct ChatCompletionResult {
 }
 
 impl<A: App> Orchestrator<A> {
+    // Helper function to get all tool results from a vector of tool calls
+    #[async_recursion]
+    async fn get_all_tool_results(
+        &self,
+        agent_id: &AgentId,
+        tool_calls: &[ToolCallFull],
+    ) -> anyhow::Result<Vec<ToolResult>> {
+        let mut tool_results = Vec::new();
+
+        for tool_call in tool_calls.iter() {
+            self.send(agent_id, ChatResponse::ToolCallStart(tool_call.clone()))
+                .await?;
+            if let Some(tool_result) = self.execute_tool(agent_id, tool_call).await? {
+                tool_results.push(tool_result.clone());
+                self.send(agent_id, ChatResponse::ToolCallEnd(tool_result))
+                    .await?;
+            }
+        }
+
+        Ok(tool_results)
+    }
     pub fn new(svc: Arc<A>, conversation_id: ConversationId, sender: Option<ArcSender>) -> Self {
         Self { app: svc, sender, conversation_id }
     }
@@ -55,8 +76,7 @@ impl<A: App> Orchestrator<A> {
         let allowed = agent.tools.iter().flatten().collect::<HashSet<_>>();
         let mut forge_tools = self.init_default_tool_definitions();
 
-        // Adding self to the list of tool definitions
-
+        // Adding Event tool to the list of tool definitions
         forge_tools.push(Event::tool_definition());
 
         forge_tools
@@ -359,17 +379,8 @@ impl<A: App> Orchestrator<A> {
             let ChatCompletionResult { tool_calls, content } =
                 self.collect_messages(&agent.id, response).await?;
 
-            let mut tool_results = Vec::new();
-
-            for tool_call in tool_calls.iter() {
-                self.send(&agent.id, ChatResponse::ToolCallStart(tool_call.clone()))
-                    .await?;
-                if let Some(tool_result) = self.execute_tool(&agent.id, tool_call).await? {
-                    tool_results.push(tool_result.clone());
-                    self.send(&agent.id, ChatResponse::ToolCallEnd(tool_result))
-                        .await?;
-                }
-            }
+            // Get all tool results using the helper function
+            let tool_results = self.get_all_tool_results(&agent.id, &tool_calls).await?;
 
             context = context
                 .add_message(ContextMessage::assistant(content, Some(tool_calls)))

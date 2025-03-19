@@ -84,10 +84,7 @@ impl ForgeCommandManager {
 
         commands.extend(workflow.commands.clone().into_iter().map(|cmd| {
             let name = format!("/{}", cmd.name);
-            let description = match cmd.value {
-                Some(ref value) => format!("⚙ {} ({})", name, value),
-                None => format!("⚙ {}", cmd.description),
-            };
+            let description = format!("⚙ {}", cmd.description);
             let value = cmd.value.clone();
 
             ForgeCommand { name, description, value }
@@ -120,6 +117,40 @@ impl ForgeCommandManager {
         self.commands.lock().unwrap().clone()
     }
 
+    /// Extracts the command value from the input parts
+    ///
+    /// # Arguments
+    /// * `command` - The command for which to extract the value
+    /// * `parts` - The parts of the command input after the command name
+    ///
+    /// # Returns
+    /// * `Option<String>` - The extracted value, if any
+    fn extract_command_value(&self, command: &ForgeCommand, parts: &[&str]) -> Option<String> {
+        // Unit tests implemented in the test module below
+
+        // Try to get value provided in the command
+        let value_provided = if !parts.is_empty() {
+            Some(parts.join(" "))
+        } else {
+            None
+        };
+
+        // Try to get default value from command definition
+        let value_default = self
+            .commands
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|c| c.name == command.name)
+            .and_then(|cmd| cmd.value.clone());
+
+        // Use provided value if non-empty, otherwise use default
+        match value_provided {
+            Some(value) if !value.trim().is_empty() => Some(value),
+            _ => value_default,
+        }
+    }
+
     pub fn parse(&self, input: &str) -> anyhow::Result<Command> {
         let trimmed = input.trim();
         let is_command = trimmed.starts_with("/");
@@ -141,21 +172,11 @@ impl ForgeCommandManager {
 
                 if let Some(command) = parts.first() {
                     if let Some(command) = self.find(command) {
-                        let value_provided = parts.get(1..).map(|args| args.join(" "));
-
-                        let value_default = self
-                            .commands
-                            .lock()
-                            .unwrap()
-                            .iter()
-                            .find(|c| c.name == command.name)
-                            .and_then(|cmd| cmd.value.clone());
-
-                        let value = value_provided.or(value_default);
+                        let value = self.extract_command_value(&command, &parts[1..]);
 
                         Ok(Command::Custom(PartialEvent::new(
                             command.name.clone().strip_prefix('/').unwrap().to_string(),
-                            value.unwrap_or_else(|| panic!("Event {} needs a value", command.name)),
+                            value.unwrap_or_default(),
                         )))
                     } else {
                         Err(anyhow::anyhow!("{} is not valid", command))
@@ -263,4 +284,147 @@ pub trait UserInput {
     /// * `Ok(Input)` - Successfully processed input
     /// * `Err` - An error occurred during input processing
     async fn prompt(&self, input: Option<Self::PromptInput>) -> anyhow::Result<Command>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_command_value_with_provided_value() {
+        // Setup
+        let cmd_manager = ForgeCommandManager::default();
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts = vec!["arg1", "arg2"];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify
+        assert_eq!(result, Some(String::from("arg1 arg2")));
+    }
+
+    #[test]
+    fn test_extract_command_value_with_empty_parts_default_value() {
+        // Setup
+        let cmd_manager = ForgeCommandManager {
+            commands: Arc::new(Mutex::new(vec![ForgeCommand {
+                name: String::from("/test"),
+                description: String::from("Test command"),
+                value: Some(String::from("default_value")),
+            }])),
+        };
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts: Vec<&str> = vec![];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify
+        assert_eq!(result, Some(String::from("default_value")));
+    }
+
+    #[test]
+    fn test_extract_command_value_with_empty_string_parts() {
+        // Setup
+        let cmd_manager = ForgeCommandManager {
+            commands: Arc::new(Mutex::new(vec![ForgeCommand {
+                name: String::from("/test"),
+                description: String::from("Test command"),
+                value: Some(String::from("default_value")),
+            }])),
+        };
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts = vec![""];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify - should use default as the provided value is empty
+        assert_eq!(result, Some(String::from("default_value")));
+    }
+
+    #[test]
+    fn test_extract_command_value_with_whitespace_parts() {
+        // Setup
+        let cmd_manager = ForgeCommandManager {
+            commands: Arc::new(Mutex::new(vec![ForgeCommand {
+                name: String::from("/test"),
+                description: String::from("Test command"),
+                value: Some(String::from("default_value")),
+            }])),
+        };
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts = vec!["  "];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify - should use default as the provided value is just whitespace
+        assert_eq!(result, Some(String::from("default_value")));
+    }
+
+    #[test]
+    fn test_extract_command_value_no_default_no_provided() {
+        // Setup
+        let cmd_manager = ForgeCommandManager {
+            commands: Arc::new(Mutex::new(vec![ForgeCommand {
+                name: String::from("/test"),
+                description: String::from("Test command"),
+                value: None,
+            }])),
+        };
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts: Vec<&str> = vec![];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify - should be None as there's no default and no provided value
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_extract_command_value_provided_overrides_default() {
+        // Setup
+        let cmd_manager = ForgeCommandManager {
+            commands: Arc::new(Mutex::new(vec![ForgeCommand {
+                name: String::from("/test"),
+                description: String::from("Test command"),
+                value: Some(String::from("default_value")),
+            }])),
+        };
+        let command = ForgeCommand {
+            name: String::from("/test"),
+            description: String::from("Test command"),
+            value: None,
+        };
+        let parts = vec!["provided_value"];
+
+        // Execute
+        let result = cmd_manager.extract_command_value(&command, &parts);
+
+        // Verify - provided value should override default
+        assert_eq!(result, Some(String::from("provided_value")));
+    }
 }

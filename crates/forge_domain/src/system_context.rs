@@ -29,5 +29,5 @@ pub struct SystemContext {
     pub readme: String,
 
     #[serde(skip_serializing_if = "String::is_empty")]
-    pub project_rules: String,
+    pub custom_rules: String,
 }

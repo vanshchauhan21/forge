@@ -66,10 +66,14 @@ impl Conversation {
     }
 
     /// Returns all the agents that are subscribed to the given event.
-    pub fn entries(&self, event_name: &str) -> Vec<Agent> {
+    pub fn subscriptions(&self, event_name: &str) -> Vec<Agent> {
         self.workflow
             .agents
             .iter()
+            .filter(|a| {
+                // Filter out disabled agents
+                !a.disable.unwrap_or_default()
+            })
             .filter(|a| {
                 self.turn_count(&a.id).unwrap_or_default() < a.max_turns.unwrap_or(u64::MAX)
             })
@@ -117,7 +121,7 @@ impl Conversation {
 
     /// Add an event to the queue of subscribed agents
     pub fn insert_event(&mut self, event: Event) -> &mut Self {
-        let subscribed_agents = self.entries(&event.name);
+        let subscribed_agents = self.subscriptions(&event.name);
         self.events.push(event.clone());
 
         subscribed_agents.iter().for_each(|agent| {
@@ -165,7 +169,7 @@ impl Conversation {
         let name = event.name.as_str();
         self.insert_event(event.clone());
 
-        let mut agents = self.entries(name);
+        let mut agents = self.subscriptions(name);
 
         agents
             .iter_mut()

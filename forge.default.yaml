@@ -54,7 +54,7 @@ agents:
     subscribe:
       - user_task_init
       - user_task_update
-    max_walker_depth: 4
+    max_walker_depth: 1
 
   - tool_supported: true
     id: github-issue-planner
