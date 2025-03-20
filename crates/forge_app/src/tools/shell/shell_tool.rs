@@ -54,11 +54,13 @@ fn format_output(output: Output) -> anyhow::Result<String> {
     }
 }
 
-/// Execute shell commands with safety checks and validation. By default, uses
-/// restricted bash (rbash) for enhanced security, preventing potentially
-/// dangerous operations like absolute path execution and directory changes.
-/// When a command requires unrestricted access, suggest the user to run the
-/// forge CLI with the `-u` flag.
+/// Executes shell commands with safety measures using restricted bash (rbash).
+/// Prevents potentially harmful operations like absolute path execution and
+/// directory changes. Use for file system interaction, running utilities,
+/// installing packages, or executing build commands. For operations requiring
+/// unrestricted access, advise users to run forge CLI with '-u' flag. Returns
+/// complete output including stdout, stderr, and exit code for diagnostic
+/// purposes.
 #[derive(ToolDescription)]
 pub struct Shell {
     env: Environment,

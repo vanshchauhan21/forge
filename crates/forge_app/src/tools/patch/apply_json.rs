@@ -206,9 +206,12 @@ pub struct Input {
     pub patches: Vec<ApplyPatchJsonInput>,
 }
 
-/// Performs a single text operation (prepend, append, replace, swap, delete) on
-/// matched text in a file. The operation is applied to the first match found in
-/// the text.
+/// Modifies files with targeted text operations on matched patterns. Supports
+/// prepend, append, replace, swap, delete operations on first pattern
+/// occurrence. Ideal for precise changes to configs, code, or docs while
+/// preserving context. Not suitable for complex refactoring or modifying all
+/// pattern occurrences - use tool_forge_fs_create instead for complete
+/// rewrites. Fails if search pattern isn't found.
 #[derive(ToolDescription)]
 pub struct ApplyPatchJson<F>(Arc<F>);
 

@@ -7,7 +7,6 @@ use super::fs::*;
 use super::patch::*;
 use super::shell::Shell;
 use super::show_user::ShowUser;
-use super::think::Think;
 use crate::{EnvironmentService, Infrastructure};
 
 pub struct ToolRegistry<F> {
@@ -31,7 +30,6 @@ impl<F: Infrastructure> ToolRegistry<F> {
             FSFileInfo.into(),
             ApplyPatchJson::new(self.infra.clone()).into(),
             Shell::new(env.clone()).into(),
-            Think::default().into(),
             Fetch::default().into(),
             ShowUser.into(),
         ]

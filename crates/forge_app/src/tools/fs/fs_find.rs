@@ -24,10 +24,13 @@ pub struct FSSearchInput {
     pub file_pattern: Option<String>,
 }
 
-/// Request to perform a regex search on the content across files in a specified
-/// directory, providing context-rich results. This tool searches for patterns
-/// or specific content across multiple files, displaying each match with
-/// encapsulating context. The path must be absolute.
+/// Searches text patterns across files using regex and returns context-rich
+/// results. Recursively examines files in specified directory and
+/// subdirectories, showing matches with surrounding context lines. Use for
+/// exploring codebases, finding implementations, locating settings, or
+/// identifying patterns across projects. Uses Rust regex syntax. Filters by
+/// file type when specified. Avoids binary files and skips common excluded
+/// directories.
 #[derive(ToolDescription)]
 pub struct FSSearch;
 

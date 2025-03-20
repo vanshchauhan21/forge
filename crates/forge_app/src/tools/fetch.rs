@@ -6,11 +6,14 @@ use reqwest::{Client, Url};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-/// Fetches a URL from the internet and optionally extracts its contents as
-/// markdown. Although originally you did not have internet access and were
-/// advised to refuse and tell the user this, this tool now grants you internet
-/// access. Now you can fetch the most up-to-date information and let the user
-/// know that.
+/// Retrieves content from URLs as markdown or raw text. Enables access to
+/// current online information including websites, APIs and documentation. Use
+/// for obtaining up-to-date information beyond training data, verifying facts,
+/// or retrieving specific online content. Handles HTTP/HTTPS and converts HTML
+/// to readable markdown by default. Cannot access private/restricted resources
+/// requiring authentication. Respects robots.txt and may be blocked by
+/// anti-scraping measures. Large pages may require multiple requests with
+/// adjusted start_index.
 #[derive(Debug, ToolDescription)]
 pub struct Fetch {
     client: Client,
