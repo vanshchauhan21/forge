@@ -76,7 +76,7 @@ impl<F: App + Infrastructure> API for ForgeAPI<F> {
         &self,
         conversation_id: &ConversationId,
     ) -> anyhow::Result<Option<Conversation>> {
-        self.app.conversation_service().get(conversation_id).await
+        self.app.conversation_service().find(conversation_id).await
     }
 
     async fn get_variable(

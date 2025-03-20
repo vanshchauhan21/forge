@@ -78,18 +78,11 @@ pub trait ToolService: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait ConversationService: Send + Sync {
-    async fn get(&self, id: &ConversationId) -> anyhow::Result<Option<Conversation>>;
+    async fn find(&self, id: &ConversationId) -> anyhow::Result<Option<Conversation>>;
+
+    async fn upsert(&self, conversation: Conversation) -> anyhow::Result<()>;
 
     async fn create(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
-
-    async fn inc_turn(&self, id: &ConversationId, agent: &AgentId) -> anyhow::Result<()>;
-
-    async fn set_context(
-        &self,
-        id: &ConversationId,
-        agent: &AgentId,
-        context: Context,
-    ) -> anyhow::Result<()>;
 
     async fn get_variable(&self, id: &ConversationId, key: &str) -> anyhow::Result<Option<Value>>;
 

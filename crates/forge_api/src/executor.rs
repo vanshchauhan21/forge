@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use forge_domain::{AgentMessage, App, ChatRequest, ChatResponse, Orchestrator};
+use forge_domain::{
+    AgentMessage, App, ChatRequest, ChatResponse, ConversationService, Orchestrator,
+};
 use forge_stream::MpscStream;
 
 pub struct ForgeExecutorService<F> {
@@ -18,10 +20,17 @@ impl<F: App> ForgeExecutorService<F> {
         request: ChatRequest,
     ) -> anyhow::Result<MpscStream<anyhow::Result<AgentMessage<ChatResponse>>>> {
         let app = self.app.clone();
+        let conversation = app
+            .conversation_service()
+            .find(&request.conversation_id)
+            .await
+            .unwrap_or_default()
+            .expect("conversation for the request should've been created");
 
         Ok(MpscStream::spawn(move |tx| async move {
             let tx = Arc::new(tx);
-            let orch = Orchestrator::new(app, request.conversation_id, Some(tx.clone()));
+
+            let orch = Orchestrator::new(app, conversation, Some(tx.clone()));
 
             match orch.dispatch(request.event).await {
                 Ok(_) => {}

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::{Context as AnyhowContext, Result};
-use forge_domain::{AgentId, Context, Conversation, ConversationId, ConversationService, Workflow};
+use forge_domain::{Conversation, ConversationId, ConversationService, Workflow};
 use serde_json::Value;
 use tokio::sync::Mutex;
 
@@ -34,8 +34,16 @@ impl ConversationService for ForgeConversationService {
         Ok(f(conversation))
     }
 
-    async fn get(&self, id: &ConversationId) -> Result<Option<Conversation>> {
+    async fn find(&self, id: &ConversationId) -> Result<Option<Conversation>> {
         Ok(self.workflows.lock().await.get(id).cloned())
+    }
+
+    async fn upsert(&self, conversation: Conversation) -> Result<()> {
+        self.workflows
+            .lock()
+            .await
+            .insert(conversation.id.clone(), conversation);
+        Ok(())
     }
 
     async fn create(&self, workflow: Workflow) -> Result<ConversationId> {
@@ -43,25 +51,6 @@ impl ConversationService for ForgeConversationService {
         let conversation = Conversation::new(id.clone(), workflow);
         self.workflows.lock().await.insert(id.clone(), conversation);
         Ok(id)
-    }
-
-    async fn inc_turn(&self, id: &ConversationId, agent: &AgentId) -> Result<()> {
-        self.update(id, |c| {
-            c.state.entry(agent.clone()).or_default().turn_count += 1;
-        })
-        .await
-    }
-
-    async fn set_context(
-        &self,
-        id: &ConversationId,
-        agent: &AgentId,
-        context: Context,
-    ) -> Result<()> {
-        self.update(id, |c| {
-            c.state.entry(agent.clone()).or_default().context = Some(context);
-        })
-        .await
     }
 
     async fn get_variable(&self, id: &ConversationId, key: &str) -> Result<Option<Value>> {
