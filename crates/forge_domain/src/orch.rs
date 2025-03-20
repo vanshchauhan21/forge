@@ -55,20 +55,17 @@ impl<A: App> Orchestrator<A> {
         Self { app: svc, sender, conversation_id }
     }
 
-    async fn send_message(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
+    async fn send(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
         if let Some(sender) = &self.sender {
-            // Only send message if hide_content is false
-            if !agent.hide_content.unwrap_or_default() {
+            // Send message if it's a Custom type or if hide_content is false
+            if matches!(&message, ChatResponse::Event(_)) || !agent.hide_content.unwrap_or_default()
+            {
                 sender
                     .send(Ok(AgentMessage { agent: agent.id.clone(), message }))
                     .await?
             }
         }
         Ok(())
-    }
-
-    async fn send(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
-        self.send_message(agent, message).await
     }
 
     fn init_default_tool_definitions(&self) -> Vec<ToolDefinition> {
@@ -205,8 +202,7 @@ impl<A: App> Orchestrator<A> {
         tool_call: &ToolCallFull,
     ) -> anyhow::Result<ToolResult> {
         if let Some(event) = Event::parse(tool_call) {
-            self.send(agent, ChatResponse::Custom(event.clone()))
-                .await?;
+            self.send(agent, ChatResponse::Event(event.clone())).await?;
 
             self.dispatch_spawned(event).await?;
             Ok(ToolResult::from(tool_call.clone()).success("Event Dispatched Successfully"))

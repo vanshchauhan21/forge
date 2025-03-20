@@ -370,7 +370,7 @@ impl<F: API> UI<F> {
                     CONSOLE.writeln(TitleFormat::success(tool_name).format())?;
                 }
             }
-            ChatResponse::Custom(event) => {
+            ChatResponse::Event(event) => {
                 if event.name == EVENT_TITLE {
                     self.state.current_title = Some(event.value);
                 }
