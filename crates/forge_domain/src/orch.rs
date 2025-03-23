@@ -31,6 +31,19 @@ struct ChatCompletionResult {
 }
 
 impl<A: App> Orchestrator<A> {
+    pub fn new(app: Arc<A>, mut conversation: Conversation, sender: Option<ArcSender>) -> Self {
+        // since this is a new request, we clear the queue
+        conversation.state.values_mut().for_each(|state| {
+            state.queue.clear();
+        });
+
+        Self {
+            app,
+            sender,
+            conversation: Arc::new(RwLock::new(conversation)),
+        }
+    }
+
     // Helper function to get all tool results from a vector of tool calls
     #[async_recursion]
     async fn get_all_tool_results(
@@ -50,19 +63,6 @@ impl<A: App> Orchestrator<A> {
         }
 
         Ok(tool_results)
-    }
-
-    pub fn new(svc: Arc<A>, mut conversation: Conversation, sender: Option<ArcSender>) -> Self {
-        // since this is a new request, we clear the queue
-        conversation.state.values_mut().for_each(|state| {
-            state.queue.clear();
-        });
-
-        Self {
-            app: svc,
-            sender,
-            conversation: Arc::new(RwLock::new(conversation)),
-        }
     }
 
     async fn send(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
