@@ -236,9 +236,8 @@ fn format_output(path: &str, content: &str, warning: Option<&str>) -> String {
         )
     } else {
         format!(
-            "<file_content path=\"{}\">\n{}\n</file_content>\n",
-            path,
-            content.trim_end()
+            "<file_content\n  path=\"{}\" status=\"patched_successfully\" />\n",
+            path
         )
     }
 }

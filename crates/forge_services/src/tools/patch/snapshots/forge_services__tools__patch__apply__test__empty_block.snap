@@ -2,7 +2,5 @@
 source: crates/forge_services/src/tools/patch/apply.rs
 expression: "TempDir::normalize(&result)"
 ---
-<file_content path="[TEMP_DIR]/test.txt">
-    First Line    
-    Last Line
-</file_content>
+<file_content
+  path="[TEMP_DIR]/test.txt" status="patched_successfully" />

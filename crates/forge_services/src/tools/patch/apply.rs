@@ -192,9 +192,8 @@ impl<T: Infrastructure> ExecutableTool for ApplyPatch<T> {
                 )
             } else {
                 format!(
-                    "<file_content path=\"{}\">\n{}\n</file_content>\n",
-                    input.path,
-                    modified.trim_end()
+                    "<file_content\n  path=\"{}\" status=\"patched_successfully\" />\n",
+                    input.path
                 )
             };
             anyhow::Ok(output)
