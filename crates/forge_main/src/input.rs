@@ -44,12 +44,12 @@ impl UserInput for Console {
         let prompt: ForgePrompt = input.map(Into::into).unwrap_or_default();
 
         loop {
-            let result = engine.prompt(&prompt);
+            let result = engine.prompt(&prompt)?;
             match result {
-                Ok(ReadResult::Continue) => continue,
-                Ok(ReadResult::Exit) => return Ok(Command::Exit),
-                Ok(ReadResult::Empty) => continue,
-                Ok(ReadResult::Success(text)) => {
+                ReadResult::Continue => continue,
+                ReadResult::Exit => return Ok(Command::Exit),
+                ReadResult::Empty => continue,
+                ReadResult::Success(text) => {
                     tokio::spawn(
                         crate::ui::TRACKER.dispatch(forge_tracker::EventKind::Prompt(text.clone())),
                     );
@@ -63,9 +63,6 @@ impl UserInput for Console {
                             )?;
                         }
                     }
-                }
-                Err(e) => {
-                    CONSOLE.writeln(TitleFormat::failed(e.to_string()).format())?;
                 }
             }
         }
