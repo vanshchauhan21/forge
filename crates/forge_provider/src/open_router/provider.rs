@@ -133,14 +133,8 @@ impl OpenRouter {
                 bail!(err)
             }
             Ok(response) => {
-                if self.provider.is_open_router() | self.provider.is_antinomy() {
-                    let data: Vec<OpenRouterModel> = serde_json::from_str(&response)?;
-                    Ok(data.into_iter().map(Into::into).collect())
-                } else {
-                    // TODO: This could fail for some providers
-                    let data: ListModelResponse = serde_json::from_str(&response)?;
-                    Ok(data.data.into_iter().map(Into::into).collect())
-                }
+                let data: ListModelResponse = serde_json::from_str(&response)?;
+                Ok(data.data.into_iter().map(Into::into).collect())
             }
         }
     }

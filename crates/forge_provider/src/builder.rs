@@ -31,6 +31,7 @@ impl Client {
                     .client(client)
                     .api_key(key.to_string())
                     .base_url(url.clone())
+                    .anthropic_version("2023-06-01".to_string())
                     .build()
                     .with_context(|| {
                         format!("Failed to initialize Anthropic client with URL: {}", url)
