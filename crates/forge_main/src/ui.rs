@@ -31,12 +31,12 @@ lazy_static! {
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, Default)]
 pub struct PartialEvent {
     pub name: String,
-    pub value: String,
+    pub value: Value,
 }
 
 impl PartialEvent {
-    pub fn new(name: impl ToString, value: impl ToString) -> Self {
-        Self { name: name.to_string(), value: value.to_string() }
+    pub fn new<V: Into<Value>>(name: impl ToString, value: V) -> Self {
+        Self { name: name.to_string(), value: value.into() }
     }
 }
 
@@ -92,14 +92,14 @@ impl<F: API> UI<F> {
         Ok(())
     }
     // Helper functions for creating events with the specific event names
-    fn create_task_init_event(content: impl ToString) -> Event {
+    fn create_task_init_event<V: Into<Value>>(content: V) -> Event {
         Event::new(EVENT_USER_TASK_INIT, content)
     }
 
-    fn create_task_update_event(content: impl ToString) -> Event {
+    fn create_task_update_event<V: Into<Value>>(content: V) -> Event {
         Event::new(EVENT_USER_TASK_UPDATE, content)
     }
-    fn create_user_help_query_event(content: impl ToString) -> Event {
+    fn create_user_help_query_event<V: Into<Value>>(content: V) -> Event {
         Event::new(EVENT_USER_HELP_QUERY, content)
     }
 
@@ -372,7 +372,7 @@ impl<F: API> UI<F> {
             }
             ChatResponse::Event(event) => {
                 if event.name == EVENT_TITLE {
-                    self.state.current_title = Some(event.value);
+                    self.state.current_title = Some(event.value.to_string());
                 }
             }
             ChatResponse::Usage(u) => {

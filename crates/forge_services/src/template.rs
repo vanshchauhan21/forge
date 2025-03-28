@@ -102,7 +102,7 @@ impl<F: Infrastructure, T: ToolService> TemplateService for ForgeTemplateService
         // Only add suggestions if the agent has suggestions enabled
         if agent.suggestions.unwrap_or_default() {
             // Query the vector index directly for suggestions
-            let query = &event.value;
+            let query = &event.value.to_string();
             let embeddings = self.infra.embedding_service().embed(query).await?;
             let suggestions = self
                 .infra
