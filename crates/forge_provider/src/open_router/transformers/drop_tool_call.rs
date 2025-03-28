@@ -59,6 +59,7 @@ mod tests {
             ],
             tools: vec![],
             tool_choice: None,
+            temperature: None,
         };
 
         let request = OpenRouterRequest::from(context);

@@ -384,6 +384,7 @@ Each agent needs tools to perform tasks, configured in the `tools` field:
 - `tool_supported` - (Optional) Boolean flag that determines whether tools defined in the agent configuration are actually made available to the LLM. When set to `false`, tools are listed in the configuration but not included in AI model requests, causing the agent to format tool calls in XML rather than in the model's native format. Default: `true`.
 - `system_prompt` - (Optional) Instructions for how the agent should behave. While optional, it's recommended to provide clear instructions for best results.
 - `user_prompt` - (Optional) Format for user inputs. If not provided, the raw event value is used.
+- `temperature` - (Optional) Controls randomness in model output. Lower values (0.0-0.3) produce more deterministic, focused responses, while higher values (0.7-2.0) generate more creative, diverse outputs. Valid range is 0.0 to 2.0. If not specified, the default value depends on the specific provider being used.
 
 **Example Agent Configuration:**
 
@@ -392,6 +393,7 @@ agents:
   - id: software-engineer
     model: gpt-4
     custom_rules: always ensure you compile and run tests before presenting to user
+    temperature: 0.3
     system_prompt: |
       You are a software engineer...
 ```

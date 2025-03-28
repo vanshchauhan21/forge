@@ -1,7 +1,7 @@
 use derive_more::derive::Display;
 use derive_setters::Setters;
 use merge::Merge;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::merge::Key;
 use crate::template::Template;
@@ -119,6 +119,45 @@ pub struct Agent {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[merge(strategy = crate::merge::option)]
     pub custom_rules: Option<String>,
+
+    /// Temperature used for agent
+    ///
+    /// Temperature controls the randomness in the model's output.
+    /// - Lower values (e.g., 0.1) make responses more focused, deterministic,
+    ///   and coherent
+    /// - Higher values (e.g., 0.8) make responses more creative, diverse, and
+    ///   exploratory
+    /// - Valid range is 0.0 to 2.0
+    /// - If not specified, the model provider's default temperature will be
+    ///   used
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "validate_temperature_range")]
+    #[merge(strategy = crate::merge::option)]
+    pub temperature: Option<f32>,
+}
+
+// validate temperature range during deserialization
+fn validate_temperature_range<'de, D>(deserializer: D) -> std::result::Result<Option<f32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    // Deserialize as Option<f32>
+    let opt = Option::<f32>::deserialize(deserializer)?;
+
+    // If Some value, validate the range
+    if let Some(temp) = opt {
+        if !(0.0..=2.0).contains(&temp) {
+            return Err(Error::custom(format!(
+                "temperature must be between 0.0 and 2.0, got {}",
+                temp
+            )));
+        }
+    }
+
+    Ok(opt)
 }
 
 fn merge_subscription(base: &mut Option<Vec<String>>, other: Option<Vec<String>>) {
@@ -150,6 +189,7 @@ impl Agent {
             max_walker_depth: None,
             custom_rules: None,
             hide_content: None,
+            temperature: None,
         }
     }
 
@@ -234,6 +274,7 @@ mod hide_content_tests {
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     use super::*;
 
@@ -403,5 +444,55 @@ mod tests {
         assert!(subscribe.contains(&"event2".to_string()));
         assert!(subscribe.contains(&"event3".to_string()));
         assert!(subscribe.contains(&"event4".to_string()));
+    }
+
+    #[test]
+    fn test_temperature_validation() {
+        // Valid temperature values should deserialize correctly
+        let valid_temps = [0.0, 0.5, 1.0, 1.5, 2.0];
+        for temp in valid_temps {
+            let json = json!({
+                "id": "test-agent",
+                "temperature": temp
+            });
+
+            let agent: std::result::Result<Agent, serde_json::Error> = serde_json::from_value(json);
+            assert!(
+                agent.is_ok(),
+                "Valid temperature {} should deserialize",
+                temp
+            );
+            assert_eq!(agent.unwrap().temperature, Some(temp));
+        }
+
+        // Invalid temperature values should fail deserialization
+        let invalid_temps = [-0.1, 2.1, 3.0, -1.0, 10.0];
+        for temp in invalid_temps {
+            let json = json!({
+                "id": "test-agent",
+                "temperature": temp
+            });
+
+            let agent: std::result::Result<Agent, serde_json::Error> = serde_json::from_value(json);
+            assert!(
+                agent.is_err(),
+                "Invalid temperature {} should fail deserialization",
+                temp
+            );
+            let err = agent.unwrap_err().to_string();
+            assert!(
+                err.contains("temperature must be between 0.0 and 2.0"),
+                "Error should mention valid range: {}",
+                err
+            );
+        }
+
+        // No temperature should deserialize to None
+        let json = json!({
+            "id": "test-agent"
+        });
+
+        let agent: Agent = serde_json::from_value(json).unwrap();
+        assert_eq!(agent.temperature, None);
     }
 }

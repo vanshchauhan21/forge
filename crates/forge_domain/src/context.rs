@@ -192,6 +192,8 @@ pub struct Context {
     pub tools: Vec<ToolDefinition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f32>,
 }
 
 impl Context {
