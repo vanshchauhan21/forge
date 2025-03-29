@@ -20,7 +20,7 @@ pub struct ForgeAPI<F> {
     loader: ForgeLoaderService<F>,
 }
 
-impl<F: App + Infrastructure> ForgeAPI<F> {
+impl<F: Services + Infrastructure> ForgeAPI<F> {
     pub fn new(app: Arc<F>) -> Self {
         Self {
             app: app.clone(),
@@ -40,7 +40,7 @@ impl ForgeAPI<ForgeServices<ForgeInfra>> {
 }
 
 #[async_trait::async_trait]
-impl<F: App + Infrastructure> API for ForgeAPI<F> {
+impl<F: Services + Infrastructure> API for ForgeAPI<F> {
     async fn suggestions(&self) -> Result<Vec<File>> {
         self.suggestion_service.suggestions().await
     }

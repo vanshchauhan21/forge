@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use forge_domain::{
-    AgentMessage, App, ChatRequest, ChatResponse, ConversationService, Orchestrator,
+    AgentMessage, ChatRequest, ChatResponse, ConversationService, Orchestrator, Services,
 };
 use forge_stream::MpscStream;
 use tracing::error;
@@ -9,13 +9,13 @@ use tracing::error;
 pub struct ForgeExecutorService<F> {
     app: Arc<F>,
 }
-impl<F: App> ForgeExecutorService<F> {
+impl<F: Services> ForgeExecutorService<F> {
     pub fn new(infra: Arc<F>) -> Self {
         Self { app: infra }
     }
 }
 
-impl<F: App> ForgeExecutorService<F> {
+impl<F: Services> ForgeExecutorService<F> {
     pub async fn chat(
         &self,
         request: ChatRequest,

@@ -5,7 +5,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, Url};
 use reqwest_eventsource::{Event, RequestBuilderExt};
 use tokio_stream::StreamExt;
-use tracing::debug;
+use tracing::{debug, error};
 
 use super::request::Request;
 use super::response::{EventData, ListModelResponse};
@@ -62,12 +62,11 @@ impl ProviderService for Anthropic {
         model: &ModelId,
         context: Context,
     ) -> ResultStream<ChatCompletionMessage, anyhow::Error> {
-        // TODO: depending on model, we've to set the max_tokens for request. for now,
-        // we're setting it to 4000.
+        let max_tokens = context.max_tokens.unwrap_or(4000);
         let request = Request::try_from(context)?
             .model(model.as_str().to_string())
             .stream(true)
-            .max_tokens(4000u64);
+            .max_tokens(max_tokens as u64);
 
         let url = self.url("/messages")?;
         debug!(url = %url, model = %model, "Connecting Upstream");
@@ -106,15 +105,16 @@ impl ProviderService for Anthropic {
                         reqwest_eventsource::Error::InvalidStatusCode(_, response) => {
                             let headers = response.headers().clone();
                             let status = response.status();
-                            match response.text().await {
+                             match response.text().await {
                                 Ok(ref body) => {
                                     debug!(status = ?status, headers = ?headers, body = body, "Invalid status code");
+                                    Some(Err(anyhow::anyhow!("Invalid status code: {}, reason: {}", status, body)))
                                 }
                                 Err(error) => {
-                                    debug!(status = ?status, headers = ?headers, body = ?error, "Invalid status code (body not available)");
+                                    error!(status = ?status, headers = ?headers, body = ?error, "Invalid status code (body not available)");
+                                    Some(Err(anyhow::anyhow!("Invalid status code: {}", status)))
                                 }
                             }
-                            Some(Err(anyhow::anyhow!("Invalid status code: {}", status)))
                         }
                         reqwest_eventsource::Error::InvalidContentType(_, ref response) => {
                             debug!(response = ?response, "Invalid content type");

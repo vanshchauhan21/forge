@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use crate::{
-    Agent, Attachment, ChatCompletionMessage, Context, Conversation, ConversationId, Event,
-    EventContext, Model, ModelId, ResultStream, SystemContext, Template, ToolCallFull,
+    Agent, Attachment, ChatCompletionMessage, Compact, Context, Conversation, ConversationId,
+    Event, EventContext, Model, ModelId, ResultStream, SystemContext, Template, ToolCallFull,
     ToolDefinition, ToolResult, Workflow,
 };
 
@@ -66,6 +66,16 @@ pub trait TemplateService: Send + Sync {
         event: &Event,
         variables: &HashMap<String, Value>,
     ) -> anyhow::Result<String>;
+
+    /// Renders a custom summarization prompt for context compaction
+    /// This takes a raw string template and renders it with information about
+    /// the compaction and the original context (which allows for more
+    /// sophisticated compaction templates)
+    async fn render_summarization(
+        &self,
+        compaction: &Compact,
+        context: &Context,
+    ) -> anyhow::Result<String>;
 }
 
 #[async_trait::async_trait]
@@ -75,7 +85,7 @@ pub trait AttachmentService {
 /// Core app trait providing access to services and repositories.
 /// This trait follows clean architecture principles for dependency management
 /// and service/repository composition.
-pub trait App: Send + Sync + 'static + Clone {
+pub trait Services: Send + Sync + 'static + Clone {
     type ToolService: ToolService;
     type ProviderService: ProviderService;
     type ConversationService: ConversationService;

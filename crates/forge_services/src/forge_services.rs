@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use forge_domain::App;
+use forge_domain::Services;
 
 use crate::attachment::ForgeChatRequest;
 use crate::conversation::ForgeConversationService;
@@ -39,7 +39,7 @@ impl<F: Infrastructure> ForgeServices<F> {
     }
 }
 
-impl<F: Infrastructure> App for ForgeServices<F> {
+impl<F: Infrastructure> Services for ForgeServices<F> {
     type ToolService = ForgeToolService;
     type ProviderService = ForgeProviderService;
     type ConversationService = ForgeConversationService;
