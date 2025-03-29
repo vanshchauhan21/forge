@@ -52,7 +52,11 @@ impl OpenRouter {
                 HeaderValue::from_str(&format!("Bearer {}", api_key)).unwrap(),
             );
         }
-        headers.insert("X-Title", HeaderValue::from_static("code-forge"));
+        headers.insert("X-Title", HeaderValue::from_static("forge"));
+        headers.insert(
+            "HTTP-Referer",
+            HeaderValue::from_static("https://github.com/antinomyhq/forge"),
+        );
         headers
     }
 
