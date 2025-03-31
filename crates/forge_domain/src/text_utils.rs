@@ -13,6 +13,7 @@
 /// # Example
 ///
 /// ```
+/// use forge_domain::extract_tag_content;
 /// let text = "Some text <summary>This is the important part</summary> and more text";
 /// let extracted = extract_tag_content(text, "summary");
 /// assert_eq!(extracted, Some("This is the important part"));
