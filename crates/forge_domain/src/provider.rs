@@ -13,7 +13,11 @@ impl Provider {
     pub fn open_ai_url(&mut self, url: String) {
         match self {
             Provider::OpenAI { url: set_url, .. } => {
-                *set_url = Url::parse(&url).unwrap();
+                if url.ends_with("/") {
+                    *set_url = Url::parse(&url).unwrap();
+                } else {
+                    *set_url = Url::parse(&format!("{}/", url)).unwrap();
+                }
             }
             Provider::Anthropic { .. } => {}
         }
@@ -23,7 +27,11 @@ impl Provider {
     pub fn anthropic_url(&mut self, url: String) {
         match self {
             Provider::Anthropic { url: set_url, .. } => {
-                *set_url = Url::parse(&url).unwrap();
+                if url.ends_with("/") {
+                    *set_url = Url::parse(&url).unwrap();
+                } else {
+                    *set_url = Url::parse(&format!("{}/", url)).unwrap();
+                }
             }
             Provider::OpenAI { .. } => {}
         }
@@ -105,5 +113,110 @@ impl Provider {
             Provider::OpenAI { .. } => false,
             Provider::Anthropic { url, .. } => url.as_str().starts_with(Self::ANTHROPIC_URL),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    #[test]
+    fn test_open_ai_url() {
+        let mut provider = Provider::OpenAI {
+            url: Url::from_str("https://example.com/").unwrap(),
+            key: None,
+        };
+
+        // Test URL without trailing slash
+        provider.open_ai_url("https://new-openai-url.com".to_string());
+        assert_eq!(
+            provider,
+            Provider::OpenAI {
+                url: Url::from_str("https://new-openai-url.com/").unwrap(),
+                key: None
+            }
+        );
+
+        // Test URL with trailing slash
+        provider.open_ai_url("https://another-openai-url.com/".to_string());
+        assert_eq!(
+            provider,
+            Provider::OpenAI {
+                url: Url::from_str("https://another-openai-url.com/").unwrap(),
+                key: None
+            }
+        );
+
+        // Test URL with subpath without trailing slash
+        provider.open_ai_url("https://new-openai-url.com/v1/api".to_string());
+        assert_eq!(
+            provider,
+            Provider::OpenAI {
+                url: Url::from_str("https://new-openai-url.com/v1/api/").unwrap(),
+                key: None
+            }
+        );
+
+        // Test URL with subpath with trailing slash
+        provider.open_ai_url("https://another-openai-url.com/v2/api/".to_string());
+        assert_eq!(
+            provider,
+            Provider::OpenAI {
+                url: Url::from_str("https://another-openai-url.com/v2/api/").unwrap(),
+                key: None
+            }
+        );
+    }
+
+    #[test]
+    fn test_anthropic_url() {
+        let mut provider = Provider::Anthropic {
+            url: Url::from_str("https://example.com/").unwrap(),
+            key: "key".to_string(),
+        };
+
+        // Test URL without trailing slash
+        provider.anthropic_url("https://new-anthropic-url.com".to_string());
+        assert_eq!(
+            provider,
+            Provider::Anthropic {
+                url: Url::from_str("https://new-anthropic-url.com/").unwrap(),
+                key: "key".to_string()
+            }
+        );
+
+        // Test URL with trailing slash
+        provider.anthropic_url("https://another-anthropic-url.com/".to_string());
+        assert_eq!(
+            provider,
+            Provider::Anthropic {
+                url: Url::from_str("https://another-anthropic-url.com/").unwrap(),
+                key: "key".to_string()
+            }
+        );
+
+        // Test URL with subpath without trailing slash
+        provider.anthropic_url("https://new-anthropic-url.com/v1/complete".to_string());
+        assert_eq!(
+            provider,
+            Provider::Anthropic {
+                url: Url::from_str("https://new-anthropic-url.com/v1/complete/").unwrap(),
+                key: "key".to_string()
+            }
+        );
+
+        // Test URL with subpath with trailing slash
+        provider.anthropic_url("https://another-anthropic-url.com/v2/complete/".to_string());
+        assert_eq!(
+            provider,
+            Provider::Anthropic {
+                url: Url::from_str("https://another-anthropic-url.com/v2/complete/").unwrap(),
+                key: "key".to_string()
+            }
+        );
     }
 }
