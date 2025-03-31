@@ -6,6 +6,8 @@ use async_recursion::async_recursion;
 use futures::future::join_all;
 use futures::{Stream, StreamExt};
 use tokio::sync::RwLock;
+use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::RetryIf;
 use tracing::debug;
 
 use crate::compaction::ContextCompactor;
@@ -13,6 +15,9 @@ use crate::services::Services;
 use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
+
+// Maximum number of retry attempts for retryable operations
+const MAX_RETRY_ATTEMPTS: usize = 3;
 
 #[derive(Debug, Clone)]
 pub struct AgentMessage<T> {
@@ -26,6 +31,7 @@ pub struct Orchestrator<App> {
     sender: Option<ArcSender>,
     conversation: Arc<RwLock<Conversation>>,
     compactor: ContextCompactor<App>,
+    retry_strategy: std::iter::Take<tokio_retry::strategy::ExponentialBackoff>,
 }
 
 struct ChatCompletionResult {
@@ -44,11 +50,23 @@ impl<A: Services> Orchestrator<A> {
             state.queue.clear();
         });
 
+        let retry_config = conversation.workflow.retry.as_ref();
+        let initial_backoff_ms = retry_config
+            .and_then(|rc| rc.initial_backoff_ms)
+            .unwrap_or(200);
+        let backoff_factor = retry_config.and_then(|rc| rc.backoff_factor).unwrap_or(2);
+        let max_retry_attempts = retry_config
+            .and_then(|rc| rc.max_retry_attempts)
+            .unwrap_or(MAX_RETRY_ATTEMPTS);
+
         Self {
             compactor: ContextCompactor::new(services.clone()),
             services,
             sender,
             conversation: Arc::new(RwLock::new(conversation)),
+            retry_strategy: ExponentialBackoff::from_millis(initial_backoff_ms)
+                .factor(backoff_factor)
+                .take(max_retry_attempts),
         }
     }
 
@@ -76,8 +94,9 @@ impl<A: Services> Orchestrator<A> {
     async fn send(&self, agent: &Agent, message: ChatResponse) -> anyhow::Result<()> {
         if let Some(sender) = &self.sender {
             // Send message if it's a Custom type or if hide_content is false
-            if matches!(&message, ChatResponse::Event(_)) || !agent.hide_content.unwrap_or_default()
-            {
+            let show_text = !agent.hide_content.unwrap_or_default();
+            let can_send = !matches!(&message, ChatResponse::Text(_)) || show_text;
+            if can_send {
                 sender
                     .send(Ok(AgentMessage { agent: agent.id.clone(), message }))
                     .await?
@@ -259,6 +278,7 @@ impl<A: Services> Orchestrator<A> {
         Ok(())
     }
 
+    // Create a helper method with the core functionality
     async fn init_agent(&self, agent_id: &AgentId, event: &Event) -> anyhow::Result<()> {
         let conversation = self.get_conversation().await?;
         debug!(
@@ -372,9 +392,33 @@ impl<A: Services> Orchestrator<A> {
             let mut conversation = self.conversation.write().await;
             conversation.poll_event(agent_id)
         } {
-            self.init_agent(agent_id, &event).await?;
+            RetryIf::spawn(
+                self.retry_strategy.clone().map(jitter),
+                || self.init_agent(agent_id, &event),
+                is_parse_error,
+            )
+            .await
+            .with_context(|| format!("Failed to initialize agent {}", *agent_id))?;
         }
 
         Ok(())
     }
+}
+
+fn is_parse_error(error: &anyhow::Error) -> bool {
+    let check = error
+        .downcast_ref::<Error>()
+        .map(|error| {
+            matches!(
+                error,
+                Error::ToolCallParse(_) | Error::ToolCallArgument(_) | Error::ToolCallMissingName
+            )
+        })
+        .unwrap_or_default();
+
+    if check {
+        debug!(error = %error, "Retrying due to parse error");
+    }
+
+    check
 }

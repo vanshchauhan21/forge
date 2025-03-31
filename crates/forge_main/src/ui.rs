@@ -372,7 +372,8 @@ impl<F: API> UI<F> {
             }
             ChatResponse::Event(event) => {
                 if event.name == EVENT_TITLE {
-                    self.state.current_title = Some(event.value.to_string());
+                    self.state.current_title =
+                        Some(event.value.as_str().unwrap_or_default().to_string());
                 }
             }
             ChatResponse::Usage(u) => {
