@@ -33,6 +33,7 @@ pub struct EventContext {
     event: Event,
     suggestions: Vec<String>,
     variables: HashMap<String, Value>,
+    current_time: String,
 }
 
 impl EventContext {
@@ -41,6 +42,9 @@ impl EventContext {
             event,
             suggestions: Default::default(),
             variables: Default::default(),
+            current_time: chrono::Local::now()
+                .format("%Y-%m-%d %H:%M:%S %:z")
+                .to_string(),
         }
     }
 }

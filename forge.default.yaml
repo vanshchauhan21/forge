@@ -58,6 +58,7 @@ agents:
     user_prompt: |-
       <task>{{event.value}}</task>
       <mode>{{variables.mode}}</mode>
+      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - tool_forge_fs_read
@@ -81,6 +82,7 @@ agents:
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
       <mode>PLAN</mode>
+      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - tool_forge_fs_read
@@ -103,6 +105,7 @@ agents:
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
       <mode>ACT</mode>
+      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - tool_forge_fs_read
@@ -125,6 +128,7 @@ agents:
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
       <mode>ACT</mode>
+      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - tool_forge_fs_read
@@ -145,7 +149,7 @@ agents:
     hide_content: true
     ephemeral: true
     system_prompt: "{{> system-prompt-git-commit.hbs }}"
-    user_prompt: "Go ahead and make the commit, {{event.value}}"
+    user_prompt: "Go ahead and make the commit, {{event.value}} <current_time>{{current_time}}</current_time>"
     tools:
       - tool_forge_process_shell
     subscribe:
@@ -159,6 +163,7 @@ agents:
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
       <mode>PLAN</mode>
+      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - tool_forge_fs_read
@@ -179,7 +184,7 @@ agents:
     model: *advanced_model
     ephemeral: true
     system_prompt: "{{> system-prompt-github-pull-request.hbs }}"
-    user_prompt: "Go ahead and create a PR"
+    user_prompt: "Go ahead and create a PR <current_time>{{current_time}}</current_time>"
     tools:
       - tool_forge_process_shell
     subscribe:
