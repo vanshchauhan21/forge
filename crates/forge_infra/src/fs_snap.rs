@@ -24,4 +24,9 @@ impl FsSnapshotService for ForgeFileSnapshotService {
     async fn create_snapshot(&self, file_path: &Path) -> Result<Snapshot> {
         self.inner.create_snapshot(file_path.to_path_buf()).await
     }
+
+    // Undo
+    async fn undo_snapshot(&self, file_path: &Path) -> Result<()> {
+        self.inner.undo_snapshot(file_path.to_path_buf()).await
+    }
 }

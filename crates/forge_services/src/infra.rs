@@ -65,6 +65,9 @@ pub trait FsCreateDirsService {
 pub trait FsSnapshotService: Send + Sync {
     // Creation
     async fn create_snapshot(&self, file_path: &Path) -> Result<Snapshot>;
+
+    /// Restores the most recent snapshot for the given file path
+    async fn undo_snapshot(&self, file_path: &Path) -> Result<()>;
 }
 
 pub trait Infrastructure: Send + Sync + Clone + 'static {

@@ -237,6 +237,10 @@ pub mod tests {
         async fn create_snapshot(&self, _: &Path) -> anyhow::Result<Snapshot> {
             unimplemented!()
         }
+
+        async fn undo_snapshot(&self, _: &Path) -> anyhow::Result<()> {
+            unimplemented!()
+        }
     }
 
     #[async_trait::async_trait]

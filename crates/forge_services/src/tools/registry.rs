@@ -28,6 +28,7 @@ impl<F: Infrastructure> ToolRegistry<F> {
             FSList::default().into(),
             FSSearch.into(),
             FSFileInfo.into(),
+            FsUndo::new(self.infra.clone()).into(),
             ApplyPatchJson::new(self.infra.clone()).into(),
             Shell::new(env.clone()).into(),
             Fetch::default().into(),
@@ -37,7 +38,7 @@ impl<F: Infrastructure> ToolRegistry<F> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::path::{Path, PathBuf};
 
     use bytes::Bytes;
@@ -72,8 +73,14 @@ mod tests {
         }
     }
 
+    impl Default for Stub {
+        fn default() -> Self {
+            stub()
+        }
+    }
+
     #[derive(Clone)]
-    struct Stub {
+    pub struct Stub {
         env: Environment,
     }
 
@@ -118,6 +125,10 @@ mod tests {
     impl FsSnapshotService for Stub {
         async fn create_snapshot(&self, _: &Path) -> anyhow::Result<Snapshot> {
             unimplemented!()
+        }
+
+        async fn undo_snapshot(&self, _: &Path) -> anyhow::Result<()> {
+            Ok(())
         }
     }
 

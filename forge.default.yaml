@@ -69,6 +69,7 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
       - tool_forge_display_show_user
+      - tool_forge_fs_undo
     subscribe:
       - user_task_init
       - user_task_update
@@ -93,6 +94,7 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
       - tool_forge_event_dispatch
+      - tool_forge_fs_undo
     subscribe:
       - fix_issue
     max_walker_depth: 4
@@ -116,6 +118,7 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
       - tool_forge_event_dispatch
+      - tool_forge_fs_undo
     subscribe:
       - update_pr
     max_walker_depth: 4
@@ -139,6 +142,7 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
       - tool_forge_event_dispatch
+      - tool_forge_fs_undo
     subscribe:
       - fix-review-comment
     max_walker_depth: 4
@@ -174,6 +178,7 @@ agents:
       - tool_forge_net_fetch
       - tool_forge_fs_search
       - tool_forge_event_dispatch
+      - tool_forge_fs_undo
     subscribe:
       - revise_plan
     max_walker_depth: 4
