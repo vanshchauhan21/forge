@@ -149,7 +149,7 @@ impl<F: Infrastructure, T: ToolService> TemplateService for ForgeTemplateService
             compaction
                 .prompt
                 .as_deref()
-                .unwrap_or("Summarize the following conversation:\n{{context}}"),
+                .unwrap_or("{{> system-prompt-context-summarizer.hbs}}"),
             &ctx,
         )?;
         Ok(result)
