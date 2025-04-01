@@ -18,6 +18,32 @@ pub fn assert_absolute_path(path: &Path) -> anyhow::Result<()> {
     }
 }
 
+/// Formats a path for display, converting absolute paths to relative when
+/// possible
+///
+/// If the path starts with the current working directory, returns a
+/// relative path. Otherwise, returns the original absolute path.
+///
+/// # Arguments
+/// * `path` - The path to format
+/// * `cwd` - The current working directory path
+///
+/// # Returns
+/// * `Ok(String)` with a formatted path string
+pub fn format_display_path(path: &Path, cwd: &Path) -> anyhow::Result<String> {
+    // Try to create a relative path for display if possible
+    let display_path = if path.starts_with(cwd) {
+        match path.strip_prefix(cwd) {
+            Ok(rel_path) => rel_path.display().to_string(),
+            Err(_) => path.display().to_string(),
+        }
+    } else {
+        path.display().to_string()
+    };
+
+    Ok(display_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,6 +71,26 @@ mod tests {
     fn test_current_dir_relative_path() {
         let path = Path::new("./current/path");
         assert!(assert_absolute_path(path).is_err());
+    }
+
+    #[test]
+    fn test_format_display_path_relative() {
+        let cwd = Path::new("/home/user/projects");
+        let path = Path::new("/home/user/projects/subfolder/file.txt");
+
+        let result = format_display_path(path, cwd);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "subfolder/file.txt");
+    }
+
+    #[test]
+    fn test_format_display_path_absolute() {
+        let cwd = Path::new("/home/user/projects");
+        let path = Path::new("/var/log/file.log");
+
+        let result = format_display_path(path, cwd);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/var/log/file.log");
     }
 
     #[test]

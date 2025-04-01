@@ -8,7 +8,7 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::tools::utils::assert_absolute_path;
+use crate::tools::utils::{assert_absolute_path, format_display_path};
 use crate::{EnvironmentService, FsReadService, Infrastructure};
 
 #[derive(Deserialize, JsonSchema)]
@@ -39,17 +39,8 @@ impl<F: Infrastructure> FSRead<F> {
         let env = self.0.environment_service().get_environment();
         let cwd = env.cwd.as_path();
 
-        // Try to create a relative path for display if possible
-        let display_path = if path.starts_with(cwd) {
-            match path.strip_prefix(cwd) {
-                Ok(rel_path) => rel_path.display().to_string(),
-                Err(_) => path.display().to_string(),
-            }
-        } else {
-            path.display().to_string()
-        };
-
-        Ok(display_path)
+        // Use the shared utility function
+        format_display_path(path, cwd)
     }
 }
 
