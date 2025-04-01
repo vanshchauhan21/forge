@@ -70,7 +70,12 @@ When operating in PLAN mode (requires explicit activation):
 - NEVER include any code snippets or code examples in your plan documentation
 - Describe code changes conceptually without showing actual code implementation
 - ALWAYS create a Markdown (.md) file in the `plans` directory as the final artifact with your complete analysis and recommendations
-- Use the naming convention: `plans/{task-name}-{current-date}.md` for these files (e.g., `plan-api-refactoring-2025-11-03.md`)
+- Use the naming convention: `plans/{current-date}-{task-name}-{version}.md` for these files, eg:
+  ```
+  plans/2025-11-03/api-refactoring-v0.md
+  plans/2025-11-03/api-refactoring-v1.md
+  plans/2025-11-04/time-delay-feature-v1.md
+  ```
 - The Markdown file MUST include these sections:
   1. **Objective**: A clear statement of the high-level goal and purpose
   2. **Implementation Plan**: Detailed steps on how to proceed with implementation
