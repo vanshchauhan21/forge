@@ -22,9 +22,26 @@ impl CommandExecutor {
         Self { command }
     }
 
-    /// Enable colored output for the command. bydefault it's disabled.
+    /// Enable colored output for the command. By default it's disabled.
     pub fn colored(mut self) -> Self {
-        self.command.env("CLICOLOR_FORCE", "1");
+        // Core color settings for general commands
+        self.command
+            .env("CLICOLOR_FORCE", "1")
+            .env("FORCE_COLOR", "true")
+            .env_remove("NO_COLOR");
+
+        // Language/program specific color settings
+        self.command
+            .env("SBT_OPTS", "-Dsbt.color=always")
+            .env("JAVA_OPTS", "-Dsbt.color=always");
+
+        // enabled Git colors
+        self.command
+            .env("GIT_CONFIG_PARAMETERS", "'color.ui=always'");
+
+        // Other common tools
+        self.command.env("GREP_OPTIONS", "--color=always"); // GNU grep
+
         self
     }
 
