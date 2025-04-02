@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct OpenRouterModel {
     pub id: ModelId,
     pub name: Option<String>,
-    pub created: u64,
+    pub created: Option<u64>,
     pub description: Option<String>,
     pub context_length: Option<u64>,
     pub architecture: Option<Architecture>,
