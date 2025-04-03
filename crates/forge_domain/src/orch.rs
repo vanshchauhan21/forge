@@ -38,6 +38,7 @@ pub struct Orchestrator<App> {
 struct ChatCompletionResult {
     pub content: String,
     pub tool_calls: Vec<ToolCallFull>,
+    pub usage: Option<Usage>,
 }
 
 impl<A: Services> Orchestrator<A> {
@@ -164,6 +165,7 @@ impl<A: Services> Orchestrator<A> {
             + std::marker::Unpin,
     ) -> anyhow::Result<ChatCompletionResult> {
         let mut messages = Vec::new();
+        let mut request_usage: Option<Usage> = None;
 
         while let Some(message) = response.next().await {
             let message = message?;
@@ -174,6 +176,7 @@ impl<A: Services> Orchestrator<A> {
             }
 
             if let Some(usage) = message.usage {
+                request_usage = Some(usage.clone());
                 debug!(usage = ?usage, "Usage");
                 self.send(agent, ChatResponse::Usage(usage)).await?;
             }
@@ -209,7 +212,7 @@ impl<A: Services> Orchestrator<A> {
         // From XML
         tool_calls.extend(ToolCallFull::try_from_xml(&content)?);
 
-        Ok(ChatCompletionResult { content, tool_calls })
+        Ok(ChatCompletionResult { content, tool_calls, usage: request_usage })
     }
 
     pub async fn dispatch_spawned(&self, event: Event) -> anyhow::Result<()> {
@@ -359,8 +362,19 @@ impl<A: Services> Orchestrator<A> {
                     context.clone(),
                 )
                 .await?;
-            let ChatCompletionResult { tool_calls, content } =
+            let ChatCompletionResult { tool_calls, content, usage } =
                 self.collect_messages(agent, response).await?;
+
+            // Check if context requires compression
+            // Only pass prompt_tokens for compaction decision
+            context = self
+                .compactor
+                .compact_context(
+                    agent,
+                    context,
+                    usage.map(|usage| usage.prompt_tokens as usize),
+                )
+                .await?;
 
             // Get all tool results using the helper function
             let tool_results = self.get_all_tool_results(agent, &tool_calls).await?;
@@ -368,9 +382,6 @@ impl<A: Services> Orchestrator<A> {
             context = context
                 .add_message(ContextMessage::assistant(content, Some(tool_calls)))
                 .add_tool_results(tool_results.clone());
-
-            // Check if context requires compression
-            context = self.compactor.compact_context(agent, context).await?;
 
             self.set_context(&agent.id, context.clone()).await?;
             self.sync_conversation().await?;

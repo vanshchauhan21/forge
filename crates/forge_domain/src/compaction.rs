@@ -25,12 +25,17 @@ impl<S: Services> ContextCompactor<S> {
     }
 
     /// Check if compaction is needed and compact the context if so
-    pub async fn compact_context(&self, agent: &Agent, context: Context) -> Result<Context> {
+    pub async fn compact_context(
+        &self,
+        agent: &Agent,
+        context: Context,
+        prompt_tokens: Option<usize>,
+    ) -> Result<Context> {
         // Early return if compaction not needed
 
         if let Some(ref compact) = agent.compact {
             // Ensure that compaction conditions are met
-            if !compact.should_compact(&context) {
+            if !compact.should_compact(&context, prompt_tokens) {
                 return Ok(context);
             }
 
