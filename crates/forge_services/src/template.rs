@@ -47,6 +47,7 @@ impl<F: Infrastructure, T: ToolService> TemplateService for ForgeTemplateService
         &self,
         _agent: &Agent,
         prompt: &Template<SystemContext>,
+        variables: &HashMap<String, Value>,
     ) -> anyhow::Result<String> {
         let env = self.infra.environment_service().get_environment();
 
@@ -80,6 +81,7 @@ impl<F: Infrastructure, T: ToolService> TemplateService for ForgeTemplateService
             files,
             readme: README_CONTENT.to_string(),
             custom_rules: _agent.custom_rules.as_ref().cloned().unwrap_or_default(),
+            variables: variables.clone(),
         };
 
         // Render the template with the context

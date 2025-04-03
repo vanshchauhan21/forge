@@ -57,7 +57,6 @@ agents:
     system_prompt: "{{> system-prompt-engineer.hbs }}"
     user_prompt: |-
       <task>{{event.value}}</task>
-      <mode>{{variables.mode}}</mode>
       <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
@@ -82,7 +81,6 @@ agents:
     user_prompt: |-
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
-      <mode>PLAN</mode>
       <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
@@ -106,7 +104,6 @@ agents:
     user_prompt: |-
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
-      <mode>ACT</mode>
       <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
@@ -130,7 +127,6 @@ agents:
     user_prompt: |-
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
-      <mode>ACT</mode>
       <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
@@ -166,7 +162,6 @@ agents:
     user_prompt: |-
       <event>{{event.name}}</event>
       <value>{{event.value}}</value>
-      <mode>PLAN</mode>
       <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:

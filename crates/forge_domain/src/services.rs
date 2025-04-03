@@ -57,6 +57,7 @@ pub trait TemplateService: Send + Sync {
         &self,
         agent: &Agent,
         prompt: &Template<SystemContext>,
+        variables: &HashMap<String, Value>,
     ) -> anyhow::Result<String>;
 
     async fn render_event(
