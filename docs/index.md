@@ -17,32 +17,28 @@ To learn more about Code-Forge, explore the following sections:
 - [Onboarding Guide](onboarding.html) - Get started with Code-Forge and learn about its system architecture
 - [Development Guidelines](guidelines.html) - Best practices for developing with Code-Forge
 - [Service Documentation](service.html) - Implementation details for services in Code-Forge
+- [Tool Guidelines](tool-guidelines.html) - Guidelines for creating and using tools
+- [Enhanced Workflows](enhanced-workflow.html) - Information about workflows and multi-agent systems
 
-## Features
+## Features Overview
 
 Code-Forge provides several powerful features:
 
-1. **File System Operations**
-   - Read/Write capabilities
-   - Directory listing
-   - File search with regex support
-   - Smart file replacement with diff blocks
-   - Code validation for multiple languages
+### Core Features
+- [Complete Coding Agent](features/coding-agent.html) - Advanced AI coding assistance
+- [Interactive AI Shell](features/ai-shell.html) - Natural language interface to powerful system operations
+- [Enhanced Security](features/security.html) - Optional restricted shell mode and security features
+- [Built-in Commands](features/commands.html) - Useful commands for managing your environment
+- [Autocomplete](features/autocomplete.html) - Intelligent command completion
+- [Operation Modes](features/operation-modes.html) - ACT and PLAN modes for flexible assistance
+- [Multi-Agent Architecture](features/multi-agent.html) - Specialized AI agents working collaboratively
 
-2. **Code Analysis**
-   - Language-aware code parsing
-   - Function and class outline generation
-   - Support for Rust, JavaScript, and Python
-   - Syntax validation
+### Additional Features
+- [Image Upload](features/image-upload.html) - Include images in your conversations
+- [WYSIWYG Shell Experience](features/wysiwyg.html) - Visualized command execution
+- [Command Interruption](features/command-interruption.html) - Control your shell environment
+- [Application Logs](features/application-logs.html) - Detailed JSON-formatted logs
+- [Provider Configuration](features/provider-configuration.html) - Configure multiple AI providers
+- [Custom Workflows](features/custom-workflows.html) - Create custom workflows for complex tasks
 
-3. **Conversation Management**
-   - Persistent conversations
-   - Context management
-   - Title generation
-   - History tracking
-
-4. **Tool Framework**
-   - Extensible tool system
-   - JSON schema-based tool definitions
-   - Asynchronous tool execution
-   - Error handling and validation
+For more detailed information on each feature, please click the corresponding links to view the complete documentation.
