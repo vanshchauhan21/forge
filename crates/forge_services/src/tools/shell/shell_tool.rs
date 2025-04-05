@@ -101,11 +101,10 @@ impl ExecutableTool for Shell {
 
             println!(
                 "\n{}",
-                TitleFormat::execute(format!(
-                    "{} {} {}",
-                    self.env.shell, parameter, &input.command
-                ))
-                .format()
+                // parameter, &input.command
+                TitleFormat::execute(&input.command)
+                    .sub_title(format!("(using {})", self.env.shell.as_str()))
+                    .format()
             );
         }
 
