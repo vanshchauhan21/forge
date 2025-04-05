@@ -57,6 +57,10 @@ impl OpenRouter {
             "HTTP-Referer",
             HeaderValue::from_static("https://github.com/antinomyhq/forge"),
         );
+        headers.insert(
+            reqwest::header::CONNECTION,
+            HeaderValue::from_static("keep-alive"),
+        );
         headers
     }
 
