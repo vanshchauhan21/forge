@@ -26,7 +26,7 @@ impl<F: Infrastructure> ToolRegistry<F> {
             FSWrite::new(self.infra.clone()).into(),
             FSRemove::new(self.infra.clone()).into(),
             FSList::default().into(),
-            FSSearch.into(),
+            FSFind::new(self.infra.clone()).into(),
             FSFileInfo.into(),
             FsUndo::new(self.infra.clone()).into(),
             ApplyPatchJson::new(self.infra.clone()).into(),

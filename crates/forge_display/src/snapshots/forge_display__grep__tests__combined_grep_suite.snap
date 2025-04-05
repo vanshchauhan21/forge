@@ -107,3 +107,29 @@ test.txt:2:More UTF-8 ありがとう here
 test.txt
 1: Contains 你好 characters
 2: More UTF-8 ありがとう here
+
+
+
+[Without regex - Basic single file with two matches]
+[RAW]
+file.txt:1:first match
+file.txt:2:second match
+[FMT]
+file.txt
+1: first match
+2: second match
+
+
+
+[Without regex - Multiple files with various patterns]
+[RAW]
+file1.txt:1:regex pattern in file1
+file2.txt:1:another pattern in file2
+file2.txt:2:different pattern in file2
+[FMT]
+file1.txt
+1: regex pattern in file1
+
+file2.txt
+1: another pattern in file2
+2: different pattern in file2

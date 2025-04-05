@@ -41,6 +41,12 @@ agents:
       - Fixtures should be generic and reusable.
       - Test should always be written in the same file as the source code.
 
+      Running Tests:
+      - We use `insta` to run tests:
+      ```
+      cargo insta test --accept --unreferenced=delete       
+      ```
+      
       Verification:
       - run the following command to format and validate if the code is working:
         ```

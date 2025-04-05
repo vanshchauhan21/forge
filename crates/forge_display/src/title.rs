@@ -86,7 +86,7 @@ impl TitleFormat {
             Kind::Execute => (
                 self.icon().cyan(),
                 self.label().bold().cyan(),
-                format!("{} ", self.title),
+                self.title.to_string(),
             ),
             Kind::Success => (
                 self.icon().green(),
