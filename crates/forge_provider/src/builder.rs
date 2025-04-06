@@ -16,8 +16,6 @@ pub enum Client {
 impl Client {
     pub fn new(provider: Provider) -> Result<Self> {
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .connect_timeout(std::time::Duration::from_secs(15))
             .pool_idle_timeout(std::time::Duration::from_secs(90))
             .pool_max_idle_per_host(5)
             .build()?;
