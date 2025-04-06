@@ -4,8 +4,8 @@ use serde_json::Value;
 
 use crate::{
     Agent, Attachment, ChatCompletionMessage, Compact, Context, Conversation, ConversationId,
-    Event, EventContext, Model, ModelId, ResultStream, SystemContext, Template, ToolCallFull,
-    ToolDefinition, ToolResult, Workflow,
+    Environment, Event, EventContext, Model, ModelId, ResultStream, SystemContext, Template,
+    ToolCallFull, ToolDefinition, ToolResult, Workflow,
 };
 
 #[async_trait::async_trait]
@@ -83,6 +83,11 @@ pub trait TemplateService: Send + Sync {
 pub trait AttachmentService {
     async fn attachments(&self, url: &str) -> anyhow::Result<Vec<Attachment>>;
 }
+
+pub trait EnvironmentService: Send + Sync {
+    fn get_environment(&self) -> Environment;
+}
+
 /// Core app trait providing access to services and repositories.
 /// This trait follows clean architecture principles for dependency management
 /// and service/repository composition.
@@ -92,10 +97,12 @@ pub trait Services: Send + Sync + 'static + Clone {
     type ConversationService: ConversationService;
     type TemplateService: TemplateService;
     type AttachmentService: AttachmentService;
+    type EnvironmentService: EnvironmentService;
 
     fn tool_service(&self) -> &Self::ToolService;
     fn provider_service(&self) -> &Self::ProviderService;
     fn conversation_service(&self) -> &Self::ConversationService;
     fn template_service(&self) -> &Self::TemplateService;
     fn attachment_service(&self) -> &Self::AttachmentService;
+    fn environment_service(&self) -> &Self::EnvironmentService;
 }

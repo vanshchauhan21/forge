@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use forge_domain::*;
 use forge_infra::ForgeInfra;
-use forge_services::{EnvironmentService, ForgeServices, Infrastructure};
+use forge_services::{ForgeServices, Infrastructure};
 use forge_stream::MpscStream;
 use serde_json::Value;
 
@@ -65,7 +65,9 @@ impl<F: Services + Infrastructure> API for ForgeAPI<F> {
     }
 
     fn environment(&self) -> Environment {
-        self.app.environment_service().get_environment().clone()
+        Services::environment_service(self.app.as_ref())
+            .get_environment()
+            .clone()
     }
 
     async fn load(&self, path: Option<&Path>) -> anyhow::Result<Workflow> {

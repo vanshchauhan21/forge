@@ -1,8 +1,10 @@
+use std::time::Duration;
+
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
 use forge_domain::{
     self, ChatCompletionMessage, Context as ChatContext, Model, ModelId, Provider, ProviderService,
-    ResultStream,
+    ResultStream, RetryConfig,
 };
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Url};
@@ -14,12 +16,15 @@ use super::model::{ListModelResponse, OpenRouterModel};
 use super::request::OpenRouterRequest;
 use super::response::OpenRouterResponse;
 use crate::open_router::transformers::{ProviderPipeline, Transformer};
+use crate::retry::StatusCodeRetryPolicy;
 use crate::utils::format_http_context;
 
 #[derive(Clone, Builder)]
 pub struct OpenRouter {
     client: Client,
     provider: Provider,
+    #[builder(default = "RetryConfig::default()")]
+    retry_config: RetryConfig,
 }
 
 impl OpenRouter {
@@ -77,13 +82,22 @@ impl OpenRouter {
 
         let url = self.url("chat/completions")?;
         debug!(url = %url, model = %model, "Connecting Upstream");
-        let es = self
+        let mut es = self
             .client
             .post(url.clone())
             .headers(self.headers())
             .json(&request)
             .eventsource()
             .context(format_http_context(None, "POST", &url))?;
+        let status_codes = self.retry_config.retry_status_codes.clone();
+
+        es.set_retry_policy(Box::new(StatusCodeRetryPolicy::new(
+            Duration::from_millis(self.retry_config.initial_backoff_ms),
+            self.retry_config.backoff_factor as f64,
+            None, // No maximum duration
+            Some(self.retry_config.max_retry_attempts),
+            status_codes.clone(),
+        )));
 
         let stream = es
             .take_while(|message| !matches!(message, Err(reqwest_eventsource::Error::StreamEnded)))

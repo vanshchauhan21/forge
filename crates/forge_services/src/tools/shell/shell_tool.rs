@@ -144,6 +144,7 @@ mod tests {
             base_path: PathBuf::new(),
             pid: std::process::id(),
             provider: Provider::anthropic("test-key"),
+            retry_config: Default::default(),
         }
     }
 

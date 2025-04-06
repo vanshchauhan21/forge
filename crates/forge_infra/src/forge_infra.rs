@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use forge_services::{EnvironmentService, Infrastructure};
+use forge_domain::EnvironmentService;
+use forge_services::Infrastructure;
 
 use crate::env::ForgeEnvironmentService;
 use crate::fs_create_dirs::ForgeCreateDirsService;

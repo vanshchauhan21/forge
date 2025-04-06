@@ -2,14 +2,14 @@ use std::path::Path;
 use std::sync::Arc;
 
 use forge_display::TitleFormat;
-use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_domain::{EnvironmentService, ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::infra::FsSnapshotService;
 use crate::tools::utils::{assert_absolute_path, format_display_path};
-use crate::{EnvironmentService, Infrastructure};
+use crate::Infrastructure;
 
 /// Reverts the most recent file operation (create/modify/delete) on a specific
 /// file. Use this tool when you need to recover from mistaken file changes or

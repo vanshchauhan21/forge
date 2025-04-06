@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use forge_display::TitleFormat;
-use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_domain::{EnvironmentService, ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::tools::utils::{assert_absolute_path, format_display_path};
-use crate::{EnvironmentService, FsReadService, Infrastructure};
+use crate::{FsReadService, Infrastructure};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSReadInput {

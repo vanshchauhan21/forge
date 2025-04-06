@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 
-use crate::Provider;
+use crate::{Provider, RetryConfig};
 
 #[derive(Debug, Setters, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +24,8 @@ pub struct Environment {
     pub base_path: PathBuf,
     /// Resolved provider based on the environment configuration.    
     pub provider: Provider,
+    /// Configuration for the retry mechanism
+    pub retry_config: RetryConfig,
 }
 
 impl Environment {

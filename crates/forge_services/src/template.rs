@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use chrono::Local;
 use forge_domain::{
-    Agent, Compact, Context, Event, EventContext, SystemContext, Template, TemplateService,
-    ToolService,
+    Agent, Compact, Context, EnvironmentService, Event, EventContext, SystemContext, Template,
+    TemplateService, ToolService,
 };
 use forge_walker::Walker;
 use handlebars::Handlebars;
@@ -12,7 +12,7 @@ use rust_embed::Embed;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::{EnvironmentService, Infrastructure};
+use crate::Infrastructure;
 
 // Include README.md at compile time
 const README_CONTENT: &str = include_str!("../../../README.md");

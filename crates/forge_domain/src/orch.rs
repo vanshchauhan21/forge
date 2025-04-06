@@ -11,14 +11,12 @@ use tokio_retry::strategy::{jitter, ExponentialBackoff};
 use tokio_retry::RetryIf;
 use tracing::debug;
 
+// Use retry_config default values directly in this file
 use crate::compaction::ContextCompactor;
 use crate::services::Services;
 use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
-
-// Maximum number of retry attempts for retryable operations
-const MAX_RETRY_ATTEMPTS: usize = 3;
 
 #[derive(Debug, Clone)]
 pub struct AgentMessage<T> {
@@ -52,23 +50,17 @@ impl<A: Services> Orchestrator<A> {
             state.queue.clear();
         });
 
-        let retry_config = conversation.workflow.retry.as_ref();
-        let initial_backoff_ms = retry_config
-            .and_then(|rc| rc.initial_backoff_ms)
-            .unwrap_or(200);
-        let backoff_factor = retry_config.and_then(|rc| rc.backoff_factor).unwrap_or(2);
-        let max_retry_attempts = retry_config
-            .and_then(|rc| rc.max_retry_attempts)
-            .unwrap_or(MAX_RETRY_ATTEMPTS);
+        let env = services.environment_service().get_environment();
+        let retry_strategy = ExponentialBackoff::from_millis(env.retry_config.initial_backoff_ms)
+            .factor(env.retry_config.backoff_factor)
+            .take(env.retry_config.max_retry_attempts);
 
         Self {
             compactor: ContextCompactor::new(services.clone()),
             services,
             sender,
+            retry_strategy,
             conversation: Arc::new(RwLock::new(conversation)),
-            retry_strategy: ExponentialBackoff::from_millis(initial_backoff_ms)
-                .factor(backoff_factor)
-                .take(max_retry_attempts),
         }
     }
 
@@ -364,7 +356,6 @@ impl<A: Services> Orchestrator<A> {
                 .await?;
             let ChatCompletionResult { tool_calls, content, usage } =
                 self.collect_messages(agent, response).await?;
-
             // Check if context requires compression
             // Only pass prompt_tokens for compaction decision
             context = self

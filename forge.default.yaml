@@ -7,15 +7,6 @@ commands:
 variables:
   mode: ACT
 
-# Retry configuration for backoff strategy
-retry:
-  # Initial backoff delay in milliseconds
-  initial_backoff_ms: 200
-  # Backoff multiplication factor for each retry attempt
-  backoff_factor: 2
-  # Maximum number of retry attempts
-  max_retry_attempts: 3
-
 # Define model anchors with simpler, purpose-based names
 models:
   # Role-based model definitions - easy to swap implementation

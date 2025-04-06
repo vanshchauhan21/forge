@@ -45,6 +45,7 @@ impl<F: Infrastructure> Services for ForgeServices<F> {
     type ConversationService = ForgeConversationService;
     type TemplateService = ForgeTemplateService<F, ForgeToolService>;
     type AttachmentService = ForgeChatRequest<F>;
+    type EnvironmentService = F::EnvironmentService;
 
     fn tool_service(&self) -> &Self::ToolService {
         &self.tool_service
@@ -64,6 +65,10 @@ impl<F: Infrastructure> Services for ForgeServices<F> {
 
     fn attachment_service(&self) -> &Self::AttachmentService {
         &self.attachment_service
+    }
+
+    fn environment_service(&self) -> &Self::EnvironmentService {
+        self.infra.environment_service()
     }
 }
 

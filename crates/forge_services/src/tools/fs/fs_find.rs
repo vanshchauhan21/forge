@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use forge_display::{GrepFormat, TitleFormat};
-use forge_domain::{ExecutableTool, NamedTool, ToolDescription, ToolName};
+use forge_domain::{EnvironmentService, ExecutableTool, NamedTool, ToolDescription, ToolName};
 use forge_tool_macros::ToolDescription;
 use forge_walker::Walker;
 use regex::Regex;
@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::tools::utils::{assert_absolute_path, format_display_path};
-use crate::{EnvironmentService, Infrastructure};
+use crate::Infrastructure;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFindInput {

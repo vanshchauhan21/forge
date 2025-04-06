@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use forge_domain::Tool;
+use forge_domain::{EnvironmentService, Tool};
 
 use super::fetch::Fetch;
 use super::fs::*;
 use super::patch::*;
 use super::shell::Shell;
 use super::show_user::ShowUser;
-use crate::{EnvironmentService, Infrastructure};
+use crate::Infrastructure;
 
 pub struct ToolRegistry<F> {
     infra: Arc<F>,
@@ -66,6 +66,7 @@ pub mod tests {
                 base_path: PathBuf::new(),
                 pid: std::process::id(),
                 provider: Provider::anthropic("test-key"),
+                retry_config: Default::default(),
             },
         }
     }
