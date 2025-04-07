@@ -24,8 +24,7 @@ impl SearchTerm {
     pub fn process(&self) -> Option<TermResult<'_>> {
         // Get all the indexes of the '@' chars
         // Get all chars between @ and the cursor
-        let term = self
-            .line
+        self.line
             .chars()
             .enumerate()
             .filter(|(_, c)| *c == '@')
@@ -36,9 +35,7 @@ impl SearchTerm {
                 span: Span::new(at + 1, self.position),
                 term: &self.line[at + 1..self.position],
             })
-            .filter(|s| !s.term.contains(" "));
-
-        term
+            .filter(|s| !s.term.contains(" "))
     }
 }
 

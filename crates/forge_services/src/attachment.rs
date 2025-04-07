@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use base64::Engine;
-use forge_domain::{Attachment, AttachmentService, ContentType};
+use forge_domain::{Attachment, AttachmentService, ContentType, EnvironmentService};
 
 use crate::{FsReadService, Infrastructure};
 // TODO: bring pdf support, pdf is just a collection of images.
@@ -18,7 +18,10 @@ impl<F: Infrastructure> ForgeChatRequest<F> {
         Self { infra }
     }
 
-    async fn prepare_attachments<T: AsRef<Path>>(&self, paths: HashSet<T>) -> Vec<Attachment> {
+    async fn prepare_attachments<T: AsRef<Path>>(
+        &self,
+        paths: HashSet<T>,
+    ) -> anyhow::Result<Vec<Attachment>> {
         futures::future::join_all(
             paths
                 .into_iter()
@@ -27,12 +30,19 @@ impl<F: Infrastructure> ForgeChatRequest<F> {
         )
         .await
         .into_iter()
-        .filter_map(|v| v.ok())
-        .collect::<Vec<_>>()
+        .collect::<anyhow::Result<Vec<_>>>()
     }
 
-    async fn populate_attachments(&self, path: PathBuf) -> anyhow::Result<Attachment> {
+    async fn populate_attachments(&self, mut path: PathBuf) -> anyhow::Result<Attachment> {
         let extension = path.extension().map(|v| v.to_string_lossy().to_string());
+        if !path.is_absolute() {
+            path = self
+                .infra
+                .environment_service()
+                .get_environment()
+                .cwd
+                .join(path)
+        }
         let read = self.infra.file_read_service().read(path.as_path()).await?;
         let path = path.to_string_lossy().to_string();
         if let Some(img_extension) = extension.and_then(|ext| match ext.as_str() {
@@ -54,8 +64,7 @@ impl<F: Infrastructure> ForgeChatRequest<F> {
 #[async_trait::async_trait]
 impl<F: Infrastructure> AttachmentService for ForgeChatRequest<F> {
     async fn attachments(&self, url: &str) -> anyhow::Result<Vec<Attachment>> {
-        let attachments = self.prepare_attachments(Attachment::parse_all(url)).await;
-        Ok(attachments)
+        self.prepare_attachments(Attachment::parse_all(url)).await
     }
 }
 
@@ -274,7 +283,7 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with a text file path in chat message
-        let url = "@/test/file1.txt".to_string();
+        let url = "@[/test/file1.txt]".to_string();
 
         // Execute
         let attachments = chat_request.attachments(&url).await.unwrap();
@@ -295,7 +304,7 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with an image file
-        let url = "@/test/image.png".to_string();
+        let url = "@[/test/image.png]".to_string();
 
         // Execute
         let attachments = chat_request.attachments(&url).await.unwrap();
@@ -323,7 +332,7 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with an image file that has spaces in the path
-        let url = "@\"/test/image with spaces.jpg\"".to_string();
+        let url = "@[/test/image with spaces.jpg]".to_string();
 
         // Execute
         let attachments = chat_request.attachments(&url).await.unwrap();
@@ -356,7 +365,7 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with multiple files mentioned
-        let url = "@/test/file1.txt @/test/file2.txt @/test/image.png".to_string();
+        let url = "@[/test/file1.txt] @[/test/file2.txt] @[/test/image.png]".to_string();
 
         // Execute
         let attachments = chat_request.attachments(&url).await.unwrap();
@@ -388,13 +397,14 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with a file that doesn't exist
-        let url = "@/test/nonexistent.txt".to_string();
+        let url = "@[/test/nonexistent.txt]".to_string();
 
-        // Execute
-        let attachments = chat_request.attachments(&url).await.unwrap();
+        // Execute - Let's handle the error properly
+        let result = chat_request.attachments(&url).await;
 
-        // Assert - nonexistent files should be ignored
-        assert_eq!(attachments.len(), 0);
+        // Assert - we expect an error for nonexistent files
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("File not found"));
     }
 
     #[tokio::test]
@@ -427,7 +437,7 @@ pub mod tests {
         let chat_request = ForgeChatRequest::new(infra.clone());
 
         // Test with the file
-        let url = "@/test/unknown.xyz".to_string();
+        let url = "@[/test/unknown.xyz]".to_string();
 
         // Execute
         let attachments = chat_request.attachments(&url).await.unwrap();
