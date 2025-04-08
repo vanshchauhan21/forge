@@ -49,4 +49,9 @@ pub struct Cli {
     /// For example: --event '{"name": "fix_issue", "value": "449"}'
     #[arg(long, short = 'e')]
     pub event: Option<String>,
+
+    /// Path to a file containing the conversation to execute.
+    /// This file should be in JSON format.
+    #[arg(long)]
+    pub conversation: Option<PathBuf>,
 }

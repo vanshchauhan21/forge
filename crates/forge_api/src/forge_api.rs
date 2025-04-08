@@ -64,6 +64,10 @@ impl<F: Services + Infrastructure> API for ForgeAPI<F> {
         self.app.conversation_service().create(workflow).await
     }
 
+    async fn upsert_conversation(&self, conversation: Conversation) -> anyhow::Result<()> {
+        self.app.conversation_service().upsert(conversation).await
+    }
+
     fn environment(&self) -> Environment {
         Services::environment_service(self.app.as_ref())
             .get_environment()

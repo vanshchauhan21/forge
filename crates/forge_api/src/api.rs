@@ -29,6 +29,9 @@ pub trait API: Sync + Send {
     /// Creates a new conversation with the given workflow
     async fn init(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
 
+    /// Adds a new conversation to the conversation store
+    async fn upsert_conversation(&self, conversation: Conversation) -> anyhow::Result<()>;
+
     /// Loads a workflow configuration from the given path, current directory's
     /// forge.yaml, or embedded default configuration in that order of
     /// precedence

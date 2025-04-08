@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::Colorize;
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, ConversationId, Event, Model, API};
+use forge_api::{
+    AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, Model, API,
+};
 use forge_display::TitleFormat;
+use forge_fs::ForgeFS;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use serde_json::Value;
@@ -270,12 +273,25 @@ impl<F: API> UI<F> {
         match self.state.conversation_id {
             Some(ref id) => Ok(id.clone()),
             None => {
-                let workflow = self.api.load(self.cli.workflow.as_deref()).await?;
-                self.command.register_all(&workflow);
-                let conversation_id = self.api.init(workflow).await?;
-                self.state.conversation_id = Some(conversation_id.clone());
+                if let Some(ref path) = self.cli.conversation {
+                    let conversation: Conversation = serde_json::from_str(
+                        ForgeFS::read_to_string(path.as_os_str()).await?.as_str(),
+                    )
+                    .context("Failed to parse Conversation")?;
 
-                Ok(conversation_id)
+                    let conversation_id = conversation.id.clone();
+                    self.state.conversation_id = Some(conversation_id.clone());
+                    self.command.register_all(&conversation.workflow);
+                    self.api.upsert_conversation(conversation).await?;
+                    Ok(conversation_id.clone())
+                } else {
+                    let workflow = self.api.load(self.cli.workflow.as_deref()).await?;
+                    self.command.register_all(&workflow);
+                    let conversation_id = self.api.init(workflow).await?;
+                    self.state.conversation_id = Some(conversation_id.clone());
+
+                    Ok(conversation_id)
+                }
             }
         }
     }

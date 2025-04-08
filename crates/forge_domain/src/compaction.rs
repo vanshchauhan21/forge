@@ -32,10 +32,16 @@ impl<S: Services> ContextCompactor<S> {
         prompt_tokens: Option<usize>,
     ) -> Result<Context> {
         // Early return if compaction not needed
-
+        debug!(
+            agent_id = %agent.id,
+            compact = ?agent.compact,
+            tokens = ?prompt_tokens,
+            "Checking for context compaction"
+        );
         if let Some(ref compact) = agent.compact {
             // Ensure that compaction conditions are met
             if !compact.should_compact(&context, prompt_tokens) {
+                debug!(agent_id = %agent.id, "Compaction not needed");
                 return Ok(context);
             }
 
@@ -48,6 +54,7 @@ impl<S: Services> ContextCompactor<S> {
                 .next()
             {
                 Some(sequence) => {
+                    debug!(agent_id = %agent.id, "Compressing sequence");
                     self.compress_single_sequence(compact, context, sequence)
                         .await
                 }

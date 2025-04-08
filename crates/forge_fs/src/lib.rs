@@ -54,4 +54,9 @@ impl ForgeFS {
             .await
             .with_context(|| format!("Failed to read directory {}", path.as_ref().display()))
     }
+    pub async fn read_to_string<T: AsRef<Path>>(path: T) -> Result<String> {
+        tokio::fs::read_to_string(path.as_ref())
+            .await
+            .with_context(|| format!("Failed to read file as string {}", path.as_ref().display()))
+    }
 }

@@ -1,7 +1,10 @@
+use std::cmp::max;
+
 use derive_more::derive::Display;
 use derive_setters::Setters;
 use merge::Merge;
 use serde::{Deserialize, Deserializer, Serialize};
+use tracing::debug;
 
 use crate::merge::Key;
 use crate::template::Template;
@@ -112,10 +115,12 @@ impl Compact {
     pub fn should_compact(&self, context: &Context, prompt_tokens: Option<usize>) -> bool {
         // Check if any of the thresholds have been exceeded
         if let Some(token_threshold) = self.token_threshold {
+            let estimate_token_count = estimate_token_count(&context.to_text());
+            debug!(tokens = ?prompt_tokens, estimated = estimate_token_count, "Token count");
             // use provided prompt_tokens if available, otherwise estimate token count
             let token_count = prompt_tokens
-                .map(|tokens| tokens as u64)
-                .unwrap_or_else(|| estimate_token_count(&context.to_text()));
+                .map(|tokens| max(tokens as u64, estimate_token_count))
+                .unwrap_or_else(|| estimate_token_count);
             if token_count >= token_threshold {
                 return true;
             }
