@@ -42,6 +42,7 @@ agents:
       token_threshold: 80000
       model: *advanced_model
       retention_window: 6
+      message_threshold: 200
       prompt: "{{> system-prompt-context-summarizer.hbs }}"
     tool_supported: true
     model: *advanced_model
