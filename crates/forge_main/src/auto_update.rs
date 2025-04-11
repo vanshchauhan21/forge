@@ -4,15 +4,14 @@ use anyhow::Result;
 use tokio::process::Command;
 
 /// Runs npm update in the background, failing silently
-pub fn update_forge_in_background() {
+pub async fn update_forge() {
     // Spawn a new task that won't block the main application
-    tokio::spawn(async {
-        if let Err(err) = perform_update().await {
-            // Send an event to the tracker on failure
-            // We don't need to handle this result since we're failing silently
-            let _ = send_update_failure_event(&format!("Auto update failed: {}", err)).await;
-        }
-    });
+
+    if let Err(err) = perform_update().await {
+        // Send an event to the tracker on failure
+        // We don't need to handle this result since we're failing silently
+        let _ = send_update_failure_event(&format!("Auto update failed: {}", err)).await;
+    }
 }
 
 /// Actually performs the npm update

@@ -13,7 +13,7 @@ use serde_json::Value;
 use tokio_stream::StreamExt;
 use tracing::error;
 
-use crate::auto_update::update_forge_in_background;
+use crate::auto_update::update_forge;
 use crate::banner;
 use crate::cli::Cli;
 use crate::console::CONSOLE;
@@ -120,9 +120,14 @@ impl<F: API> UI<F> {
         })
     }
 
+    async fn prompt(&self) -> Result<Command> {
+        // Prompt the user for input
+        self.console.prompt(Some(self.state.clone().into())).await
+    }
+
     pub async fn run(&mut self) -> Result<()> {
         // Trigger auto-update in the background
-        update_forge_in_background();
+        let join = tokio::spawn(update_forge());
 
         // Check for dispatch flag first
         if let Some(dispatch_json) = self.cli.event.clone() {
@@ -143,21 +148,21 @@ impl<F: API> UI<F> {
         // Get initial input from file or prompt
         let mut input = match &self.cli.command {
             Some(path) => self.console.upload(path).await?,
-            None => self.console.prompt(Some(self.state.clone().into())).await?,
+            None => self.prompt().await?,
         };
 
         loop {
             match input {
                 Command::Dump => {
                     self.handle_dump().await?;
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+                    input = self.prompt().await?;
                     continue;
                 }
                 Command::New => {
+                    self.state = UIState::default();
                     self.init_conversation().await?;
                     banner::display(self.command.command_names())?;
-                    input = self.console.prompt(None).await?;
+                    input = self.prompt().await?;
 
                     continue;
                 }
@@ -167,8 +172,7 @@ impl<F: API> UI<F> {
 
                     CONSOLE.writeln(info.to_string())?;
 
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+                    input = self.prompt().await?;
                     continue;
                 }
                 Command::Message(ref content) => {
@@ -187,28 +191,24 @@ impl<F: API> UI<F> {
 
                         CONSOLE.writeln(TitleFormat::failed(format!("{:?}", err)).format())?;
                     }
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+
+                    input = self.prompt().await?;
                 }
                 Command::Act => {
                     self.handle_mode_change(Mode::Act).await?;
 
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+                    input = self.prompt().await?;
                     continue;
                 }
                 Command::Plan => {
                     self.handle_mode_change(Mode::Plan).await?;
-
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+                    input = self.prompt().await?;
                     continue;
                 }
                 Command::Help => {
                     self.handle_mode_change(Mode::Help).await?;
 
-                    let prompt_input = Some(self.state.clone().into());
-                    input = self.console.prompt(prompt_input).await?;
+                    input = self.prompt().await?;
                     continue;
                 }
                 Command::Exit => {
@@ -226,7 +226,7 @@ impl<F: API> UI<F> {
                             Err(err) => {
                                 CONSOLE
                                     .writeln(TitleFormat::failed(format!("{:?}", err)).format())?;
-                                input = self.console.prompt(None).await?;
+                                input = self.prompt().await?;
                                 continue;
                             }
                         }
@@ -234,7 +234,7 @@ impl<F: API> UI<F> {
                     let info: Info = models.as_slice().into();
                     CONSOLE.writeln(info.to_string())?;
 
-                    input = self.console.prompt(None).await?;
+                    input = self.prompt().await?;
                 }
                 Command::Custom(event) => {
                     if let Err(e) = self.dispatch_event(event.into()).await {
@@ -246,11 +246,12 @@ impl<F: API> UI<F> {
                         )?;
                     }
 
-                    input = self.console.prompt(None).await?;
+                    input = self.prompt().await?;
                 }
             }
         }
 
+        join.await.expect("Failed to upgrade forge. Please update manually using `npm update -g @antinomyhq/forge`");
         Ok(())
     }
 
