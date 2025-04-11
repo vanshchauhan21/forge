@@ -3,15 +3,11 @@ use forge_tool_macros::ToolDescription;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Sends a formatted markdown message to the user's terminal display.
 /// This tool allows the agent to communicate information to the user with
-/// proper text formatting. Use this when you need to display structured content
-/// such as headers, lists, tables, code blocks, or text with emphasis
-/// (bold/italic). The content parameter must contain valid markdown syntax. The
-/// tool will render this content in the terminal with appropriate formatting
-/// using the termimad library. Do NOT use this tool for collecting user input
-/// or for messages that don't benefit from formatting. Returns a simple
-/// confirmation string but does not capture user responses.
+/// proper text formatting. Use this when you need to show a message or ask for
+/// a clarification to the user. The content parameter must contain valid
+/// markdown syntax. Returns a simple confirmation string but does not capture
+/// user responses.
 #[derive(Clone, Default, ToolDescription)]
 pub struct ShowUser;
 

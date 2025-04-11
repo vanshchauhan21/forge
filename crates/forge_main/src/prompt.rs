@@ -17,9 +17,9 @@ const RIGHT_CHEVRON: &str = "❯";
 #[derive(Clone, Default, Setters)]
 #[setters(strip_option, borrow_self)]
 pub struct ForgePrompt {
-    title: Option<String>,
-    usage: Option<Usage>,
-    mode: Mode,
+    pub title: Option<String>,
+    pub usage: Option<Usage>,
+    pub mode: Mode,
 }
 
 impl Prompt for ForgePrompt {

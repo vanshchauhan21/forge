@@ -1,13 +1,12 @@
 use std::collections::{HashMap, VecDeque};
 
-use anyhow::Result;
 use derive_more::derive::Display;
 use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{Agent, AgentId, Context, Error, Event, Workflow};
+use crate::{Agent, AgentId, Context, Error, Event, Result, Workflow};
 
 #[derive(Debug, Display, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(transparent)]
@@ -22,7 +21,7 @@ impl ConversationId {
         self.0.to_string()
     }
 
-    pub fn parse(value: impl ToString) -> Result<Self, Error> {
+    pub fn parse(value: impl ToString) -> Result<Self> {
         Ok(Self(
             Uuid::parse_str(&value.to_string()).map_err(Error::ConversationId)?,
         ))
@@ -34,8 +33,8 @@ pub struct Conversation {
     pub id: ConversationId,
     pub archived: bool,
     pub state: HashMap<AgentId, AgentState>,
-    pub workflow: Workflow,
     pub variables: HashMap<String, Value>,
+    pub agents: Vec<Agent>,
     pub events: Vec<Event>,
 }
 
@@ -48,13 +47,49 @@ pub struct AgentState {
 }
 
 impl Conversation {
+    pub const MAIN_AGENT_NAME: &str = "software-engineer";
     pub fn new(id: ConversationId, workflow: Workflow) -> Self {
+        let mut agents = Vec::new();
+
+        for mut agent in workflow.agents.into_iter() {
+            if let Some(custom_rules) = workflow.custom_rules.clone() {
+                agent.custom_rules = Some(custom_rules);
+            }
+
+            if let Some(max_walker_depth) = workflow.max_walker_depth {
+                agent.max_walker_depth = Some(max_walker_depth);
+            }
+
+            if let Some(temperature) = workflow.temperature {
+                agent.temperature = Some(temperature);
+            }
+
+            if let Some(model) = workflow.model.clone() {
+                agent.model = Some(model);
+            }
+
+            if agent.id.as_str() == Conversation::MAIN_AGENT_NAME {
+                let commands = workflow
+                    .commands
+                    .iter()
+                    .map(|c| c.name.clone())
+                    .collect::<Vec<_>>();
+                if let Some(ref mut subscriptions) = agent.subscribe {
+                    subscriptions.extend(commands);
+                } else {
+                    agent.subscribe = Some(commands);
+                }
+            }
+
+            agents.push(agent);
+        }
+
         Self {
             id,
             archived: false,
             state: Default::default(),
-            variables: workflow.variables.clone().unwrap_or_default(),
-            workflow,
+            variables: workflow.variables.clone(),
+            agents,
             events: Default::default(),
         }
     }
@@ -65,8 +100,7 @@ impl Conversation {
 
     /// Returns all the agents that are subscribed to the given event.
     pub fn subscriptions(&self, event_name: &str) -> Vec<Agent> {
-        self.workflow
-            .agents
+        self.agents
             .iter()
             .filter(|a| {
                 // Filter out disabled agents
@@ -82,6 +116,14 @@ impl Conversation {
             })
             .cloned()
             .collect::<Vec<_>>()
+    }
+
+    /// Returns the agent with the given id or an error if it doesn't exist
+    pub fn get_agent(&self, id: &AgentId) -> Result<&Agent> {
+        self.agents
+            .iter()
+            .find(|a| a.id == *id)
+            .ok_or(Error::AgentUndefined(id.clone()))
     }
 
     pub fn context(&self, id: &AgentId) -> Option<&Context> {
@@ -184,5 +226,278 @@ impl Conversation {
         self.insert_event(event);
 
         inactive_agents
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use serde_json::json;
+
+    use crate::{Agent, Command, ModelId, Temperature, Workflow};
+
+    #[test]
+    fn test_conversation_new_with_empty_workflow() {
+        // Arrange
+        let id = super::ConversationId::generate();
+        let workflow = Workflow {
+            agents: Vec::new(),
+            variables: HashMap::new(),
+            commands: Vec::new(),
+            model: None,
+            max_walker_depth: None,
+            custom_rules: None,
+            temperature: None,
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        assert_eq!(conversation.id, id);
+        assert!(!conversation.archived);
+        assert!(conversation.state.is_empty());
+        assert!(conversation.variables.is_empty());
+        assert!(conversation.agents.is_empty());
+        assert!(conversation.events.is_empty());
+    }
+
+    #[test]
+    fn test_conversation_new_with_workflow_variables() {
+        // Arrange
+        let id = super::ConversationId::generate();
+        let mut variables = HashMap::new();
+        variables.insert("key1".to_string(), json!("value1"));
+        variables.insert("key2".to_string(), json!(42));
+
+        let workflow = Workflow {
+            agents: Vec::new(),
+            variables: variables.clone(),
+            commands: Vec::new(),
+            model: None,
+            max_walker_depth: None,
+            custom_rules: None,
+            temperature: None,
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        assert_eq!(conversation.id, id);
+        assert_eq!(conversation.variables, variables);
+    }
+
+    #[test]
+    fn test_conversation_new_applies_workflow_settings_to_agents() {
+        // Arrange
+        let id = super::ConversationId::generate();
+        let agent1 = Agent::new("agent1");
+        let agent2 = Agent::new("agent2");
+
+        let workflow = Workflow {
+            agents: vec![agent1, agent2],
+            variables: HashMap::new(),
+            commands: Vec::new(),
+            model: Some(ModelId::new("test-model")),
+            max_walker_depth: Some(5),
+            custom_rules: Some("Be helpful".to_string()),
+            temperature: Some(Temperature::new(0.7).unwrap()),
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        assert_eq!(conversation.agents.len(), 2);
+
+        // Check that workflow settings were applied to all agents
+        for agent in &conversation.agents {
+            assert_eq!(agent.model, Some(ModelId::new("test-model")));
+            assert_eq!(agent.max_walker_depth, Some(5));
+            assert_eq!(agent.custom_rules, Some("Be helpful".to_string()));
+            assert_eq!(agent.temperature, Some(Temperature::new(0.7).unwrap()));
+        }
+    }
+
+    #[test]
+    fn test_conversation_new_preserves_agent_specific_settings() {
+        // Arrange
+        let id = super::ConversationId::generate();
+
+        // Agent with specific settings
+        let mut agent1 = Agent::new("agent1");
+        agent1.model = Some(ModelId::new("agent1-model"));
+        agent1.max_walker_depth = Some(10);
+        agent1.custom_rules = Some("Agent1 specific rules".to_string());
+        agent1.temperature = Some(Temperature::new(0.3).unwrap());
+
+        // Agent without specific settings
+        let agent2 = Agent::new("agent2");
+
+        let workflow = Workflow {
+            agents: vec![agent1, agent2],
+            variables: HashMap::new(),
+            commands: Vec::new(),
+            model: Some(ModelId::new("default-model")),
+            max_walker_depth: Some(5),
+            custom_rules: Some("Default rules".to_string()),
+            temperature: Some(Temperature::new(0.7).unwrap()),
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        assert_eq!(conversation.agents.len(), 2);
+
+        // Check that agent1's settings were overridden by workflow settings
+        let agent1 = conversation
+            .agents
+            .iter()
+            .find(|a| a.id.as_str() == "agent1")
+            .unwrap();
+        assert_eq!(agent1.model, Some(ModelId::new("default-model")));
+        assert_eq!(agent1.max_walker_depth, Some(5));
+        assert_eq!(agent1.custom_rules, Some("Default rules".to_string()));
+        assert_eq!(agent1.temperature, Some(Temperature::new(0.7).unwrap()));
+
+        // Check that agent2 got the workflow defaults
+        let agent2 = conversation
+            .agents
+            .iter()
+            .find(|a| a.id.as_str() == "agent2")
+            .unwrap();
+        assert_eq!(agent2.model, Some(ModelId::new("default-model")));
+        assert_eq!(agent2.max_walker_depth, Some(5));
+        assert_eq!(agent2.custom_rules, Some("Default rules".to_string()));
+        assert_eq!(agent2.temperature, Some(Temperature::new(0.7).unwrap()));
+    }
+
+    #[test]
+    fn test_conversation_new_adds_commands_to_main_agent_subscriptions() {
+        // Arrange
+        let id = super::ConversationId::generate();
+
+        // Create the main software-engineer agent
+        let main_agent = Agent::new(super::Conversation::MAIN_AGENT_NAME);
+        // Create a regular agent
+        let other_agent = Agent::new("other-agent");
+
+        // Create some commands
+        let commands = vec![
+            Command {
+                name: "cmd1".to_string(),
+                description: "Command 1".to_string(),
+                prompt: None,
+            },
+            Command {
+                name: "cmd2".to_string(),
+                description: "Command 2".to_string(),
+                prompt: None,
+            },
+        ];
+
+        let workflow = Workflow {
+            agents: vec![main_agent, other_agent],
+            variables: HashMap::new(),
+            commands: commands.clone(),
+            model: None,
+            max_walker_depth: None,
+            custom_rules: None,
+            temperature: None,
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        assert_eq!(conversation.agents.len(), 2);
+
+        // Check that main agent received command subscriptions
+        let main_agent = conversation
+            .agents
+            .iter()
+            .find(|a| a.id.as_str() == super::Conversation::MAIN_AGENT_NAME)
+            .unwrap();
+
+        assert!(main_agent.subscribe.is_some());
+        let subscriptions = main_agent.subscribe.as_ref().unwrap();
+        assert!(subscriptions.contains(&"cmd1".to_string()));
+        assert!(subscriptions.contains(&"cmd2".to_string()));
+
+        // Check that other agent didn't receive command subscriptions
+        let other_agent = conversation
+            .agents
+            .iter()
+            .find(|a| a.id.as_str() == "other-agent")
+            .unwrap();
+
+        if other_agent.subscribe.is_some() {
+            assert!(!other_agent
+                .subscribe
+                .as_ref()
+                .unwrap()
+                .contains(&"cmd1".to_string()));
+            assert!(!other_agent
+                .subscribe
+                .as_ref()
+                .unwrap()
+                .contains(&"cmd2".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_conversation_new_merges_commands_with_existing_subscriptions() {
+        // Arrange
+        let id = super::ConversationId::generate();
+
+        // Create the main software-engineer agent with existing subscriptions
+        let mut main_agent = Agent::new(super::Conversation::MAIN_AGENT_NAME);
+        main_agent.subscribe = Some(vec!["existing-event".to_string()]);
+
+        // Create some commands
+        let commands = vec![
+            Command {
+                name: "cmd1".to_string(),
+                description: "Command 1".to_string(),
+                prompt: None,
+            },
+            Command {
+                name: "cmd2".to_string(),
+                description: "Command 2".to_string(),
+                prompt: None,
+            },
+        ];
+
+        let workflow = Workflow {
+            agents: vec![main_agent],
+            variables: HashMap::new(),
+            commands: commands.clone(),
+            model: None,
+            max_walker_depth: None,
+            custom_rules: None,
+            temperature: None,
+        };
+
+        // Act
+        let conversation = super::Conversation::new(id.clone(), workflow);
+
+        // Assert
+        let main_agent = conversation
+            .agents
+            .iter()
+            .find(|a| a.id.as_str() == super::Conversation::MAIN_AGENT_NAME)
+            .unwrap();
+
+        assert!(main_agent.subscribe.is_some());
+        let subscriptions = main_agent.subscribe.as_ref().unwrap();
+
+        // Should contain both the existing subscription and the new commands
+        assert!(subscriptions.contains(&"existing-event".to_string()));
+        assert!(subscriptions.contains(&"cmd1".to_string()));
+        assert!(subscriptions.contains(&"cmd2".to_string()));
+        assert_eq!(subscriptions.len(), 3);
     }
 }

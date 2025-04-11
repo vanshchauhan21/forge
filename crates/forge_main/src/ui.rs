@@ -64,19 +64,17 @@ pub struct UI<F> {
 impl<F: API> UI<F> {
     // Set the current mode and update conversation variable
     async fn handle_mode_change(&mut self, mode: Mode) -> Result<()> {
-        // Update the mode in state
-        self.state.mode = mode;
-
-        // Show message that mode changed
-        let mode_str = self.state.mode.to_string();
-
         // Set the mode variable in the conversation if a conversation exists
         let conversation_id = self.init_conversation().await?;
+
+        // Override the mode that was reset by the conversation
+        self.state.mode = mode.clone();
+
         self.api
             .set_variable(
                 &conversation_id,
                 "mode".to_string(),
-                Value::from(mode_str.as_str()),
+                Value::from(mode.to_string()),
             )
             .await?;
 
@@ -88,7 +86,7 @@ impl<F: API> UI<F> {
         };
 
         CONSOLE.write(
-            TitleFormat::success(&mode_str)
+            TitleFormat::success(mode.to_string())
                 .sub_title(mode_message)
                 .format(),
         )?;
@@ -145,19 +143,18 @@ impl<F: API> UI<F> {
         // Get initial input from file or prompt
         let mut input = match &self.cli.command {
             Some(path) => self.console.upload(path).await?,
-            None => self.console.prompt(None).await?,
+            None => self.console.prompt(Some(self.state.clone().into())).await?,
         };
 
         loop {
             match input {
                 Command::Dump => {
                     self.handle_dump().await?;
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
                 Command::New => {
-                    self.state = Default::default();
                     self.init_conversation().await?;
                     banner::display(self.command.command_names())?;
                     input = self.console.prompt(None).await?;
@@ -170,7 +167,7 @@ impl<F: API> UI<F> {
 
                     CONSOLE.writeln(info.to_string())?;
 
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
@@ -190,27 +187,27 @@ impl<F: API> UI<F> {
 
                         CONSOLE.writeln(TitleFormat::failed(format!("{:?}", err)).format())?;
                     }
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                 }
                 Command::Act => {
                     self.handle_mode_change(Mode::Act).await?;
 
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
                 Command::Plan => {
                     self.handle_mode_change(Mode::Plan).await?;
 
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
                 Command::Help => {
                     self.handle_mode_change(Mode::Help).await?;
 
-                    let prompt_input = Some((&self.state).into());
+                    let prompt_input = Some(self.state.clone().into());
                     input = self.console.prompt(prompt_input).await?;
                     continue;
                 }
@@ -277,6 +274,19 @@ impl<F: API> UI<F> {
         match self.state.conversation_id {
             Some(ref id) => Ok(id.clone()),
             None => {
+                let config = self.api.load(self.cli.workflow.as_deref()).await?;
+
+                // Get the mode from the config
+                let mode = config
+                    .variables
+                    .get("mode")
+                    .cloned()
+                    .and_then(|value| serde_json::from_value(value).ok())
+                    .unwrap_or(Mode::Act);
+
+                self.state = UIState::new(mode);
+                self.command.register_all(&config);
+
                 if let Some(ref path) = self.cli.conversation {
                     let conversation: Conversation = serde_json::from_str(
                         ForgeFS::read_to_string(path.as_os_str()).await?.as_str(),
@@ -285,15 +295,11 @@ impl<F: API> UI<F> {
 
                     let conversation_id = conversation.id.clone();
                     self.state.conversation_id = Some(conversation_id.clone());
-                    self.command.register_all(&conversation.workflow);
                     self.api.upsert_conversation(conversation).await?;
                     Ok(conversation_id.clone())
                 } else {
-                    let workflow = self.api.load(self.cli.workflow.as_deref()).await?;
-                    self.command.register_all(&workflow);
-                    let conversation_id = self.api.init(workflow).await?;
+                    let conversation_id = self.api.init(config.clone()).await?;
                     self.state.conversation_id = Some(conversation_id.clone());
-
                     Ok(conversation_id)
                 }
             }

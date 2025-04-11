@@ -293,7 +293,7 @@ impl<A: Services> Orchestrator<A> {
             event = ?event,
             "Initializing agent"
         );
-        let agent = conversation.workflow.get_agent(agent_id)?;
+        let agent = conversation.get_agent(agent_id)?;
 
         let mut context = if agent.ephemeral.unwrap_or_default() {
             self.init_agent_context(agent).await?
@@ -346,11 +346,9 @@ impl<A: Services> Orchestrator<A> {
 
             // Determine which model to use - prefer workflow model if available, fallback
             // to agent model
-            let model_id = conversation
-                .workflow
+            let model_id = agent
                 .model
                 .as_ref()
-                .or(agent.model.as_ref())
                 .ok_or(Error::MissingModel(agent.id.clone()))?;
 
             let response = self

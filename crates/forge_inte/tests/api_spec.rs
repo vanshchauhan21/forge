@@ -3,7 +3,8 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Context;
-use forge_api::{AgentMessage, ChatRequest, ChatResponse, Event, ForgeAPI, ModelId, API};
+use forge_api::ForgeAPI;
+use forge_domain::{AgentMessage, ChatRequest, ChatResponse, Event, ModelId, API};
 use tokio_stream::StreamExt;
 
 const MAX_RETRIES: usize = 5;

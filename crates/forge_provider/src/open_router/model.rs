@@ -23,10 +23,10 @@ pub struct Architecture {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Pricing {
-    pub prompt: String,
-    pub completion: String,
-    pub image: String,
-    pub request: String,
+    pub prompt: Option<String>,
+    pub completion: Option<String>,
+    pub image: Option<String>,
+    pub request: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

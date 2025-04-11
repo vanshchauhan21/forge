@@ -1,8 +1,11 @@
 use forge_api::{ConversationId, Usage};
+use serde::Deserialize;
 
-use crate::input::PromptInput;
+use crate::prompt::ForgePrompt;
 
-#[derive(Clone, Default)]
+// TODO: convert to a new type
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Mode {
     Plan,
     Help,
@@ -21,6 +24,7 @@ impl std::fmt::Display for Mode {
 }
 
 /// State information for the UI
+#[derive(Default, Clone)]
 pub struct UIState {
     pub current_title: Option<String>,
     pub conversation_id: Option<ConversationId>,
@@ -29,24 +33,24 @@ pub struct UIState {
     pub is_first: bool,
 }
 
-impl Default for UIState {
-    fn default() -> Self {
+impl UIState {
+    pub fn new(mode: Mode) -> Self {
         Self {
             current_title: Default::default(),
             conversation_id: Default::default(),
             usage: Default::default(),
-            mode: Default::default(),
+            mode,
             is_first: true,
         }
     }
 }
 
-impl From<&UIState> for PromptInput {
-    fn from(state: &UIState) -> Self {
-        PromptInput::Update {
-            title: state.current_title.clone(),
-            usage: Some(state.usage.clone()),
-            mode: state.mode.clone(),
+impl From<UIState> for ForgePrompt {
+    fn from(state: UIState) -> Self {
+        ForgePrompt {
+            title: state.current_title,
+            usage: Some(state.usage),
+            mode: state.mode,
         }
     }
 }

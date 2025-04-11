@@ -119,6 +119,61 @@ To use Amazon Bedrock models with Forge, you'll need to first set up the [Bedroc
    model: anthropic.claude-3-opus
    ```
 
+### Advanced Configuration Options
+
+#### `custom_rules`
+
+Add your own guidelines that all agents should follow when generating responses.
+
+```yaml
+# forge.yaml
+custom_rules: |
+  1. Always add comprehensive error handling to any code you write.
+  2. Include unit tests for all new functions.
+  3. Follow our team's naming convention: camelCase for variables, PascalCase for classes.
+```
+
+The `forge.yaml` file supports several advanced configuration options that let you customize Forge's behavior. Here's a comprehensive list of available fields:
+
+#### `commands`
+
+Define custom commands that as shortcuts for repetitive prompts:
+
+```yaml
+# forge.yaml
+commands:
+  - name: "refactor"
+    description: "Refactor selected code"
+    prompt: "Please refactor this code to improve readability and performance"
+```
+
+#### `model`
+
+Specify the default AI model to use for all agents in the workflow.
+
+```yaml
+# forge.yaml
+model: "claude-3.7-sonnet"
+```
+
+#### `max_walker_depth`
+
+Control how deeply Forge traverses your project directory structure when gathering context.
+
+```yaml
+# forge.yaml
+max_walker_depth: 3 # Limit directory traversal to 3 levels deep
+```
+
+#### `temperature`
+
+Adjust the creativity and randomness in AI responses. Lower values (0.0-0.3) produce more focused, deterministic outputs, while higher values (0.7-2.0) generate more diverse and creative results.
+
+```yaml
+# forge.yaml
+temperature: 0.7 # Balanced creativity and focus
+```
+
 ## 📚 Documentation
 
 For comprehensive documentation on all features and capabilities, please visit the [documentation site](https://github.com/antinomyhq/forge/tree/main/docs).

@@ -3,7 +3,6 @@ commands:
     description: Looks for all the fixme comments in the code and attempts to fix them
     value: |
       Find all the FIXME comments in source-code files and attempt to fix them.
-
 agents:
   - id: software-engineer
     max_walker_depth: 1024

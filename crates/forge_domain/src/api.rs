@@ -1,8 +1,9 @@
 use std::path::Path;
 
-pub use forge_domain::*;
 use forge_stream::MpscStream;
 use serde_json::Value;
+
+use crate::*;
 
 #[async_trait::async_trait]
 pub trait API: Sync + Send {
@@ -26,8 +27,11 @@ pub trait API: Sync + Send {
     /// Returns the current environment
     fn environment(&self) -> Environment;
 
-    /// Creates a new conversation with the given workflow
-    async fn init(&self, workflow: Workflow) -> anyhow::Result<ConversationId>;
+    /// Creates a new conversation with the given workflow configuration
+    async fn init<W: Into<Workflow> + Send + Sync>(
+        &self,
+        config: W,
+    ) -> anyhow::Result<ConversationId>;
 
     /// Adds a new conversation to the conversation store
     async fn upsert_conversation(&self, conversation: Conversation) -> anyhow::Result<()>;

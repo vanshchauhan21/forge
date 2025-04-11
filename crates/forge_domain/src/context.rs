@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use super::{ToolCallFull, ToolResult};
+use crate::temperature::Temperature;
 use crate::{ToolChoice, ToolDefinition};
 
 /// Represents a message being sent to the LLM provider
@@ -106,7 +107,7 @@ pub struct Context {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f32>,
+    pub temperature: Option<Temperature>,
 }
 
 impl Context {
