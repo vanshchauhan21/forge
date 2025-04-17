@@ -157,6 +157,25 @@ impl<F: API> UI<F> {
 
         loop {
             match input {
+                Command::Compact => {
+                    let conversation_id = self.init_conversation().await?;
+                    let compaction_result = self.api.compact_conversation(&conversation_id).await?;
+
+                    // Calculate percentage reduction
+                    let token_reduction = compaction_result.token_reduction_percentage();
+                    let message_reduction = compaction_result.message_reduction_percentage();
+
+                    CONSOLE.writeln(
+                        TitleFormat::execute("compact")
+                            .sub_title(format!(
+                                "context size reduced by {:.1}% (tokens), {:.1}% (messages)",
+                                token_reduction, message_reduction
+                            ))
+                            .format(),
+                    )?;
+                    input = self.prompt().await?;
+                    continue;
+                }
                 Command::Dump => {
                     self.handle_dump().await?;
                     input = self.prompt().await?;
@@ -291,7 +310,9 @@ impl<F: API> UI<F> {
             .prompt()
         {
             Ok(model) => model,
-            Err(InquireError::OperationCanceled) => return Ok(()),
+            Err(InquireError::OperationCanceled | InquireError::OperationInterrupted) => {
+                return Ok(())
+            }
             Err(err) => return Err(err.into()),
         };
 

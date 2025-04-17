@@ -73,6 +73,16 @@ impl<F: Services + Infrastructure> API for ForgeAPI<F> {
         self.app.conversation_service().upsert(conversation).await
     }
 
+    async fn compact_conversation(
+        &self,
+        conversation_id: &ConversationId,
+    ) -> anyhow::Result<CompactionResult> {
+        self.app
+            .conversation_service()
+            .compact_conversation(conversation_id)
+            .await
+    }
+
     fn environment(&self) -> Environment {
         Services::environment_service(self.app.as_ref())
             .get_environment()
