@@ -7,6 +7,7 @@ use forge_api::{
 };
 use forge_display::TitleFormat;
 use forge_fs::ForgeFS;
+use inquire::error::InquireError;
 use inquire::ui::{RenderConfig, Styled};
 use inquire::Select;
 use serde::Deserialize;
@@ -261,11 +262,16 @@ impl<F: API> UI<F> {
             .unwrap_or(0);
 
         // Use inquire to select a model, with the current model pre-selected
-        let model = Select::new("Select a model:", model_ids)
+        let model = match Select::new("Select a model:", model_ids)
             .with_help_message("Use arrow keys to navigate and Enter to select")
             .with_render_config(render_config)
             .with_starting_cursor(starting_cursor)
-            .prompt()?;
+            .prompt()
+        {
+            Ok(model) => model,
+            Err(InquireError::OperationCanceled) => return Ok(()),
+            Err(err) => return Err(err.into()),
+        };
 
         // Get the conversation to update
         let conversation_id = self.init_conversation().await?;
