@@ -3,7 +3,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use forge_api::{
-    AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, ModelId, API,
+    AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, Model, ModelId,
+    API,
 };
 use forge_display::TitleFormat;
 use forge_fs::ForgeFS;
@@ -58,6 +59,17 @@ pub struct UI<F> {
 }
 
 impl<F: API> UI<F> {
+    /// Retrieve available models, using cache if present
+    async fn get_models(&mut self) -> Result<Vec<Model>> {
+        if let Some(models) = &self.state.cached_models {
+            Ok(models.clone())
+        } else {
+            let models = self.api.models().await?;
+            self.state.cached_models = Some(models.clone());
+            Ok(models)
+        }
+    }
+
     // Set the current mode and update conversation variable
     async fn handle_mode_change(&mut self, mode: Mode) -> Result<()> {
         // Set the mode variable in the conversation if a conversation exists
@@ -241,7 +253,7 @@ impl<F: API> UI<F> {
     // Helper method to handle model selection and update the conversation
     async fn handle_model_selection(&mut self) -> Result<()> {
         // Fetch available models
-        let models = self.api.models().await?;
+        let models = self.get_models().await?;
 
         // Create list of model IDs for selection
         let model_ids: Vec<ModelId> = models.into_iter().map(|m| m.id).collect();
