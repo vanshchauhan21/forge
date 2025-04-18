@@ -62,24 +62,6 @@ That's it! Forge is now ready to assist you with your development tasks.
 
 Forge can be used in different ways depending on your needs. Here are some common usage patterns:
 
-| Command                                                    | Description                                                                                                   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `forge`                                                    | Start Forge in interactive mode. This opens a prompt where you can have a conversation with the AI assistant. |
-| `forge -p "Explain how this React component works"`        | Process a single prompt without entering interactive mode                                                     |
-| `forge -p "Generate unit tests for utils/format.js"`       | Ask Forge to generate tests for a specific file                                                               |
-| `forge -p "Refactor this function to improve performance"` | Request code optimization with a specific goal                                                                |
-| `forge -c commands.txt`                                    | Execute commands from a file, then continue in interactive mode                                               |
-| `forge --workflow custom-workflow.yaml`                    | Execute a custom workflow                                                                                     |
-| `forge --verbose`                                          | Run with verbose output to see additional debugging information                                               |
-
-> **Note:** Unlike some other AI tools, Forge doesn't support direct prompting without flags. Always use the `-p` or `--prompt` flag when providing a direct prompt.
-
----
-
-## Interactive Mode Examples
-
-When you run `forge` with no arguments, you enter interactive mode, which is the most flexible way to use Forge. Here are some examples of what you can do in an interactive session:
-
 ### Code Understanding
 
 ```
