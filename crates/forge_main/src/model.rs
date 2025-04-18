@@ -102,15 +102,6 @@ impl ForgeCommandManager {
             .cloned()
     }
 
-    pub fn command_names(&self) -> Vec<String> {
-        self.commands
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|command| command.name.clone())
-            .collect::<Vec<_>>()
-    }
-
     /// Lists all registered commands.
     pub fn list(&self) -> Vec<ForgeCommand> {
         self.commands.lock().unwrap().clone()

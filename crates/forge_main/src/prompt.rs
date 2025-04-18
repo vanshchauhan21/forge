@@ -48,6 +48,7 @@ impl Prompt for ForgePrompt {
         let mut result = String::with_capacity(64); // Pre-allocate a reasonable size
 
         // Build the string step-by-step
+
         let _ = write!(
             result,
             "{} {}",
@@ -57,7 +58,9 @@ impl Prompt for ForgePrompt {
 
         // Only append branch info if present
         if let Some(branch) = branch_opt {
-            let _ = write!(result, " {} ", branch_style.paint(branch));
+            if branch != current_dir {
+                let _ = write!(result, " {} ", branch_style.paint(branch));
+            }
         }
 
         let _ = write!(result, "\n{} ", branch_style.paint(RIGHT_CHEVRON));

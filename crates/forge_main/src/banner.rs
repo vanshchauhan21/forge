@@ -4,8 +4,8 @@ use colored::Colorize;
 
 const BANNER: &str = include_str!("banner");
 
-pub fn display(commands: Vec<String>) -> io::Result<()> {
-    // Split the banner into lines and display each line dimmed
+pub fn display() -> io::Result<()> {
+    let commands = ["/info", "/help"];
     println!("{} {}", BANNER.dimmed(), commands.join(", ").bold());
     Ok(())
 }

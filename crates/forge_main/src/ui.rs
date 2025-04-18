@@ -28,7 +28,6 @@ use crate::{banner, TRACKER};
 // Event type constants moved to UI layer
 pub const EVENT_USER_TASK_INIT: &str = "user_task_init";
 pub const EVENT_USER_TASK_UPDATE: &str = "user_task_update";
-pub const EVENT_USER_HELP_QUERY: &str = "user_help_query";
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, Default)]
 pub struct PartialEvent {
@@ -90,7 +89,6 @@ impl<F: API> UI<F> {
         let mode_message = match self.state.mode {
             Mode::Act => "mode - executes commands and makes file changes",
             Mode::Plan => "mode - plans actions without making changes",
-            Mode::Help => "mode - answers questions (type /act or /plan to switch back)",
         };
 
         CONSOLE.write(
@@ -108,9 +106,6 @@ impl<F: API> UI<F> {
 
     fn create_task_update_event<V: Into<Value>>(content: V) -> Event {
         Event::new(EVENT_USER_TASK_UPDATE, content)
-    }
-    fn create_user_help_query_event<V: Into<Value>>(content: V) -> Event {
-        Event::new(EVENT_USER_HELP_QUERY, content)
     }
 
     pub fn init(cli: Cli, api: Arc<F>) -> Result<Self> {
@@ -147,7 +142,7 @@ impl<F: API> UI<F> {
 
         // Display the banner in dimmed colors since we're in interactive mode
         self.init_conversation().await?;
-        banner::display(self.command.command_names())?;
+        banner::display()?;
 
         // Get initial input from file or prompt
         let mut input = match &self.cli.command {
@@ -173,39 +168,22 @@ impl<F: API> UI<F> {
                             ))
                             .format(),
                     )?;
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::Dump => {
                     self.handle_dump().await?;
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::New => {
                     self.state = UIState::default();
                     self.init_conversation().await?;
-                    banner::display(self.command.command_names())?;
-                    input = self.prompt().await?;
-
-                    continue;
+                    banner::display()?;
                 }
                 Command::Info => {
-                    let info =
-                        Info::from(&self.api.environment()).extend(Info::from(&self.state.usage));
+                    let info = Info::from(&self.state).extend(Info::from(&self.api.environment()));
 
                     CONSOLE.writeln(info.to_string())?;
-
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::Message(ref content) => {
-                    let chat_result = match self.state.mode {
-                        Mode::Help => {
-                            self.dispatch_event(Self::create_user_help_query_event(content.clone()))
-                                .await
-                        }
-                        _ => self.chat(content.clone()).await,
-                    };
+                    let chat_result = self.chat(content.clone()).await;
                     if let Err(err) = chat_result {
                         tokio::spawn(
                             TRACKER.dispatch(forge_tracker::EventKind::Error(format!("{:?}", err))),
@@ -214,25 +192,17 @@ impl<F: API> UI<F> {
 
                         CONSOLE.writeln(TitleFormat::failed(format!("{:?}", err)).format())?;
                     }
-
-                    input = self.prompt().await?;
                 }
                 Command::Act => {
                     self.handle_mode_change(Mode::Act).await?;
-
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::Plan => {
                     self.handle_mode_change(Mode::Plan).await?;
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::Help => {
-                    self.handle_mode_change(Mode::Help).await?;
+                    let info = Info::from(self.command.as_ref());
 
-                    input = self.prompt().await?;
-                    continue;
+                    CONSOLE.writeln(info.to_string())?;
                 }
                 Command::Exit => {
                     CONSOLE.writeln(
@@ -255,13 +225,9 @@ impl<F: API> UI<F> {
                                 .format(),
                         )?;
                     }
-
-                    input = self.prompt().await?;
                 }
                 Command::Model => {
                     self.handle_model_selection().await?;
-                    input = self.prompt().await?;
-                    continue;
                 }
                 Command::Shell(ref command) => {
                     // Execute the shell command using the existing infrastructure
@@ -270,11 +236,11 @@ impl<F: API> UI<F> {
 
                     // Execute the command
                     let _ = self.api.execute_shell_command(command, cwd).await;
-
-                    input = self.prompt().await?;
-                    continue;
                 }
             }
+
+            // Centralized prompt call at the end of the loop
+            input = self.prompt().await?;
         }
 
         Ok(())
