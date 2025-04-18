@@ -56,8 +56,6 @@ forge
 
 That's it! Forge is now ready to assist you with your development tasks.
 
----
-
 ## Usage Examples
 
 Forge can be used in different ways depending on your needs. Here are some common usage patterns:
@@ -126,8 +124,6 @@ Forge can help modernize your codebase by walking you through refactoring steps 
 
 Forge can guide you through resolving git conflicts, explaining the differences and suggesting the best way to reconcile them.
 
----
-
 ## Why Forge?
 
 Forge is designed for developers who want to enhance their workflow with AI assistance while maintaining full control over their development environment.
@@ -139,8 +135,6 @@ Forge is designed for developers who want to enhance their workflow with AI assi
 - **Open-source** - Transparent, extensible, and community-driven
 
 Forge helps you code faster, solve complex problems, and learn new technologies without leaving your terminal.
-
----
 
 ## Command-Line Options
 
@@ -158,7 +152,6 @@ Here's a quick reference of Forge's command-line options:
 | `-h, --help`                    | Print help information                                     |
 | `-V, --version`                 | Print version                                              |
 
----
 
 ## Advanced Configuration
 
