@@ -77,14 +77,13 @@ impl From<&Environment> for Info {
             .add_key_value("Shell", &env.shell)
             .add_key_value("Git Branch", branch_info)
             .add_title("Paths")
-            .add_key_value("Config", format_path_zsh_style(&env.home, &env.base_path))
             .add_key_value("Logs", format_path_zsh_style(&env.home, &env.log_path()))
             .add_key_value(
                 "History",
                 format_path_zsh_style(&env.home, &env.history_path()),
             )
             .add_key_value(
-                "Snapshot",
+                "Checkpoints",
                 format_path_zsh_style(&env.home, &env.snapshot_path()),
             )
     }

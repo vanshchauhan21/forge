@@ -77,7 +77,12 @@ impl Prompt for ForgePrompt {
 
         // Append model if available
         if let Some(model) = self.model.as_ref() {
-            let _ = write!(result, "/{}", model);
+            let model_str = model.to_string();
+            let formatted_model = model_str
+                .split('/')
+                .next_back()
+                .unwrap_or_else(|| model.as_str());
+            let _ = write!(result, "/{}", formatted_model);
         }
 
         // Append usage info
@@ -271,10 +276,11 @@ mod tests {
         let usage = Usage { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 };
         let mut prompt = ForgePrompt::default();
         prompt.usage(usage);
-        prompt.model(ModelId::new("gpt-4-turbo"));
+        prompt.model(ModelId::new("anthropic/claude-3"));
 
         let actual = prompt.render_prompt_right();
-        assert!(actual.contains("gpt-4-turbo"));
+        assert!(actual.contains("claude-3")); // Only the last part after splitting by '/'
+        assert!(!actual.contains("anthropic/claude-3")); // Should not contain the full model ID
         assert!(actual.contains(&VERSION.to_string()));
         assert!(actual.contains("30"));
     }

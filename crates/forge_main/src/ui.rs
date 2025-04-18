@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use colored::Colorize;
 use forge_api::{
     AgentMessage, ChatRequest, ChatResponse, Conversation, ConversationId, Event, Model, ModelId,
     API,
 };
-use forge_display::TitleFormat;
+use forge_display::{MarkdownFormat, TitleFormat};
 use forge_fs::ForgeFS;
+use forge_spinner::SpinnerManager;
 use inquire::error::InquireError;
 use inquire::ui::{RenderConfig, Styled};
 use inquire::Select;
@@ -18,7 +18,6 @@ use tracing::error;
 
 use crate::auto_update::update_forge;
 use crate::cli::Cli;
-use crate::console::CONSOLE;
 use crate::info::Info;
 use crate::input::Console;
 use crate::model::{Command, ForgeCommandManager};
@@ -48,11 +47,13 @@ impl From<PartialEvent> for Event {
 }
 
 pub struct UI<F> {
+    markdown: MarkdownFormat,
     state: UIState,
     api: Arc<F>,
     console: Console,
     command: Arc<ForgeCommandManager>,
     cli: Cli,
+    spinner: SpinnerManager,
     #[allow(dead_code)] // The guard is kept alive by being held in the struct
     _guard: forge_tracker::Guard,
 }
@@ -91,11 +92,12 @@ impl<F: API> UI<F> {
             Mode::Plan => "mode - plans actions without making changes",
         };
 
-        CONSOLE.write(
-            TitleFormat::success(mode.to_string())
+        println!(
+            "{}",
+            TitleFormat::new(mode.to_string())
                 .sub_title(mode_message)
-                .format(),
-        )?;
+                .format()
+        );
 
         Ok(())
     }
@@ -118,6 +120,8 @@ impl<F: API> UI<F> {
             console: Console::new(env.clone(), command.clone()),
             cli,
             command,
+            spinner: SpinnerManager::new(),
+            markdown: MarkdownFormat::new(),
             _guard: forge_tracker::init_tracing(env.log_path())?,
         })
     }
@@ -153,6 +157,7 @@ impl<F: API> UI<F> {
         loop {
             match input {
                 Command::Compact => {
+                    self.spinner.start()?;
                     let conversation_id = self.init_conversation().await?;
                     let compaction_result = self.api.compact_conversation(&conversation_id).await?;
 
@@ -160,14 +165,13 @@ impl<F: API> UI<F> {
                     let token_reduction = compaction_result.token_reduction_percentage();
                     let message_reduction = compaction_result.message_reduction_percentage();
 
-                    CONSOLE.writeln(
-                        TitleFormat::execute("compact")
-                            .sub_title(format!(
-                                "context size reduced by {:.1}% (tokens), {:.1}% (messages)",
-                                token_reduction, message_reduction
-                            ))
-                            .format(),
-                    )?;
+                    let content = TitleFormat::new("compact")
+                        .sub_title(format!(
+                            "context size reduced by {:.1}% (tokens), {:.1}% (messages)",
+                            token_reduction, message_reduction
+                        ))
+                        .format();
+                    self.spinner.stop(Some(content))?;
                 }
                 Command::Dump => {
                     self.handle_dump().await?;
@@ -179,10 +183,10 @@ impl<F: API> UI<F> {
                 }
                 Command::Info => {
                     let info = Info::from(&self.state).extend(Info::from(&self.api.environment()));
-
-                    CONSOLE.writeln(info.to_string())?;
+                    println!("{}", info);
                 }
                 Command::Message(ref content) => {
+                    self.spinner.start()?;
                     let chat_result = self.chat(content.clone()).await;
                     if let Err(err) = chat_result {
                         tokio::spawn(
@@ -190,7 +194,12 @@ impl<F: API> UI<F> {
                         );
                         error!(error = ?err, "Chat request failed");
 
-                        CONSOLE.writeln(TitleFormat::failed(format!("{:?}", err)).format())?;
+                        println!(
+                            "{}",
+                            TitleFormat::new("error")
+                                .error(format!("{:?}", err))
+                                .format()
+                        );
                     }
                 }
                 Command::Act => {
@@ -201,16 +210,9 @@ impl<F: API> UI<F> {
                 }
                 Command::Help => {
                     let info = Info::from(self.command.as_ref());
-
-                    CONSOLE.writeln(info.to_string())?;
+                    println!("{}", info);
                 }
                 Command::Exit => {
-                    CONSOLE.writeln(
-                        TitleFormat::execute("exit")
-                            .sub_title("initializing graceful shutdown... thank you!")
-                            .format(),
-                    )?;
-
                     update_forge().await;
 
                     break;
@@ -218,12 +220,13 @@ impl<F: API> UI<F> {
 
                 Command::Custom(event) => {
                     if let Err(e) = self.dispatch_event(event.into()).await {
-                        CONSOLE.writeln(
-                            TitleFormat::failed("Failed to execute the command.")
+                        println!(
+                            "{}",
+                            TitleFormat::new("Failed to execute the command.")
                                 .sub_title("Command Execution")
                                 .error(e.to_string())
-                                .format(),
-                        )?;
+                                .format()
+                        );
                     }
                 }
                 Command::Model => {
@@ -295,17 +298,19 @@ impl<F: API> UI<F> {
             // Update the UI state with the new model
             self.state.model = Some(model.clone());
 
-            CONSOLE.writeln(
-                TitleFormat::success("model")
+            println!(
+                "{}",
+                TitleFormat::new("model")
                     .sub_title(format!("switched to: {}", model))
-                    .format(),
-            )?;
+                    .format()
+            );
         } else {
-            CONSOLE.writeln(
-                TitleFormat::failed("model")
+            println!(
+                "{}",
+                TitleFormat::new("model")
                     .error("Failed to update model: conversation not found")
-                    .format(),
-            )?;
+                    .format()
+            );
         }
 
         Ok(())
@@ -390,18 +395,32 @@ impl<F: API> UI<F> {
         &mut self,
         stream: &mut (impl StreamExt<Item = Result<AgentMessage<ChatResponse>>> + Unpin),
     ) -> Result<()> {
+        // Set up a tokio interval to update the spinner every second
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
+
         loop {
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => {
+                    self.spinner.stop(None)?;
                     return Ok(());
+                }
+                _ = interval.tick() => {
+                    // Update the spinner with elapsed time
+                    if let Err(e) = self.spinner.update_time() {
+                        tracing::warn!("Failed to update spinner time: {}", e);
+                    }
                 }
                 maybe_message = stream.next() => {
                     match maybe_message {
                         Some(Ok(message)) => self.handle_chat_response(message)?,
                         Some(Err(err)) => {
+                            self.spinner.stop(None)?;
                             return Err(err);
                         }
-                        None => return Ok(()),
+                        None => {
+                            self.spinner.stop(None)?;
+                            return Ok(())
+                        },
                     }
                 }
             }
@@ -418,18 +437,20 @@ impl<F: API> UI<F> {
                 let content = serde_json::to_string_pretty(&conversation)?;
                 tokio::fs::write(path.as_str(), content).await?;
 
-                CONSOLE.writeln(
-                    TitleFormat::success("dump")
+                println!(
+                    "{}",
+                    TitleFormat::new("dump")
                         .sub_title(format!("path: {path}"))
-                        .format(),
-                )?;
+                        .format()
+                );
             } else {
-                CONSOLE.writeln(
-                    TitleFormat::failed("dump")
+                println!(
+                    "{}",
+                    TitleFormat::new("dump")
                         .error("conversation not found")
                         .sub_title(format!("conversation_id: {conversation_id}"))
-                        .format(),
-                )?;
+                        .format()
+                );
             }
         }
         Ok(())
@@ -437,33 +458,24 @@ impl<F: API> UI<F> {
 
     fn handle_chat_response(&mut self, message: AgentMessage<ChatResponse>) -> Result<()> {
         match message.message {
-            ChatResponse::Text { text: content, is_complete } => {
-                if is_complete {
-                    CONSOLE.writeln(content.trim())?;
-                } else {
-                    CONSOLE.write(content.dimmed().to_string())?;
+            ChatResponse::Text { mut text, is_complete, is_md } => {
+                if is_complete && !text.trim().is_empty() {
+                    if is_md {
+                        text = self.markdown.render(&text);
+                    }
+                    self.spinner.stop(Some(text))?;
                 }
             }
             ChatResponse::ToolCallStart(_) => {
-                CONSOLE.newline()?;
-                CONSOLE.newline()?;
+                self.spinner.stop(None)?;
             }
-            ChatResponse::ToolCallEnd(tool_result) => {
+            ChatResponse::ToolCallEnd(_) => {
+                self.spinner.start()?;
                 if !self.cli.verbose {
                     return Ok(());
                 }
-
-                let tool_name = tool_result.name.as_str();
-
-                CONSOLE.writeln(format!("{}", tool_result.content.dimmed()))?;
-
-                if tool_result.is_error {
-                    CONSOLE.writeln(TitleFormat::failed(tool_name).format())?;
-                } else {
-                    CONSOLE.writeln(TitleFormat::success(tool_name).format())?;
-                }
             }
-            ChatResponse::Event(_event) => {
+            ChatResponse::Event(_) => {
                 // Event handling removed
             }
             ChatResponse::Usage(u) => {

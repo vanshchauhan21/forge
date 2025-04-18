@@ -16,6 +16,22 @@ use crate::services::Services;
 use crate::*;
 
 type ArcSender = Arc<tokio::sync::mpsc::Sender<anyhow::Result<AgentMessage<ChatResponse>>>>;
+// Tags to filter as defined in system prompt
+const THINKING_TAGS: &[&str] = &[
+    "thinking",
+    "analysis",
+    "action_plan",
+    "execution",
+    "verification",
+    "forge_analysis",
+    "forge_query_analysis",
+    "pr_preparation",
+    "thought_process",
+    "exploration_and_discovery",
+    "content_plan",
+    "creation",
+    "review",
+];
 
 #[derive(Debug, Clone)]
 pub struct AgentMessage<T> {
@@ -168,7 +184,11 @@ impl<A: Services> Orchestrator<A> {
             if let Some(content) = message.content {
                 self.send(
                     agent,
-                    ChatResponse::Text { text: content.as_str().to_string(), is_complete: false },
+                    ChatResponse::Text {
+                        text: content.as_str().to_string(),
+                        is_complete: false,
+                        is_md: false,
+                    },
                 )
                 .await?;
             }
@@ -186,6 +206,17 @@ impl<A: Services> Orchestrator<A> {
             .map(|content| content.as_str())
             .collect::<Vec<_>>()
             .join("");
+
+        let filtered_content = crate::text_utils::remove_tag_content(&content, THINKING_TAGS);
+        self.send(
+            agent,
+            ChatResponse::Text {
+                text: filtered_content.as_str().to_string(),
+                is_complete: true,
+                is_md: true,
+            },
+        )
+        .await?;
 
         // From Complete (incase streaming is disabled)
         let mut tool_calls: Vec<ToolCallFull> = messages
@@ -210,7 +241,7 @@ impl<A: Services> Orchestrator<A> {
         // From XML
         tool_calls.extend(ToolCallFull::try_from_xml(&content)?);
 
-        Ok(ChatCompletionResult { content, tool_calls, usage: request_usage })
+        Ok(ChatCompletionResult { content: filtered_content, tool_calls, usage: request_usage })
     }
 
     pub async fn dispatch_spawned(&self, event: Event) -> anyhow::Result<()> {
@@ -354,11 +385,9 @@ impl<A: Services> Orchestrator<A> {
         }
 
         self.set_context(&agent.id, context.clone()).await?;
-
         loop {
             // Set context for the current loop iteration
             self.set_context(&agent.id, context.clone()).await?;
-
             // Determine which model to use - prefer workflow model if available, fallback
             // to agent model
             let model_id = agent

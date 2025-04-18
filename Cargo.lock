@@ -856,11 +856,13 @@ dependencies = [
  "chrono",
  "clap",
  "colored 3.0.0",
+ "convert_case",
  "derive_setters",
  "forge_api",
  "forge_display",
  "forge_fs",
  "forge_snaps",
+ "forge_spinner",
  "forge_tracker",
  "forge_walker",
  "inquire",
@@ -921,12 +923,14 @@ dependencies = [
  "chrono",
  "colored 3.0.0",
  "console",
+ "convert_case",
  "derive_setters",
  "insta",
  "pretty_assertions",
  "regex",
  "similar",
  "strip-ansi-escapes",
+ "termimad",
 ]
 
 [[package]]
@@ -945,6 +949,7 @@ dependencies = [
  "merge",
  "nom 8.0.0",
  "pretty_assertions",
+ "regex",
  "schemars",
  "serde",
  "serde_json",
@@ -1065,7 +1070,6 @@ dependencies = [
  "strum_macros 0.27.1",
  "syn 2.0.98",
  "tempfile",
- "termimad",
  "thiserror 2.0.12",
  "tokio",
  "tokio-stream",
@@ -1099,6 +1103,16 @@ dependencies = [
  "tempfile",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "forge_spinner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "colored 3.0.0",
+ "indicatif",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -1841,6 +1855,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "indicatif"
+version = "0.17.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "183b3088984b400f4cfac3620d5e076c84da5364016b4f49473de574b2586235"
+dependencies = [
+ "console",
+ "number_prefix",
+ "portable-atomic",
+ "unicode-width 0.2.0",
+ "web-time",
+]
+
+[[package]]
 name = "inquire"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2307,6 +2334,12 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "object"
