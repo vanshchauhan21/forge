@@ -860,6 +860,7 @@ dependencies = [
  "derive_setters",
  "forge_api",
  "forge_display",
+ "forge_domain",
  "forge_fs",
  "forge_snaps",
  "forge_spinner",

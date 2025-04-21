@@ -8,6 +8,7 @@ mod input;
 mod model;
 mod prompt;
 mod state;
+mod tools_display;
 mod ui;
 
 pub use auto_update::update_forge;

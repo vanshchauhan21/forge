@@ -180,6 +180,7 @@ impl ForgeCommandManager {
             "/plan" => Ok(Command::Plan),
             "/help" => Ok(Command::Help),
             "/model" => Ok(Command::Model),
+            "/tools" => Ok(Command::Tools),
             text => {
                 let parts = text.split_ascii_whitespace().collect::<Vec<&str>>();
 
@@ -248,6 +249,10 @@ pub enum Command {
     /// This can be triggered with the '/model' command.
     #[strum(props(usage = "Switch to a different model"))]
     Model,
+    /// List all available tools with their descriptions and schema
+    /// This can be triggered with the '/tools' command.
+    #[strum(props(usage = "List all available tools with their descriptions and schema"))]
+    Tools,
     /// Handles custom command defined in workflow file.
     Custom(PartialEvent),
     /// Executes a native shell command.
@@ -269,6 +274,7 @@ impl Command {
             Command::Help => "/help",
             Command::Dump(_) => "/dump",
             Command::Model => "/model",
+            Command::Tools => "/tools",
             Command::Custom(event) => &event.name,
             Command::Shell(_) => "!shell",
         }

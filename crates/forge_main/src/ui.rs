@@ -206,6 +206,12 @@ impl<F: API> UI<F> {
                     let info = Info::from(self.command.as_ref());
                     println!("{}", info);
                 }
+                Command::Tools => {
+                    use crate::tools_display::format_tools;
+                    let tools = self.api.tools().await;
+                    let output = format_tools(&tools);
+                    println!("{}", output);
+                }
                 Command::Exit => {
                     update_forge().await;
 
