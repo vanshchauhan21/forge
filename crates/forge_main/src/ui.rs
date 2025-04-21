@@ -88,16 +88,11 @@ impl<F: API> UI<F> {
 
         // Print a mode-specific message
         let mode_message = match self.state.mode {
-            Mode::Act => "mode - executes commands and makes file changes",
-            Mode::Plan => "mode - plans actions without making changes",
+            Mode::Act => "Switched to 'ACT' mode",
+            Mode::Plan => "Switched to 'PLAN' mode",
         };
 
-        println!(
-            "{}",
-            TitleFormat::new(mode.to_string())
-                .sub_title(mode_message)
-                .format()
-        );
+        println!("{}", TitleFormat::action(mode_message).format());
 
         Ok(())
     }
@@ -165,16 +160,15 @@ impl<F: API> UI<F> {
                     let token_reduction = compaction_result.token_reduction_percentage();
                     let message_reduction = compaction_result.message_reduction_percentage();
 
-                    let content = TitleFormat::new("compact")
-                        .sub_title(format!(
-                            "context size reduced by {:.1}% (tokens), {:.1}% (messages)",
-                            token_reduction, message_reduction
-                        ))
-                        .format();
+                    let content = TitleFormat::action(format!(
+                        "Context size reduced by {:.1}% (tokens), {:.1}% (messages)",
+                        token_reduction, message_reduction
+                    ))
+                    .format();
                     self.spinner.stop(Some(content))?;
                 }
-                Command::Dump => {
-                    self.handle_dump().await?;
+                Command::Dump(format) => {
+                    self.handle_dump(format).await?;
                 }
                 Command::New => {
                     self.state = UIState::default();
@@ -196,7 +190,7 @@ impl<F: API> UI<F> {
 
                         println!(
                             "{}",
-                            TitleFormat::new("error")
+                            TitleFormat::action("error")
                                 .error(format!("{:?}", err))
                                 .format()
                         );
@@ -222,7 +216,7 @@ impl<F: API> UI<F> {
                     if let Err(e) = self.dispatch_event(event.into()).await {
                         println!(
                             "{}",
-                            TitleFormat::new("Failed to execute the command.")
+                            TitleFormat::action("Failed to execute the command")
                                 .sub_title("Command Execution")
                                 .error(e.to_string())
                                 .format()
@@ -300,16 +294,7 @@ impl<F: API> UI<F> {
 
             println!(
                 "{}",
-                TitleFormat::new("model")
-                    .sub_title(format!("switched to: {}", model))
-                    .format()
-            );
-        } else {
-            println!(
-                "{}",
-                TitleFormat::new("model")
-                    .error("Failed to update model: conversation not found")
-                    .format()
+                TitleFormat::action(format!("Switched to model: {}", model)).format()
             );
         }
 
@@ -427,27 +412,46 @@ impl<F: API> UI<F> {
         }
     }
 
-    async fn handle_dump(&mut self) -> Result<()> {
+    /// Modified version of handle_dump that supports HTML format
+    async fn handle_dump(&mut self, format: Option<String>) -> Result<()> {
         if let Some(conversation_id) = self.state.conversation_id.clone() {
             let conversation = self.api.conversation(&conversation_id).await?;
             if let Some(conversation) = conversation {
                 let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-                let path = format!("{timestamp}-dump.json");
 
-                let content = serde_json::to_string_pretty(&conversation)?;
-                tokio::fs::write(path.as_str(), content).await?;
+                if let Some(format) = format {
+                    if format == "html" {
+                        // Export as HTML
+                        let html_content = conversation.to_html();
+                        let path = format!("{timestamp}-dump.html");
+                        tokio::fs::write(path.as_str(), html_content).await?;
 
-                println!(
-                    "{}",
-                    TitleFormat::new("dump")
-                        .sub_title(format!("path: {path}"))
-                        .format()
-                );
+                        println!(
+                            "{}",
+                            TitleFormat::action("Conversation HTML dump created".to_string())
+                                .sub_title(path.to_string())
+                                .format()
+                        );
+                        return Ok(());
+                    }
+                } else {
+                    // Default: Export as JSON
+                    let path = format!("{timestamp}-dump.json");
+                    let content = serde_json::to_string_pretty(&conversation)?;
+                    tokio::fs::write(path.as_str(), content).await?;
+
+                    println!(
+                        "{}",
+                        TitleFormat::action("Conversation JSON dump created".to_string())
+                            .sub_title(path.to_string())
+                            .format()
+                    );
+                }
             } else {
                 println!(
                     "{}",
-                    TitleFormat::new("dump")
-                        .error("conversation not found")
+                    TitleFormat::action("Could not create dump")
+                        .error("Conversation not found")
                         .sub_title(format!("conversation_id: {conversation_id}"))
                         .format()
                 );
@@ -474,9 +478,6 @@ impl<F: API> UI<F> {
                 if !self.cli.verbose {
                     return Ok(());
                 }
-            }
-            ChatResponse::Event(_) => {
-                // Event handling removed
             }
             ChatResponse::Usage(u) => {
                 self.state.usage = u;

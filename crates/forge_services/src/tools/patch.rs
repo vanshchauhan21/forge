@@ -185,27 +185,21 @@ pub enum Operation {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ApplyPatchJsonInput {
+pub struct Input {
+    /// The path to the file to modify
+    pub path: String,
+
     /// The text to search for in the source. If empty, operation applies to the
     /// end of the file.
     pub search: String,
 
-    /// The operation to perform on the matched text
+    /// The operation to perform on the matched text. Possible options are only
+    /// 'prepend', 'append', 'replace', and 'swap'.
     pub operation: Operation,
 
     /// The content to use for the operation (replacement text, text to
     /// prepend/append, or target text for swap operations)
     pub content: String,
-}
-
-#[derive(Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Input {
-    /// The path to the file to modify
-    pub path: String,
-
-    /// List of patch operations to apply in sequence
-    pub patches: Vec<ApplyPatchJsonInput>,
 }
 
 /// Modifies files with targeted text operations on matched patterns. Supports
@@ -263,8 +257,8 @@ fn format_output(path: &str, content: &str, warning: Option<&str>) -> String {
 impl<F: Infrastructure> ExecutableTool for ApplyPatchJson<F> {
     type Input = Input;
 
-    async fn call(&self, context: ToolCallContext, input: Self::Input) -> anyhow::Result<String> {
-        let path = Path::new(&input.path);
+    async fn call(&self, context: ToolCallContext, patch: Self::Input) -> anyhow::Result<String> {
+        let path = Path::new(&patch.path);
         assert_absolute_path(path)?;
 
         // Read the original content once
@@ -272,29 +266,30 @@ impl<F: Infrastructure> ExecutableTool for ApplyPatchJson<F> {
             .await
             .map_err(Error::FileOperation)?;
 
-        // Apply each patch sequentially
-        for patch in input.patches {
-            // Save the old content before modification for diff generation
-            let old_content = current_content.clone();
+        // Save the old content before modification for diff generation
+        let old_content = current_content.clone();
 
-            // Apply the replacement
-            current_content = apply_replacement(
-                current_content,
-                &patch.search,
-                &patch.operation,
-                &patch.content,
-            )?;
+        // Apply the replacement
+        current_content = apply_replacement(
+            current_content,
+            &patch.search,
+            &patch.operation,
+            &patch.content,
+        )?;
 
-            // Format the display path for output
-            let path = self.format_display_path(path)?;
+        // Format the display path for output
+        let display_path = self.format_display_path(path)?;
 
-            // Generate diff between old and new content
-            let diff =
-                DiffFormat::format("patch", PathBuf::from(path), &old_content, &current_content);
+        // Generate diff between old and new content
+        let diff = DiffFormat::format(
+            "patch",
+            PathBuf::from(display_path),
+            &old_content,
+            &current_content,
+        );
 
-            // Output diff either to sender or println
-            context.send_text(diff).await?;
-        }
+        // Output diff either to sender or println
+        context.send_text(diff).await?;
 
         // Write final content to file after all patches are applied
         self.0
