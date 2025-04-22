@@ -282,7 +282,7 @@ impl<F: Infrastructure> ExecutableTool for ApplyPatchJson<F> {
 
         // Generate diff between old and new content
         let diff = DiffFormat::format(
-            "patch",
+            "Patch",
             PathBuf::from(display_path),
             &old_content,
             &current_content,

@@ -190,7 +190,7 @@ impl<F: API> UI<F> {
 
                         println!(
                             "{}",
-                            TitleFormat::action("error")
+                            TitleFormat::action("Error")
                                 .error(format!("{:?}", err))
                                 .format()
                         );

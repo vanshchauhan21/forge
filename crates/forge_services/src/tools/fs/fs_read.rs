@@ -77,7 +77,7 @@ impl<F: Infrastructure> ExecutableTool for FSRead<F> {
         })?;
 
         // Display a message about the file being read
-        let title = "read";
+        let title = "Read";
         let display_path = self.format_display_path(path)?;
         let message = TitleFormat::new(title).sub_title(display_path);
         context.send_text(message.format()).await?;
@@ -126,7 +126,7 @@ mod test {
         let content = tokio::fs::read_to_string(path).await.unwrap();
 
         // Display a message - just for testing
-        let title = "read";
+        let title = "Read";
         let message = TitleFormat::new(title).sub_title(path.display().to_string());
         println!("{}", message);
 

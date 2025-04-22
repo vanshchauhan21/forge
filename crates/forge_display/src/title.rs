@@ -1,7 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
 use colored::Colorize;
-use convert_case::{Case, Casing};
 use derive_setters::Setters;
 
 #[derive(Clone, Setters)]
@@ -49,7 +48,7 @@ impl TitleFormat {
         } else {
             buf.push_str(format!("{} ", "⏺".dimmed()).as_str());
         }
-        let mut title = self.title.to_case(Case::Sentence).dimmed();
+        let mut title = self.title.dimmed();
 
         if self.error.is_some() {
             title = title.red().bold();
