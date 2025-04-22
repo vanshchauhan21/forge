@@ -152,7 +152,6 @@ Here's a quick reference of Forge's command-line options:
 | `-h, --help`                    | Print help information                                     |
 | `-V, --version`                 | Print version                                              |
 
-
 ## Advanced Configuration
 
 ### Provider Configuration
@@ -231,6 +230,22 @@ OPENAI_URL=<your_provider_url>
 ```yaml
 # forge.yaml
 model: <provider-specific-model>
+```
+
+</details>
+
+<details>
+<summary><strong>Groq</strong></summary>
+
+```bash
+# .env
+OPENAI_API_KEY=<your_groq_api_key>
+OPENAI_URL=https://api.groq.com/openai/v1
+```
+
+```yaml
+# forge.yaml
+model: deepseek-r1-distill-llama-70b
 ```
 
 </details>
