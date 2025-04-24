@@ -1,7 +1,6 @@
 ---
 source: crates/forge_display/src/diff.rs
 expression: clean_diff
-snapshot_kind: text
 ---
 ⏺ diff xya.txt
 
