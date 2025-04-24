@@ -74,8 +74,7 @@ impl<F: Infrastructure> ExecutableTool for FsUndo<F> {
         context.send_text(message.format()).await?;
 
         Ok(format!(
-            "Successfully undid last operation on path: {}",
-            display_path
+            "Successfully undid last operation on path: {display_path}"
         ))
     }
 }

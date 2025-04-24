@@ -130,7 +130,7 @@ mod test {
             _context: ToolCallContext,
             input: Self::Input,
         ) -> anyhow::Result<String> {
-            Ok(format!("Success with input: {}", input))
+            Ok(format!("Success with input: {input}"))
         }
     }
 

@@ -196,12 +196,12 @@ impl Context {
                     lines.push_str("</message>");
                 }
                 ContextMessage::Image(url) => {
-                    lines.push_str(format!("<file_attachment path=\"{}\">", url).as_str());
+                    lines.push_str(format!("<file_attachment path=\"{url}\">").as_str());
                 }
             }
         }
 
-        format!("<chat_history>{}</chat_history>", lines)
+        format!("<chat_history>{lines}</chat_history>")
     }
 
     /// Estimates the token count for this context using a simple approximation

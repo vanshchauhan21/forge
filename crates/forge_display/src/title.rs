@@ -54,14 +54,14 @@ impl TitleFormat {
             title = title.red().bold();
         }
 
-        buf.push_str(&format!("{}", title));
+        buf.push_str(&format!("{title}"));
 
         if let Some(ref sub_title) = self.sub_title {
             buf.push_str(&format!(" {}", sub_title.dimmed()).to_string());
         }
 
         if let Some(ref error) = self.error {
-            buf.push_str(&format!(" {}", error).to_string());
+            buf.push_str(&format!(" {error}").to_string());
         }
 
         buf

@@ -80,9 +80,9 @@ fn apply_replacement(
     if search.is_empty() {
         return match operation {
             // Append to the end of the file
-            Operation::Append => Ok(format!("{}{}", source, content)),
+            Operation::Append => Ok(format!("{source}{content}")),
             // Prepend to the beginning of the file
-            Operation::Prepend => Ok(format!("{}{}", content, source)),
+            Operation::Prepend => Ok(format!("{content}{source}")),
             // Replace is equivalent to completely replacing the file
             Operation::Replace => Ok(content.to_string()),
             // Swap doesn't make sense with empty search - keep source unchanged
@@ -241,8 +241,7 @@ impl<F: Infrastructure> ApplyPatchJson<F> {
 fn format_output(path: &str, content: &str, warning: Option<&str>) -> String {
     if let Some(w) = warning {
         format!(
-            "<file_content\n  path=\"{}\"\n  syntax_checker_warning=\"{}\">\n{}</file_content>\n",
-            path, w, content
+            "<file_content\n  path=\"{path}\"\n  syntax_checker_warning=\"{w}\">\n{content}</file_content>\n"
         )
     } else {
         format!(

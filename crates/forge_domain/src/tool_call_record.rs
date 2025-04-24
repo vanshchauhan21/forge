@@ -18,12 +18,12 @@ pub struct ToolCallRecord {
 impl Display for ToolCallRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let tool_name = self.tool_call.name.as_str();
-        write!(f, "<tool_result tool=\"{}\">", tool_name)?;
+        write!(f, "<tool_result tool=\"{tool_name}\">")?;
 
         if let Some(object) = self.tool_call.arguments.as_object() {
             write!(f, "<arguments>")?;
             for (key, value) in object.iter() {
-                write!(f, "<{0}>{1}</{0}>", key, value)?;
+                write!(f, "<{key}>{value}</{key}>")?;
             }
             write!(f, "</arguments>")?;
         }

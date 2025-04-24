@@ -242,8 +242,7 @@ mod tests {
 
         assert!(
             matches_pattern,
-            "Error message '{}' did not match any expected patterns for this platform: {:?}",
-            err, COMMAND_NOT_FOUND_PATTERNS
+            "Error message '{err}' did not match any expected patterns for this platform: {COMMAND_NOT_FOUND_PATTERNS:?}"
         );
     }
 

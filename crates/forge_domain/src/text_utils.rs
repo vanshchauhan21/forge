@@ -19,8 +19,8 @@
 /// assert_eq!(extracted, Some("This is the important part"));
 /// ```
 pub fn extract_tag_content<'a>(text: &'a str, tag_name: &str) -> Option<&'a str> {
-    let opening_tag = format!("<{}>", tag_name);
-    let closing_tag = format!("</{}>", tag_name);
+    let opening_tag = format!("<{tag_name}>",);
+    let closing_tag = format!("</{tag_name}>");
 
     if let Some(start_idx) = text.find(&opening_tag) {
         if let Some(end_idx) = text.find(&closing_tag) {
@@ -39,7 +39,7 @@ pub fn remove_tag_content(text: &str, tag_names: &[&str]) -> String {
     let mut result = text.to_string();
 
     for tag_name in tag_names {
-        let pattern = format!("<{}>[\\s\\S]*?</{}>", tag_name, tag_name);
+        let pattern = format!("<{tag_name}>[\\s\\S]*?</{tag_name}>");
 
         // Create regex to match tag content including nested tags
         if let Ok(regex) = regex::Regex::new(&pattern) {

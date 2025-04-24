@@ -245,7 +245,7 @@ impl<A: Services> Orchestrator<A> {
 
         // Process partial tool calls
         let partial_tool_calls = ToolCallFull::try_from_parts(&tool_call_parts)
-            .with_context(|| format!("Failed to parse tool call: {:?}", tool_call_parts))?;
+            .with_context(|| format!("Failed to parse tool call: {tool_call_parts:?}"))?;
 
         // Process XML tool calls
         let xml_tool_calls = ToolCallFull::try_from_xml(&content)?;

@@ -68,12 +68,12 @@ impl Fetch {
                     if let Some(disallowed) = line.strip_prefix("Disallow: ") {
                         let disallowed = disallowed.trim();
                         let disallowed = if !disallowed.starts_with('/') {
-                            format!("/{}", disallowed)
+                            format!("/{disallowed}")
                         } else {
                             disallowed.to_string()
                         };
                         let path = if !path.starts_with('/') {
-                            format!("/{}", path)
+                            format!("/{path}")
                         } else {
                             path.to_string()
                         };
@@ -140,9 +140,7 @@ impl Fetch {
             Ok((
                 page_raw,
                 format!(
-                    "Content type {} cannot be simplified to markdown, but here is the raw content:\n",
-                    content_type
-                ),
+                    "Content type {content_type} cannot be simplified to markdown, but here is the raw content:\n"),
             ))
         }
     }
@@ -173,12 +171,10 @@ impl ExecutableTool for Fetch {
 
         if end < original_length {
             truncated.push_str(&format!(
-                "\n\n<error>Content truncated. Call the fetch tool with a start_index of {} to get more content.</error>",
-                end
-            ));
+                "\n\n<error>Content truncated. Call the fetch tool with a start_index of {end} to get more content.</error>"));
         }
 
-        Ok(format!("{}Contents of {}:\n{}", prefix, url, truncated))
+        Ok(format!("{prefix}Contents of {url}:\n{truncated}"))
     }
 }
 
@@ -303,8 +299,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("robots.txt"),
-            "Expected error containing 'robots.txt', got: {}",
-            err
+            "Expected error containing 'robots.txt', got: {err}"
         );
     }
 

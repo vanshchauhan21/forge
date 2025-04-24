@@ -74,9 +74,8 @@ impl<T: TemplateService, P: ProviderService> ForgeCompactionService<T, P> {
         );
 
         let summary = format!(
-            r#"Continuing from a prior analysis. Below is a compacted summary of the ongoing session. Use this summary as authoritative context for your reasoning and decision-making. You do not need to repeat or reanalyze it unless specifically asked: <summary>{}</summary> Proceed based on this context.
-        "#,
-            summary
+            r#"Continuing from a prior analysis. Below is a compacted summary of the ongoing session. Use this summary as authoritative context for your reasoning and decision-making. You do not need to repeat or reanalyze it unless specifically asked: <summary>{summary}</summary> Proceed based on this context.
+        "#
         );
 
         // Replace the sequence with a single summary message using splice

@@ -128,7 +128,7 @@ mod test {
         // Display a message - just for testing
         let title = "Read";
         let message = TitleFormat::new(title).sub_title(path.display().to_string());
-        println!("{}", message);
+        println!("{message}");
 
         // Assert the content matches
         assert_eq!(content, test_content);

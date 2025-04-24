@@ -39,7 +39,7 @@ impl ExecutableTool for FSFileInfo {
         let meta = tokio::fs::metadata(&input.path)
             .await
             .with_context(|| format!("Failed to get metadata for '{}'", input.path))?;
-        Ok(format!("{:?}", meta))
+        Ok(format!("{meta:?}"))
     }
 }
 
