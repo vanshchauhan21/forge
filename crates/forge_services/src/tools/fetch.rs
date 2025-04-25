@@ -21,7 +21,7 @@ pub struct Fetch {
 
 impl NamedTool for Fetch {
     fn tool_name() -> forge_domain::ToolName {
-        forge_domain::ToolName::new("tool_forge_net_fetch")
+        forge_domain::ToolName::new("forge_tool_net_fetch")
     }
 }
 

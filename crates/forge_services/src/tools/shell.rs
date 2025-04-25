@@ -80,7 +80,7 @@ impl<I: Infrastructure> Shell<I> {
 
 impl<I> NamedTool for Shell<I> {
     fn tool_name() -> ToolName {
-        ToolName::new("tool_forge_process_shell")
+        ToolName::new("forge_tool_process_shell")
     }
 }
 

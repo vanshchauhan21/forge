@@ -70,8 +70,18 @@ impl<F: API> UI<F> {
         }
     }
 
+    // Handle creating a new conversation
+    async fn handle_new(&mut self) -> Result<()> {
+        self.state = UIState::default();
+        self.init_conversation().await?;
+        banner::display()?;
+
+        Ok(())
+    }
+
     // Set the current mode and update conversation variable
     async fn handle_mode_change(&mut self, mode: Mode) -> Result<()> {
+        self.handle_new().await?;
         // Set the mode variable in the conversation if a conversation exists
         let conversation_id = self.init_conversation().await?;
 
@@ -86,23 +96,38 @@ impl<F: API> UI<F> {
             )
             .await?;
 
-        // Print a mode-specific message
-        let mode_message = match self.state.mode {
-            Mode::Act => "Switched to 'ACT' mode",
-            Mode::Plan => "Switched to 'PLAN' mode",
-        };
-
-        println!("{}", TitleFormat::action(mode_message).format());
+        println!(
+            "{}",
+            TitleFormat::action(format!(
+                "Switched to '{}' mode (context cleared)",
+                self.state.mode
+            ))
+            .format()
+        );
 
         Ok(())
     }
     // Helper functions for creating events with the specific event names
-    fn create_task_init_event<V: Into<Value>>(content: V) -> Event {
-        Event::new(EVENT_USER_TASK_INIT, content)
+    fn create_task_init_event<V: Into<Value>>(&self, content: V) -> Event {
+        Event::new(
+            format!(
+                "{}/{}",
+                self.state.mode.to_string().to_lowercase(),
+                EVENT_USER_TASK_INIT
+            ),
+            content,
+        )
     }
 
-    fn create_task_update_event<V: Into<Value>>(content: V) -> Event {
-        Event::new(EVENT_USER_TASK_UPDATE, content)
+    fn create_task_update_event<V: Into<Value>>(&self, content: V) -> Event {
+        Event::new(
+            format!(
+                "{}/{}",
+                self.state.mode.to_string().to_lowercase(),
+                EVENT_USER_TASK_UPDATE
+            ),
+            content,
+        )
     }
 
     pub fn init(cli: Cli, api: Arc<F>) -> Result<Self> {
@@ -170,9 +195,7 @@ impl<F: API> UI<F> {
                     self.handle_dump(format).await?;
                 }
                 Command::New => {
-                    self.state = UIState::default();
-                    self.init_conversation().await?;
-                    banner::display()?;
+                    self.handle_new().await?;
                 }
                 Command::Info => {
                     let info = Info::from(&self.state).extend(Info::from(&self.api.environment()));
@@ -367,9 +390,9 @@ impl<F: API> UI<F> {
         // Create a ChatRequest with the appropriate event type
         let event = if self.state.is_first {
             self.state.is_first = false;
-            Self::create_task_init_event(content.clone())
+            self.create_task_init_event(content.clone())
         } else {
-            Self::create_task_update_event(content.clone())
+            self.create_task_update_event(content.clone())
         };
 
         // Create the chat request with the event

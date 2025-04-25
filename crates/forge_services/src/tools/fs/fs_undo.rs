@@ -43,7 +43,7 @@ impl<F: Infrastructure> FsUndo<F> {
 
 impl<F> NamedTool for FsUndo<F> {
     fn tool_name() -> ToolName {
-        ToolName::new("tool_forge_fs_undo")
+        ToolName::new("forge_tool_fs_undo")
     }
 }
 
@@ -121,7 +121,7 @@ mod tests {
     async fn test_tool_name() {
         assert_eq!(
             FsUndo::<Stub>::tool_name().as_str(),
-            "tool_forge_fs_undo",
+            "forge_tool_fs_undo",
             "Tool name should match expected value"
         );
     }

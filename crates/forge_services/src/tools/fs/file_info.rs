@@ -24,7 +24,7 @@ pub struct FSFileInfo;
 
 impl NamedTool for FSFileInfo {
     fn tool_name() -> ToolName {
-        ToolName::new("tool_forge_fs_info")
+        ToolName::new("forge_tool_fs_info")
     }
 }
 

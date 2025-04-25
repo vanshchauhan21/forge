@@ -21,7 +21,6 @@ pub trait ToolService: Send + Sync {
     // TODO: should take `call` by reference
     async fn call(&self, context: ToolCallContext, call: ToolCallFull) -> ToolResult;
     fn list(&self) -> Vec<ToolDefinition>;
-    fn usage_prompt(&self) -> String;
 }
 
 #[async_trait::async_trait]
