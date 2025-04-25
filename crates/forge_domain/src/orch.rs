@@ -237,6 +237,28 @@ impl<A: Services> Orchestrator<A> {
             }
         }
 
+        // Get the full content from all messages
+        let mut content = messages
+            .iter()
+            .flat_map(|m| m.content.iter())
+            .map(|content| content.as_str())
+            .collect::<Vec<_>>()
+            .join("");
+
+        if tool_interrupted && !content.trim().ends_with("</forge_tool_call>") {
+            if let Some((i, right)) = content.rmatch_indices("</forge_tool_call>").next() {
+                content.truncate(i + right.len());
+
+                // Add a comment for the assistant to signal interruption
+                content.push('\n');
+                content.push_str("<forge_feedback>");
+                content.push_str(
+                    "Response interrupted by tool result. Use only one tool at the end of the message",
+                 );
+                content.push_str("</forge_feedback>");
+            }
+        }
+
         // Send the complete message
         self.send(
             agent,
@@ -249,20 +271,6 @@ impl<A: Services> Orchestrator<A> {
             },
         )
         .await?;
-
-        // Get the full content from all messages
-        let mut content = messages
-            .iter()
-            .flat_map(|m| m.content.iter())
-            .map(|content| content.as_str())
-            .collect::<Vec<_>>()
-            .join("");
-
-        if tool_interrupted && !content.trim().ends_with("</forge_tool_call>") {
-            content.push_str(
-             "\n[Response interrupted by tool result. Use only one tool at the end of the message]",
-          );
-        }
 
         // Extract all tool calls in a fully declarative way with combined sources
         // Start with complete tool calls (for non-streaming mode)
