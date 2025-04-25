@@ -38,16 +38,36 @@ impl TitleFormat {
 
     /// Create a status for executing a tool
     pub fn action(title: impl Into<String>) -> Self {
-        Self::new(title).is_user_action(true)
+        Self {
+            title: title.into(),
+            error: None,
+            sub_title: Default::default(),
+            is_user_action: true,
+        }
     }
 
     pub fn format(&self) -> String {
         let mut buf = String::new();
+
         if self.is_user_action {
             buf.push_str(format!("{} ", "⏺".yellow()).as_str());
         } else {
-            buf.push_str(format!("{} ", "⏺".dimmed()).as_str());
+            buf.push_str(format!("{} ", "⏺".cyan()).as_str());
         }
+
+        // Add timestamp at the beginning if this is not a user action
+        #[cfg(not(test))]
+        {
+            use chrono::Local;
+
+            buf.push_str(
+                format!("[{}] ", Local::now().format("%H:%M:%S.%3f"))
+                    .dimmed()
+                    .to_string()
+                    .as_str(),
+            );
+        }
+
         let mut title = self.title.dimmed();
 
         if self.error.is_some() {
