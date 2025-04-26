@@ -16,7 +16,7 @@ agents:
       retention_window: 6
       message_threshold: 200
       prompt: "{{> system-prompt-context-summarizer.hbs }}"
-    tool_supported: true
+    tool_supported: false
     model: *advanced_model
     system_prompt: |-
       {{> system-prompt-engineer-act.hbs }}
@@ -46,7 +46,7 @@ agents:
       retention_window: 6
       message_threshold: 200
       prompt: "{{> system-prompt-context-summarizer.hbs }}"
-    tool_supported: true
+    tool_supported: false
     model: *advanced_model
     system_prompt: |-
       {{> system-prompt-engineer-plan.hbs }}
