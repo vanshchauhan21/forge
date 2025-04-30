@@ -50,6 +50,8 @@ strum_macros.workspace = true
 strum.workspace = true
 bytes.workspace = true
 console.workspace = true
+serde_yml.workspace = true
+merge.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

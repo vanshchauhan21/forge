@@ -6,8 +6,10 @@ use crate::attachment::ForgeChatRequest;
 use crate::compaction::ForgeCompactionService;
 use crate::conversation::ForgeConversationService;
 use crate::provider::ForgeProviderService;
+use crate::suggestion::ForgeSuggestionService;
 use crate::template::ForgeTemplateService;
 use crate::tool_service::ForgeToolService;
+use crate::workflow::ForgeWorkflowService;
 use crate::Infrastructure;
 
 /// ForgeApp is the main application container that implements the App trait.
@@ -29,6 +31,8 @@ pub struct ForgeServices<F> {
     template_service: Arc<ForgeTemplateService>,
     attachment_service: Arc<ForgeChatRequest<F>>,
     compaction_service: Arc<ForgeCompactionService<ForgeTemplateService, ForgeProviderService>>,
+    workflow_service: Arc<ForgeWorkflowService<F>>,
+    suggestion_service: Arc<ForgeSuggestionService<F>>,
 }
 
 impl<F: Infrastructure> ForgeServices<F> {
@@ -44,6 +48,9 @@ impl<F: Infrastructure> ForgeServices<F> {
 
         let conversation_service =
             Arc::new(ForgeConversationService::new(compaction_service.clone()));
+
+        let workflow_service = Arc::new(ForgeWorkflowService::new(infra.clone()));
+        let suggestion_service = Arc::new(ForgeSuggestionService::new(infra.clone()));
         Self {
             infra,
             conversation_service,
@@ -52,6 +59,8 @@ impl<F: Infrastructure> ForgeServices<F> {
             compaction_service,
             provider_service,
             template_service,
+            workflow_service,
+            suggestion_service,
         }
     }
 }
@@ -64,6 +73,8 @@ impl<F: Infrastructure> Services for ForgeServices<F> {
     type AttachmentService = ForgeChatRequest<F>;
     type EnvironmentService = F::EnvironmentService;
     type CompactionService = ForgeCompactionService<Self::TemplateService, Self::ProviderService>;
+    type WorkflowService = ForgeWorkflowService<F>;
+    type SuggestionService = ForgeSuggestionService<F>;
 
     fn tool_service(&self) -> &Self::ToolService {
         &self.tool_service
@@ -91,6 +102,14 @@ impl<F: Infrastructure> Services for ForgeServices<F> {
 
     fn compaction_service(&self) -> &Self::CompactionService {
         self.compaction_service.as_ref()
+    }
+
+    fn workflow_service(&self) -> &Self::WorkflowService {
+        self.workflow_service.as_ref()
+    }
+
+    fn suggestion_service(&self) -> &Self::SuggestionService {
+        self.suggestion_service.as_ref()
     }
 }
 
