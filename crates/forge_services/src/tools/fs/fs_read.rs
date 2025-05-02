@@ -35,7 +35,7 @@ pub fn assert_valid_range(start_char: u64, end_char: u64) -> anyhow::Result<()> 
     }
 
     // Check that the range size doesn't exceed the maximum
-    if end_char.saturating_sub(start_char).saturating_add(1) > MAX_RANGE_SIZE {
+    if end_char.saturating_sub(start_char) > MAX_RANGE_SIZE {
         bail!("The requested range exceeds the maximum size of {MAX_RANGE_SIZE} characters. Please specify a smaller range.")
     }
 
@@ -65,8 +65,8 @@ pub struct FSReadInput {
 /// functionality, returning only the first 40,000 characters by default. For
 /// large files, you can specify custom ranges using start_char and end_char
 /// parameters. The total range must not exceed 40,000 characters (an error will
-/// be thrown if end_char - start_char > 40,000). Binary files are automatically
-/// detected and rejected.
+/// be thrown if (end_char - start_char) > 40,000). Binary files are
+/// automatically detected and rejected.
 #[derive(ToolDescription)]
 pub struct FSRead<F>(Arc<F>);
 
