@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -341,7 +340,7 @@ impl<F: API> UI<F> {
         };
 
         self.api
-            .update_workflow(&self.workflow_path(), |workflow| {
+            .update_workflow(self.cli.workflow.as_deref(), |workflow| {
                 workflow.model = Some(model.clone());
             })
             .await?;
@@ -389,7 +388,7 @@ impl<F: API> UI<F> {
             Some(ref id) => Ok(id.clone()),
             None => {
                 // Select a model if workflow doesn't have one
-                let mut workflow = self.api.read_workflow(&self.workflow_path()).await?;
+                let mut workflow = self.api.read_workflow(self.cli.workflow.as_deref()).await?;
                 if workflow.model.is_none() {
                     workflow.model = Some(
                         self.select_model()
@@ -399,7 +398,7 @@ impl<F: API> UI<F> {
                 }
 
                 self.api
-                    .write_workflow(&self.workflow_path(), &workflow)
+                    .write_workflow(self.cli.workflow.as_deref(), &workflow)
                     .await?;
 
                 // Get the mode from the config
@@ -433,16 +432,6 @@ impl<F: API> UI<F> {
                 }
             }
         }
-    }
-
-    fn workflow_path(&self) -> PathBuf {
-        let path: PathBuf = self
-            .cli
-            .workflow
-            .as_ref()
-            .unwrap_or(&PathBuf::from("forge.yaml"))
-            .clone();
-        path
     }
 
     async fn chat(&mut self, content: String) -> Result<()> {
