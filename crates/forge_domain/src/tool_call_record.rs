@@ -7,7 +7,7 @@ use crate::{ToolCallFull, ToolResult};
 
 /// Represents a complete tool invocation cycle, containing both the original
 /// call and its corresponding result.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Setters)]
+#[derive(Clone, Debug, Deserialize, Serialize, Setters)]
 #[setters(strip_option, into)]
 pub struct ToolCallRecord {
     pub tool_call: ToolCallFull,

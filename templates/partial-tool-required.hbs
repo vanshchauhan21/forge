@@ -1,0 +1,21 @@
+<error>
+You did not use the tool or used it incorrectly in your previous response! 
+Please retry with correct tool use
+</error>
+
+Here's a correct example structure:
+
+```
+<forge_tool_call>
+<forge_tool_fs_read>
+<path>/path/to/file</path>
+<recursive>true</recursive>
+</forge_tool_fs_read>
+</forge_tool_call>
+```
+
+Next Steps: If you have completed the user's task, use the `tool_forge_attempt_completion`
+tool. If you require additional information from the user, use the
+`tool_forge_followup` tool. Otherwise, if you have not completed the task and do
+not need additional information, then proceed with the next step of the task.
+(This is an automated message, so do not respond to it conversationally.)

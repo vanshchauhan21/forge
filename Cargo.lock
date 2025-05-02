@@ -1003,6 +1003,7 @@ dependencies = [
  "forge_fs",
  "forge_services",
  "forge_snaps",
+ "inquire",
  "pretty_assertions",
  "reqwest 0.12.12",
  "serde",

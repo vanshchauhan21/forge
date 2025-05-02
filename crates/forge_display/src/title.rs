@@ -27,9 +27,9 @@ where
 
 impl TitleFormat {
     /// Create a status for executing a tool
-    pub fn new(title: impl Into<String>) -> Self {
+    pub fn new(tag: impl Into<String>) -> Self {
         Self {
-            title: title.into(),
+            title: tag.into(),
             error: None,
             sub_title: Default::default(),
             is_user_action: false,
@@ -49,7 +49,9 @@ impl TitleFormat {
     pub fn format(&self) -> String {
         let mut buf = String::new();
 
-        if self.is_user_action {
+        if self.error.is_some() {
+            buf.push_str(format!("{} ", "⏺".red()).as_str());
+        } else if self.is_user_action {
             buf.push_str(format!("{} ", "⏺".yellow()).as_str());
         } else {
             buf.push_str(format!("{} ", "⏺".cyan()).as_str());
@@ -68,13 +70,13 @@ impl TitleFormat {
             );
         }
 
-        let title = if self.error.is_some() {
-            self.title.red().bold()
+        if self.error.is_some() {
+            buf.push_str(self.title.red().bold().to_string().as_str())
+        } else if self.is_user_action {
+            buf.push_str(self.title.as_str())
         } else {
-            self.title.dimmed()
+            buf.push_str(self.title.dimmed().to_string().as_str())
         };
-
-        buf.push_str(&format!("{title}"));
 
         if let Some(ref sub_title) = self.sub_title {
             buf.push_str(&format!(" {}", sub_title.dimmed()).to_string());

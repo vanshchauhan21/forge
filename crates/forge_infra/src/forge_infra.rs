@@ -11,6 +11,7 @@ use crate::fs_read::ForgeFileReadService;
 use crate::fs_remove::ForgeFileRemoveService;
 use crate::fs_snap::ForgeFileSnapshotService;
 use crate::fs_write::ForgeFileWriteService;
+use crate::inquire::ForgeInquire;
 
 #[derive(Clone)]
 pub struct ForgeInfra {
@@ -22,6 +23,7 @@ pub struct ForgeInfra {
     file_remove_service: Arc<ForgeFileRemoveService<ForgeFileSnapshotService>>,
     create_dirs_service: Arc<ForgeCreateDirsService>,
     command_executor_service: Arc<ForgeCommandExecutorService>,
+    inquire_service: Arc<ForgeInquire>,
 }
 
 impl ForgeInfra {
@@ -43,6 +45,7 @@ impl ForgeInfra {
                 restricted,
                 env.clone(),
             )),
+            inquire_service: Arc::new(ForgeInquire::new()),
         }
     }
 }
@@ -56,6 +59,7 @@ impl Infrastructure for ForgeInfra {
     type FsRemoveService = ForgeFileRemoveService<ForgeFileSnapshotService>;
     type FsCreateDirsService = ForgeCreateDirsService;
     type CommandExecutorService = ForgeCommandExecutorService;
+    type InquireService = ForgeInquire;
 
     fn environment_service(&self) -> &Self::EnvironmentService {
         &self.environment_service
@@ -87,5 +91,9 @@ impl Infrastructure for ForgeInfra {
 
     fn command_executor_service(&self) -> &Self::CommandExecutorService {
         &self.command_executor_service
+    }
+
+    fn inquire_service(&self) -> &Self::InquireService {
+        &self.inquire_service
     }
 }

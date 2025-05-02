@@ -42,6 +42,7 @@ impl ToolService for ForgeToolService {
         let name = call.name.clone();
         let input = call.arguments.clone();
         debug!(tool_name = ?call.name, arguments = ?call.arguments, "Executing tool call");
+
         let mut available_tools = self
             .tools
             .keys()
@@ -49,6 +50,7 @@ impl ToolService for ForgeToolService {
             .collect::<Vec<_>>();
 
         available_tools.sort();
+
         let output = match self.tools.get(&name) {
             Some(tool) => {
                 // Wrap tool call with timeout

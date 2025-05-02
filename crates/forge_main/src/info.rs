@@ -1,9 +1,8 @@
-use std::cmp::max;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 use colored::Colorize;
-use forge_api::{Environment, Usage};
+use forge_api::Environment;
 use forge_tracker::VERSION;
 
 use crate::model::ForgeCommandManager;
@@ -50,27 +49,6 @@ impl Info {
     }
 }
 
-impl From<&Usage> for Info {
-    fn from(usage: &Usage) -> Self {
-        let mut info = Info::new();
-        let estimated = usage.estimated_tokens.unwrap_or(0);
-
-        if estimated > usage.prompt_tokens {
-            info = info.add_key_value("Prompt", format!("~{estimated}"));
-        } else {
-            info = info.add_key_value("Prompt", usage.prompt_tokens)
-        }
-
-        info.add_title("Usage".to_string())
-            .add_key_value(
-                "Prompt",
-                max(usage.prompt_tokens, usage.estimated_tokens.unwrap_or(0)),
-            )
-            .add_key_value("Completion", usage.completion_tokens)
-            .add_key_value("Total", usage.total_tokens)
-    }
-}
-
 impl From<&Environment> for Info {
     fn from(env: &Environment) -> Self {
         // Get the current git branch
@@ -113,15 +91,20 @@ impl From<&UIState> for Info {
             info = info.add_key_value("Provider (URL)", provider.to_base_url());
         }
 
-        info = info
-            .add_key_value("Prompt Tokens", value.usage.prompt_tokens)
-            .add_key_value("Completion Tokens", value.usage.completion_tokens)
-            .add_key_value("Total Reported", value.usage.total_tokens);
+        let usage = &value.usage;
+        let estimated = usage.estimated_tokens.unwrap_or(0);
 
-        // Add estimated tokens if available
-        if let Some(estimated) = value.usage.estimated_tokens {
-            info = info.add_key_value("Total Estimated", estimated);
+        info = info.add_title("Usage".to_string());
+
+        if estimated > usage.prompt_tokens {
+            info = info.add_key_value("Prompt", format!("~{estimated}"));
+        } else {
+            info = info.add_key_value("Prompt", usage.prompt_tokens)
         }
+
+        info = info
+            .add_key_value("Completion", usage.completion_tokens)
+            .add_key_value("Total", usage.total_tokens);
 
         info
     }

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::Context as AnyhowContext;
+use anyhow::{bail, Context as AnyhowContext};
 use async_recursion::async_recursion;
 use chrono::Local;
 use forge_walker::Walker;
@@ -75,6 +75,7 @@ impl<A: Services> Orchestrator<A> {
         &self,
         agent: &Agent,
         tool_calls: &[ToolCallFull],
+        tool_context: ToolCallContext,
     ) -> anyhow::Result<Vec<ToolCallRecord>> {
         // Always process tool calls sequentially
         let mut tool_call_records = Vec::with_capacity(tool_calls.len());
@@ -88,12 +89,7 @@ impl<A: Services> Orchestrator<A> {
             let tool_result = self
                 .services
                 .tool_service()
-                .call(
-                    ToolCallContext::default()
-                        .sender(self.sender.clone())
-                        .agent_id(agent.id.clone()),
-                    tool_call.clone(),
-                )
+                .call(tool_context.clone(), tool_call.clone())
                 .await;
 
             // Send the end notification
@@ -206,7 +202,12 @@ impl<A: Services> Orchestrator<A> {
                 // Send partial content to the client
                 self.send(
                     agent,
-                    ChatResponse::Text { text: content_part, is_complete: false, is_md: false },
+                    ChatResponse::Text {
+                        text: content_part,
+                        is_complete: false,
+                        is_md: false,
+                        is_summary: false,
+                    },
                 )
                 .await?;
 
@@ -273,6 +274,7 @@ impl<A: Services> Orchestrator<A> {
                     .to_string(),
                 is_complete: true,
                 is_md: true,
+                is_summary: false,
             },
         )
         .await?;
@@ -359,6 +361,14 @@ impl<A: Services> Orchestrator<A> {
         Ok(())
     }
 
+    // Get the ToolCallContext for an agent
+    fn get_tool_call_context(&self, agent_id: &AgentId) -> ToolCallContext {
+        // Create a new ToolCallContext with the agent ID
+        ToolCallContext::default()
+            .agent_id(agent_id.clone())
+            .sender(self.sender.clone())
+    }
+
     // Create a helper method with the core functionality
     async fn init_agent(&self, agent_id: &AgentId, event: &Event) -> anyhow::Result<()> {
         let conversation = self.get_conversation().await?;
@@ -418,7 +428,12 @@ impl<A: Services> Orchestrator<A> {
             });
 
         self.set_context(&agent.id, context.clone()).await?;
-        loop {
+
+        let tool_context = self.get_tool_call_context(&agent.id);
+
+        let mut empty_tool_call_count = 0;
+
+        while !tool_context.get_complete().await {
             // Set context for the current loop iteration
             self.set_context(&agent.id, context.clone()).await?;
 
@@ -450,29 +465,42 @@ impl<A: Services> Orchestrator<A> {
                 debug!(agent_id = %agent.id, "Compaction not needed");
             }
 
-            let tool_call_count = tool_calls.is_empty();
+            let empty_tool_calls = tool_calls.is_empty();
 
             debug!(
                 agent_id = %agent.id,
-                tool_call_count = tool_call_count,
+                tool_call_count = empty_tool_calls,
                 "Tool call count: {}",
-                tool_call_count
+                empty_tool_calls
             );
 
             // Process tool calls and update context
             context = context.append_message(
                 content,
-                self.get_all_tool_results(agent, &tool_calls).await?,
+                self.get_all_tool_results(agent, &tool_calls, tool_context.clone())
+                    .await?,
                 agent.tool_supported.unwrap_or_default(),
             );
+
+            if empty_tool_calls {
+                // No tool calls present, which doesn't mean task is complete so reprompt the
+                // agent to ensure the task complete.
+                let content = self
+                    .services
+                    .template_service()
+                    .render("{{> partial-tool-required.hbs}}", &())?;
+                context = context.add_message(ContextMessage::user(content));
+
+                empty_tool_call_count += 1;
+
+                if empty_tool_call_count > 3 {
+                    bail!("Model is unable to follow instructions. Consider retrying or switching to a bigger model");
+                }
+            }
 
             // Update context in the conversation
             self.set_context(&agent.id, context.clone()).await?;
             self.sync_conversation().await?;
-
-            if tool_call_count {
-                break;
-            }
         }
 
         self.complete_turn(&agent.id).await?;
@@ -516,8 +544,7 @@ impl<A: Services> Orchestrator<A> {
                 || self.init_agent(agent_id, &event),
                 is_parse_error,
             )
-            .await
-            .with_context(|| format!("Failed to initialize agent {}", *agent_id))?;
+            .await?;
         }
 
         Ok(())

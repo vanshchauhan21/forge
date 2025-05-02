@@ -11,6 +11,7 @@ pub enum ChatResponse {
         text: String,
         is_complete: bool,
         is_md: bool,
+        is_summary: bool,
     },
     ToolCallStart(ToolCallFull),
     ToolCallEnd(ToolResult),

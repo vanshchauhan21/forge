@@ -449,6 +449,7 @@ mod test {
             type FsRemoveService = crate::attachment::tests::MockFileService;
             type FsSnapshotService = crate::attachment::tests::MockSnapService;
             type CommandExecutorService = ();
+            type InquireService = ();
 
             fn environment_service(&self) -> &Self::EnvironmentService {
                 self.inner.environment_service()
@@ -480,6 +481,10 @@ mod test {
 
             fn command_executor_service(&self) -> &Self::CommandExecutorService {
                 self.inner.command_executor_service()
+            }
+
+            fn inquire_service(&self) -> &Self::InquireService {
+                self.inner.inquire_service()
             }
         }
 
