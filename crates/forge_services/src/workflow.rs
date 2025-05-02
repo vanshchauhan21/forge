@@ -60,18 +60,18 @@ impl<F: Infrastructure> ForgeWorkflowService<F> {
     /// the specified path (in the current directory).
     pub async fn read(&self, path: &Path) -> anyhow::Result<Workflow> {
         // First, try to find the config file in parent directories if needed
-        let path = self.resolve_path(Some(path.into())).await;
+        let path = &self.resolve_path(Some(path.into())).await;
 
         if !path.exists() {
             let workflow = Workflow::new();
             self.infra
                 .file_write_service()
-                .write(&path, serde_yml::to_string(&workflow)?.into())
+                .write(path, serde_yml::to_string(&workflow)?.into())
                 .await?;
 
             Ok(workflow)
         } else {
-            let content = self.infra.file_read_service().read(&path).await?;
+            let content = self.infra.file_read_service().read_utf8(path).await?;
             let workflow: Workflow = serde_yml::from_str(&content)
                 .with_context(|| format!("Failed to parse workflow from {}", path.display()))?;
             Ok(workflow)
