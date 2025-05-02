@@ -20,14 +20,6 @@ impl Display for ToolCallRecord {
         let tool_name = self.tool_call.name.as_str();
         write!(f, "<forge_tool_result tool=\"{tool_name}\">")?;
 
-        if let Some(object) = self.tool_call.arguments.as_object() {
-            write!(f, "<arguments>")?;
-            for (key, value) in object.iter() {
-                write!(f, "<{key}>{value}</{key}>")?;
-            }
-            write!(f, "</arguments>")?;
-        }
-
         write!(f, "<result>")?;
 
         if self.tool_result.is_error {
