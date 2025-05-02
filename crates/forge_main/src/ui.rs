@@ -9,6 +9,7 @@ use forge_api::{
 use forge_display::{MarkdownFormat, TitleFormat};
 use forge_fs::ForgeFS;
 use forge_spinner::SpinnerManager;
+use forge_tracker::ToolCallPayload;
 use inquire::error::InquireError;
 use inquire::ui::{RenderConfig, Styled};
 use inquire::Select;
@@ -561,7 +562,16 @@ impl<F: API> UI<F> {
             ChatResponse::ToolCallStart(_) => {
                 self.spinner.stop(None)?;
             }
-            ChatResponse::ToolCallEnd(_) => {
+            ChatResponse::ToolCallEnd(toolcall_result) => {
+                // Only track toolcall name in case of success else track the error.
+                let payload = if toolcall_result.is_error {
+                    ToolCallPayload::new(toolcall_result.name.into_string())
+                        .with_cause(toolcall_result.content)
+                } else {
+                    ToolCallPayload::new(toolcall_result.name.into_string())
+                };
+                tokio::spawn(TRACKER.dispatch(forge_tracker::EventKind::ToolCall(payload)));
+
                 self.spinner.start(None)?;
                 if !self.cli.verbose {
                     return Ok(());
