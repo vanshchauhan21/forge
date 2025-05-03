@@ -1,7 +1,7 @@
 use derive_setters::Setters;
 use regex::Regex;
-use termimad::crossterm::style::Color;
-use termimad::{gray, CompoundStyle, LineStyle, MadSkin};
+use termimad::crossterm::style::{Attribute, Color};
+use termimad::{CompoundStyle, LineStyle, MadSkin};
 
 /// MarkdownFormat provides functionality for formatting markdown text for
 /// terminal display.
@@ -16,10 +16,11 @@ impl MarkdownFormat {
     /// Create a new MarkdownFormat with the default skin
     pub fn new() -> Self {
         let mut skin = MadSkin::default();
-        let compound_style =
-            CompoundStyle::new(Some(Color::Black), Some(gray(17)), Default::default());
+        let compound_style = CompoundStyle::new(Some(Color::Cyan), None, Attribute::Bold.into());
         skin.inline_code = compound_style.clone();
-        skin.code_block = LineStyle::new(compound_style, Default::default());
+
+        let codeblock_style = CompoundStyle::new(Some(Color::Cyan), None, Default::default());
+        skin.code_block = LineStyle::new(codeblock_style, Default::default());
 
         Self { skin, max_consecutive_newlines: 2 }
     }

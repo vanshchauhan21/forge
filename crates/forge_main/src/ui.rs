@@ -60,6 +60,11 @@ pub struct UI<F> {
 }
 
 impl<F: API> UI<F> {
+    /// Writes a line to the console output
+    /// Takes anything that implements ToString trait
+    fn writeln<T: ToString>(&mut self, content: T) -> anyhow::Result<()> {
+        self.spinner.write_ln(content)
+    }
     /// Retrieve available models, using cache if present
     async fn get_models(&mut self) -> Result<Vec<Model>> {
         if let Some(models) = &self.state.cached_models {
@@ -97,14 +102,10 @@ impl<F: API> UI<F> {
             self.api.upsert_conversation(conversation).await?;
         }
 
-        println!(
-            "{}",
-            TitleFormat::action(format!(
-                "Switched to '{}' mode (context cleared)",
-                self.state.mode
-            ))
-            .format()
-        );
+        self.writeln(TitleFormat::action(format!(
+            "Switched to '{}' mode (context cleared)",
+            self.state.mode
+        )))?;
 
         Ok(())
     }
@@ -156,12 +157,8 @@ impl<F: API> UI<F> {
         match self.run_inner().await {
             Ok(_) => {}
             Err(error) => {
-                println!(
-                    "{}",
-                    TitleFormat::action("Error")
-                        .error(format!("{error:?}"))
-                        .format()
-                );
+                self.writeln(TitleFormat::error(format!("{error:?}")))
+                    .unwrap();
             }
         }
     }
@@ -202,9 +199,8 @@ impl<F: API> UI<F> {
 
                     let content = TitleFormat::action(format!(
                         "Context size reduced by {token_reduction:.1}% (tokens), {message_reduction:.1}% (messages)"
-                    ))
-                    .format();
-                    self.spinner.stop(Some(content))?;
+                     )).to_string();
+                    self.writeln(content)?;
                 }
                 Command::Dump(format) => {
                     self.handle_dump(format).await?;
@@ -214,7 +210,7 @@ impl<F: API> UI<F> {
                 }
                 Command::Info => {
                     let info = Info::from(&self.state).extend(Info::from(&self.api.environment()));
-                    println!("{info}");
+                    self.writeln(info)?;
                 }
                 Command::Message(ref content) => {
                     self.spinner.start(None)?;
@@ -225,12 +221,7 @@ impl<F: API> UI<F> {
                         );
                         error!(error = ?err, "Chat request failed");
 
-                        println!(
-                            "{}",
-                            TitleFormat::action("Error")
-                                .error(format!("{err:?}"))
-                                .format()
-                        );
+                        self.writeln(TitleFormat::error(format!("{err:?}")))?;
                     }
                 }
                 Command::Act => {
@@ -241,13 +232,13 @@ impl<F: API> UI<F> {
                 }
                 Command::Help => {
                     let info = Info::from(self.command.as_ref());
-                    println!("{info}");
+                    self.writeln(info)?;
                 }
                 Command::Tools => {
                     use crate::tools_display::format_tools;
                     let tools = self.api.tools().await;
                     let output = format_tools(&tools);
-                    println!("{output}");
+                    self.writeln(output)?;
                 }
                 Command::Exit => {
                     update_forge().await;
@@ -257,13 +248,10 @@ impl<F: API> UI<F> {
 
                 Command::Custom(event) => {
                     if let Err(e) = self.dispatch_event(event.into()).await {
-                        println!(
-                            "{}",
-                            TitleFormat::action("Failed to execute the command")
-                                .sub_title("Command Execution")
-                                .error(e.to_string())
-                                .format()
-                        );
+                        self.writeln(
+                            TitleFormat::error("Failed to execute the command")
+                                .sub_title(e.to_string()),
+                        )?;
                     }
                 }
                 Command::Model => {
@@ -358,10 +346,7 @@ impl<F: API> UI<F> {
             // Update the UI state with the new model
             self.state.model = Some(model.clone());
 
-            println!(
-                "{}",
-                TitleFormat::action(format!("Switched to model: {model}")).format()
-            );
+            self.writeln(TitleFormat::action(format!("Switched to model: {model}")))?;
         }
 
         Ok(())
@@ -504,12 +489,10 @@ impl<F: API> UI<F> {
                         let path = format!("{timestamp}-dump.html");
                         tokio::fs::write(path.as_str(), html_content).await?;
 
-                        println!(
-                            "{}",
+                        self.writeln(
                             TitleFormat::action("Conversation HTML dump created".to_string())
-                                .sub_title(path.to_string())
-                                .format()
-                        );
+                                .sub_title(path.to_string()),
+                        )?;
                         return Ok(());
                     }
                 } else {
@@ -518,21 +501,16 @@ impl<F: API> UI<F> {
                     let content = serde_json::to_string_pretty(&conversation)?;
                     tokio::fs::write(path.as_str(), content).await?;
 
-                    println!(
-                        "{}",
+                    self.writeln(
                         TitleFormat::action("Conversation JSON dump created".to_string())
-                            .sub_title(path.to_string())
-                            .format()
-                    );
+                            .sub_title(path.to_string()),
+                    )?;
                 }
             } else {
-                println!(
-                    "{}",
-                    TitleFormat::action("Could not create dump")
-                        .error("Conversation not found")
-                        .sub_title(format!("conversation_id: {conversation_id}"))
-                        .format()
-                );
+                self.writeln(
+                    TitleFormat::error("Could not create dump")
+                        .sub_title(format!("Conversation: {conversation_id} was not found")),
+                )?;
             }
         }
         Ok(())
@@ -547,10 +525,10 @@ impl<F: API> UI<F> {
                     }
 
                     if is_summary {
-                        text = TitleFormat::action(text).to_string();
+                        text = TitleFormat::debug(text).to_string();
                     }
 
-                    self.spinner.stop(Some(text))?;
+                    self.writeln(text)?;
                 }
             }
             ChatResponse::ToolCallStart(_) => {

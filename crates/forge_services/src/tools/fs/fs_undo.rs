@@ -70,8 +70,8 @@ impl<F: Infrastructure> ExecutableTool for FsUndo<F> {
         let display_path = self.format_display_path(path)?;
 
         // Display a message about the file being undone
-        let message = TitleFormat::new("Undo").sub_title(display_path.clone());
-        context.send_text(message.format()).await?;
+        let message = TitleFormat::debug("Undo").sub_title(display_path.clone());
+        context.send_text(message).await?;
 
         Ok(format!(
             "Successfully undid last operation on path: {display_path}"

@@ -1,5 +1,10 @@
 ---
 source: crates/forge_domain/src/tool_call_record.rs
 expression: record.to_string()
+snapshot_kind: text
 ---
-<forge_tool_result tool="fs_read"><result><content><![CDATA[Contents of the file]]></content></result></forge_tool_result>
+---
+tool_name: fs_read
+status: Success
+---
+Contents of the file

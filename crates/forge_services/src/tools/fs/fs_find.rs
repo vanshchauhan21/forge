@@ -105,7 +105,7 @@ impl<F: Infrastructure> FSFind<F> {
             (None, None) => format!("at {formatted_dir}"),
         };
 
-        Ok(TitleFormat::new(title))
+        Ok(TitleFormat::debug(title))
     }
 
     async fn call(&self, context: ToolCallContext, input: FSFindInput) -> anyhow::Result<String> {
@@ -114,7 +114,7 @@ impl<F: Infrastructure> FSFind<F> {
 
         let title_format = self.create_title(&input)?;
 
-        context.send_text(title_format.format()).await?;
+        context.send_text(title_format).await?;
 
         if !dir.exists() {
             return Err(anyhow::anyhow!("Directory '{}' does not exist", input.path));

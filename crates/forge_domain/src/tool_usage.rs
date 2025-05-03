@@ -1,5 +1,8 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Display;
+
+use schemars::schema::{InstanceType, SingleOrVec};
+use serde::Serialize;
 
 use crate::ToolDefinition;
 
@@ -15,9 +18,7 @@ impl<'a> From<&'a Vec<ToolDefinition>> for ToolUsagePrompt<'a> {
 
 impl Display for ToolUsagePrompt<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, tool) in self.tools.iter().enumerate() {
-            writeln!(f, "{}. {}:", i + 1, tool.name.as_str())?;
-            writeln!(f, "Description: {}", &tool.description)?;
+        for tool in self.tools.iter() {
             let required = tool
                 .input_schema
                 .schema
@@ -35,40 +36,55 @@ impl Display for ToolUsagePrompt<'_> {
                 .into_iter()
                 .flat_map(|object| object.properties.into_iter())
                 .flat_map(|(name, props)| {
-                    props
-                        .into_object()
+                    let object = props.into_object();
+                    let instance = object.instance_type.clone();
+                    object
                         .metadata
                         .into_iter()
-                        .map(move |meta| (name.clone(), meta))
+                        .map(move |meta| (name.clone(), meta, instance.clone()))
                 })
-                .flat_map(|(name, meta)| {
+                .flat_map(|(name, meta, instance)| {
                     meta.description
                         .into_iter()
-                        .map(move |desc| (name.clone(), desc))
+                        .map(move |desc| (name.clone(), desc, instance.clone()))
                 })
-                .collect::<Vec<_>>();
+                .map(|(name, desc, instance)| {
+                    let parameter = Parameter {
+                        description: desc,
+                        type_of: instance,
+                        is_required: required.contains(&name),
+                    };
 
-            writeln!(f, "Usage:")?;
-            writeln!(f, "<forge_tool_call>")?;
-            writeln!(f, "<{}>", tool.name.as_str())?;
+                    (name, parameter)
+                })
+                .collect::<BTreeMap<_, _>>();
 
-            for (parameter, desc) in parameters {
-                writeln!(f, "<{parameter}>")?;
+            let schema = Schema { name: tool.name.as_str().to_string(), arguments: parameters };
 
-                if required.contains(&parameter) {
-                    writeln!(f, "<!-- required -->")?;
-                }
-
-                writeln!(f, "<!-- {desc} -->")?;
-
-                writeln!(f, "</{parameter}>")?;
-            }
-
-            writeln!(f, "</{}>", tool.name.as_str())?;
-            writeln!(f, "</forge_tool_call>\n\n")?;
+            writeln!(f, "{schema}")?;
         }
 
         Ok(())
+    }
+}
+
+#[derive(Serialize)]
+struct Schema {
+    name: String,
+    arguments: BTreeMap<String, Parameter>,
+}
+
+#[derive(Serialize)]
+struct Parameter {
+    description: String,
+    #[serde(rename = "type")]
+    type_of: Option<SingleOrVec<InstanceType>>,
+    is_required: bool,
+}
+
+impl Display for Schema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
 

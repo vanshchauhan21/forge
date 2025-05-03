@@ -3,8 +3,7 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::tool_call_parser::parse;
-use crate::{Error, Result, ToolName};
+use crate::{extract_tag_content, Error, Result, ToolName};
 
 /// Unique identifier for a using a tool
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -128,7 +127,12 @@ impl ToolCallFull {
 
     /// Parse multiple tool calls from XML format.
     pub fn try_from_xml(input: &str) -> std::result::Result<Vec<Self>, Error> {
-        parse(input)
+        match extract_tag_content(input, "forge_tool_call") {
+            None => Ok(Default::default()),
+            Some(content) => Ok(vec![
+                serde_json::from_str(content).map_err(Error::ToolCallArgument)?
+            ]),
+        }
     }
 }
 

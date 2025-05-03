@@ -3,13 +3,20 @@ use std::fmt::{self, Display, Formatter};
 use colored::Colorize;
 use derive_setters::Setters;
 
+#[derive(Clone)]
+pub enum Category {
+    Action,
+    Info,
+    Debug,
+    Error,
+}
+
 #[derive(Clone, Setters)]
 #[setters(into, strip_option)]
 pub struct TitleFormat {
     pub title: String,
     pub sub_title: Option<String>,
-    pub error: Option<String>,
-    pub is_user_action: bool,
+    pub category: Category,
 }
 
 pub trait TitleExt {
@@ -27,35 +34,50 @@ where
 
 impl TitleFormat {
     /// Create a status for executing a tool
-    pub fn new(tag: impl Into<String>) -> Self {
+    pub fn info(message: impl Into<String>) -> Self {
         Self {
-            title: tag.into(),
-            error: None,
-            sub_title: Default::default(),
-            is_user_action: false,
+            title: message.into(),
+            sub_title: None,
+            category: Category::Info,
         }
     }
 
     /// Create a status for executing a tool
-    pub fn action(title: impl Into<String>) -> Self {
+    pub fn action(message: impl Into<String>) -> Self {
         Self {
-            title: title.into(),
-            error: None,
-            sub_title: Default::default(),
-            is_user_action: true,
+            title: message.into(),
+            sub_title: None,
+            category: Category::Action,
         }
     }
 
-    pub fn format(&self) -> String {
+    pub fn error(message: impl Into<String>) -> Self {
+        Self {
+            title: message.into(),
+            sub_title: None,
+            category: Category::Error,
+        }
+    }
+
+    pub fn debug(message: impl Into<String>) -> Self {
+        Self {
+            title: message.into(),
+            sub_title: None,
+            category: Category::Debug,
+        }
+    }
+
+    fn format(&self) -> String {
         let mut buf = String::new();
 
-        if self.error.is_some() {
-            buf.push_str(format!("{} ", "⏺".red()).as_str());
-        } else if self.is_user_action {
-            buf.push_str(format!("{} ", "⏺".yellow()).as_str());
-        } else {
-            buf.push_str(format!("{} ", "⏺".cyan()).as_str());
-        }
+        let icon = match self.category {
+            Category::Action => "⏺".yellow(),
+            Category::Info => "⏺".white(),
+            Category::Debug => "⏺".cyan(),
+            Category::Error => "⏺".red(),
+        };
+
+        buf.push_str(format!("{icon} ").as_str());
 
         // Add timestamp at the beginning if this is not a user action
         #[cfg(not(test))]
@@ -70,20 +92,17 @@ impl TitleFormat {
             );
         }
 
-        if self.error.is_some() {
-            buf.push_str(self.title.red().bold().to_string().as_str())
-        } else if self.is_user_action {
-            buf.push_str(self.title.as_str())
-        } else {
-            buf.push_str(self.title.dimmed().to_string().as_str())
+        let title = match self.category {
+            Category::Action => self.title.white(),
+            Category::Info => self.title.white(),
+            Category::Debug => self.title.dimmed(),
+            Category::Error => format!("{} {}", "ERROR:".bold(), self.title).red(),
         };
+
+        buf.push_str(title.to_string().as_str());
 
         if let Some(ref sub_title) = self.sub_title {
             buf.push_str(&format!(" {}", sub_title.dimmed()).to_string());
-        }
-
-        if let Some(ref error) = self.error {
-            buf.push_str(&format!(" {error}").to_string());
         }
 
         buf

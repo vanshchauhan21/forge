@@ -18,22 +18,17 @@ pub struct ToolCallRecord {
 impl Display for ToolCallRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let tool_name = self.tool_call.name.as_str();
-        write!(f, "<forge_tool_result tool=\"{tool_name}\">")?;
 
-        write!(f, "<result>")?;
-
+        writeln!(f, "---")?;
+        writeln!(f, "tool_name: {tool_name}")?;
         if self.tool_result.is_error {
-            write!(f, "<error><![CDATA[{}]]></error>", self.tool_result.content)?;
+            writeln!(f, "status: Failure")?;
         } else {
-            write!(
-                f,
-                "<content><![CDATA[{}]]></content>",
-                self.tool_result.content
-            )?;
+            writeln!(f, "status: Success")?;
         }
+        writeln!(f, "---")?;
 
-        write!(f, "</result>")?;
-        write!(f, "</forge_tool_result>")?;
+        writeln!(f, "{}", self.tool_result.content)?;
 
         Ok(())
     }

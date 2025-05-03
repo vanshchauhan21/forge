@@ -109,10 +109,10 @@ impl<I: Infrastructure> ExecutableTool for Shell<I> {
         if input.command.trim().is_empty() {
             bail!("Command string is empty or contains only whitespace".to_string());
         }
-        let title_format = TitleFormat::new(format!("Execute [{}]", self.env.shell.as_str()))
+        let title_format = TitleFormat::debug(format!("Execute [{}]", self.env.shell.as_str()))
             .sub_title(&input.command);
 
-        context.send_text(title_format.format()).await?;
+        context.send_text(title_format).await?;
 
         let output = self
             .infra

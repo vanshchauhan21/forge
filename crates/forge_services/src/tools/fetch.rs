@@ -105,9 +105,11 @@ impl Fetch {
             .await
             .map_err(|e| anyhow!("Failed to fetch URL {}: {}", url, e))?;
 
-        let title_format =
-            TitleFormat::new(format!("GET {}", response.status())).sub_title(url.as_str());
-        context.send_text(title_format.format()).await?;
+        context
+            .send_text(
+                TitleFormat::debug(format!("GET {}", response.status())).sub_title(url.as_str()),
+            )
+            .await?;
 
         if !response.status().is_success() {
             return Err(anyhow!(

@@ -1,8 +1,12 @@
 ---
 source: crates/forge_domain/src/tool_call_record.rs
 expression: record.to_string()
+snapshot_kind: text
 ---
-<forge_tool_result tool="fs_write"><result><error><![CDATA[
+---
+tool_name: fs_write
+status: Failure
+---
+
 ERROR:
 Caused by: Permission denied
-]]></error></result></forge_tool_result>

@@ -22,7 +22,6 @@ agents:
       {{> system-prompt-engineer-act.hbs }}
     user_prompt: |-
       <task>{{event.value}}</task>
-      <current_time>{{current_time}}</current_time>
     ephemeral: false
     tools:
       - forge_tool_fs_read

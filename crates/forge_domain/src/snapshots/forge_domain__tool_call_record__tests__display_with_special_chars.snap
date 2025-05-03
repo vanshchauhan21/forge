@@ -1,5 +1,10 @@
 ---
 source: crates/forge_domain/src/tool_call_record.rs
 expression: record.to_string()
+snapshot_kind: text
 ---
-<forge_tool_result tool="test_tool"><result><content><![CDATA[Result with <tags> & special "characters"]]></content></result></forge_tool_result>
+---
+tool_name: test_tool
+status: Success
+---
+Result with <tags> & special "characters"
