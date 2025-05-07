@@ -13,8 +13,11 @@ use regex::Regex;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::metadata::Metadata;
 use crate::tools::utils::{assert_absolute_path, format_display_path};
-use crate::Infrastructure;
+use crate::{Clipper, FsWriteService, Infrastructure};
+
+const MAX_SEARCH_CHAR_LIMIT: usize = 40_000;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FSFindInput {
@@ -70,7 +73,9 @@ impl FSFindInput {
 /// (when regex omitted). Uses case-insensitive Rust regex syntax. Requires
 /// absolute paths. Avoids binary files and excluded directories. Best for code
 /// exploration, API usage discovery, configuration settings, or finding
-/// patterns across projects.
+/// patterns across projects. For large pages, returns the first 40,000
+/// characters and stores the complete content in a temporary file for
+/// subsequent access.
 #[derive(ToolDescription)]
 pub struct FSFind<F>(Arc<F>);
 
@@ -109,7 +114,12 @@ impl<F: Infrastructure> FSFind<F> {
         Ok(TitleFormat::debug(title))
     }
 
-    async fn call(&self, context: ToolCallContext, input: FSFindInput) -> anyhow::Result<String> {
+    async fn call_inner(
+        &self,
+        context: ToolCallContext,
+        input: FSFindInput,
+        max_char_limit: usize,
+    ) -> anyhow::Result<String> {
         let path = Path::new(&input.path);
         assert_absolute_path(path)?;
 
@@ -198,22 +208,59 @@ impl<F: Infrastructure> FSFind<F> {
         }
 
         context.send_text(formatted_output.format()).await?;
-        Ok(matches.join("\n"))
+
+        let matches = matches.join("\n");
+        let metadata = Metadata::default()
+            .add("path", input.path)
+            .add_optional("regex", input.regex)
+            .add_optional("file_pattern", input.file_pattern)
+            .add("total_chars", matches.len())
+            .add("start_char", 0);
+
+        let truncated_result = Clipper::from_start(max_char_limit).clip(&matches);
+        if let Some(truncated) = truncated_result.prefix_content() {
+            let path = self
+                .0
+                .file_write_service()
+                .write_temp("forge_find_", ".md", &matches)
+                .await?;
+
+            let metadata = metadata
+                .add("end_char", truncated.len())
+                .add("temp_file", path.display());
+
+            let truncation_tag = format!("\n<truncation>content is truncated to {} chars, remaining content can be read from path:{}</truncation>", 
+            max_char_limit,path.to_string_lossy());
+
+            Ok(format!("{metadata}{truncated}{truncation_tag}"))
+        } else {
+            let metadata = metadata.add("end_char", matches.len());
+            Ok(format!("{metadata}{matches}"))
+        }
     }
 }
 
-async fn retrieve_file_paths(dir: &Path) -> anyhow::Result<HashSet<std::path::PathBuf>> {
+async fn retrieve_file_paths(dir: &Path) -> anyhow::Result<Vec<std::path::PathBuf>> {
     if dir.is_dir() {
-        Ok(Walker::max_all()
+        // note: Paths needs mutable to avoid flaky tests.
+        #[allow(unused_mut)]
+        let mut paths = Walker::max_all()
             .cwd(dir.to_path_buf())
             .get()
             .await
             .with_context(|| format!("Failed to walk directory '{}'", dir.display()))?
             .into_iter()
             .map(|file| dir.join(file.path))
-            .collect::<HashSet<_>>())
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        #[cfg(test)]
+        paths.sort();
+
+        Ok(paths)
     } else {
-        Ok(HashSet::from_iter([dir.to_path_buf()]))
+        Ok(Vec::from_iter([dir.to_path_buf()]))
     }
 }
 
@@ -228,7 +275,7 @@ impl<F: Infrastructure> ExecutableTool for FSFind<F> {
     type Input = FSFindInput;
 
     async fn call(&self, context: ToolCallContext, input: Self::Input) -> anyhow::Result<String> {
-        self.call(context, input).await
+        self.call_inner(context, input, MAX_SEARCH_CHAR_LIMIT).await
     }
 }
 
@@ -269,8 +316,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 2);
         assert!(result.contains("test1.txt"));
         assert!(result.contains("test2.txt"));
     }
@@ -300,8 +345,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 1);
         assert!(result.contains("test2.rs"));
     }
 
@@ -333,8 +376,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 2);
         assert!(result.contains("test1.txt"));
         assert!(result.contains("test2.txt"));
         assert!(!result.contains("other.txt"));
@@ -363,8 +404,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 1);
         assert!(result.contains("test line"));
     }
 
@@ -399,8 +438,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 3);
         assert!(result.contains("test1.txt"));
         assert!(result.contains("test2.txt"));
         assert!(result.contains("best.txt"));
@@ -431,8 +468,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 2);
         assert!(result.contains("TEST CONTENT"));
         assert!(result.contains("test content"));
     }
@@ -487,8 +522,6 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 2);
         assert!(result.contains("file1.txt"));
         assert!(result.contains("file2.rs"));
     }
@@ -589,9 +622,7 @@ mod test {
             .await
             .unwrap();
 
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 1);
-        assert!(lines[0].eq(&format!(
+        assert!(result.contains(&format!(
             "{}:1:nice code.",
             temp_dir.path().join("best.txt").display()
         )));
@@ -608,8 +639,32 @@ mod test {
             )
             .await
             .unwrap();
-        let lines: Vec<_> = result.lines().collect();
-        assert_eq!(lines.len(), 1);
-        assert!(lines[0].eq(&format!("{}", temp_dir.path().join("best.txt").display())));
+        assert!(result.contains(&format!("{}", temp_dir.path().join("best.txt").display())));
+    }
+
+    #[tokio::test]
+    async fn test_fs_large_result() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let content = "content".repeat(10);
+        fs::write(temp_dir.path().join("file1.txt"), &content)
+            .await
+            .unwrap();
+
+        let infra = Arc::new(MockInfrastructure::new());
+        let fs_search = FSFind::new(infra);
+        let result = fs_search
+            .call_inner(
+                ToolCallContext::default(),
+                FSFindInput {
+                    path: temp_dir.path().to_string_lossy().to_string(),
+                    regex: Some("content*".into()),
+                    file_pattern: None,
+                },
+                100,
+            )
+            .await
+            .unwrap();
+        assert!(result.contains("content is truncated to 100 chars"))
     }
 }
