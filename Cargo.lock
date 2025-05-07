@@ -1117,6 +1117,7 @@ dependencies = [
  "colored 3.0.0",
  "indicatif",
  "rand 0.8.5",
+ "tokio",
 ]
 
 [[package]]
