@@ -1,4 +1,3 @@
-mod auto_update;
 mod banner;
 mod cli;
 mod completer;
@@ -10,8 +9,8 @@ mod prompt;
 mod state;
 mod tools_display;
 mod ui;
+mod update;
 
-pub use auto_update::update_forge;
 pub use cli::Cli;
 use lazy_static::lazy_static;
 pub use ui::UI;

@@ -16,12 +16,12 @@ use serde::Deserialize;
 use serde_json::Value;
 use tokio_stream::StreamExt;
 
-use crate::auto_update::update_forge;
 use crate::cli::Cli;
 use crate::info::Info;
 use crate::input::Console;
 use crate::model::{Command, ForgeCommandManager};
 use crate::state::{Mode, UIState};
+use crate::update::on_update;
 use crate::{banner, TRACKER};
 
 // Event type constants moved to UI layer
@@ -242,8 +242,10 @@ impl<F: API> UI<F> {
                 let output = format_tools(&tools);
                 self.writeln(output)?;
             }
+            Command::Update => {
+                on_update(self.api.clone(), None).await;
+            }
             Command::Exit => {
-                update_forge().await;
                 return Ok(true);
             }
 
@@ -384,6 +386,9 @@ impl<F: API> UI<F> {
                             .ok_or(anyhow::anyhow!("Model selection is required to continue"))?,
                     );
                 }
+
+                // Perform update using the configuration
+                on_update(self.api.clone(), workflow.updates.as_ref()).await;
 
                 self.api
                     .write_workflow(self.cli.workflow.as_deref(), &workflow)
