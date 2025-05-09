@@ -349,7 +349,7 @@ impl<F: API> UI<F> {
             self.api.upsert_conversation(conversation).await?;
 
             // Update the UI state with the new model
-            self.state.model = Some(model.clone());
+            self.update_model(model.clone());
 
             self.writeln(TitleFormat::action(format!("Switched to model: {model}")))?;
         }
@@ -413,14 +413,14 @@ impl<F: API> UI<F> {
                     .context("Failed to parse Conversation")?;
 
                     let conversation_id = conversation.id.clone();
-                    self.state.model = Some(conversation.main_model()?);
                     self.state.conversation_id = Some(conversation_id.clone());
+                    self.update_model(conversation.main_model()?);
                     self.api.upsert_conversation(conversation).await?;
                     Ok(conversation_id)
                 } else {
                     let conversation = self.api.init_conversation(workflow.clone()).await?;
-                    self.state.model = Some(conversation.main_model()?);
                     self.state.conversation_id = Some(conversation.id.clone());
+                    self.update_model(conversation.main_model()?);
                     Ok(conversation.id)
                 }
             }
@@ -540,6 +540,11 @@ impl<F: API> UI<F> {
             }
         }
         Ok(())
+    }
+
+    fn update_model(&mut self, model: ModelId) {
+        tokio::spawn(TRACKER.set_model(model.to_string()));
+        self.state.model = Some(model);
     }
 
     async fn on_custom_event(&mut self, event: Event) -> Result<()> {
