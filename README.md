@@ -39,7 +39,7 @@ Install globally:
 npm install -g @antinomyhq/forge
 ```
 
-Sign up at [Antinomy.ai](https://antinomy.ai/app/) to enable the Forge provider.
+Sign up at [Antinomy.ai](https://app.antinomy.ai/app/) to enable the Forge provider.
 
 Then set up your Forge provider key:
 
