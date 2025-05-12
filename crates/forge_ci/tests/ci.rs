@@ -190,7 +190,7 @@ fn generate() {
         build_release_job
             .add_needs(build_job.clone())
             .add_needs(draft_release_job.clone())
-            .cond(tag_cond.clone())
+            .cond(Expression::new("github.event_name == 'push' && github.ref == 'refs/heads/main'"))
             // Rename binary to target name
             .add_step(Step::run(
                 "cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}",
