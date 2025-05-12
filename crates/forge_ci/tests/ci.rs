@@ -96,8 +96,10 @@ fn generate() {
     });
 
     let build_job = workflow.jobs.clone().unwrap().get("build").unwrap().clone();
-    let _main_cond =
+
+    let main_cond =
         Expression::new("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+
     // Tag-based condition for release workflows
     let tag_cond =
         Expression::new("github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')");
@@ -105,7 +107,7 @@ fn generate() {
     // Add draft release job
     let draft_release_job = Job::new("draft_release")
             .runs_on("ubuntu-latest")
-            .cond(tag_cond.clone())
+            .cond(main_cond.clone())
             .permissions(
                 Permissions::default()
                     .contents(Level::Write)
@@ -190,9 +192,7 @@ fn generate() {
         build_release_job
             .add_needs(build_job.clone())
             .add_needs(draft_release_job.clone())
-            .cond(Expression::new(
-                "github.event_name == 'push' && github.ref == 'refs/heads/main'",
-            ))
+            .cond(main_cond)
             // Rename binary to target name
             .add_step(Step::run(
                 "cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}",

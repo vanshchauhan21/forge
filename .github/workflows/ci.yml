@@ -72,7 +72,7 @@ jobs:
     - name: Cargo Clippy
       run: cargo +nightly clippy --all-features --workspace -- -D warnings
   draft_release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: draft_release
     runs-on: ubuntu-latest
     permissions:
