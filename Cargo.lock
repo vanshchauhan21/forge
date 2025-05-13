@@ -937,6 +937,7 @@ dependencies = [
  "gh-workflow-tailcall",
  "indexmap",
  "pretty_assertions",
+ "serde",
  "serde_json",
 ]
 
