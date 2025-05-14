@@ -162,6 +162,13 @@ pub mod tests {
         async fn execute_command(&self, _: String, _: PathBuf) -> anyhow::Result<CommandOutput> {
             unimplemented!()
         }
+        async fn execute_command_raw(
+            &self,
+            _: &str,
+            _: &[&str],
+        ) -> anyhow::Result<std::process::ExitStatus> {
+            unimplemented!()
+        }
     }
 
     #[async_trait::async_trait]

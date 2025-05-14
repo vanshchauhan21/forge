@@ -127,4 +127,15 @@ impl<F: Services + Infrastructure> API for ForgeAPI<F> {
             .execute_command(command.to_string(), working_dir)
             .await
     }
+
+    async fn execute_shell_command_raw(
+        &self,
+        command: &str,
+        args: &[&str],
+    ) -> anyhow::Result<std::process::ExitStatus> {
+        self.app
+            .command_executor_service()
+            .execute_command_raw(command, args)
+            .await
+    }
 }

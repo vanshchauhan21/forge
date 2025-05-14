@@ -7,32 +7,21 @@ use update_informer::{registry, Check, Version};
 
 use crate::TRACKER;
 
-/// Displays a formatted error message for manual update
-async fn handle_update_error<S: AsRef<str>>(error: S) {
-    println!(
-        "{} Could not update Forge automatically.",
-        "Update Failed:".bold().red()
-    );
-    println!("{} Run this command:", "Manual Update:".bold().yellow());
-    println!("   {}", "npm i update -g @antinomyhq/forge".bold().cyan());
-    let _ = send_update_failure_event(error.as_ref()).await;
-}
-
 /// Runs npm update in the background, failing silently
 async fn execute_update_command(api: Arc<impl API>) {
     // Spawn a new task that won't block the main application
     let output = api
-        .execute_shell_command("npm i update -g @antinomyhq/forge", api.environment().cwd)
+        .execute_shell_command_raw("npm", &["update", "-g", "@antinomyhq/forge"])
         .await;
 
     match output {
         Err(err) => {
             // Send an event to the tracker on failure
             // We don't need to handle this result since we're failing silently
-            handle_update_error(err.to_string()).await;
+            let _ = send_update_failure_event(&format!("Auto update failed {err}")).await;
         }
         Ok(output) => {
-            if output.stderr.is_empty() {
+            if output.success() {
                 let answer = inquire::Confirm::new(
                     "You need to close forge to complete update. Do you want to close it now?",
                 )
@@ -43,7 +32,12 @@ async fn execute_update_command(api: Arc<impl API>) {
                     std::process::exit(0);
                 }
             } else {
-                handle_update_error(format!("Auto update failed: {}", output.stderr)).await;
+                let exit_output = match output.code() {
+                    Some(code) => format!("Process exited with code: {code}"),
+                    None => "Process exited without code".to_string(),
+                };
+                let _ =
+                    send_update_failure_event(&format!("Auto update failed, {exit_output}",)).await;
             }
         }
     }

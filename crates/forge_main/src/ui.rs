@@ -267,12 +267,16 @@ impl<F: API> UI<F> {
                 self.on_model_selection().await?;
             }
             Command::Shell(ref command) => {
-                // Execute the shell command using the existing infrastructure
-                // Get the working directory from the environment service instead of std::env
-                let cwd = self.api.environment().cwd;
-
-                // Execute the command
-                let _ = self.api.execute_shell_command(command, cwd).await;
+                let mut s = command.split_whitespace();
+                if let Some(command) = s.next() {
+                    let args = s.collect::<Vec<_>>();
+                    self.api.execute_shell_command_raw(command, &args).await?;
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "Correct Usage: ! <command> [args...] (e.g., !ls -la)"
+                    ))
+                    .context("Empty shell command.");
+                }
             }
         }
 
