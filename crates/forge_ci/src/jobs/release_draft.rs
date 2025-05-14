@@ -24,7 +24,7 @@ pub fn create_draft_release_job(build_job: &Job) -> Job {
                 .with(("config-name", "release-drafter.yml")),
         )
         .add_step(
-            Step::run("echo \"crate_release_id=${{ steps.create_release.outputs.id }}\" >> $GITHUB_OUTPUT && echo \"crate_release_name=${GITHUB_REF#refs/tags/}\" >> $GITHUB_OUTPUT")
+            Step::run("echo \"crate_release_id=${{ steps.create_release.outputs.id }}\" >> $GITHUB_OUTPUT && echo \"crate_release_name=${{ steps.create_release.outputs.tag_name }}\" >> $GITHUB_OUTPUT")
                 .id("set_output"),
         )
         .outputs(indexmap! {
