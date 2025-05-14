@@ -174,7 +174,7 @@ jobs:
     - run: cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}
     - uses: xresloader/upload-to-github-release@v1
       with:
-        release_id: ${{ needs.draft_release.outputs.crate_release_name }}
+        release_id: ${{ needs.draft_release.outputs.crate_release_id }}
         file: ${{ matrix.binary_name }}
         overwrite: 'true'
   build_release_pr:

@@ -91,7 +91,7 @@ pub fn create_build_release_main_job(draft_release_job: &Job) -> Job {
             Step::uses("xresloader", "upload-to-github-release", "v1")
                 .add_with((
                     "release_id",
-                    "${{ needs.draft_release.outputs.crate_release_name }}",
+                    "${{ needs.draft_release.outputs.crate_release_id }}",
                 ))
                 .add_with(("file", "${{ matrix.binary_name }}"))
                 .add_with(("overwrite", "true")),
