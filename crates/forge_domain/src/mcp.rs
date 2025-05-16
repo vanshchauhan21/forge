@@ -6,7 +6,6 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
 use derive_setters::Setters;
-use merge::Merge;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -38,30 +37,25 @@ impl McpServerConfig {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Merge, Setters, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Setters, PartialEq, Hash)]
 #[setters(strip_option, into)]
 pub struct McpStdioServer {
     /// Command to execute for starting this MCP server
-    #[merge(strategy = crate::merge::option)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
 
     /// Arguments to pass to the command
-    #[merge(strategy = crate::merge::vec::append)]
-    #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
 
     /// Environment variables to pass to the command
-    #[merge(strategy = crate::merge::option)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<BTreeMap<String, String>>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Merge, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Hash)]
 pub struct McpSseServer {
     /// Url of the MCP server
-    #[merge(strategy = crate::merge::option)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
 }
