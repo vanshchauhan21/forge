@@ -481,7 +481,6 @@ impl<F: API> UI<F> {
             None => {
                 // Select a model if workflow doesn't have one
                 let workflow = self.init_state().await?;
-                self.command.register_all(&workflow);
 
                 // We need to try and get the conversation ID first before fetching the model
                 if let Some(ref path) = self.cli.conversation {
@@ -522,7 +521,9 @@ impl<F: API> UI<F> {
             .write_workflow(self.cli.workflow.as_deref(), &workflow)
             .await?;
 
+        self.command.register_all(&base_workflow);
         self.state = UIState::new(base_workflow).provider(self.api.environment().provider);
+
         Ok(workflow)
     }
 
