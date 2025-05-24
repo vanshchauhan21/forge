@@ -203,6 +203,11 @@ impl<F: API> UI<F> {
                     match result {
                         Ok(exit) => if exit {return Ok(())},
                         Err(error) => {
+                            if let Some(conversation_id) = self.state.conversation_id.as_ref() {
+                                if let Some(conversation) = self.api.conversation(conversation_id).await.ok().flatten() {
+                                    TRACKER.set_conversation(conversation).await;
+                                }
+                            }
                             tokio::spawn(
                                 TRACKER.dispatch(forge_tracker::EventKind::Error(format!("{error:?}"))),
                             );
