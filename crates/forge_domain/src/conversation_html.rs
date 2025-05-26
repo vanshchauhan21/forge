@@ -324,8 +324,7 @@ fn create_agent_states_section(conversation: &Conversation) -> Element {
                         Element::new("div.tool-call")
                             .append(
                                 Element::new("p")
-                                    .append(Element::new("strong").text("Tool: "))
-                                    .text(tool.name.to_string()),
+                                    .append(Element::new("strong").text(tool.name.to_string())),
                             )
                             .append(
                                 Element::new("p")
@@ -340,12 +339,6 @@ fn create_agent_states_section(conversation: &Conversation) -> Element {
                                 Element::new("pre")
                                     .text(to_string_pretty(&tool.input_schema).unwrap_or_default()),
                             )
-                            .append(tool.output_schema.as_ref().map(|schema| {
-                                Element::new("pre").append(
-                                    Element::new("strong")
-                                        .text(format!("Output Schema: {schema:?}")),
-                                )
-                            }))
                             .append(tool.output_schema.as_ref().map(|schema| {
                                 Element::new("pre")
                                     .text(to_string_pretty(schema).unwrap_or_default())

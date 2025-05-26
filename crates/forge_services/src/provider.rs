@@ -42,4 +42,8 @@ impl ProviderService for ForgeProviderService {
     async fn models(&self) -> Result<Vec<Model>> {
         self.client.models().await
     }
+
+    async fn model(&self, model: &ModelId) -> Result<Option<Model>> {
+        self.client.model(model).await
+    }
 }

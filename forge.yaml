@@ -68,4 +68,3 @@ custom_rules: |-
 
   Refactoring:
   - If asked to fix failing tests, always confirm whether to update the implementation or the tests.
-tool_supported: false

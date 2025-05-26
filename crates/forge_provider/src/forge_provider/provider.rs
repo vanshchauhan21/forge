@@ -221,11 +221,16 @@ impl ForgeProvider {
 
 impl From<Model> for forge_domain::Model {
     fn from(value: Model) -> Self {
+        let tools_supported = value
+            .supported_parameters
+            .iter()
+            .any(|param| param == "tools");
         forge_domain::Model {
             id: value.id,
             name: value.name,
             description: value.description,
             context_length: value.context_length,
+            tools_supported: Some(tools_supported),
         }
     }
 }
