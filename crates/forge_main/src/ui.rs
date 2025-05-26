@@ -163,8 +163,7 @@ impl<F: API> UI<F> {
         match self.run_inner().await {
             Ok(_) => {}
             Err(error) => {
-                self.writeln(TitleFormat::error(format!("{error:?}")))
-                    .unwrap();
+                eprintln!("{}", TitleFormat::error(format!("{error:?}")));
             }
         }
     }
@@ -211,7 +210,8 @@ impl<F: API> UI<F> {
                             tokio::spawn(
                                 TRACKER.dispatch(forge_tracker::EventKind::Error(format!("{error:?}"))),
                             );
-                            self.writeln(TitleFormat::error(format!("{error:?}")))?;
+                            self.spinner.stop(None)?;
+                            eprintln!("{}", TitleFormat::error(format!("{error:?}")));
                         },
                     }
                 }
