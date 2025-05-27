@@ -224,6 +224,7 @@ impl From<Model> for forge_domain::Model {
         let tools_supported = value
             .supported_parameters
             .iter()
+            .flatten()
             .any(|param| param == "tools");
         forge_domain::Model {
             id: value.id,
