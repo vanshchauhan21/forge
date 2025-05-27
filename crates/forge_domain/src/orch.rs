@@ -223,7 +223,9 @@ impl<A: Services> Orchestrator<A> {
         // estimates.
 
         let mut usage = message.usage.clone().unwrap_or(request_usage);
-        usage.estimated_tokens = context.estimate_token_count();
+        let content_length = context.to_text().len();
+        usage.estimated_tokens = estimate_token_count(content_length) as u64;
+        usage.content_length = content_length as u64;
         usage
     }
 
@@ -514,7 +516,12 @@ impl<A: Services> Orchestrator<A> {
 
             // Send the usage information if available
 
-            info!(token_usage= ?usage.prompt_tokens, estimated_token_usage= ?usage.estimated_tokens, "Processing usage information");
+            info!(
+                token_usage= ?usage.prompt_tokens,
+                estimated_token_usage= ?usage.estimated_tokens,
+                content_length = ?usage.content_length,
+                "Processing usage information"
+            );
             self.send(agent, ChatResponse::Usage(usage.clone())).await?;
 
             // Check if context requires compression and decide to compact

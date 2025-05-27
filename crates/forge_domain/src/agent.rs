@@ -331,10 +331,10 @@ impl Key for Agent {
 /// tokenizer
 /// Estimates token count from a string representation
 /// Re-exported for compaction reporting
-pub fn estimate_token_count(text: &str) -> u64 {
+pub fn estimate_token_count(count: usize) -> usize {
     // A very rough estimation that assumes ~4 characters per token on average
     // In a real implementation, this should use a proper LLM-specific tokenizer
-    text.len() as u64 / 4
+    count / 4
 }
 
 // The Transform enum has been removed

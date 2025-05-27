@@ -215,7 +215,7 @@ mod tests {
             prompt_tokens: 10,
             completion_tokens: 20,
             total_tokens: 30,
-            estimated_tokens: 0,
+            ..Default::default()
         };
         let mut prompt = ForgePrompt::default();
         prompt.usage(usage);
@@ -292,7 +292,7 @@ mod tests {
             prompt_tokens: 10,
             completion_tokens: 20,
             total_tokens: 30,
-            estimated_tokens: 0,
+            ..Default::default()
         };
         let mut prompt = ForgePrompt::default();
         prompt.usage(usage);
