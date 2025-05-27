@@ -1,4 +1,3 @@
-use std::cmp::max;
 use std::collections::HashSet;
 
 use derive_more::derive::Display;
@@ -108,15 +107,11 @@ impl Compact {
 
     /// Determines if compaction should be triggered based on the current
     /// context
-    pub fn should_compact(&self, context: &Context, prompt_tokens: Option<usize>) -> bool {
+    pub fn should_compact(&self, context: &Context, token_count: u64) -> bool {
         // Check if any of the thresholds have been exceeded
         if let Some(token_threshold) = self.token_threshold {
-            let estimate_token_count = context.estimate_token_count();
-            debug!(tokens = ?prompt_tokens, estimated = estimate_token_count, "Token count");
+            debug!(tokens = ?token_count, "Token count");
             // use provided prompt_tokens if available, otherwise estimate token count
-            let token_count = prompt_tokens
-                .map(|tokens| max(tokens as u64, estimate_token_count))
-                .unwrap_or_else(|| estimate_token_count);
             if token_count >= token_threshold {
                 return true;
             }
@@ -287,10 +282,10 @@ impl Agent {
             .description(self.description.clone().unwrap()))
     }
     /// Checks if compaction should be applied
-    pub fn should_compact(&self, context: &Context, prompt_tokens: Option<usize>) -> bool {
+    pub fn should_compact(&self, context: &Context, token_count: u64) -> bool {
         // Return false if compaction is not configured
         if let Some(compact) = &self.compact {
-            compact.should_compact(context, prompt_tokens)
+            compact.should_compact(context, token_count)
         } else {
             false
         }
