@@ -197,7 +197,9 @@ impl<F: API> UI<F> {
 
         loop {
             tokio::select! {
-                _ = tokio::signal::ctrl_c() => {}
+                _ = tokio::signal::ctrl_c() => {
+                    tracing::info!("User interrupted operation with Ctrl+C");
+                }
                 result = self.on_command(command) => {
                     match result {
                         Ok(exit) => if exit {return Ok(())},
